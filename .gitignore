@@ -1,0 +1,14 @@
+/out
+bin/
+build/
+/.vs
+.idea/
+shaders/**/*.spv
+shaders/**/*.slang-module
+resources/hdr
+CMakeSettings.json
+resources/models
+logs/
+src/includes*
+/tools/*.exe
+*.hdr

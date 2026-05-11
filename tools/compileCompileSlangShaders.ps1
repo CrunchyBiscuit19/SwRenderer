@@ -1,0 +1,1 @@
+Start-Process -FilePath "g++" -ArgumentList "./compileSlangShaders.cpp", "-o", "./compileSlangShaders.exe", "-O3", "--std=c++23" -Wait

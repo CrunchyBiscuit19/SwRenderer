@@ -1,0 +1,38 @@
+# .clang-format file
+
+# Use a standard style as a base (e.g., Google or LLVM) and customize from there.
+# This ensures sensible defaults for unlisted options.
+BasedOnStyle: Google
+
+# --- Brace Placement ---
+# Key setting: This places the opening brace on the same line as the statement.
+# e.g., 'if (condition) {'
+BreakBeforeBraces: Attach
+
+# --- Indentation ---
+# Set the number of spaces for indentation. 4 is a common standard.
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never # Always use spaces for indentation
+AccessModifierOffset: -4
+IndentAccessModifiers: false
+
+# --- Other Common Settings ---
+
+# The maximum length of a line before clang-format wraps it.
+ColumnLimit: 160
+
+# Control spacing around pointers/references (e.g., int *x vs int* x)
+# The options are: None, Before, After, Both
+PointerAlignment: Left # Results in 'int* x'
+
+# Aligning member initializer lists for constructors
+ConstructorInitializerIndentWidth: 4
+
+# Put a space between the function name and the opening parenthesis.
+# e.g., 'void func (int a)'
+SpaceBeforeParens: ControlStatements
+
+BinPackArguments: false
+BinPackParameters: true
+AlignAfterOpenBracket: BlockIndent
