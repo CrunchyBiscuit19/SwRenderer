@@ -1,4 +1,5 @@
 /out
+obj/
 bin/
 build/
 /.vs
