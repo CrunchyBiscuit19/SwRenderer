@@ -14,7 +14,6 @@ protected:
     vk::ImageLayout mCurrentLayout;
     vk::PipelineStageFlagBits2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
-    std::uint32_t mNumFaces{1};
 
     SwImage(std::vector<vk::Format> formats, vk::Extent3D extent);
 
@@ -70,6 +69,8 @@ protected:
         vk::ClearValue clearValue, vk::ImageAspectFlags aspect, const VmaAllocator mAllocator, VmaAllocation mAllocation
     );
 
+    void generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces);
+
 public:
     void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;
 
@@ -79,7 +80,7 @@ public:
     void copyFrom(vk::CommandBuffer cmd, SwSwapchainImage source);
     void copyFrom(vk::CommandBuffer cmd, SwAllocatedImage source);
 
-    void generateMipmaps(vk::CommandBuffer cmd);
+    virtual void generateMipmaps(vk::CommandBuffer cmd);
 
     inline vk::Image getRawImage() { return *mImage; }
 
@@ -103,6 +104,8 @@ public:
         vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
     );
 
+    void generateMipmaps(vk::CommandBuffer cmd) override;
+
     SwColorImage2D(SwColorImage2D&&) noexcept = default;
     SwColorImage2D& operator=(SwColorImage2D&&) noexcept = default;
 
@@ -117,6 +120,8 @@ public:
         vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
     );
 
+    void generateMipmaps(vk::CommandBuffer cmd) override;
+
     SwDepthImage2D(SwDepthImage2D&&) noexcept = default;
     SwDepthImage2D& operator=(SwDepthImage2D&&) noexcept = default;
 
@@ -130,6 +135,8 @@ public:
         vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
         vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
     );
+
+    void generateMipmaps(vk::CommandBuffer cmd) override;
 
     SwColorImageCubemap(SwColorImageCubemap&&) noexcept = default;
     SwColorImageCubemap& operator=(SwColorImageCubemap&&) noexcept = default;
@@ -161,7 +168,7 @@ private:
     static void fillImageData(SwImageType swImageType, const void* data, SwAllocatedImage& image);
 
 public:
-    static const uint32_t NUM_CUBEMAP_FACES = 6;
+    static const uint32_t NUM_CUBEMAP_FACES{6};
 
     static void init(SwRendererContext rendererContext);
 

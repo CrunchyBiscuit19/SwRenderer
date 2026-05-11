@@ -122,7 +122,7 @@ void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, SwAllocatedImage source) 
     copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), source.mAspect);
 }
 
-void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd) {
+void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces) {
     const std::uint32_t mipLevels = swHelper::calculateMipMapLevels(mExtent);
     vk::Extent2D imageSize = swHelper::extent3dTo2d(mExtent);
     constexpr auto aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -139,7 +139,7 @@ void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd) {
         mipBarrier.dstAccessMask = vk::AccessFlagBits2::eTransferRead;
         mipBarrier.subresourceRange.aspectMask = aspectMask;
         mipBarrier.subresourceRange.baseArrayLayer = 0;
-        mipBarrier.subresourceRange.layerCount = mNumFaces;
+        mipBarrier.subresourceRange.layerCount = numFaces;
         mipBarrier.subresourceRange.baseMipLevel = mip;
         mipBarrier.subresourceRange.levelCount = 1;
         mipBarrier.image = *mImage;
@@ -156,13 +156,13 @@ void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd) {
         blitRegion.pNext = nullptr;
         blitRegion.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blitRegion.srcSubresource.baseArrayLayer = 0;
-        blitRegion.srcSubresource.layerCount = mNumFaces;
+        blitRegion.srcSubresource.layerCount = numFaces;
         blitRegion.srcSubresource.mipLevel = mip;
         blitRegion.srcOffsets[0] = vk::Offset3D{0, 0, 0};
         blitRegion.srcOffsets[1] = vk::Offset3D{static_cast<std::int32_t>(imageSize.width), static_cast<std::int32_t>(imageSize.height), 1};
         blitRegion.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blitRegion.dstSubresource.baseArrayLayer = 0;
-        blitRegion.dstSubresource.layerCount = mNumFaces;
+        blitRegion.dstSubresource.layerCount = numFaces;
         blitRegion.dstSubresource.mipLevel = mip + 1;
         blitRegion.dstOffsets[0] = vk::Offset3D{0, 0, 0};
         blitRegion.dstOffsets[1] = vk::Offset3D{static_cast<std::int32_t>(halfSize.width), static_cast<std::int32_t>(halfSize.height), 1};
@@ -192,7 +192,7 @@ void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd) {
     mipBarrier.dstAccessMask = vk::AccessFlagBits2::eTransferRead;
     mipBarrier.subresourceRange.aspectMask = aspectMask;
     mipBarrier.subresourceRange.baseArrayLayer = 0;
-    mipBarrier.subresourceRange.layerCount = mNumFaces;
+    mipBarrier.subresourceRange.layerCount = numFaces;
     mipBarrier.subresourceRange.baseMipLevel = mipLevels - 1;
     mipBarrier.subresourceRange.levelCount = 1;
     mipBarrier.image = *mImage;
@@ -273,6 +273,8 @@ SwColorImage2D::SwColorImage2D(
           std::move(image), std::move(imageViews), std::move(formats), extent, mipmapped, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation
       ) {}
 
+void SwColorImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
+
 SwDepthImage2D::SwDepthImage2D(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
     vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation
@@ -281,15 +283,17 @@ SwDepthImage2D::SwDepthImage2D(
           std::move(image), std::move(imageViews), std::move(formats), extent, mipmapped, clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation
       ) {}
 
+void SwDepthImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
+
 SwColorImageCubemap::SwColorImageCubemap(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
     vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation
 )
     : SwAllocatedImage(
           std::move(image), std::move(imageViews), std::move(formats), extent, mipmapped, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation
-      ) {
-    mNumFaces = SwImageFactory::NUM_CUBEMAP_FACES;
-}
+      ) {}
+
+void SwColorImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
 
 SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstructionInfo(
     SwImageType swImageType, const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
@@ -394,7 +398,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
             copyRegion.imageSubresource.baseArrayLayer = face;
             copyRegion.imageSubresource.layerCount = 1;
             copyRegion.imageExtent = image.getExtent();
-            copyRegions.push_back(copyRegion);
+            copyRegions.emplace_back(copyRegion);
         }
 
         cmd.copyBufferToImage(SwResourceStager::sImageStagingBuffer.getRawBuffer(), image.getRawImage(), vk::ImageLayout::eTransferDstOptimal, copyRegions);

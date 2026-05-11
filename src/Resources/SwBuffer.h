@@ -61,10 +61,7 @@ public:
 
 class SwStagingBuffer : public SwBuffer {
 public:
-    SwStagingBuffer(
-        vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-        std::uint32_t size
-    );
+    SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint32_t size);
 
     SwStagingBuffer(SwStagingBuffer&&) noexcept = default;
     SwStagingBuffer& operator=(SwStagingBuffer&&) noexcept = default;
