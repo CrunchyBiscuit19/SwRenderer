@@ -6,9 +6,8 @@ build/
 .idea/
 shaders/**/*.spv
 shaders/**/*.slang-module
-resources/hdr
+resources/
 CMakeSettings.json
-resources/models
 logs/
 src/includes*
 /tools/*.exe
