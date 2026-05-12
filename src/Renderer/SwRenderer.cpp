@@ -1,4 +1,11 @@
 #include <Renderer/SwRenderer.h>
+#include <Resources/SwBuffer.h>
+#include <Resources/SwDescriptor.h>
+#include <Resources/SwImage.h>
+#include <Resources/SwPipeline.h>
+#include <Resources/SwResourceStager.h>
+#include <Resources/SwSampler.h>
+#include <Resources/SwShader.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
@@ -57,13 +64,13 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            LOG_ERROR(static_cast<SwRenderer*>(pUserData)->getLogger(), "\n{}", message);
+            LOG_ERROR(static_cast<SwRenderer*>(pUserData)->getLogger(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            LOG_WARNING(static_cast<SwRenderer*>(pUserData)->getLogger(), "\n{}", message);
+            LOG_WARNING(static_cast<SwRenderer*>(pUserData)->getLogger(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            LOG_TRACE_L3(static_cast<SwRenderer*>(pUserData)->getLogger(), "\n{}", message);
+            LOG_TRACE_L3(static_cast<SwRenderer*>(pUserData)->getLogger(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
         default:
@@ -103,12 +110,17 @@ SwRenderer::SwRenderer()
         quill::FileEventNotifier{}
     );
     auto consoleSink = quill::Frontend::create_or_get_sink<quill::ConsoleSink>("sink1");
+    quill::PatternFormatterOptions options{};
+    options.format_pattern = "[%(short_source_location) | %(time) | %(log_level)] \n %(message)";
+    options.timestamp_pattern = "%H:%M:%S.%Qms";
+    options.add_metadata_to_multi_line_logs = false;
     if (LOG_LOCATION == LogLocation::File) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink)});
+        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink)}, options);
     } else if (LOG_LOCATION == LogLocation::Console) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", std::move(consoleSink));
+        mLogger = quill::Frontend::create_or_get_logger("LOGGER", std::move(consoleSink), options);
     } else if (LOG_LOCATION == LogLocation::Both) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)});
+        mLogger =
+            quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)}, options);
     }
     mLogger->set_log_level(quill::LogLevel::Info);
 
@@ -250,6 +262,14 @@ SwRenderer::SwRenderer()
 
     mRendererContext = SwRendererContext(&mDevice, mAllocator, &mGraphicsQueue, &mComputeQueue);
 
+    SwImmSubmit::init(mRendererContext);
+    SwShaderFactory::init(mRendererContext);
+    SwSamplerFactory::init(mRendererContext);
+    SwDescriptorPool::init(mRendererContext);
+    SwPipelineFactory::init(mRendererContext);
+    SwBufferFactory::init(mRendererContext);
+    SwImageFactory::init(mRendererContext);
+    SwResourceStager::init(mRendererContext);
 }
 
 void SwRenderer::addEventCallback(const std::function<void(SDL_Event& e)>& inputCallback) { mEventCallbacks.emplace_back(inputCallback); }
@@ -258,4 +278,12 @@ void SwRenderer::executeEventCallbacks(SDL_Event& e) const {
     for (const auto& inputCallback : mEventCallbacks) {
         inputCallback(e);
     }
+}
+
+void SwRenderer::cleanup() {
+    SwResourceStager::destroy();
+    SwImmSubmit::destroy();
+    vmaDestroyAllocator(mAllocator);
+    SDL_DestroyWindow(mWindow);
+    SDL_Quit();
 }

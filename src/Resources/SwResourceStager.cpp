@@ -11,6 +11,12 @@ SwStagingBuffer SwResourceStager::sBoundsStagingBuffer{};
 void SwResourceStager::init(SwRendererContext rendererContext) {
     sRendererContext = rendererContext;
 
+    sImageStagingBuffer = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
+    sMeshStagingBuffer = SwBufferFactory::createStagingBuffer(MESH_STAGING_BUFFER_SIZE);
+    sMaterialConstantsStagingBuffer = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE);
+    sNodeTransformsStagingBuffer = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
+    sBoundsStagingBuffer = SwBufferFactory::createStagingBuffer(BOUNDS_STAGING_BUFFER_SIZE);
+
     constexpr std::uint32_t white = std::byteswap(0xFFFFFFFF);
     sDefaultImages.try_emplace(
         DefaultImageOption::White,
@@ -42,12 +48,6 @@ void SwResourceStager::init(SwRendererContext rendererContext) {
         DefaultImageOption::Checkerboard,
         SwImageFactory::createColorImage2D(pixels.data(), vk::Extent3D{16, 16, 1}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, false)
     );
-
-    sImageStagingBuffer = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
-    sMeshStagingBuffer = SwBufferFactory::createStagingBuffer(MESH_STAGING_BUFFER_SIZE);
-    sMaterialConstantsStagingBuffer = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE);
-    sNodeTransformsStagingBuffer = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
-    sBoundsStagingBuffer = SwBufferFactory::createStagingBuffer(BOUNDS_STAGING_BUFFER_SIZE);
 }
 
 void SwResourceStager::destroy() { 

@@ -2,7 +2,7 @@
 
 SwRendererContext SwSamplerFactory::sRendererContext{};
 
-SwSampler::SwSampler(vk::raii::Sampler sampler) : mSampler(sampler) {}
+SwSampler::SwSampler(vk::raii::Sampler sampler) : mSampler(std::move(sampler)) {}
 
 void SwSamplerFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 

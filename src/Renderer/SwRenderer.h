@@ -144,4 +144,6 @@ class SwRenderer {
         vk::DebugUtilsObjectNameInfoEXT nameInfo{VulkanResourceInfo<T>::resourceType, VulkanResourceInfo<T>::getHandle(resource), name};
         mDevice.setDebugUtilsObjectNameEXT(nameInfo);
     };
+
+    void cleanup();
 };
