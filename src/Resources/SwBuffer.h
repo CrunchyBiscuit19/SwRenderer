@@ -20,6 +20,8 @@ protected:
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
 
+    SwBuffer();
+
     SwBuffer(
         vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
         vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
@@ -47,6 +49,8 @@ public:
 
 class SwAllocatedBuffer : public SwBuffer {
 public:
+    SwAllocatedBuffer();
+
     SwAllocatedBuffer(
         vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
         vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
@@ -61,6 +65,8 @@ public:
 
 class SwStagingBuffer : public SwBuffer {
 public:
+    SwStagingBuffer();
+
     SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint32_t size);
 
     SwStagingBuffer(SwStagingBuffer&&) noexcept = default;

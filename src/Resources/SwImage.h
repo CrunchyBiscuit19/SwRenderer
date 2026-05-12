@@ -29,11 +29,11 @@ public:
     inline void setCurrentStage(vk::PipelineStageFlagBits2 stage) { mCurrentStage = stage; }
     inline void setCurrentAccess(vk::AccessFlags2 access) { mCurrentAccess = access; }
 
+    SwImage(SwImage&&) noexcept = default;
+    SwImage& operator=(SwImage&&) noexcept = default; 
+
     SwImage(const SwImage&) = delete;
     SwImage& operator=(const SwImage&) = delete;
-
-    SwImage(SwImage&&) noexcept = default;
-    SwImage& operator=(SwImage&&) noexcept = default;
 
     virtual ~SwImage() = default;
 };
@@ -51,6 +51,12 @@ public:
     void transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;
 
     inline vk::Image getRawImage() const { return mImage; }
+
+    SwSwapchainImage(SwSwapchainImage&&) noexcept = default;
+    SwSwapchainImage& operator=(SwSwapchainImage&&) noexcept = default;
+
+    SwSwapchainImage(const SwSwapchainImage&) = delete;
+    SwSwapchainImage& operator=(const SwSwapchainImage&) = delete;
 };
 
 class SwAllocatedImage : public SwImage {
@@ -77,10 +83,10 @@ public:
     void transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;
 
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect);
-    void copyFrom(vk::CommandBuffer cmd, SwSwapchainImage source);
-    void copyFrom(vk::CommandBuffer cmd, SwAllocatedImage source);
+    void copyFrom(vk::CommandBuffer cmd, SwSwapchainImage& source);
+    void copyFrom(vk::CommandBuffer cmd, SwAllocatedImage& source);
 
-    virtual void generateMipmaps(vk::CommandBuffer cmd);
+    virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
 
     inline vk::Image getRawImage() { return *mImage; }
 
@@ -88,11 +94,11 @@ public:
 
     void destroy();
 
-    SwAllocatedImage(const SwAllocatedImage&) = delete;
-    SwAllocatedImage& operator=(const SwAllocatedImage&) = delete;
-
     SwAllocatedImage(SwAllocatedImage&&) noexcept;
     SwAllocatedImage& operator=(SwAllocatedImage&&) noexcept;
+
+    SwAllocatedImage(const SwAllocatedImage&) = delete;
+    SwAllocatedImage& operator=(const SwAllocatedImage&) = delete;
 
     ~SwAllocatedImage();
 };

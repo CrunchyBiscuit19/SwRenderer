@@ -2,6 +2,16 @@
 
 #include <stdexcept>
 
+SwBuffer::SwBuffer()
+    : mBuffer(nullptr),
+      mAllocator(nullptr),
+      mAllocation(nullptr),
+      mFlags(0),
+      mUsage(0),
+      mSize(0),
+      mCurrentStage(vk::PipelineStageFlagBits2::eTopOfPipe),
+      mCurrentAccess(vk::AccessFlags2()) {}
+
 SwBuffer::SwBuffer(
     vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
     vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
@@ -46,18 +56,18 @@ void SwBuffer::copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk:
     return;
 }
 
-void* SwBuffer::getMappedPointer() { 
+void* SwBuffer::getMappedPointer() {
     if (mInfo.pMappedData == nullptr) {
         throw std::runtime_error("Buffer is not mapped");
     }
-    return mInfo.pMappedData; 
+    return mInfo.pMappedData;
 }
 
-void SwBuffer::destroy() { 
+void SwBuffer::destroy() {
     if (mAllocator == nullptr) {
         return;
     }
-    mBuffer.clear(); 
+    mBuffer.clear();
     vmaFreeMemory(mAllocator, mAllocation);
     mAllocator = nullptr;
     mAllocation = nullptr;
@@ -110,20 +120,23 @@ SwBuffer::~SwBuffer() {
     vmaFreeMemory(mAllocator, mAllocation);
 }
 
+SwAllocatedBuffer::SwAllocatedBuffer() : SwBuffer() {}
+
 SwAllocatedBuffer::SwAllocatedBuffer(
     vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
     vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
 )
     : SwBuffer(std::move(buffer), address, allocator, allocation, info, usage, flags, size) {}
 
-SwStagingBuffer::SwStagingBuffer(
-    vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-    std::uint32_t size
-)
+SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
+
+SwStagingBuffer::SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint32_t size)
     : SwBuffer(
           std::move(buffer), std::nullopt, allocator, allocation, info, vk::BufferUsageFlagBits::eTransferSrc,
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size
       ) {}
+
+SwRendererContext SwBufferFactory::sRendererContext{};
 
 void SwBufferFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
@@ -151,13 +164,13 @@ SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlags us
     }
 
     return SwAllocatedBuffer(
-        vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer), 
-        tempAddress, 
-        sRendererContext.mAllocator, 
-        tempAllocation, 
-        tempInfo, 
-        usage, 
-        flags | VMA_ALLOCATION_CREATE_MAPPED_BIT, 
+        vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer),
+        tempAddress,
+        sRendererContext.mAllocator,
+        tempAllocation,
+        tempInfo,
+        usage,
+        flags | VMA_ALLOCATION_CREATE_MAPPED_BIT,
         size
     );
 }
@@ -178,12 +191,5 @@ SwStagingBuffer SwBufferFactory::createStagingBuffer(std::uint32_t size) {
     VmaAllocationInfo tempInfo;
     vmaCreateBuffer(sRendererContext.mAllocator, &bufferInfo1, &vmaCreateInfo, &tempBuffer, &tempAllocation, &tempInfo);
 
-    return SwStagingBuffer(
-        vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer),
-        sRendererContext.mAllocator,
-        tempAllocation,
-        tempInfo,
-        size
-    );
+    return SwStagingBuffer(vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer), sRendererContext.mAllocator, tempAllocation, tempInfo, size);
 }
-

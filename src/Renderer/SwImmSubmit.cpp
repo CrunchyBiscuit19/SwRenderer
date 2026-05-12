@@ -1,4 +1,11 @@
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwRenderer.h>
+
+SwRendererContext SwImmSubmit::sRendererContext{};
+vk::raii::CommandPool SwImmSubmit::sCommandPool{nullptr};
+vk::raii::CommandBuffer SwImmSubmit::sCommandBuffer{nullptr};
+vk::raii::Fence SwImmSubmit::sFence{nullptr};
+std::vector<std::function<void(vk::CommandBuffer cmd)>> SwImmSubmit::mCallbacks{};
 
 void SwImmSubmit::init(SwRendererContext rendererContext) {
     sRendererContext = rendererContext;
@@ -91,4 +98,4 @@ void SwImmSubmit::destroy() {
     sCommandBuffer.clear();
     sCommandPool.clear();
     sFence.clear();
-}   
+}

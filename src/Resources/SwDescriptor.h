@@ -21,17 +21,17 @@ public:
 
     inline vk::DescriptorSetLayout getRawLayout() { return *mLayout; };
 
-    inline std::vector<vk::DescriptorSetLayoutBinding>& getBindings() const { return mBindings; };
+    inline std::span<const vk::DescriptorSetLayoutBinding> getBindings() const { return mBindings; };
 };
 
 class SwDescriptorSet {
 private:
     vk::raii::DescriptorSet mSet;
-    std::span<vk::DescriptorSetLayoutBinding> mBindings;
+    std::span<const vk::DescriptorSetLayoutBinding> mBindings;
     std::vector<vk::WriteDescriptorSet> mWrites;
 
 public:
-    SwDescriptorSet(vk::raii::DescriptorSet mSet, std::vector<vk::DescriptorSetLayoutBinding>& bindings);
+    SwDescriptorSet(vk::raii::DescriptorSet mSet, std::span<const vk::DescriptorSetLayoutBinding> bindings);
 
     void writeImage(
         std::uint32_t binding, vk::ImageView image, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayIndex = 0

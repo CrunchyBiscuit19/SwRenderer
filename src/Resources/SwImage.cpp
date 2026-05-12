@@ -114,11 +114,11 @@ void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Ext
     cmd.blitImage2(blitInfo);
 }
 
-void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, SwSwapchainImage source) {
+void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, SwSwapchainImage& source) {
     copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
 }
 
-void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, SwAllocatedImage source) {
+void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, SwAllocatedImage& source) {
     copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), source.mAspect);
 }
 
@@ -241,6 +241,7 @@ SwAllocatedImage& SwAllocatedImage::operator=(SwAllocatedImage&& other) noexcept
             vmaFreeMemory(mAllocator, mAllocation);
         }
 
+        SwImage::operator=(std::move(other)); 
         mImage = std::move(other.mImage);
         mImageViews = std::move(other.mImageViews);
         mClearValue = other.mClearValue;
@@ -294,6 +295,8 @@ SwColorImageCubemap::SwColorImageCubemap(
       ) {}
 
 void SwColorImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
+
+SwRendererContext SwImageFactory::sRendererContext{};
 
 SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstructionInfo(
     SwImageType swImageType, const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
@@ -351,7 +354,9 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
             break;
     }
     imageViewCreateInfo.subresourceRange.levelCount = imageCreateInfo.mipLevels;
-    std::vector<vk::raii::ImageView> imageViews{sRendererContext.mDevice->createImageView(imageViewCreateInfo)};
+    std::vector<vk::raii::ImageView> imageViews;
+    imageViews.reserve(1);
+    imageViews.emplace_back(sRendererContext.mDevice->createImageView(imageViewCreateInfo));
 
     std::vector<vk::Format> formats{format};
 

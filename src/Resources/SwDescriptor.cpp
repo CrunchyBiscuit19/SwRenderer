@@ -3,7 +3,7 @@
 SwDescriptorLayout::SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings)
     : mLayout(std::move(layout)), mBindings(std::move(bindings)) {}
 
-SwDescriptorSet::SwDescriptorSet(vk::raii::DescriptorSet set, std::vector<vk::DescriptorSetLayoutBinding>& bindings)
+SwDescriptorSet::SwDescriptorSet(vk::raii::DescriptorSet set, std::span<const vk::DescriptorSetLayoutBinding> bindings)
     : mSet(std::move(set)), mBindings(bindings) {}
 
 void SwDescriptorSet::writeImage(
@@ -39,6 +39,8 @@ void SwDescriptorSet::pushWrites() {
 }
 
 void SwDescriptorSet::clearWrites() { mWrites.clear(); }
+
+SwRendererContext SwDescriptorPool::sRendererContext{};
 
 SwDescriptorPool::SwDescriptorPool(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool) : mRatios(std::move(ratios)), mSetsPerPool(setsPerPool) {}
 

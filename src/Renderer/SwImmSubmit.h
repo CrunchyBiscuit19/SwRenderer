@@ -1,8 +1,9 @@
 #pragma once
 
-#include <Renderer/SwRenderer.h>
 #include <vulkan/vulkan_raii.hpp>
 #include <functional>
+
+struct SwRendererContext;
 
 class SwImmSubmit {
 private:
