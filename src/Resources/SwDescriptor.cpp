@@ -1,4 +1,4 @@
-#include "SwDescriptor.h"
+#include <Resources/SwDescriptor.h>
 
 SwDescriptorLayout::SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings)
     : mLayout(std::move(layout)), mBindings(std::move(bindings)) {}
@@ -110,9 +110,9 @@ SwDescriptorSet SwDescriptorPool::createDescriptorSet(SwDescriptorLayout layout)
     try {
         auto sets = sRendererContext.mDevice->allocateDescriptorSets(descriptorSetAllocateInfo);
         return SwDescriptorSet(std::move(sets.front()), layout.getBindings());
-    } catch (const vk::OutOfPoolMemoryError&) { 
+    } catch (const vk::OutOfPoolMemoryError&) {
         /* grow below */
-    } catch (const vk::FragmentedPoolError&) {  
+    } catch (const vk::FragmentedPoolError&) {
         /* grow below */
     }
 

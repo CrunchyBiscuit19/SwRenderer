@@ -1,4 +1,5 @@
 #include <Misc/SwHelper.h>
+#include <Resources/SwImage.h>
 #include <Resources/SwResourceStager.h>
 
 SwImage::SwImage(std::vector<vk::Format> formats, vk::Extent3D extent)
@@ -241,7 +242,7 @@ SwAllocatedImage& SwAllocatedImage::operator=(SwAllocatedImage&& other) noexcept
             vmaFreeMemory(mAllocator, mAllocation);
         }
 
-        SwImage::operator=(std::move(other)); 
+        SwImage::operator=(std::move(other));
         mImage = std::move(other.mImage);
         mImageViews = std::move(other.mImageViews);
         mClearValue = other.mClearValue;
