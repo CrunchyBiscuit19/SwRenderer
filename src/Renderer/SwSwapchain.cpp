@@ -126,6 +126,22 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     });
 }
 
+SwFrame& SwSwapchain::getCurrentFrame() {
+    return mFrames.at(mFrameNumber % NUM_FRAME_OVERLAP);
+}
+
+SwFrame& SwSwapchain::getPreviousFrame() {
+    return mFrames.at((mFrameNumber - 1) % NUM_FRAME_OVERLAP);
+}
+
+SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() {
+    return mImages.at(mSwapchainIndex);
+}
+
+void SwSwapchain::acquireNextImage(uint64_t timeout, vk::Semaphore semaphore, vk::Fence fence) {
+    mSwapchainIndex = mSwapchain.acquireNextImage(1e9, getCurrentFrame().getAvailableSemaphore().getRawSemaphore(), nullptr).value;
+}
+
 SwSwapchain::~SwSwapchain() {
     mSwapchain.clear();
     mSurface.clear();

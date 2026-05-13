@@ -28,6 +28,8 @@ public:
     SwFrame();
 
     void initialize();
+
+    inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };
 };
 
 class SwSwapchain {
@@ -68,13 +70,14 @@ public:
 
     void initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen);
 
-    SwFrame& getCurrentFrame();
+    inline std::uint32_t getFrameNumber() const { return mFrameNumber; }
 
+    SwFrame& getCurrentFrame();
     SwFrame& getPreviousFrame();
 
     SwSwapchainImage& getCurrentSwapchainImage();
 
-    vk::ResultValue<std::uint32_t> acquireNextImage(uint64_t timeout, vk::Semaphore semaphore, vk::Fence fence);
+    void acquireNextImage(uint64_t timeout, vk::Semaphore semaphore, vk::Fence fence);
 
     ~SwSwapchain();
 };

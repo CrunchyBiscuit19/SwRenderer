@@ -43,8 +43,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 
     std::string message = "\n";
     message += fmt::format(
-        "{} <{}> Frame {}\n\n", severity, pCallbackData->pMessageIdName == nullptr ? "" : std::string(pCallbackData->pMessageIdName), 0
-        // static_cast<SwRenderer*>(pUserData)->mSwapchain.mFrameNumber // TODO
+        "{} <{}> Frame {}\n\n",
+        severity,
+        pCallbackData->pMessageIdName == nullptr ? "" : std::string(pCallbackData->pMessageIdName),
+        static_cast<SwRenderer*>(pUserData)->getFrameNumber()
     );
     message += fmt::format("{}\n\n", std::string(pCallbackData->pMessage));
 

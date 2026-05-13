@@ -146,6 +146,8 @@ public:
 
     inline SwFactoryContext getRendererInfo() { return mRendererContext; };
 
+    inline std::uint32_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };
+
     template <typename T>
     inline void labelResourceDebug(T& resource, const char* name) {
         vk::DebugUtilsObjectNameInfoEXT nameInfo{VulkanResourceInfo<T>::resourceType, VulkanResourceInfo<T>::getHandle(resource), name};
