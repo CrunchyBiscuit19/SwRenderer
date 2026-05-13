@@ -1,7 +1,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Resources/SwResourceStager.h>
 
-SwRendererContext SwResourceStager::sRendererContext{};
+SwFactoryContext SwResourceStager::sRendererContext{};
 std::unordered_map<SwResourceStager::DefaultImageOption, SwColorImage2D> SwResourceStager::sDefaultImages{};
 SwStagingBuffer SwResourceStager::sImageStagingBuffer{};
 SwStagingBuffer SwResourceStager::sMeshStagingBuffer{};
@@ -9,7 +9,7 @@ SwStagingBuffer SwResourceStager::sMaterialConstantsStagingBuffer{};
 SwStagingBuffer SwResourceStager::sNodeTransformsStagingBuffer{};
 SwStagingBuffer SwResourceStager::sBoundsStagingBuffer{};
 
-void SwResourceStager::init(SwRendererContext rendererContext) {
+void SwResourceStager::init(SwFactoryContext rendererContext) {
     sRendererContext = rendererContext;
 
     sImageStagingBuffer = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);

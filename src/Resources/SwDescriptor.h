@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwRendererContext;
+struct SwFactoryContext;
 
 class SwDescriptorLayout {
 private:
@@ -63,7 +63,7 @@ public:
     };
 
 private:
-    static SwRendererContext sRendererContext;
+    static SwFactoryContext sRendererContext;
     static const std::uint32_t MAX_SETS_PER_POOL{4096};
 
     std::vector<SwPoolSizeRatio> mRatios;
@@ -86,7 +86,7 @@ public:
     SwDescriptorPool(const SwDescriptorPool&) = delete;
     SwDescriptorPool& operator=(const SwDescriptorPool&) = delete;
 
-    static void init(SwRendererContext rendererContext);
+    static void init(SwFactoryContext rendererContext);
 
     SwDescriptorLayout createDescriptorLayout(
         std::vector<vk::DescriptorSetLayoutBinding> bindings, vk::ShaderStageFlags shaderStages, bool useBindless = false

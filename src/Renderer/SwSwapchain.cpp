@@ -5,6 +5,10 @@
 SwFrame::SwFrame() : mCommandPool(nullptr), mCommandBuffer(nullptr), mRenderFence(nullptr), mAvailableSemaphore(nullptr) {}
 
 void SwFrame::initialize() {
+    mCommandPool = SwCommandPoolFactory::createCommandPool(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+    mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(mCommandPool);
+    mRenderFence = SwFenceFactory::createFence(vk::FenceCreateFlagBits::eSignaled);
+    mAvailableSemaphore = SwSemaphoreFactory::createSemaphore();
     mPerspectiveBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
@@ -14,25 +18,42 @@ void SwFrame::initialize() {
 
 SwSwapchainContext SwSwapchain::sSwapchainContext{};
 
-SwSwapchain::SwSwapchain() : mSwapchain(nullptr) {}
+SwSwapchain::SwSwapchain() : mSwapchain(nullptr), mSurface(nullptr) {}
 
 void SwSwapchain::init(SwSwapchainContext swapchainContext) { sSwapchainContext = swapchainContext; }
 
-void SwSwapchain::initialize() {
+void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen) {
+    mWindow = window;
+    mSurface = std::move(surface);
+    mWindowExtent = windowExtent;
+    mWindowFullScreen = windowFullScreen;
+    mAspectRatio = static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height);
+
+    sSwapchainContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+        const SDL_Keymod modState = SDL_GetModState();
+        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
+        if ((modState & KMOD_ALT) && keyState[SDL_SCANCODE_RETURN] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+            mWindowFullScreen = !mWindowFullScreen;
+            SDL_SetWindowFullscreen(mWindow, mWindowFullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
+            SDL_SetWindowBordered(mWindow, mWindowFullScreen ? SDL_FALSE : SDL_TRUE);
+        }
+    });
+
     vk::ImageFormatListCreateInfo formatListCreateInfo{};
-    std::array<vk::Format, 2> formats = {vk::Format::eB8G8R8A8Srgb, vk::Format::eB8G8R8A8Unorm};
+    std::vector<vk::Format> formats = {vk::Format::eB8G8R8A8Srgb, vk::Format::eB8G8R8A8Unorm};
     formatListCreateInfo.pViewFormats = formats.data();
     formatListCreateInfo.viewFormatCount = formats.size();
 
-    vkb::SwapchainBuilder swapchainBuilder(**sSwapchainContext.mChosenGPU, **sSwapchainContext.mDevice, **sSwapchainContext.mSurface);
+    vkb::SwapchainBuilder swapchainBuilder(**sSwapchainContext.mChosenGPU, **sSwapchainContext.mDevice, *mSurface);
     vkb::Swapchain vkbSwapchain =
         swapchainBuilder
             .set_desired_format(
-                VkSurfaceFormatKHR{.format = static_cast<VkFormat>(formats[0]), .colorSpace = static_cast<VkColorSpaceKHR>(vk::ColorSpaceKHR::eSrgbNonlinear)
+                VkSurfaceFormatKHR{
+                    .format = static_cast<VkFormat>(formats[SRGB_INDEX]), .colorSpace = static_cast<VkColorSpaceKHR>(vk::ColorSpaceKHR::eSrgbNonlinear)
                 }
             )
             .set_desired_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
-            .set_desired_extent(sSwapchainContext.mWindowExtent.width, sSwapchainContext.mWindowExtent.height)
+            .set_desired_extent(mWindowExtent.width, mWindowExtent.height)
             .add_image_usage_flags(static_cast<VkImageUsageFlags>(vk::ImageUsageFlagBits::eTransferDst))
             .set_desired_min_image_count(NUM_SWAPCHAIN_IMAGES)
             .set_create_flags(static_cast<VkSwapchainCreateFlagBitsKHR>(vk::SwapchainCreateFlagBitsKHR::eMutableFormat))
@@ -41,5 +62,54 @@ void SwSwapchain::initialize() {
             .value();
     mSwapchain = vk::raii::SwapchainKHR(*sSwapchainContext.mDevice, vkbSwapchain.swapchain);
 
-    //mSwapchainBundle.mExtent = vkbSwapchain.extent;
+    mImages.reserve(NUM_SWAPCHAIN_IMAGES);
+    for (std::uint32_t i = 0; i < vkbSwapchain.get_images().value().size(); i++) {
+        vk::ImageViewCreateInfo imageViewCreateInfo = {};
+        imageViewCreateInfo.pNext = nullptr;
+        imageViewCreateInfo.viewType = vk::ImageViewType::e2D;
+        imageViewCreateInfo.image = vkbSwapchain.get_images().value()[i];
+        imageViewCreateInfo.format = formats[SRGB_INDEX];
+        imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+        imageViewCreateInfo.subresourceRange.levelCount = 1;
+        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        imageViewCreateInfo.subresourceRange.layerCount = 1;
+        imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        std::vector<vk::raii::ImageView> imageViews;
+        imageViews.reserve(2);
+        imageViews.emplace_back(sSwapchainContext.mDevice->createImageView(imageViewCreateInfo));
+        imageViewCreateInfo.format = formats[UNORM_INDEX];
+        imageViews.emplace_back(sSwapchainContext.mDevice->createImageView(imageViewCreateInfo));
+        SwSwapchainImage swapchainImage(
+            vkbSwapchain.get_images().value()[i], std::move(imageViews), SwSemaphoreFactory::createSemaphore(), formats, vk::Extent3D(vkbSwapchain.extent, 1)
+        );
+        mImages.emplace_back(std::move(swapchainImage));
+    }
+
+    mFrames.reserve(NUM_FRAME_OVERLAP);
+    for (size_t i = 0; i < NUM_FRAME_OVERLAP; i++) {
+        mFrames.emplace_back();
+        mFrames.back().initialize();
+    }
+
+    mDrawImage = SwImageFactory::createColorImage2D(
+        nullptr,
+        vk::Extent3D{mWindowExtent, 1},
+        vk::Format::eR16G16B16A16Sfloat,
+        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment |
+            vk::ImageUsageFlagBits::eStorage,
+        false
+    );
+    mDepthImage = SwImageFactory::createDepthImage2D(
+        nullptr,
+        mDrawImage.getExtent(),
+        vk::Format::eD32Sfloat,
+        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
+        false
+    );
+}
+
+SwSwapchain::~SwSwapchain() {
+    mSwapchain.clear();
+    mSurface.clear();
+    SDL_DestroyWindow(mWindow);
 }

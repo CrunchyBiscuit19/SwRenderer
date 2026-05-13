@@ -4,11 +4,11 @@
 #include <bit>
 #include <fstream>
 
-SwRendererContext SwShaderFactory::sRendererContext{};
+SwFactoryContext SwShaderFactory::sRendererContext{};
 
 SwShader::SwShader(vk::raii::ShaderModule module, vk::ShaderStageFlagBits shaderStageFlag) : mModule(std::move(module)), mStage(shaderStageFlag) {}
 
-void SwShaderFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
+void SwShaderFactory::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
 
 SwShader SwShaderFactory::createShader(const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);

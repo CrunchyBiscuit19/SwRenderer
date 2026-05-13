@@ -90,7 +90,6 @@ SwRenderer::SwRenderer()
       mInstance(nullptr),
       mDevice(nullptr),
       mChosenGPU(nullptr),
-      mSurface(nullptr),
       mComputeQueue(nullptr),
       mGraphicsQueue(nullptr) {
     quill::Backend::start();
@@ -127,16 +126,17 @@ SwRenderer::SwRenderer()
     }
     mLogger->set_log_level(quill::LogLevel::Info);
 
+    vk::Extent2D windowExtent(1700, 900);
     SDL_Init(SDL_INIT_VIDEO);
-    mWindow = SDL_CreateWindow(
+    SDL_Window* window = SDL_CreateWindow(
         "SwRenderer",
         SDL_WINDOWPOS_UNDEFINED,
         SDL_WINDOWPOS_UNDEFINED,
-        static_cast<std::uint32_t>(mWindowExtent.width),
-        static_cast<std::uint32_t>(mWindowExtent.height),
-        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | (mWindowFullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)
+        static_cast<std::uint32_t>(windowExtent.width),
+        static_cast<std::uint32_t>(windowExtent.height),
+        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | (FULLSCREEN_ON_STARTUP ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)
     );
-    mAspectRatio = static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height);
+    float aspectRatio = static_cast<float>(windowExtent.width) / static_cast<float>(windowExtent.height);
 
     mContext = vk::raii::Context();
 
@@ -174,8 +174,8 @@ SwRenderer::SwRenderer()
     mDebugMessenger = std::move(debugMessenger);
 
     VkSurfaceKHR tempSurface = nullptr;
-    SDL_Vulkan_CreateSurface(mWindow, *mInstance, &tempSurface);
-    mSurface = vk::raii::SurfaceKHR(mInstance, tempSurface);
+    SDL_Vulkan_CreateSurface(window, *mInstance, &tempSurface);
+    vk::raii::SurfaceKHR surface(mInstance, tempSurface);
 
     vk::PhysicalDeviceVulkan14Features features14{};
     vk::PhysicalDeviceVulkan13Features features13{};
@@ -228,7 +228,7 @@ SwRenderer::SwRenderer()
                                              .set_required_features_12(features12)
                                              .set_required_features_11(features11)
                                              .set_required_features(features10)
-                                             .set_surface(*mSurface)
+                                             .set_surface(*surface)
                                              .select()
                                              .value();
     vkb::DeviceBuilder deviceBuilder{physicalDevice};
@@ -253,19 +253,9 @@ SwRenderer::SwRenderer()
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
-    addEventCallback([this](SDL_Event& e) -> void {
-        const SDL_Keymod modState = SDL_GetModState();
-        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
-        if ((modState & KMOD_ALT) && keyState[SDL_SCANCODE_RETURN] && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            mWindowFullScreen = !mWindowFullScreen;
-            SDL_SetWindowFullscreen(mWindow, mWindowFullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-            SDL_SetWindowBordered(mWindow, mWindowFullScreen ? SDL_FALSE : SDL_TRUE);
-        }
-    });
-
-    mRendererContext = SwRendererContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
+    mRendererContext = SwFactoryContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
     mImmSubmitContext = SwImmSubmitContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue);
-    mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mSurface, mWindowExtent);
+    mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mEvents);
 
     SwSemaphoreFactory::init(mRendererContext);
     SwFenceFactory::init(mRendererContext);
@@ -284,21 +274,12 @@ SwRenderer::SwRenderer()
     SwResourceStager::init(mRendererContext);
 
     SwSwapchain::init(mSwapchainContext);
-    mSwapchain.initialize();
+    mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
 
     mStats.initialize();
 }
 
-void SwRenderer::addEventCallback(const std::function<void(SDL_Event& e)>& inputCallback) { mEventCallbacks.emplace_back(inputCallback); }
-
-void SwRenderer::executeEventCallbacks(SDL_Event& e) const {
-    for (const auto& inputCallback : mEventCallbacks) {
-        inputCallback(e);
-    }
-}
-
-void SwRenderer::cleanup() {
+SwRenderer::~SwRenderer() {
     SwResourceStager::cleanup();
-    SDL_DestroyWindow(mWindow);
     SDL_Quit();
 }

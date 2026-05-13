@@ -41,11 +41,11 @@ void SwDescriptorSet::pushWrites() {
 
 void SwDescriptorSet::clearWrites() { mWrites.clear(); }
 
-SwRendererContext SwDescriptorPool::sRendererContext{};
+SwFactoryContext SwDescriptorPool::sRendererContext{};
 
 SwDescriptorPool::SwDescriptorPool(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool) : mRatios(std::move(ratios)), mSetsPerPool(setsPerPool) {}
 
-void SwDescriptorPool::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
+void SwDescriptorPool::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
 
 vk::raii::DescriptorPool SwDescriptorPool::createPool(std::uint32_t setCount) const {
     std::vector<vk::DescriptorPoolSize> sizes;

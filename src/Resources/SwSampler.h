@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwRendererContext;
+struct SwFactoryContext;
 
 class SwSampler {
 private:
@@ -18,10 +18,10 @@ public:
 
 class SwSamplerFactory {
 private:
-    static SwRendererContext sRendererContext;
+    static SwFactoryContext sRendererContext;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init(SwFactoryContext rendererContext);
 
     static SwSampler createSampler(vk::SamplerCreateInfo);
 };

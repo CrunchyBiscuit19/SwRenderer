@@ -3,6 +3,8 @@
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwStats.h>
 #include <Renderer/SwSwapchain.h>
+#include <Renderer/SwRendererContext.h>
+#include <Renderer/SwEvents.h>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_events.h>
@@ -86,40 +88,6 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData
 );
 
-struct SwRendererContext {
-    vk::raii::Device* mDevice;
-    VmaAllocator mAllocator;
-    SwImmSubmit* mImmSubmit;
-
-    SwRendererContext() = default;
-
-    SwRendererContext(vk::raii::Device* device, VmaAllocator allocator, SwImmSubmit* immSubmit)
-        : mDevice(device), mAllocator(allocator), mImmSubmit(immSubmit) {};
-};
-
-struct SwImmSubmitContext {
-    vk::raii::Device* mDevice;
-    VmaAllocator mAllocator;
-    vk::raii::Queue* mGraphicsQueue;
-
-    SwImmSubmitContext() = default;
-
-    SwImmSubmitContext(vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue)
-        : mDevice(device), mAllocator(allocator), mGraphicsQueue(graphicsQueue) {};
-};
-
-struct SwSwapchainContext {
-    vk::raii::Device* mDevice;
-    vk::raii::PhysicalDevice* mChosenGPU;
-    vk::raii::SurfaceKHR* mSurface;
-    vk::Extent2D mWindowExtent;
-
-    SwSwapchainContext() = default;
-
-    SwSwapchainContext(vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, vk::raii::SurfaceKHR* surface, vk::Extent2D windowExtent)
-        : mDevice(device), mChosenGPU(chosenGPU), mSurface(surface), mWindowExtent(windowExtent) {};
-};
-
 struct SwVmaAllocator {
     VmaAllocator mAllocator;
 
@@ -143,34 +111,31 @@ class SwRenderer {
     static const std::uint32_t VK_MAJOR_VERSION{1};
     static const std::uint32_t VK_MINOR_VERSION{4};
     static const std::uint32_t VK_PATCH_VERSION{0};
+    static const bool FULLSCREEN_ON_STARTUP{false};
 
     vk::raii::Context mContext;
     vk::raii::Instance mInstance;
     vk::raii::PhysicalDevice mChosenGPU;
     vk::raii::Device mDevice;
     vk::PhysicalDeviceProperties mChosenGPUProperties;
-    vk::raii::SurfaceKHR mSurface;
     vk::raii::DebugUtilsMessengerEXT mDebugMessenger;
     vk::raii::Queue mComputeQueue;
     std::uint32_t mComputeQueueFamily;
     vk::raii::Queue mGraphicsQueue;
     std::uint32_t mGraphicsQueueFamily;
     SwVmaAllocator mAllocator;
-    SDL_Window* mWindow{nullptr};
-    vk::Extent2D mWindowExtent{1700, 900};
-    float mAspectRatio{static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height)};
-    bool mWindowFullScreen{false};
     bool mIsInitialized{false};
     bool mStopRendering{false};
 
     quill::Logger* mLogger;
-    std::vector<std::function<void(SDL_Event& e)>> mEventCallbacks;
+
 
     SwImmSubmit mImmSubmit;
     SwSwapchain mSwapchain;
     SwStats mStats;
+    SwEvents mEvents;
 
-    SwRendererContext mRendererContext;
+    SwFactoryContext mRendererContext;
     SwImmSubmitContext mImmSubmitContext;
     SwSwapchainContext mSwapchainContext;
 
@@ -179,11 +144,7 @@ public:
 
     inline quill::Logger* getLogger() { return mLogger; };
 
-    inline SwRendererContext getRendererInfo() { return mRendererContext; };
-
-    void addEventCallback(const std::function<void(SDL_Event& e)>& inputCallback);
-
-    void executeEventCallbacks(SDL_Event& e) const;
+    inline SwFactoryContext getRendererInfo() { return mRendererContext; };
 
     template <typename T>
     inline void labelResourceDebug(T& resource, const char* name) {
@@ -191,5 +152,5 @@ public:
         mDevice.setDebugUtilsObjectNameEXT(nameInfo);
     };
 
-    void cleanup();
+    ~SwRenderer();
 };

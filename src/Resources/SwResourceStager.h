@@ -3,14 +3,14 @@
 #include <Resources/SwImage.h>
 #include <Resources/SwBuffer.h>
 
-struct SwRendererContext;
+struct SwFactoryContext;
 
 class SwResourceStager {
 public:
     enum class DefaultImageOption { White, Grey, Black, Blue, Checkerboard };
 
 private:
-    static SwRendererContext sRendererContext;
+    static SwFactoryContext sRendererContext;
 
     static const std::uint32_t IMAGE_STAGING_BUFFER_SIZE = 256 * 1024 * 1024;               // 256 MB
     static const std::uint32_t MESH_STAGING_BUFFER_SIZE = 256 * 1024 * 1024;                // 256 MB
@@ -19,7 +19,7 @@ private:
     static const std::uint32_t BOUNDS_STAGING_BUFFER_SIZE = 256 * 1024 * 1024;              // 256 MB
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init(SwFactoryContext rendererContext);
     static void cleanup();
 
     static std::unordered_map<DefaultImageOption, SwColorImage2D> sDefaultImages;

@@ -11,11 +11,11 @@ SwGraphicsPipeline::SwGraphicsPipeline(vk::Pipeline pipeline, vk::PipelineLayout
 
 SwComputePipeline::SwComputePipeline(vk::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(pipeline, layout) {}
 
-SwRendererContext SwPipelineFactory::sRendererContext{};
+SwFactoryContext SwPipelineFactory::sRendererContext{};
 std::string SwPipelineFactory::DEFAULT_SHADER_ENTRY_POINT = "main";
 std::uint32_t SwPipelineFactory::MIN_NUM_SHADER_STAGES = 2;
 
-void SwPipelineFactory::init(SwRendererContext context) {
+void SwPipelineFactory::init(SwFactoryContext context) {
     sRendererContext = context;
     DEFAULT_SHADER_ENTRY_POINT = "main";
     MIN_NUM_SHADER_STAGES = 2;

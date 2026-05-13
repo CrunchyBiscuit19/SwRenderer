@@ -1,12 +1,13 @@
 #pragma once
 
+#include <Resources/SwSemaphore.h>
 #include <vk_mem_alloc.h>
 
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwRendererContext;
+struct SwFactoryContext;
 
 class SwImage {
 protected:
@@ -33,7 +34,7 @@ public:
     inline void setCurrentAccess(vk::AccessFlags2 access) { mCurrentAccess = access; }
 
     SwImage(SwImage&&) noexcept = default;
-    SwImage& operator=(SwImage&&) noexcept = default; 
+    SwImage& operator=(SwImage&&) noexcept = default;
 
     SwImage(const SwImage&) = delete;
     SwImage& operator=(const SwImage&) = delete;
@@ -45,14 +46,13 @@ class SwSwapchainImage : public SwImage {
 private:
     vk::Image mImage;
     std::vector<vk::raii::ImageView> mImageViews;
-    vk::raii::Semaphore mRenderedSemaphore;
-
-    SwSwapchainImage(
-        vk::Image image, std::vector<vk::raii::ImageView> imageViews, vk::raii::Semaphore renderedSemaphore, std::vector<vk::Format> formats,
-        vk::Extent3D extent
-    );
+    SwSemaphore mRenderedSemaphore;
 
 public:
+    SwSwapchainImage(
+        vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
+    );
+
     void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;
 
     void transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;
@@ -78,7 +78,7 @@ protected:
     std::uint32_t mMipLevels;
 
     SwAllocatedImage();
-     
+
     SwAllocatedImage(
         vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
         vk::ClearValue clearValue, vk::ImageAspectFlags aspect, const VmaAllocator mAllocator, VmaAllocation mAllocation
@@ -180,7 +180,7 @@ private:
         VmaAllocation mAllocation;
     };
 
-    static SwRendererContext sRendererContext;
+    static SwFactoryContext sRendererContext;
 
     static SwImageConstructionInfo prepareImageConstructionInfo(
         SwImageType swImageType, const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
@@ -191,7 +191,7 @@ private:
 public:
     static const uint32_t NUM_CUBEMAP_FACES{6};
 
-    static void init(SwRendererContext rendererContext);
+    static void init(SwFactoryContext rendererContext);
 
     static SwColorImage2D createColorImage2D(
         const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()

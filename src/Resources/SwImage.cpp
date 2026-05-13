@@ -13,7 +13,7 @@ SwImage::SwImage(std::vector<vk::Format> formats, vk::Extent3D extent)
       mCurrentAccess(vk::AccessFlags2()) {}
 
 SwSwapchainImage::SwSwapchainImage(
-    vk::Image image, std::vector<vk::raii::ImageView> imageViews, vk::raii::Semaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
+    vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
 )
     : SwImage(std::move(formats), extent), mImage(image), mImageViews(std::move(imageViews)), mRenderedSemaphore(std::move(renderedSemaphore)) {}
 
@@ -299,7 +299,7 @@ SwColorImageCubemap::SwColorImageCubemap(
 
 void SwColorImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
 
-SwRendererContext SwImageFactory::sRendererContext{};
+SwFactoryContext SwImageFactory::sRendererContext{};
 
 SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstructionInfo(
     SwImageType swImageType, const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
@@ -417,7 +417,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     });
 }
 
-void SwImageFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
+void SwImageFactory::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
 
 SwColorImage2D SwImageFactory::createColorImage2D(
     const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
