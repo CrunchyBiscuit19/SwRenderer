@@ -1,11 +1,12 @@
 #pragma once
 
-#include <Renderer/SwRenderer.h>
 #include <vk_mem_alloc.h>
 
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
+
+struct SwRendererContext;
 
 class SwImage {
 protected:
@@ -42,8 +43,12 @@ class SwSwapchainImage : public SwImage {
 private:
     vk::Image mImage;
     std::vector<vk::raii::ImageView> mImageViews;
+    vk::raii::Semaphore mRenderedSemaphore;
 
-    SwSwapchainImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent);
+    SwSwapchainImage(
+        vk::Image image, std::vector<vk::raii::ImageView> imageViews, vk::raii::Semaphore renderedSemaphore, std::vector<vk::Format> formats,
+        vk::Extent3D extent
+    );
 
 public:
     void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;

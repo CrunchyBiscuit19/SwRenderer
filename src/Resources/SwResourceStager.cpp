@@ -1,3 +1,4 @@
+#include <Renderer/SwRenderer.h>
 #include <Resources/SwResourceStager.h>
 
 SwRendererContext SwResourceStager::sRendererContext{};
@@ -50,7 +51,7 @@ void SwResourceStager::init(SwRendererContext rendererContext) {
     );
 }
 
-void SwResourceStager::destroy() { 
+void SwResourceStager::cleanup() { 
     sBoundsStagingBuffer.destroy(); 
     sNodeTransformsStagingBuffer.destroy();
     sMaterialConstantsStagingBuffer.destroy();

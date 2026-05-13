@@ -1,9 +1,10 @@
 #pragma once
 
-#include <Renderer/SwRenderer.h>
 #include <vk_mem_alloc.h>
 
 #include <vulkan/vulkan_raii.hpp>
+
+struct SwRendererContext;
 
 class SwPipelineLayout {
 private:

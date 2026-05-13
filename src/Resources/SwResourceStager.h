@@ -1,8 +1,9 @@
 #pragma once
 
-#include <Renderer/SwRenderer.h>
 #include <Resources/SwImage.h>
 #include <Resources/SwBuffer.h>
+
+struct SwRendererContext;
 
 class SwResourceStager {
 public:
@@ -19,7 +20,7 @@ private:
 
 public:
     static void init(SwRendererContext rendererContext);
-    static void destroy();
+    static void cleanup();
 
     static std::unordered_map<DefaultImageOption, SwColorImage2D> sDefaultImages;
     static SwStagingBuffer sImageStagingBuffer;

@@ -1,24 +1,25 @@
 #pragma once
 
-#include <Renderer/SwRenderer.h>
 #include <vk_mem_alloc.h>
 
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
 
+struct SwRendererContext;
+
 class SwBuffer {
 protected:
-    vk::raii::Buffer mBuffer;
     std::optional<vk::DeviceAddress> mAddress;
-    VmaAllocator mAllocator;
-    VmaAllocation mAllocation;
     VmaAllocationInfo mInfo;
     VmaAllocationCreateFlags mFlags;
     vk::BufferUsageFlags mUsage;
     std::uint32_t mSize;
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
+    VmaAllocator mAllocator;
+    VmaAllocation mAllocation;
+    vk::raii::Buffer mBuffer;
 
     SwBuffer();
 

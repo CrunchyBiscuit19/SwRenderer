@@ -8,15 +8,19 @@ struct SwRendererContext;
 class SwImmSubmit {
 private:
     static SwRendererContext sRendererContext;
-    static vk::raii::CommandPool sCommandPool;
-    static vk::raii::CommandBuffer sCommandBuffer;
-    static vk::raii::Fence sFence;
-    static std::vector<std::function<void(vk::CommandBuffer cmd)>> mCallbacks;
+    vk::raii::CommandPool mCommandPool;
+    vk::raii::CommandBuffer mCommandBuffer;
+    vk::raii::Fence mFence;
+    std::vector<std::function<void(vk::CommandBuffer cmd)>> mCallbacks;
 
 public:
-    static void init(SwRendererContext rendererContext);
-    static void destroy();
+    SwImmSubmit();
 
-    static void individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& function);
-    static void queuedSubmit();
+    static void init(SwRendererContext rendererContext);
+
+    void initialize();
+
+    void individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& function);
+    
+    void queuedSubmit();
 };

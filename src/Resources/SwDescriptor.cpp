@@ -1,3 +1,4 @@
+#include <Renderer/SwRenderer.h>
 #include <Resources/SwDescriptor.h>
 
 SwDescriptorLayout::SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings)

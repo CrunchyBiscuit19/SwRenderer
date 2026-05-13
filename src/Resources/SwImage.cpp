@@ -1,4 +1,5 @@
 #include <Misc/SwHelper.h>
+#include <Renderer/SwRenderer.h>
 #include <Resources/SwImage.h>
 #include <Resources/SwResourceStager.h>
 
@@ -9,8 +10,10 @@ SwImage::SwImage(std::vector<vk::Format> formats, vk::Extent3D extent)
       mCurrentStage(vk::PipelineStageFlagBits2::eTopOfPipe),
       mCurrentAccess(vk::AccessFlags2()) {}
 
-SwSwapchainImage::SwSwapchainImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent)
-    : SwImage(std::move(formats), extent), mImage(image), mImageViews(std::move(imageViews)) {}
+SwSwapchainImage::SwSwapchainImage(
+    vk::Image image, std::vector<vk::raii::ImageView> imageViews, vk::raii::Semaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
+)
+    : SwImage(std::move(formats), extent), mImage(image), mImageViews(std::move(imageViews)), mRenderedSemaphore(std::move(renderedSemaphore)) {}
 
 void SwSwapchainImage::barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) {
     transition(cmd, mCurrentLayout, nextStage, nextAccess);
@@ -210,12 +213,12 @@ void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numF
 }
 
 void SwAllocatedImage::destroy() {
-    if (mAllocator == nullptr) {
+    if (mAllocation == nullptr) {
         return;
     }
-    mImage.clear();
     mImageViews.clear();
-    vmaFreeMemory(mAllocator, mAllocation);
+    vk::Image rawImage = mImage.release();
+    vmaDestroyImage(mAllocator, rawImage, mAllocation);
     mAllocator = nullptr;
     mAllocation = nullptr;
 }
@@ -236,11 +239,7 @@ SwAllocatedImage::SwAllocatedImage(SwAllocatedImage&& other) noexcept
 
 SwAllocatedImage& SwAllocatedImage::operator=(SwAllocatedImage&& other) noexcept {
     if (this != &other) {
-        if (mAllocator != nullptr) {
-            mImageViews.clear();
-            mImage.clear();
-            vmaFreeMemory(mAllocator, mAllocation);
-        }
+        destroy();
 
         SwImage::operator=(std::move(other));
         mImage = std::move(other.mImage);
@@ -258,14 +257,7 @@ SwAllocatedImage& SwAllocatedImage::operator=(SwAllocatedImage&& other) noexcept
     return *this;
 }
 
-SwAllocatedImage::~SwAllocatedImage() {
-    if (mAllocator == nullptr) {  // To prevent calling clear on moved images
-        return;
-    }
-    mImageViews.clear();
-    mImage.clear();
-    vmaFreeMemory(mAllocator, mAllocation);
-}
+SwAllocatedImage::~SwAllocatedImage() { destroy(); }
 
 SwColorImage2D::SwColorImage2D(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
@@ -389,7 +381,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     const size_t dataSize = faceSize * numFaces;
     std::memcpy(SwResourceStager::sImageStagingBuffer.getMappedPointer(), data, dataSize);
 
-    SwImmSubmit::individualSubmit([&](vk::CommandBuffer cmd) {
+    sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
         image.transition(cmd, vk::ImageLayout::eTransferDstOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
 
         std::vector<vk::BufferImageCopy> copyRegions;

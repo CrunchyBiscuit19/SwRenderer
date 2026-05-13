@@ -1,4 +1,5 @@
 #include <Resources/SwBuffer.h>
+#include <Renderer/SwRenderer.h>
 
 #include <stdexcept>
 
@@ -64,36 +65,33 @@ void* SwBuffer::getMappedPointer() {
 }
 
 void SwBuffer::destroy() {
-    if (mAllocator == nullptr) {
+    if (mAllocation == nullptr) {
         return;
     }
-    mBuffer.clear();
-    vmaFreeMemory(mAllocator, mAllocation);
+    vk::Buffer rawBuffer = mBuffer.release();
+    vmaDestroyBuffer(mAllocator, rawBuffer, mAllocation);
     mAllocator = nullptr;
     mAllocation = nullptr;
 }
 
 SwBuffer::SwBuffer(SwBuffer&& other) noexcept
     : mBuffer(std::move(other.mBuffer)),
-      mAddress(other.mAddress),
-      mAllocator(other.mAllocator),
-      mAllocation(other.mAllocation),
-      mInfo(other.mInfo),
-      mFlags(other.mFlags),
-      mUsage(other.mUsage),
-      mSize(other.mSize),
-      mCurrentStage(other.mCurrentStage),
-      mCurrentAccess(other.mCurrentAccess) {
+        mAddress(other.mAddress),
+        mAllocator(other.mAllocator),
+        mAllocation(other.mAllocation),
+        mInfo(other.mInfo),
+        mFlags(other.mFlags),
+        mUsage(other.mUsage),
+        mSize(other.mSize),
+        mCurrentStage(other.mCurrentStage),
+        mCurrentAccess(other.mCurrentAccess) {
     other.mAllocator = nullptr;
     other.mAllocation = nullptr;
 }
 
 SwBuffer& SwBuffer::operator=(SwBuffer&& other) noexcept {
     if (this != &other) {
-        if (mAllocator != nullptr) {
-            mBuffer.clear();
-            vmaFreeMemory(mAllocator, mAllocation);
-        }
+        destroy();
 
         mBuffer = std::move(other.mBuffer);
         mAddress = other.mAddress;
@@ -112,13 +110,7 @@ SwBuffer& SwBuffer::operator=(SwBuffer&& other) noexcept {
     return *this;
 }
 
-SwBuffer::~SwBuffer() {
-    if (mAllocator == nullptr) {
-        return;
-    }
-    mBuffer.clear();
-    vmaFreeMemory(mAllocator, mAllocation);
-}
+SwBuffer::~SwBuffer() { destroy(); }
 
 SwAllocatedBuffer::SwAllocatedBuffer() : SwBuffer() {}
 

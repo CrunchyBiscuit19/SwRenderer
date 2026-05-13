@@ -248,7 +248,7 @@ SwRenderer::SwRenderer()
     allocatorInfo.device = *mDevice;
     allocatorInfo.instance = *mInstance;
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-    vmaCreateAllocator(&allocatorInfo, &mAllocator);
+    vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
     addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
@@ -260,9 +260,11 @@ SwRenderer::SwRenderer()
         }
     });
 
-    mRendererContext = SwRendererContext(&mDevice, mAllocator, &mGraphicsQueue, &mComputeQueue);
+    mRendererContext = SwRendererContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue, &mImmSubmit);
 
     SwImmSubmit::init(mRendererContext);
+    mImmSubmit.initialize();
+
     SwShaderFactory::init(mRendererContext);
     SwSamplerFactory::init(mRendererContext);
     SwDescriptorPool::init(mRendererContext);
@@ -270,6 +272,8 @@ SwRenderer::SwRenderer()
     SwBufferFactory::init(mRendererContext);
     SwImageFactory::init(mRendererContext);
     SwResourceStager::init(mRendererContext);
+    
+    mStats.initialize();
 }
 
 void SwRenderer::addEventCallback(const std::function<void(SDL_Event& e)>& inputCallback) { mEventCallbacks.emplace_back(inputCallback); }
@@ -281,9 +285,7 @@ void SwRenderer::executeEventCallbacks(SDL_Event& e) const {
 }
 
 void SwRenderer::cleanup() {
-    SwResourceStager::destroy();
-    SwImmSubmit::destroy();
-    vmaDestroyAllocator(mAllocator);
+    SwResourceStager::cleanup();
     SDL_DestroyWindow(mWindow);
     SDL_Quit();
 }

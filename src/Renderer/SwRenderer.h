@@ -1,13 +1,15 @@
 #pragma once
 
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwStats.h>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_events.h>
 #include <quill/Logger.h>
 #include <vk_mem_alloc.h>
-#include <vulkan/vulkan.hpp>
+
 #include <functional>
+#include <vulkan/vulkan.hpp>
 
 template <typename T>
 struct VulkanResourceInfo;
@@ -85,25 +87,39 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 
 struct SwRendererContext {
     vk::raii::Device* mDevice;
-    vk::raii::Queue* mGraphicsQueue;
-    vk::raii::Queue* mComputeQueue;
     VmaAllocator mAllocator;
+    vk::raii::Queue* mGraphicsQueue;
+    SwImmSubmit* mImmSubmit;
 
     SwRendererContext() = default;
 
-    SwRendererContext(vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue, vk::raii::Queue* computeQueue)
-        : mDevice(device), mAllocator(allocator), mGraphicsQueue(graphicsQueue), mComputeQueue(computeQueue) {};
+    SwRendererContext(vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue, SwImmSubmit* immSubmit)
+        : mDevice(device), mAllocator(allocator), mGraphicsQueue(graphicsQueue), mImmSubmit(immSubmit) {};
+};
+
+struct SwVmaAllocator {
+    VmaAllocator mAllocator;
+
+    SwVmaAllocator() = default;
+
+    SwVmaAllocator(VmaAllocator allocator) : mAllocator(allocator) {  };
+
+    ~SwVmaAllocator() {
+        if (mAllocator == nullptr) return;
+        vmaDestroyAllocator(mAllocator);
+        mAllocator = nullptr;
+    }
 };
 
 class SwRenderer {
     enum class ValidationMode { None, Basic, Strict };
     enum class LogLocation { Console, File, Both };
 
-    static const ValidationMode VALIDATION_MODE = ValidationMode::Basic;
-    static const LogLocation LOG_LOCATION = LogLocation::Both;
-    static const std::uint32_t VK_MAJOR_VERSION = 1;
-    static const std::uint32_t VK_MINOR_VERSION = 4;
-    static const std::uint32_t VK_PATCH_VERSION = 0;
+    static const ValidationMode VALIDATION_MODE{ValidationMode::Basic};
+    static const LogLocation LOG_LOCATION{LogLocation::Both};
+    static const std::uint32_t VK_MAJOR_VERSION{1};
+    static const std::uint32_t VK_MINOR_VERSION{4};
+    static const std::uint32_t VK_PATCH_VERSION{0};
 
     vk::raii::Context mContext;
     vk::raii::Instance mInstance;
@@ -116,19 +132,23 @@ class SwRenderer {
     std::uint32_t mComputeQueueFamily;
     vk::raii::Queue mGraphicsQueue;
     std::uint32_t mGraphicsQueueFamily;
-    VmaAllocator mAllocator;
-    SwImmSubmit mImmSubmit;
+    SwVmaAllocator mAllocator;
     SDL_Window* mWindow{nullptr};
     vk::Extent2D mWindowExtent{1700, 900};
     float mAspectRatio{static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height)};
     bool mWindowFullScreen{false};
     bool mIsInitialized{false};
     bool mStopRendering{false};
+
     quill::Logger* mLogger;
     std::vector<std::function<void(SDL_Event& e)>> mEventCallbacks;
+
     SwRendererContext mRendererContext;
 
-  public:
+    SwImmSubmit mImmSubmit;
+    SwStats mStats;
+
+public:
     SwRenderer();
 
     inline quill::Logger* getLogger() { return mLogger; };

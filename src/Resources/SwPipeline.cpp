@@ -1,3 +1,4 @@
+#include <Renderer/SwRenderer.h>
 #include <Resources/SwPipeline.h>
 
 SwPipelineLayout::SwPipelineLayout(vk::raii::PipelineLayout layout) : mLayout(std::move(layout)) {}

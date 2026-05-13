@@ -1,3 +1,4 @@
+#include <Renderer/SwRenderer.h>
 #include <Resources/SwShader.h>
 
 #include <bit>

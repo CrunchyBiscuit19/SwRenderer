@@ -1,10 +1,11 @@
 #pragma once
 
-#include <Renderer/SwRenderer.h>
 #include <vk_mem_alloc.h>
 
 #include <filesystem>
 #include <vulkan/vulkan_raii.hpp>
+
+struct SwRendererContext;
 
 class SwShader {
 private:
