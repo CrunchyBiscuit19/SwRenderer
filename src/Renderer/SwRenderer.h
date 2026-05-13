@@ -2,6 +2,7 @@
 
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwStats.h>
+#include <Renderer/SwSwapchain.h>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_events.h>
@@ -88,13 +89,35 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 struct SwRendererContext {
     vk::raii::Device* mDevice;
     VmaAllocator mAllocator;
-    vk::raii::Queue* mGraphicsQueue;
     SwImmSubmit* mImmSubmit;
 
     SwRendererContext() = default;
 
-    SwRendererContext(vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue, SwImmSubmit* immSubmit)
-        : mDevice(device), mAllocator(allocator), mGraphicsQueue(graphicsQueue), mImmSubmit(immSubmit) {};
+    SwRendererContext(vk::raii::Device* device, VmaAllocator allocator, SwImmSubmit* immSubmit)
+        : mDevice(device), mAllocator(allocator), mImmSubmit(immSubmit) {};
+};
+
+struct SwImmSubmitContext {
+    vk::raii::Device* mDevice;
+    VmaAllocator mAllocator;
+    vk::raii::Queue* mGraphicsQueue;
+
+    SwImmSubmitContext() = default;
+
+    SwImmSubmitContext(vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue)
+        : mDevice(device), mAllocator(allocator), mGraphicsQueue(graphicsQueue) {};
+};
+
+struct SwSwapchainContext {
+    vk::raii::Device* mDevice;
+    vk::raii::PhysicalDevice* mChosenGPU;
+    vk::raii::SurfaceKHR* mSurface;
+    vk::Extent2D mWindowExtent;
+
+    SwSwapchainContext() = default;
+
+    SwSwapchainContext(vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, vk::raii::SurfaceKHR* surface, vk::Extent2D windowExtent)
+        : mDevice(device), mChosenGPU(chosenGPU), mSurface(surface), mWindowExtent(windowExtent) {};
 };
 
 struct SwVmaAllocator {
@@ -102,7 +125,7 @@ struct SwVmaAllocator {
 
     SwVmaAllocator() = default;
 
-    SwVmaAllocator(VmaAllocator allocator) : mAllocator(allocator) {  };
+    SwVmaAllocator(VmaAllocator allocator) : mAllocator(allocator) {};
 
     ~SwVmaAllocator() {
         if (mAllocator == nullptr) return;
@@ -143,10 +166,13 @@ class SwRenderer {
     quill::Logger* mLogger;
     std::vector<std::function<void(SDL_Event& e)>> mEventCallbacks;
 
-    SwRendererContext mRendererContext;
-
     SwImmSubmit mImmSubmit;
+    SwSwapchain mSwapchain;
     SwStats mStats;
+
+    SwRendererContext mRendererContext;
+    SwImmSubmitContext mImmSubmitContext;
+    SwSwapchainContext mSwapchainContext;
 
 public:
     SwRenderer();

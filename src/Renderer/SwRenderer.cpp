@@ -1,10 +1,14 @@
 #include <Renderer/SwRenderer.h>
 #include <Resources/SwBuffer.h>
+#include <Resources/SwCommandBuffer.h>
+#include <Resources/SwCommandPool.h>
 #include <Resources/SwDescriptor.h>
+#include <Resources/SwFence.h>
 #include <Resources/SwImage.h>
 #include <Resources/SwPipeline.h>
 #include <Resources/SwResourceStager.h>
 #include <Resources/SwSampler.h>
+#include <Resources/SwSemaphore.h>
 #include <Resources/SwShader.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
@@ -119,8 +123,7 @@ SwRenderer::SwRenderer()
     } else if (LOG_LOCATION == LogLocation::Console) {
         mLogger = quill::Frontend::create_or_get_logger("LOGGER", std::move(consoleSink), options);
     } else if (LOG_LOCATION == LogLocation::Both) {
-        mLogger =
-            quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)}, options);
+        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)}, options);
     }
     mLogger->set_log_level(quill::LogLevel::Info);
 
@@ -260,9 +263,16 @@ SwRenderer::SwRenderer()
         }
     });
 
-    mRendererContext = SwRendererContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue, &mImmSubmit);
+    mRendererContext = SwRendererContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
+    mImmSubmitContext = SwImmSubmitContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue);
+    mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mSurface, mWindowExtent);
 
-    SwImmSubmit::init(mRendererContext);
+    SwSemaphoreFactory::init(mRendererContext);
+    SwFenceFactory::init(mRendererContext);
+    SwCommandPoolFactory::init(mRendererContext);
+    SwCommandBufferFactory::init(mRendererContext);
+
+    SwImmSubmit::init(mImmSubmitContext);
     mImmSubmit.initialize();
 
     SwShaderFactory::init(mRendererContext);
@@ -272,7 +282,10 @@ SwRenderer::SwRenderer()
     SwBufferFactory::init(mRendererContext);
     SwImageFactory::init(mRendererContext);
     SwResourceStager::init(mRendererContext);
-    
+
+    SwSwapchain::init(mSwapchainContext);
+    mSwapchain.initialize();
+
     mStats.initialize();
 }
 

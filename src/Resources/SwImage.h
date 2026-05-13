@@ -16,6 +16,8 @@ protected:
     vk::PipelineStageFlagBits2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
 
+    SwImage();
+
     SwImage(std::vector<vk::Format> formats, vk::Extent3D extent);
 
 public:
@@ -75,6 +77,8 @@ protected:
     bool mMipmapped;
     std::uint32_t mMipLevels;
 
+    SwAllocatedImage();
+     
     SwAllocatedImage(
         vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
         vk::ClearValue clearValue, vk::ImageAspectFlags aspect, const VmaAllocator mAllocator, VmaAllocation mAllocation
@@ -110,6 +114,8 @@ public:
 
 class SwColorImage2D : public SwAllocatedImage {
 public:
+    SwColorImage2D();
+
     SwColorImage2D(
         vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
         vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
@@ -126,6 +132,8 @@ public:
 
 class SwDepthImage2D : public SwAllocatedImage {
 public:
+    SwDepthImage2D();
+
     SwDepthImage2D(
         vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
         vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
@@ -142,6 +150,8 @@ public:
 
 class SwColorImageCubemap : public SwAllocatedImage {
 public:
+    SwColorImageCubemap();
+
     SwColorImageCubemap(
         vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
         vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation

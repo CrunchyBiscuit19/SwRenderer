@@ -1,26 +1,30 @@
 #pragma once
 
-#include <vulkan/vulkan_raii.hpp>
-#include <functional>
+#include <Resources/SwCommandBuffer.h>
+#include <Resources/SwCommandPool.h>
+#include <Resources/SwFence.h>
 
-struct SwRendererContext;
+#include <functional>
+#include <vulkan/vulkan_raii.hpp>
+
+struct SwImmSubmitContext;
 
 class SwImmSubmit {
 private:
-    static SwRendererContext sRendererContext;
-    vk::raii::CommandPool mCommandPool;
-    vk::raii::CommandBuffer mCommandBuffer;
-    vk::raii::Fence mFence;
+    static SwImmSubmitContext sImmSubmitContext;
+    SwCommandPool mCommandPool;
+    SwCommandBuffer mCommandBuffer;
+    SwFence mFence;
     std::vector<std::function<void(vk::CommandBuffer cmd)>> mCallbacks;
 
 public:
     SwImmSubmit();
 
-    static void init(SwRendererContext rendererContext);
+    static void init(SwImmSubmitContext immSubmitContext);
 
     void initialize();
 
     void individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& function);
-    
+
     void queuedSubmit();
 };

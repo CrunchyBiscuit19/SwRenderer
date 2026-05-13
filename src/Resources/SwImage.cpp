@@ -3,6 +3,8 @@
 #include <Resources/SwImage.h>
 #include <Resources/SwResourceStager.h>
 
+SwImage::SwImage() {}
+
 SwImage::SwImage(std::vector<vk::Format> formats, vk::Extent3D extent)
     : mFormats(std::move(formats)),
       mExtent(extent),
@@ -44,6 +46,8 @@ void SwSwapchainImage::transition(vk::CommandBuffer cmd, vk::ImageLayout nextLay
     mCurrentAccess = nextAccess;
     mCurrentLayout = nextLayout;
 }
+
+SwAllocatedImage::SwAllocatedImage(): mImage(nullptr), mAllocation(nullptr), mAllocator(nullptr) {}
 
 SwAllocatedImage::SwAllocatedImage(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
@@ -259,6 +263,8 @@ SwAllocatedImage& SwAllocatedImage::operator=(SwAllocatedImage&& other) noexcept
 
 SwAllocatedImage::~SwAllocatedImage() { destroy(); }
 
+SwColorImage2D::SwColorImage2D() {}
+
 SwColorImage2D::SwColorImage2D(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
     vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation
@@ -269,6 +275,8 @@ SwColorImage2D::SwColorImage2D(
 
 void SwColorImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
 
+SwDepthImage2D::SwDepthImage2D() {}
+
 SwDepthImage2D::SwDepthImage2D(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
     vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation
@@ -278,6 +286,8 @@ SwDepthImage2D::SwDepthImage2D(
       ) {}
 
 void SwDepthImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
+
+SwColorImageCubemap::SwColorImageCubemap() {}
 
 SwColorImageCubemap::SwColorImageCubemap(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
