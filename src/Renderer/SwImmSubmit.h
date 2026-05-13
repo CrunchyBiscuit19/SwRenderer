@@ -27,4 +27,6 @@ public:
     void individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& function);
 
     void queuedSubmit();
+
+    void addCallback(std::function<void(vk::CommandBuffer cmd)>&& function);
 };

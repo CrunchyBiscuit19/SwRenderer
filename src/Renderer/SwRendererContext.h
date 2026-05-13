@@ -31,11 +31,11 @@ struct SwImmSubmitContext {
 struct SwSwapchainContext {
     vk::raii::Device* mDevice;
     vk::raii::PhysicalDevice* mChosenGPU;
+    SwImmSubmit* mImmSubmit;
     SwEvents* mEvents;
 
     SwSwapchainContext() = default;
 
-    SwSwapchainContext(
-        vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, SwEvents* events)
-        : mDevice(device), mChosenGPU(chosenGPU), mEvents(events) {};
+    SwSwapchainContext(vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, SwImmSubmit* immSubmit, SwEvents* events)
+        : mDevice(device), mChosenGPU(chosenGPU), mImmSubmit(immSubmit), mEvents(events) {};
 };

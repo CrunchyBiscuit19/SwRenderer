@@ -255,7 +255,7 @@ SwRenderer::SwRenderer()
 
     mRendererContext = SwFactoryContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
     mImmSubmitContext = SwImmSubmitContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue);
-    mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mEvents);
+    mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mImmSubmit, &mEvents);
 
     SwSemaphoreFactory::init(mRendererContext);
     SwFenceFactory::init(mRendererContext);

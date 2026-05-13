@@ -28,6 +28,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     mWindowExtent = windowExtent;
     mWindowFullScreen = windowFullScreen;
     mAspectRatio = static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height);
+    mWindowFullScreen ? mResizeRequested = true : mResizeRequested = false;  // Initial resize for fullscreen
 
     sSwapchainContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
@@ -106,6 +107,23 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
+    sSwapchainContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        for (std::uint32_t i = 0; i < mImages.size(); i++) {
+            mImages.at(i).transition(
+                cmd,
+                vk::ImageLayout::ePresentSrcKHR,
+                vk::PipelineStageFlagBits2::eNone,
+                vk::AccessFlagBits2::eNone
+            );
+        }
+        mDrawImage.transition(cmd, vk::ImageLayout::eTransferSrcOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        mDepthImage.transition(
+            cmd,
+            vk::ImageLayout::eDepthAttachmentOptimal,
+            vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+            vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+        );
+    });
 }
 
 SwSwapchain::~SwSwapchain() {

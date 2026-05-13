@@ -67,3 +67,5 @@ void SwImmSubmit::queuedSubmit() {
 
     mCallbacks.clear();
 }
+
+void SwImmSubmit::addCallback(std::function<void(vk::CommandBuffer cmd)>&& function) { mCallbacks.emplace_back(std::move(function)); }
