@@ -9,7 +9,7 @@ void SwFrame::initialize() {
     mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(mCommandPool);
     mRenderFence = SwFenceFactory::createFence(vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore();
-    mPerspectiveBuffer = SwBufferFactory::createAllocatedBuffer(
+    mPerFrameBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         sizeof(std::uint32_t)  // TODO
@@ -50,7 +50,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         swapchainBuilder
             .set_desired_format(
                 VkSurfaceFormatKHR{
-                    .format = static_cast<VkFormat>(formats[SRGB_INDEX]), .colorSpace = static_cast<VkColorSpaceKHR>(vk::ColorSpaceKHR::eSrgbNonlinear)
+                    .format = static_cast<VkFormat>(SRGB_FORMAT), .colorSpace = static_cast<VkColorSpaceKHR>(vk::ColorSpaceKHR::eSrgbNonlinear)
                 }
             )
             .set_desired_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
@@ -69,7 +69,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         imageViewCreateInfo.pNext = nullptr;
         imageViewCreateInfo.viewType = vk::ImageViewType::e2D;
         imageViewCreateInfo.image = vkbSwapchain.get_images().value()[i];
-        imageViewCreateInfo.format = formats[SRGB_INDEX];
+        imageViewCreateInfo.format = SRGB_FORMAT;
         imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
         imageViewCreateInfo.subresourceRange.levelCount = 1;
         imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
@@ -78,7 +78,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         std::vector<vk::raii::ImageView> imageViews;
         imageViews.reserve(2);
         imageViews.emplace_back(sSwapchainContext.mDevice->createImageView(imageViewCreateInfo));
-        imageViewCreateInfo.format = formats[UNORM_INDEX];
+        imageViewCreateInfo.format = UNORM_FORMAT;
         imageViews.emplace_back(sSwapchainContext.mDevice->createImageView(imageViewCreateInfo));
         SwSwapchainImage swapchainImage(
             vkbSwapchain.get_images().value()[i], std::move(imageViews), SwSemaphoreFactory::createSemaphore(), formats, vk::Extent3D(vkbSwapchain.extent, 1)
@@ -95,7 +95,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     mDrawImage = SwImageFactory::createColorImage2D(
         nullptr,
         vk::Extent3D{mWindowExtent, 1},
-        vk::Format::eR16G16B16A16Sfloat,
+        DRAW_FORMAT,
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eStorage,
         false
@@ -103,7 +103,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     mDepthImage = SwImageFactory::createDepthImage2D(
         nullptr,
         mDrawImage.getExtent(),
-        vk::Format::eD32Sfloat,
+        DEPTH_FORMAT,
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );

@@ -1,7 +1,9 @@
 #pragma once
 
-#include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwEvents.h>
+#include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwSwapchain.h>
+#include <Resource/SwDescriptor.h>
 #include <vk_mem_alloc.h>
 
 #include <vulkan/vulkan_raii.hpp>
@@ -38,4 +40,38 @@ struct SwSwapchainContext {
 
     SwSwapchainContext(vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, SwImmSubmit* immSubmit, SwEvents* events)
         : mDevice(device), mChosenGPU(chosenGPU), mImmSubmit(immSubmit), mEvents(events) {};
+};
+
+struct SwGuiContext {
+    vk::raii::Instance* mInstance;
+    vk::raii::Device* mDevice;
+    vk::raii::PhysicalDevice* mChosenGPU;
+    vk::raii::Queue* mGraphicsQueue;
+    SwSwapchain* mSwapchain;
+    SwEvents* mEvents;
+    SwDescriptorAllocator* mDescriptorAllocator;
+
+    SwGuiContext() = default;
+
+    SwGuiContext(
+        vk::raii::Instance* instance, vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Queue* graphicsQueue, SwSwapchain* swapchain,
+        SwEvents* events, SwDescriptorAllocator* descriptorAllocator
+    )
+        : mInstance(instance),
+          mDevice(device),
+          mChosenGPU(chosenGPU),
+          mGraphicsQueue(graphicsQueue),
+          mSwapchain(swapchain),
+          mEvents(events),
+          mDescriptorAllocator(descriptorAllocator) {};
+};
+
+struct SwCameraContext {
+    vk::raii::Device* mDevice;
+    SwEvents* mEvents;
+    SwSwapchain* mSwapchain;
+
+    SwCameraContext() = default;
+
+    SwCameraContext(vk::raii::Device* device, SwEvents* events, SwSwapchain* swapchain) : mDevice(device), mEvents(events), mSwapchain(swapchain) {};
 };

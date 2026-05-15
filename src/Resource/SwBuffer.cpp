@@ -1,4 +1,4 @@
-#include <Resources/SwBuffer.h>
+#include <Resource/SwBuffer.h>
 #include <Renderer/SwRenderer.h>
 
 #include <stdexcept>

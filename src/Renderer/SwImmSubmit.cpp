@@ -1,8 +1,8 @@
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
-#include <Resources/SwCommandBuffer.h>
-#include <Resources/SwCommandPool.h>
-#include <Resources/SwFence.h>
+#include <Resource/SwCommandBuffer.h>
+#include <Resource/SwCommandPool.h>
+#include <Resource/SwFence.h>
 
 SwImmSubmitContext SwImmSubmit::sImmSubmitContext{};
 

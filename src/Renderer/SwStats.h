@@ -1,6 +1,6 @@
 # pragma once
 
-#include <Resources/SwBuffer.h>
+#include <Resource/SwBuffer.h>
 
 class SwStats {
 public:

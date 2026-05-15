@@ -1,0 +1,152 @@
+#include <Gui/SwGui.h>
+#include <fmt/core.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_vulkan.h>
+#include <imgui_internal.h>
+
+#include <glm/gtc/type_ptr.hpp>
+#include <magic_enum.hpp>
+#include <ranges>
+#include <vulkan/vulkan_raii.hpp>
+
+SwGuiContext SwGui::sGuiContext{};
+
+SwGui::SwGui() {}
+
+void SwGui::init(SwGuiContext guiContext) { sGuiContext = guiContext; }
+
+void SwGui::initialize() {
+    ImGui::CreateContext();
+    ImGui_ImplSDL2_InitForVulkan(sGuiContext.mSwapchain->getWindow());
+
+    vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
+    pipelineRenderingCreateInfo.colorAttachmentCount = 1;
+    pipelineRenderingCreateInfo.pColorAttachmentFormats = &SwSwapchain::SRGB_FORMAT;
+    pipelineRenderingCreateInfo.depthAttachmentFormat = SwSwapchain::DEPTH_FORMAT;
+
+    std::array<SwPoolSizeRatio, 1> ratios{
+        {vk::DescriptorType::eCombinedImageSampler, 1000},
+    };
+    mDescriptorPool = sGuiContext.mDescriptorAllocator->createDescriptorPool(ratios, 100);
+
+    ImGui_ImplVulkan_InitInfo initInfo = {};
+    initInfo.Instance = **sGuiContext.mInstance;
+    initInfo.PhysicalDevice = **sGuiContext.mChosenGPU;
+    initInfo.Device = **sGuiContext.mDevice;
+    initInfo.Queue = **sGuiContext.mGraphicsQueue;
+    initInfo.DescriptorPool = mDescriptorPool.getRawPool();
+    initInfo.MinImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
+    initInfo.ImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
+    initInfo.UseDynamicRendering = true;
+    initInfo.MSAASamples = static_cast<VkSampleCountFlagBits>(vk::SampleCountFlagBits::e1);
+    initInfo.UseDynamicRendering = true;
+    initInfo.PipelineRenderingCreateInfo = pipelineRenderingCreateInfo;
+    ImGui_ImplVulkan_Init(&initInfo);
+
+    ImGui_ImplVulkan_CreateFontsTexture();
+    ImGui_ImplVulkan_DestroyFontsTexture();
+
+    ImGuiIO& io = ImGui::GetIO();
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_NavEnableKeyboard;
+
+    // Hack solution of applying a gamma correction factor to reduce brightness
+    ImGuiStyle& style = ImGui::GetStyle();
+    constexpr float gamma = 2.2f;
+    for (std::uint32_t i = 0; i < ImGuiCol_COUNT; i++) {
+        ImVec4& col = style.Colors[i];
+        col.x = pow(col.x, gamma);
+        col.y = pow(col.y, gamma);
+        col.z = pow(col.z, gamma);
+    }
+
+    mSelectModelFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection | ImGuiFileBrowserFlags_ConfirmOnEnter, MODELS_PATH);
+    mSelectModelFileBrowser.SetTitle("Select GLTF / GLB File");
+    mSelectModelFileBrowser.SetTypeFilters({".glb", ".gltf"});
+
+    mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_SelectDirectory, SKYBOXES_PATH);
+    mSelectSkyboxFileBrowser.SetTitle("Select Directory of Skybox Image");
+
+    // TODO
+
+    sGuiContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+        const SDL_Keymod modState = SDL_GetModState();
+        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
+
+        if (keyState[SDL_SCANCODE_G] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+            mCollapsed = !mCollapsed;
+        }
+
+        if (keyState[SDL_SCANCODE_T] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+            // mRenderer->mScene.mPicker.changeImguizmoOperation(); // TODO
+        }
+
+        if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+            mSelectModelFileBrowser.Open();
+            // mRenderer->mCamera.mRelativeMode = SDL_FALSE; // TODO
+        }
+    });
+}
+
+void SwGui::update() {
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL2_NewFrame();
+    ImGui::NewFrame();
+
+    createDockSpace();
+    createRendererOptionsWindow();
+    // mRenderer->mScene.mPicker.imguizmoFrame(); // TODO
+
+    mSelectModelFileBrowser.Display();
+    if (mSelectModelFileBrowser.HasSelected()) {
+        auto selectedFiles = mSelectModelFileBrowser.GetMultiSelected();
+        // mRenderer->mScene.loadModels(selectedFiles); // TODO
+        mSelectModelFileBrowser.ClearSelected();
+    }
+
+    ImGui::Render();
+}
+
+void SwGui::createDockSpace() {
+    static ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_PassthruCentralNode;
+    static ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
+                                          ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
+                                          ImGuiWindowFlags_NoBackground;
+
+    ImGuiViewport* mainViewport = ImGui::GetMainViewport();
+
+    ImGui::SetNextWindowPos(mainViewport->WorkPos);
+    ImGui::SetNextWindowSize(mainViewport->WorkSize);
+    ImGui::SetNextWindowViewport(mainViewport->ID);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+
+    ImGui::Begin("DockSpace Window", &mCollapsed, windowFlags);
+    static ImGuiID mainDockSpace = ImGui::GetID("MainDockSpace");
+    ImGui::DockSpace(mainDockSpace, ImVec2(0.0f, 0.0f), dockSpaceFlags);
+    ImGui::End();
+    ImGui::PopStyleVar(3);
+}
+
+void SwGui::createRendererOptionsWindow() const {
+    if (mCollapsed) return;
+    if (!ImGui::Begin("Renderer Options", nullptr, ImGuiWindowFlags_NoDecoration)) return;
+    if (ImGui::IsWindowCollapsed()) return;
+    if (!ImGui::BeginTabBar(
+            "RendererOptionsTabBar", ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | ImGuiTabBarFlags_FittingPolicyResizeDown
+        ))
+        return;
+    for (auto& component : mGuiComponents) {
+        if (!ImGui::BeginTabItem(magic_enum::enum_name(component.first).data(), nullptr, ImGuiTabItemFlags_NoCloseButton)) return;
+        component.second();
+        ImGui::EndTabItem();
+    }
+    ImGui::EndTabBar();
+
+    ImGui::End();
+}
+
+SwGui::~SwGui() {
+    ImGui_ImplVulkan_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
+}

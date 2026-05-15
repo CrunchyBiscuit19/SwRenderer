@@ -1,0 +1,93 @@
+@startuml
+
+struct SwGeometryPushConstants {
+    + mSceneVertexBuffer: vk::DeviceAddress
+    + mSceneMaterialConstantsBuffer: vk::DeviceAddress
+    + mSceneNodeTransformsBuffer: vk::DeviceAddress
+    + mSceneInstancesBuffer: vk::DeviceAddress
+    + mSceneVisibleRenderItemsBuffer: vk::DeviceAddress
+    + mSceneVisibleRenderInstancesInstanceIndexBuffer: vk::DeviceAddress
+}
+
+class SwSceneFlags {
+    - mAssetLoadedFlag: bool
+    - mAssetUnloadedFlag: bool
+    - mInstanceLoadedFlag: bool
+    - mInstanceUnloadedFlag: bool
+    - mReloadMainBufferFlag: bool
+}
+
+class SwScene {
+    + mFlags: SwSceneFlags
+    - mCamera: SwCamera
+    - mAssets: std::unordered_map<std::filesystem::path, SwAsset>
+    - mInstances: std::vector<SwInstance>
+    - mPasses: std::unordered_map<SwPassType, SwPass&>
+    - mRenderGraph: SwRenderGraph
+    - mOpaqueBatches: std::unordered_map<std::uint32_t, SwBatch>
+    - mMaskBatches: std::unordered_map<std::uint32_t, SwBatch>
+    - mTransparentBatches: std::unordered_map<std::uint32_t, SwBatch>
+    - mGeometryPushConstants: SwGeometryPushConstants
+    - mSceneMaterialResourcesDescriptorSet: SwDescriptorSet
+    - mSceneMaterialResourcesDescriptorLayout: SwDescriptorLayout
+    - mSceneVertexBuffer: SwAllocatedBuffer 
+    - mSceneIndexBuffer: SwAllocatedBuffer 
+    - mSceneNodeTransformsBuffer: SwAllocatedBuffer 
+    - mSceneMaterialConstantsBuffer: SwAllocatedBuffer 
+    - mSceneInstancesBuffer: SwAllocatedBuffer 
+    - mSceneBoundsBuffer: SwAllocatedBuffer 
+    - mSceneVisibleRenderInstancesInstanceIndexBuffer: SwAllocatedBuffer 
+}
+
+class SwInstance {
+    {static} - sLatestInstanceId: std::uint32_t = 0
+    - mAsset: SwAsset&
+    - mId: std::uint32_t
+    - mDelete: bool
+    - mData: SwInstanceData
+}
+
+class SwAsset {
+    {static} - sLatestAssetId: std::uint32_t = 0
+}
+
+class SwMesh {
+    {static} - mLatestMeshId: std::uint32_t = 0
+ 
+}
+
+class SwMaterial {
+    {static} - mLatestMaterialId: std::uint32_t = 0
+}
+
+struct SwRenderItem {
+    + mIndexCount: std::uint32_t
+    + mRenderInstanceCount: std::uint32_t
+    + mFirstIndex: std::uint32_t
+    + mVertexOffset: std::uint32_t
+    + mFirstRenderInstance: std::uint32_t
+    + mMaterialIndex: std::uint32_t
+    + mNodeTransformIndex: std::uint32_t
+    + mAssetIndex: std::uint32_t
+    + mFirstInstance: std::uint32_t
+    + mBoundsIndex: std::uint32_t
+}
+
+struct SwRenderInstance {
+    + mRenderItemIndex: std::uint32_t
+    + mSceneInstanceIndex: std::uint32_t
+}
+
+class SwBatch {
+    {static} - mFirstRenderInstanceOffset: std::uint32_t
+    - mPipelineBundle: SwPipelineBundle
+    - mRenderItems: std::vector<SwRenderItem>
+    - renderItemsStagingBuffer: SwStagingBuffer
+    - preCullRenderItemsBuffer: SwAllocatedBuffer
+    - postCullRenderItemsBuffer: SwAllocatedBuffer
+    - postCullRenderItemsCountBuffer: SwAllocatedBuffer
+    - mRenderInstance: std::vector<RenderInstance>
+    - mRenderInstancesStagingBuffer: SwStagingBuffer
+    - mRenderInstancesBuffer: SwAllocatedBuffer
+}
+@enduml 

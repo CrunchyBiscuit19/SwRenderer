@@ -1,7 +1,7 @@
 #pragma once
 
-#include <Resources/SwImage.h>
-#include <Resources/SwBuffer.h>
+#include <Resource/SwImage.h>
+#include <Resource/SwBuffer.h>
 
 struct SwFactoryContext;
 

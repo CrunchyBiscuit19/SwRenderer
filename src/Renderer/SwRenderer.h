@@ -1,10 +1,11 @@
 #pragma once
 
+#include <Gui/SwGui.h>
+#include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwRendererContext.h>
 #include <Renderer/SwStats.h>
 #include <Renderer/SwSwapchain.h>
-#include <Renderer/SwRendererContext.h>
-#include <Renderer/SwEvents.h>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <SDL_events.h>
@@ -129,22 +130,26 @@ class SwRenderer {
 
     quill::Logger* mLogger;
 
-
     SwImmSubmit mImmSubmit;
     SwSwapchain mSwapchain;
     SwStats mStats;
     SwEvents mEvents;
+    SwGui mGui;
 
-    SwFactoryContext mRendererContext;
+    SwDescriptorAllocator mDescriptorAllocator;
+
+    SwFactoryContext mFactoryContext;
     SwImmSubmitContext mImmSubmitContext;
     SwSwapchainContext mSwapchainContext;
+    SwGuiContext mGuiContext;
+    SwCameraContext mCameraContext;
 
 public:
     SwRenderer();
 
     inline quill::Logger* getLogger() { return mLogger; };
 
-    inline SwFactoryContext getRendererInfo() { return mRendererContext; };
+    inline SwFactoryContext getRendererInfo() { return mFactoryContext; };
 
     inline std::uint32_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };
 

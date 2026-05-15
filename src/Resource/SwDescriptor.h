@@ -12,6 +12,8 @@ private:
     std::vector<vk::DescriptorSetLayoutBinding> mBindings;
 
 public:
+    SwDescriptorLayout();
+
     SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings);
 
     SwDescriptorLayout(SwDescriptorLayout&&) noexcept = default;
@@ -32,6 +34,8 @@ private:
     std::vector<vk::WriteDescriptorSet> mWrites;
 
 public:
+    SwDescriptorSet();
+
     SwDescriptorSet(vk::raii::DescriptorSet mSet, std::span<const vk::DescriptorSetLayoutBinding> bindings);
 
     void writeImage(
@@ -55,38 +59,55 @@ public:
     SwDescriptorSet& operator=(const SwDescriptorSet&) = delete;
 };
 
-class SwDescriptorPool {
-public:
-    struct SwPoolSizeRatio {
-        vk::DescriptorType mType;
-        float mRatio;
-    };
+struct SwPoolSizeRatio {
+    vk::DescriptorType mType;
+    float mRatio;
+};
 
+class SwDescriptorPool {
+private:
+    vk::raii::DescriptorPool mPool;
+
+public:
+    SwDescriptorPool() : mPool(nullptr) {}
+
+    SwDescriptorPool(vk::raii::DescriptorPool);
+
+    inline vk::DescriptorPool getRawPool() { return *mPool; }
+
+    inline void reset() { mPool.reset(); };
+};
+
+class SwDescriptorAllocator {
 private:
     static SwFactoryContext sRendererContext;
     static const std::uint32_t MAX_SETS_PER_POOL{4096};
 
     std::vector<SwPoolSizeRatio> mRatios;
     std::uint32_t mSetsPerPool;
-    std::vector<vk::raii::DescriptorPool> mReadyPools;
-    std::vector<vk::raii::DescriptorPool> mFullPools;
+    std::vector<SwDescriptorPool> mReadyPools;
+    std::vector<SwDescriptorPool> mFullPools;
 
-    vk::raii::DescriptorPool createPool(std::uint32_t setCount) const;
+    SwDescriptorPool createPool(std::uint32_t setCount) const;
 
-    vk::raii::DescriptorPool& getPool();
+    SwDescriptorPool& getPool();
 
     static std::uint32_t nextPoolSize(std::uint32_t current);
 
 public:
-    SwDescriptorPool(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool);
+    SwDescriptorAllocator();
 
-    SwDescriptorPool(SwDescriptorPool&&) noexcept = default;
-    SwDescriptorPool& operator=(SwDescriptorPool&&) noexcept = default;
+    SwDescriptorAllocator(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool);
 
-    SwDescriptorPool(const SwDescriptorPool&) = delete;
-    SwDescriptorPool& operator=(const SwDescriptorPool&) = delete;
+    SwDescriptorAllocator(SwDescriptorAllocator&&) noexcept = default;
+    SwDescriptorAllocator& operator=(SwDescriptorAllocator&&) noexcept = default;
+
+    SwDescriptorAllocator(const SwDescriptorAllocator&) = delete;
+    SwDescriptorAllocator& operator=(const SwDescriptorAllocator&) = delete;
 
     static void init(SwFactoryContext rendererContext);
+
+    SwDescriptorPool createDescriptorPool(vk::ArrayProxy<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool);
 
     SwDescriptorLayout createDescriptorLayout(
         std::vector<vk::DescriptorSetLayoutBinding> bindings, vk::ShaderStageFlags shaderStages, bool useBindless = false

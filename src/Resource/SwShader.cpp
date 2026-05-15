@@ -1,5 +1,5 @@
 #include <Renderer/SwRenderer.h>
-#include <Resources/SwShader.h>
+#include <Resource/SwShader.h>
 
 #include <bit>
 #include <fstream>

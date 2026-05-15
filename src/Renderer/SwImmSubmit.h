@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Resources/SwCommandBuffer.h>
-#include <Resources/SwCommandPool.h>
-#include <Resources/SwFence.h>
+#include <Resource/SwCommandBuffer.h>
+#include <Resource/SwCommandPool.h>
+#include <Resource/SwFence.h>
 
 #include <functional>
 #include <vulkan/vulkan_raii.hpp>

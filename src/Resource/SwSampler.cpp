@@ -1,5 +1,5 @@
 #include <Renderer/SwRenderer.h>
-#include <Resources/SwSampler.h>
+#include <Resource/SwSampler.h>
 
 SwFactoryContext SwSamplerFactory::sRendererContext{};
 

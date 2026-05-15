@@ -1,5 +1,5 @@
 #include <Renderer/SwRenderer.h>
-#include <Resources/SwResourceStager.h>
+#include <Resource/SwResourceStager.h>
 
 SwFactoryContext SwResourceStager::sRendererContext{};
 std::unordered_map<SwResourceStager::DefaultImageOption, SwColorImage2D> SwResourceStager::sDefaultImages{};

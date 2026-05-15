@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Resources/SwImage.h>
+#include <Resource/SwImage.h>
 #include <vulkan/vulkan.hpp>
 
 namespace swHelper {

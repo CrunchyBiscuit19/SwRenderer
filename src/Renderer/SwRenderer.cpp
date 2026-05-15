@@ -1,15 +1,15 @@
 #include <Renderer/SwRenderer.h>
-#include <Resources/SwBuffer.h>
-#include <Resources/SwCommandBuffer.h>
-#include <Resources/SwCommandPool.h>
-#include <Resources/SwDescriptor.h>
-#include <Resources/SwFence.h>
-#include <Resources/SwImage.h>
-#include <Resources/SwPipeline.h>
-#include <Resources/SwResourceStager.h>
-#include <Resources/SwSampler.h>
-#include <Resources/SwSemaphore.h>
-#include <Resources/SwShader.h>
+#include <Resource/SwBuffer.h>
+#include <Resource/SwCommandBuffer.h>
+#include <Resource/SwCommandPool.h>
+#include <Resource/SwDescriptor.h>
+#include <Resource/SwFence.h>
+#include <Resource/SwImage.h>
+#include <Resource/SwPipeline.h>
+#include <Resource/SwResourceStager.h>
+#include <Resource/SwSampler.h>
+#include <Resource/SwSemaphore.h>
+#include <Resource/SwShader.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
@@ -22,9 +22,11 @@
 #include <vk_mem_alloc.h>
 
 VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData
 ) {
+    auto* renderer = static_cast<SwRenderer*>(pUserData);
+
     std::string severity;
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
@@ -39,61 +41,68 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
             severity = "VERBOSE";
             break;
+        default:
+            severity = "UNKNOWN";
+            break;
     }
 
-    std::string message = "\n";
-    message += fmt::format(
-        "{} <{}> Frame {}\n\n",
-        severity,
-        pCallbackData->pMessageIdName == nullptr ? "" : std::string(pCallbackData->pMessageIdName),
-        static_cast<SwRenderer*>(pUserData)->getFrameNumber()
-    );
-    message += fmt::format("{}\n\n", std::string(pCallbackData->pMessage));
+    std::string queueLabels;
+    for (std::uint32_t i = 0; i < pCallbackData->queueLabelCount; ++i) {
+        queueLabels += fmt::format("LabelName = <{}>\n", pCallbackData->pQueueLabels[i].pLabelName);
+    }
 
-    message += fmt::format("Queue Labels:\n");
-    for (std::uint32_t i = 0; i < pCallbackData->queueLabelCount; i++) message += fmt::format("LabelName = <{}>\n", pCallbackData->pQueueLabels[i].pLabelName);
-    message += fmt::format("CommandBuffer Labels:\n");
-    for (std::uint32_t i = 0; i < pCallbackData->cmdBufLabelCount; i++)
-        message += fmt::format("LabelName = <{}>\n", pCallbackData->pCmdBufLabels[i].pLabelName);
+    std::string cmdBufLabels;
+    for (std::uint32_t i = 0; i < pCallbackData->cmdBufLabelCount; ++i) {
+        cmdBufLabels += fmt::format("LabelName = <{}>\n", pCallbackData->pCmdBufLabels[i].pLabelName);
+    }
 
-    message += fmt::format("\n");
+    std::string resources;
+    for (std::uint32_t i = 0; i < pCallbackData->objectCount; ++i) {
+        const auto& object = pCallbackData->pObjects[i];
 
-    for (std::uint32_t i = 0; i < pCallbackData->objectCount; i++) {
-        message += fmt::format(
-            "Resource {} -> [ ResourceType = {}, ResourceHandle = {}]\n",
-            std::to_string(i),
-            vk::to_string(static_cast<vk::ObjectType>(pCallbackData->pObjects[i].objectType)),
-            std::to_string(pCallbackData->pObjects[i].objectHandle)
+        resources += fmt::format(
+            "Resource {} -> [ ResourceType = {}, ResourceHandle = {}]\n", i, vk::to_string(static_cast<vk::ObjectType>(object.objectType)), object.objectHandle
         );
-        if (pCallbackData->pObjects[i].pObjectName) message += fmt::format("ResourceName   = <{}>\n", pCallbackData->pObjects[i].pObjectName);
+
+        if (object.pObjectName) {
+            resources += fmt::format("ResourceName   = <{}>\n", object.pObjectName);
+        }
     }
+
+    std::string message = fmt::format(
+        "\n{} <{}> Frame {}\n{}\nQueue Labels: {}\nCommandBuffer Labels: {}\n{}",
+        severity,
+        pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "",
+        renderer->getFrameNumber(),
+        pCallbackData->pMessage,
+        queueLabels,
+        cmdBufLabels,
+        resources
+    );
 
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            LOG_ERROR(static_cast<SwRenderer*>(pUserData)->getLogger(), "{}", message);
+            LOG_ERROR(renderer->getLogger(), "{}", message);
             break;
+
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            LOG_WARNING(static_cast<SwRenderer*>(pUserData)->getLogger(), "{}", message);
+            LOG_WARNING(renderer->getLogger(), "{}", message);
             break;
+
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            LOG_TRACE_L3(static_cast<SwRenderer*>(pUserData)->getLogger(), "{}", message);
+            LOG_TRACE_L3(renderer->getLogger(), "{}", message);
             break;
+
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
         default:
             break;
     }
 
-    return false;
+    return vk::False;
 }
 
 SwRenderer::SwRenderer()
-    : mContext(),
-      mDebugMessenger(nullptr),
-      mInstance(nullptr),
-      mDevice(nullptr),
-      mChosenGPU(nullptr),
-      mComputeQueue(nullptr),
-      mGraphicsQueue(nullptr) {
+    : mContext(), mDebugMessenger(nullptr), mInstance(nullptr), mDevice(nullptr), mChosenGPU(nullptr), mComputeQueue(nullptr), mGraphicsQueue(nullptr) {
     quill::Backend::start();
     auto fileSink = quill::Frontend::create_or_get_sink<quill::FileSink>(
         fmt::format("{}Run.log", LOGS_PATH).c_str(),
@@ -255,30 +264,35 @@ SwRenderer::SwRenderer()
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
-    mRendererContext = SwFactoryContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
+    mFactoryContext = SwFactoryContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
     mImmSubmitContext = SwImmSubmitContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue);
     mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mImmSubmit, &mEvents);
+    mGuiContext = SwGuiContext(&mInstance, &mDevice, &mChosenGPU, &mGraphicsQueue, &mSwapchain, &mEvents, &mDescriptorAllocator);
+    mCameraContext = SwCameraContext(&mDevice, &mEvents, &mSwapchain);
 
-    SwSemaphoreFactory::init(mRendererContext);
-    SwFenceFactory::init(mRendererContext);
-    SwCommandPoolFactory::init(mRendererContext);
-    SwCommandBufferFactory::init(mRendererContext);
+    SwSemaphoreFactory::init(mFactoryContext);
+    SwFenceFactory::init(mFactoryContext);
+    SwCommandPoolFactory::init(mFactoryContext);
+    SwCommandBufferFactory::init(mFactoryContext);
 
     SwImmSubmit::init(mImmSubmitContext);
     mImmSubmit.initialize();
 
-    SwShaderFactory::init(mRendererContext);
-    SwSamplerFactory::init(mRendererContext);
-    SwDescriptorPool::init(mRendererContext);
-    SwPipelineFactory::init(mRendererContext);
-    SwBufferFactory::init(mRendererContext);
-    SwImageFactory::init(mRendererContext);
-    SwResourceStager::init(mRendererContext);
+    SwShaderFactory::init(mFactoryContext);
+    SwSamplerFactory::init(mFactoryContext);
+    SwDescriptorAllocator::init(mFactoryContext);
+    SwPipelineFactory::init(mFactoryContext);
+    SwBufferFactory::init(mFactoryContext);
+    SwImageFactory::init(mFactoryContext);
+    SwResourceStager::init(mFactoryContext);
 
     SwSwapchain::init(mSwapchainContext);
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
 
     mStats.initialize();
+
+    SwGui::init(mGuiContext);
+    mGui.initialize();
 }
 
 SwRenderer::~SwRenderer() {

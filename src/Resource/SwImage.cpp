@@ -1,7 +1,7 @@
 #include <Misc/SwHelper.h>
 #include <Renderer/SwRenderer.h>
-#include <Resources/SwImage.h>
-#include <Resources/SwResourceStager.h>
+#include <Resource/SwImage.h>
+#include <Resource/SwResourceStager.h>
 
 SwImage::SwImage() {}
 

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Resources/SwSemaphore.h>
+#include <Resource/SwSemaphore.h>
 #include <vk_mem_alloc.h>
 
 #include <unordered_map>
