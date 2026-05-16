@@ -2,23 +2,24 @@
 
 #include <glm/glm.hpp>
 
-class SwModel;
+#include <filesystem>
 
 struct SwInstanceData {
     glm::mat4 mTransformMatrix;
 
-    SwInstanceData() : mTransformMatrix(glm::mat4(1.f)) {}
-
-    SwInstanceData(glm::mat4&& transform) : mTransformMatrix(transform) {}
+    SwInstanceData();
+    SwInstanceData(glm::mat4&& transform);
 };
 
 class SwInstance {
 private:
-    SwModel& mModel;
+    static uint32_t sLatestInstanceId;
+
+    std::filesystem::path& mAssetName;
     std::uint32_t mId;
     bool mDelete;
 
     SwInstanceData mData;
 
-    SwInstance(SwModel& model, std::uint32_t id, SwInstanceData data = SwInstanceData());
+    SwInstance(std::filesystem::path& assetName, std::uint32_t id, SwInstanceData data = SwInstanceData());
 };

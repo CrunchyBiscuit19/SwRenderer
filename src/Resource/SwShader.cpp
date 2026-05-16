@@ -4,9 +4,13 @@
 #include <bit>
 #include <fstream>
 
-SwFactoryContext SwShaderFactory::sRendererContext{};
+SwShader::SwShader() : mModule(nullptr), mStage(vk::ShaderStageFlagBits::eVertex) {}
 
 SwShader::SwShader(vk::raii::ShaderModule module, vk::ShaderStageFlagBits shaderStageFlag) : mModule(std::move(module)), mStage(shaderStageFlag) {}
+
+void SwShader::destroy() { mModule.clear(); }
+
+SwFactoryContext SwShaderFactory::sRendererContext{};
 
 void SwShaderFactory::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
 

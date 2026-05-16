@@ -1,7 +1,6 @@
 #include <Misc/SwHelper.h>
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwImage.h>
-#include <Resource/SwResourceStager.h>
 
 SwImage::SwImage() {}
 
@@ -12,16 +11,14 @@ SwImage::SwImage(std::vector<vk::Format> formats, vk::Extent3D extent)
       mCurrentStage(vk::PipelineStageFlagBits2::eTopOfPipe),
       mCurrentAccess(vk::AccessFlags2()) {}
 
-SwSwapchainImage::SwSwapchainImage(
-    vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
-)
-    : SwImage(std::move(formats), extent), mImage(image), mImageViews(std::move(imageViews)), mRenderedSemaphore(std::move(renderedSemaphore)) {}
+SwNonOwningImage::SwNonOwningImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent)
+    : SwImage(std::move(formats), extent), mImage(image), mImageViews(std::move(imageViews)) {}
 
-void SwSwapchainImage::barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) {
+void SwNonOwningImage::barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) {
     transition(cmd, mCurrentLayout, nextStage, nextAccess);
 }
 
-void SwSwapchainImage::transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) {
+void SwNonOwningImage::transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) {
     vk::ImageMemoryBarrier2 barrierInfo = {};
     barrierInfo.srcStageMask = mCurrentStage;
     barrierInfo.dstStageMask = nextStage;
@@ -47,7 +44,17 @@ void SwSwapchainImage::transition(vk::CommandBuffer cmd, vk::ImageLayout nextLay
     mCurrentLayout = nextLayout;
 }
 
-SwAllocatedImage::SwAllocatedImage(): mImage(nullptr), mAllocation(nullptr), mAllocator(nullptr) {}
+SwSwapchainImage::SwSwapchainImage(
+    vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
+)
+    : SwNonOwningImage(image, std::move(imageViews), std::move(formats), extent), mRenderedSemaphore(std::move(renderedSemaphore)) {}
+
+SwMaterialImage::SwMaterialImage(
+    vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSampler& sampler, std::vector<vk::Format> formats, vk::Extent3D extent
+)
+    : SwNonOwningImage(image, std::move(imageViews), std::move(formats), extent), mSampler(sampler) {}
+
+SwAllocatedImage::SwAllocatedImage() : mImage(nullptr), mAllocation(nullptr), mAllocator(nullptr), mMipLevels(1), mMipmapped(false) {}
 
 SwAllocatedImage::SwAllocatedImage(
     vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
@@ -300,6 +307,8 @@ SwColorImageCubemap::SwColorImageCubemap(
 void SwColorImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
 
 SwFactoryContext SwImageFactory::sRendererContext{};
+SwStagingBuffer SwImageFactory::sImageStagingBuffer;
+std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
 SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstructionInfo(
     SwImageType swImageType, const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
@@ -389,7 +398,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     std::uint32_t bytesPerTexel = swHelper::getFormatTexelSize(image.getFormat());
     const size_t faceSize = image.getExtent().depth * image.getExtent().width * image.getExtent().height * bytesPerTexel;
     const size_t dataSize = faceSize * numFaces;
-    std::memcpy(SwResourceStager::sImageStagingBuffer.getMappedPointer(), data, dataSize);
+    std::memcpy(sImageStagingBuffer.getMappedPointer(), data, dataSize);
 
     sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
         image.transition(cmd, vk::ImageLayout::eTransferDstOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
@@ -409,7 +418,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
             copyRegions.emplace_back(copyRegion);
         }
 
-        cmd.copyBufferToImage(SwResourceStager::sImageStagingBuffer.getRawBuffer(), image.getRawImage(), vk::ImageLayout::eTransferDstOptimal, copyRegions);
+        cmd.copyBufferToImage(sImageStagingBuffer.getRawBuffer(), image.getRawImage(), vk::ImageLayout::eTransferDstOptimal, copyRegions);
 
         if (image.isMipmapped()) image.generateMipmaps(cmd);
 
@@ -417,7 +426,41 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     });
 }
 
-void SwImageFactory::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
+void SwImageFactory::init(SwFactoryContext rendererContext) {
+    sRendererContext = rendererContext;
+    sImageStagingBuffer = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
+    constexpr std::uint32_t white = std::byteswap(0xFFFFFFFF);
+    sDefaultImages.try_emplace(
+        SwDefaultImageOption::White,
+        SwImageFactory::createColorImage2D(&white, vk::Extent3D{1, 1, 1}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, false)
+    );
+    constexpr std::uint32_t grey = std::byteswap(0xAAAAAAFF);
+    sDefaultImages.try_emplace(
+        SwDefaultImageOption::Grey,
+        SwImageFactory::createColorImage2D(&grey, vk::Extent3D{1, 1, 1}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, false)
+    );
+    constexpr std::uint32_t black = std::byteswap(0x000000FF);
+    sDefaultImages.try_emplace(
+        SwDefaultImageOption::Black,
+        SwImageFactory::createColorImage2D(&black, vk::Extent3D{1, 1, 1}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, false)
+    );
+    constexpr std::uint32_t blue = std::byteswap(0x769DDBFF);
+    sDefaultImages.try_emplace(
+        SwDefaultImageOption::Blue,
+        SwImageFactory::createColorImage2D(&blue, vk::Extent3D{1, 1, 1}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, false)
+    );
+    std::array<std::uint32_t, 16 * 16> pixels;
+    for (std::uint32_t x = 0; x < 16; x++) {
+        for (std::uint32_t y = 0; y < 16; y++) {
+            constexpr std::uint32_t magenta = std::byteswap(0xFF00FFFF);
+            pixels[static_cast<std::array<std::uint32_t, 256Ui64>::size_type>(y) * 16 + x] = ((x % 2) ^ (y % 2)) ? magenta : black;
+        }
+    }
+    sDefaultImages.try_emplace(
+        SwDefaultImageOption::Checkerboard,
+        SwImageFactory::createColorImage2D(pixels.data(), vk::Extent3D{16, 16, 1}, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, false)
+    );
+}
 
 SwColorImage2D SwImageFactory::createColorImage2D(
     const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
@@ -477,4 +520,9 @@ SwColorImageCubemap SwImageFactory::createColorImageCubemap(
     );
     if (data != nullptr) fillImageData(SwImageType::SwColorImageCubemap, data, newImage);
     return newImage;
+}
+
+void SwImageFactory::cleanup() {
+    sDefaultImages.clear();
+    sImageStagingBuffer.destroy();
 }

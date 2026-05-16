@@ -1,12 +1,16 @@
 #pragma once
 
-#include <Renderer/SwEvents.h>
-#include <Renderer/SwImmSubmit.h>
-#include <Renderer/SwSwapchain.h>
-#include <Resource/SwDescriptor.h>
 #include <vk_mem_alloc.h>
 
-#include <vulkan/vulkan_raii.hpp>
+class vk::raii::Device;
+class vk::raii::PhysicalDevice;
+class vk::raii::Queue;
+class vk::raii::Instance;
+class SwImmSubmit;
+class SwEvents;
+class SwCamera;
+class SwSwapchain;
+class SwDescriptorAllocator;
 
 struct SwFactoryContext {
     vk::raii::Device* mDevice;
@@ -14,9 +18,7 @@ struct SwFactoryContext {
     SwImmSubmit* mImmSubmit;
 
     SwFactoryContext() = default;
-
-    SwFactoryContext(vk::raii::Device* device, VmaAllocator allocator, SwImmSubmit* immSubmit)
-        : mDevice(device), mAllocator(allocator), mImmSubmit(immSubmit) {};
+    SwFactoryContext(vk::raii::Device* device, VmaAllocator allocator, SwImmSubmit* immSubmit);
 };
 
 struct SwImmSubmitContext {
@@ -25,9 +27,7 @@ struct SwImmSubmitContext {
     vk::raii::Queue* mGraphicsQueue;
 
     SwImmSubmitContext() = default;
-
-    SwImmSubmitContext(vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue)
-        : mDevice(device), mAllocator(allocator), mGraphicsQueue(graphicsQueue) {};
+    SwImmSubmitContext(vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue);
 };
 
 struct SwSwapchainContext {
@@ -37,9 +37,7 @@ struct SwSwapchainContext {
     SwEvents* mEvents;
 
     SwSwapchainContext() = default;
-
-    SwSwapchainContext(vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, SwImmSubmit* immSubmit, SwEvents* events)
-        : mDevice(device), mChosenGPU(chosenGPU), mImmSubmit(immSubmit), mEvents(events) {};
+    SwSwapchainContext(vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, SwImmSubmit* immSubmit, SwEvents* events);
 };
 
 struct SwGuiContext {
@@ -49,21 +47,14 @@ struct SwGuiContext {
     vk::raii::Queue* mGraphicsQueue;
     SwSwapchain* mSwapchain;
     SwEvents* mEvents;
+    SwCamera* mCamera;
     SwDescriptorAllocator* mDescriptorAllocator;
 
     SwGuiContext() = default;
-
     SwGuiContext(
         vk::raii::Instance* instance, vk::raii::Device* device, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Queue* graphicsQueue, SwSwapchain* swapchain,
-        SwEvents* events, SwDescriptorAllocator* descriptorAllocator
-    )
-        : mInstance(instance),
-          mDevice(device),
-          mChosenGPU(chosenGPU),
-          mGraphicsQueue(graphicsQueue),
-          mSwapchain(swapchain),
-          mEvents(events),
-          mDescriptorAllocator(descriptorAllocator) {};
+        SwEvents* events, SwCamera* mCamera, SwDescriptorAllocator* descriptorAllocator
+    );
 };
 
 struct SwCameraContext {
@@ -72,6 +63,13 @@ struct SwCameraContext {
     SwSwapchain* mSwapchain;
 
     SwCameraContext() = default;
+    SwCameraContext(vk::raii::Device* device, SwEvents* events, SwSwapchain* swapchain);
+};
 
-    SwCameraContext(vk::raii::Device* device, SwEvents* events, SwSwapchain* swapchain) : mDevice(device), mEvents(events), mSwapchain(swapchain) {};
+struct SwMaterialResourcesContext {
+    vk::raii::Device* mDevice;
+    SwDescriptorAllocator* mDescriptorAllocator;
+
+    SwMaterialResourcesContext() = default;
+    SwMaterialResourcesContext(vk::raii::Device* device, SwDescriptorAllocator* descriptorAllocator);
 };

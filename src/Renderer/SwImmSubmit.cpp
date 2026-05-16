@@ -37,7 +37,7 @@ void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& 
     submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
 
     sImmSubmitContext.mGraphicsQueue->submit2(submitInfo, mFence.getRawFence());
-    sImmSubmitContext.mDevice->waitForFences(mFence.getRawFence(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
+    vk::Result result = sImmSubmitContext.mDevice->waitForFences(mFence.getRawFence(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
 }
 
 void SwImmSubmit::queuedSubmit() {
@@ -63,7 +63,7 @@ void SwImmSubmit::queuedSubmit() {
     submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
 
     sImmSubmitContext.mGraphicsQueue->submit2(submitInfo, mFence.getRawFence());
-    sImmSubmitContext.mDevice->waitForFences(mFence.getRawFence(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
+    vk::Result result = sImmSubmitContext.mDevice->waitForFences(mFence.getRawFence(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
 
     mCallbacks.clear();
 }

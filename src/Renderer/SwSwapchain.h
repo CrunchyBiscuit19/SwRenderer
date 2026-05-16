@@ -7,6 +7,8 @@
 #include <Resource/SwIResizable.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwSemaphore.h>
+#include <Resource/SwFence.h>
+#include <Data/SwCamera.h>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <vk_mem_alloc.h>
@@ -18,6 +20,8 @@ struct SwSwapchainContext;
 
 class SwFrame {
 private:
+    static const std::uint32_t PER_FRAME_BUFFER_SIZE{sizeof(SwPerspective)};
+
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;
     SwFence mRenderFence;
@@ -67,7 +71,7 @@ public:
     static const std::uint32_t NUM_FRAME_OVERLAP{2};
     static const std::uint32_t WINDOW_WIDTH_STARTUP{1700};
     static const std::uint32_t WINDOW_HEIGHT_STARTUP{900};
-    
+
     SwSwapchain();
 
     static void init(SwSwapchainContext swapchainContext);

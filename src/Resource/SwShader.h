@@ -13,9 +13,13 @@ private:
     vk::ShaderStageFlagBits mStage;
 
 public:
+    SwShader();
+
     SwShader(vk::raii::ShaderModule, vk::ShaderStageFlagBits);
 
     inline vk::ShaderModule getRawModule() { return *mModule; }
+
+    void destroy();
 };
 
 class SwShaderFactory {

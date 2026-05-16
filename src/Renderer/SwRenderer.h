@@ -114,6 +114,8 @@ class SwRenderer {
     static const std::uint32_t VK_PATCH_VERSION{0};
     static const bool FULLSCREEN_ON_STARTUP{false};
 
+    quill::Logger* mLogger;
+
     vk::raii::Context mContext;
     vk::raii::Instance mInstance;
     vk::raii::PhysicalDevice mChosenGPU;
@@ -128,13 +130,12 @@ class SwRenderer {
     bool mIsInitialized{false};
     bool mStopRendering{false};
 
-    quill::Logger* mLogger;
-
     SwImmSubmit mImmSubmit;
     SwSwapchain mSwapchain;
     SwStats mStats;
     SwEvents mEvents;
     SwGui mGui;
+    SwCamera mCamera;
 
     SwDescriptorAllocator mDescriptorAllocator;
 
@@ -143,6 +144,7 @@ class SwRenderer {
     SwSwapchainContext mSwapchainContext;
     SwGuiContext mGuiContext;
     SwCameraContext mCameraContext;
+    SwMaterialResourcesContext mMaterialResourcesContext;
 
 public:
     SwRenderer();

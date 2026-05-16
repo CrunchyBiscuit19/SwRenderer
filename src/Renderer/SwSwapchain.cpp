@@ -1,5 +1,6 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
+#include <Data/SwCamera.h>
 #include <VkBootstrap.h>
 
 SwFrame::SwFrame() : mCommandPool(nullptr), mCommandBuffer(nullptr), mRenderFence(nullptr), mAvailableSemaphore(nullptr) {}
@@ -12,7 +13,7 @@ void SwFrame::initialize() {
     mPerFrameBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        sizeof(std::uint32_t)  // TODO
+        PER_FRAME_BUFFER_SIZE
     );
 }
 

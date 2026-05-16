@@ -8,15 +8,17 @@
 #include <functional>
 #include <glm/gtx/quaternion.hpp>
 
-enum MovementMode {
+enum SwMovementMode {
     FREEFLY,
     DRONE,
 };
 
-struct Perspective {
+struct SwPerspective {
     glm::mat4 view;
     glm::mat4 proj;
 };
+
+struct SwCameraContext;
 
 class SwCamera {
 private:
@@ -39,11 +41,12 @@ private:
     float mYaw{0.f};
     float mSpeed{1.f};
     SDL_bool mRelativeMode{SDL_FALSE};
-    MovementMode mMovementMode;
-    std::unordered_map<MovementMode, std::function<void()>> mMovementFunctions;
+    SwMovementMode mMovementMode;
+    std::unordered_map<SwMovementMode, std::function<void()>> mMovementFunctions;
     SwAllocatedBuffer mFrustumBuffer;
     std::array<Plane, NUM_FRUSTUM_PLANES> mFrustumPlanes;
 
+public:
     SwCamera();
 
     static void init(SwCameraContext cameraContext);
@@ -59,5 +62,7 @@ private:
 
     inline std::array<Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
 
-    Perspective getPerspective() const;
+    SwPerspective getPerspective() const;
+
+    void setRelativeMode(SDL_bool relativeMode);
 };

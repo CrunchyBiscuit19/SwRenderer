@@ -25,6 +25,8 @@ public:
     inline vk::DescriptorSetLayout getRawLayout() { return *mLayout; };
 
     inline std::span<const vk::DescriptorSetLayoutBinding> getBindings() const { return mBindings; };
+
+    void destroy();
 };
 
 class SwDescriptorSet {

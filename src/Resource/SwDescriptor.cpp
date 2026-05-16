@@ -6,6 +6,8 @@ SwDescriptorLayout::SwDescriptorLayout() : mLayout(nullptr) {};
 SwDescriptorLayout::SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings)
     : mLayout(std::move(layout)), mBindings(std::move(bindings)) {}
 
+void SwDescriptorLayout::destroy() { mLayout.clear(); }
+
 SwDescriptorSet::SwDescriptorSet() : mSet(nullptr) {};
 
 SwDescriptorSet::SwDescriptorSet(vk::raii::DescriptorSet set, std::span<const vk::DescriptorSetLayoutBinding> bindings)

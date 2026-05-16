@@ -1,4 +1,7 @@
 #include <Data/SwCamera.h>
+#include <Renderer/SwEvents.h>
+#include <Renderer/SwSwapchain.h>
+#include <Renderer/SwRendererContext.h>
 
 const float SwCamera::FOVY = 70.f;
 const float SwCamera::NEAR_PLANE = 0.1f;
@@ -104,6 +107,8 @@ glm::vec3 SwCamera::getDirectionVector() const {
 }
 
 void SwCamera::update(float deltaTime, float expectedDeltaTime) {
+    SDL_SetRelativeMouseMode(mRelativeMode);
+
     switch (mMovementMode) {
         case FREEFLY:
             mPosition += glm::vec3(getYawMatrix() * glm::vec4(mVelocity * mSpeed * (deltaTime / expectedDeltaTime), 0.f));
@@ -131,10 +136,14 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
     // Planes stretch indefinitely. Left, right, top, bottom planes all pass through camera position. Near and far calculate with normal * distance.
 }
 
-Perspective SwCamera::getPerspective() const {
-    Perspective perspective;
+SwPerspective SwCamera::getPerspective() const {
+    SwPerspective perspective;
     perspective.view = getViewMatrix();
     perspective.proj = glm::perspective(glm::radians(FOVY), sCameraContext.mSwapchain->getAspectRatio(), NEAR_PLANE, FAR_PLANE);
     perspective.proj[1][1] *= -1;  // Flip Y for Vulkan
     return perspective;
+}
+
+void SwCamera::setRelativeMode(SDL_bool relativeMode) {
+    mRelativeMode = relativeMode;
 }

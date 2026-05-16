@@ -1,0 +1,51 @@
+#pragma once
+
+#include <Resource/SwBuffer.h>
+#include <Resource/SwPipeline.h>
+
+#include <vector>
+
+struct SwPrimitive;
+
+struct SwRenderItem {
+    std::uint32_t mIndexCount;
+    std::uint32_t mRenderInstanceCount;
+    std::uint32_t mFirstIndex;
+    std::uint32_t mVertexOffset;
+    std::uint32_t mFirstRenderInstance;
+    std::uint32_t mMaterialIndex;
+    std::uint32_t mNodeTransformIndex;
+    std::uint32_t mAssetIndex;
+    std::uint32_t mFirstInstance;
+    std::uint32_t mBoundsIndex;
+};
+
+struct SwRenderInstance {
+    std::uint32_t mRenderItemIndex;
+    std::uint32_t mSceneInstanceIndex;
+};
+
+class SwBatch {
+private:
+    static const std::uint32_t BATCH_MAX_RENDER_ITEMS = 1 << 10;
+    static const std::uint32_t BATCH_MAX_RENDER_INSTANCES = BATCH_MAX_RENDER_ITEMS << 3;
+    static const std::uint32_t RENDER_ITEMS_BUFFER_SIZE = sizeof(SwRenderItem) * BATCH_MAX_RENDER_ITEMS;
+    static const std::uint32_t RENDER_INSTANCES_BUFFER_SIZE = sizeof(SwRenderInstance) * BATCH_MAX_RENDER_INSTANCES;
+
+    static std::uint32_t sFirstRenderInstanceOffset;
+
+    SwGraphicsPipelineBundle mGraphicsPipelineBundle;
+
+    std::vector<SwRenderItem> mRenderItems;
+    SwStagingBuffer mRenderItemsStagingBuffer;
+    SwAllocatedBuffer mPreCullRenderItemsBuffer;
+    SwAllocatedBuffer mPostCullRenderItemsBuffer;
+    SwAllocatedBuffer mPostCullRenderItemsCountBuffer;
+
+    std::vector<SwRenderInstance> mRenderInstances;
+    SwStagingBuffer mRenderInstancesStagingBuffer;
+    SwAllocatedBuffer mRenderInstancesBuffer;
+
+    SwBatch(SwPrimitive& primitive);
+};
+

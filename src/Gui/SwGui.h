@@ -18,7 +18,7 @@ private:
     SwDescriptorPool mDescriptorPool;
     bool mCollapsed;
     std::unordered_map<SwGuiComponent, std::function<void()>> mGuiComponents;
-    ImGui::FileBrowser mSelectModelFileBrowser;
+    ImGui::FileBrowser mSelectAssetsFileBrowser;
     ImGui::FileBrowser mSelectSkyboxFileBrowser;
 
     void createDockSpace();

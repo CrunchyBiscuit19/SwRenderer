@@ -1,5 +1,7 @@
 #pragma once
 
+#include <Resource/SwBuffer.h>
+#include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
 #include <vk_mem_alloc.h>
 
@@ -42,16 +44,13 @@ public:
     virtual ~SwImage() = default;
 };
 
-class SwSwapchainImage : public SwImage {
+class SwNonOwningImage : public SwImage {
 private:
     vk::Image mImage;
     std::vector<vk::raii::ImageView> mImageViews;
-    SwSemaphore mRenderedSemaphore;
 
 public:
-    SwSwapchainImage(
-        vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
-    );
+    SwNonOwningImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent);
 
     void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;
 
@@ -59,11 +58,41 @@ public:
 
     inline vk::Image getRawImage() const { return mImage; }
 
+    SwNonOwningImage(SwNonOwningImage&&) noexcept = default;
+    SwNonOwningImage& operator=(SwNonOwningImage&&) noexcept = default;
+
+    SwNonOwningImage(const SwNonOwningImage&) = delete;
+    SwNonOwningImage& operator=(const SwNonOwningImage&) = delete;
+};
+
+class SwSwapchainImage : public SwNonOwningImage {
+private:
+    SwSemaphore mRenderedSemaphore;
+
+public:
+    SwSwapchainImage(
+        vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
+    );
+
     SwSwapchainImage(SwSwapchainImage&&) noexcept = default;
     SwSwapchainImage& operator=(SwSwapchainImage&&) noexcept = default;
 
     SwSwapchainImage(const SwSwapchainImage&) = delete;
     SwSwapchainImage& operator=(const SwSwapchainImage&) = delete;
+};
+
+class SwMaterialImage : public SwNonOwningImage {
+private:
+    SwSampler& mSampler;
+
+public:
+    SwMaterialImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSampler& sampler, std::vector<vk::Format> formats, vk::Extent3D extent);
+
+    SwMaterialImage(SwMaterialImage&&) noexcept = default;
+    SwMaterialImage& operator=(SwMaterialImage&&) noexcept = default;
+
+    SwMaterialImage(const SwMaterialImage&) = delete;
+    SwMaterialImage& operator=(const SwMaterialImage&) = delete;
 };
 
 class SwAllocatedImage : public SwImage {
@@ -180,6 +209,9 @@ private:
         VmaAllocation mAllocation;
     };
 
+    static const std::uint32_t IMAGE_STAGING_BUFFER_SIZE = 256 * (1 << 10) * (1 << 10);  // 256 MB
+    static SwStagingBuffer sImageStagingBuffer;
+
     static SwFactoryContext sRendererContext;
 
     static SwImageConstructionInfo prepareImageConstructionInfo(
@@ -189,6 +221,10 @@ private:
     static void fillImageData(SwImageType swImageType, const void* data, SwAllocatedImage& image);
 
 public:
+    enum class SwDefaultImageOption { White, Grey, Black, Blue, Checkerboard };
+
+    static std::unordered_map<SwDefaultImageOption, SwColorImage2D> sDefaultImages;
+
     static const uint32_t NUM_CUBEMAP_FACES{6};
 
     static void init(SwFactoryContext rendererContext);
@@ -205,4 +241,6 @@ public:
     static SwColorImageCubemap createColorImageCubemap(
         const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()
     );
+
+    static void cleanup();
 };

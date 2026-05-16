@@ -10,6 +10,7 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
+#include <Data/SwMaterial.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
@@ -267,8 +268,9 @@ SwRenderer::SwRenderer()
     mFactoryContext = SwFactoryContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
     mImmSubmitContext = SwImmSubmitContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue);
     mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mImmSubmit, &mEvents);
-    mGuiContext = SwGuiContext(&mInstance, &mDevice, &mChosenGPU, &mGraphicsQueue, &mSwapchain, &mEvents, &mDescriptorAllocator);
+    mGuiContext = SwGuiContext(&mInstance, &mDevice, &mChosenGPU, &mGraphicsQueue, &mSwapchain, &mEvents, &mCamera, &mDescriptorAllocator);
     mCameraContext = SwCameraContext(&mDevice, &mEvents, &mSwapchain);
+    mMaterialResourcesContext = SwMaterialResourcesContext(&mDevice, &mDescriptorAllocator);
 
     SwSemaphoreFactory::init(mFactoryContext);
     SwFenceFactory::init(mFactoryContext);
@@ -288,14 +290,21 @@ SwRenderer::SwRenderer()
 
     SwSwapchain::init(mSwapchainContext);
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
-
     mStats.initialize();
 
     SwGui::init(mGuiContext);
     mGui.initialize();
+    
+    SwCamera::init(mCameraContext);
+    mCamera.initialize();
+    SwMaterialResources::init(mMaterialResourcesContext);
+    SwMaterial::init();
 }
 
 SwRenderer::~SwRenderer() {
     SwResourceStager::cleanup();
+    SwImageFactory::cleanup();
+    SwMaterialResources::cleanup();
+    SwMaterial::cleanup();
     SDL_Quit();
 }

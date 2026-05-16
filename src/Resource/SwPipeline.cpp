@@ -1,15 +1,19 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwPipeline.h>
 
+SwPipelineLayout::SwPipelineLayout(): mLayout(nullptr) {}
+
 SwPipelineLayout::SwPipelineLayout(vk::raii::PipelineLayout layout) : mLayout(std::move(layout)) {}
+
+void SwPipelineLayout::destroy() { mLayout.clear(); }
 
 SwPipelinePipeline::SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : mPipeline(std::move(pipeline)), mLayout(layout) {}
 
 SwPipelineBundle::SwPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout) : mPipeline(pipeline), mLayout(layout) {}
 
-SwGraphicsPipeline::SwGraphicsPipeline(vk::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(pipeline, layout) {}
+SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(pipeline, layout) {}
 
-SwComputePipeline::SwComputePipeline(vk::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(pipeline, layout) {}
+SwComputePipelineBundle::SwComputePipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(pipeline, layout) {}
 
 SwFactoryContext SwPipelineFactory::sRendererContext{};
 std::string SwPipelineFactory::DEFAULT_SHADER_ENTRY_POINT = "main";
@@ -28,7 +32,7 @@ SwPipelineLayout SwPipelineFactory::createPipelineLayout(
     return SwPipelineLayout(vk::raii::PipelineLayout(*sRendererContext.mDevice, pipelineLayoutCreateInfo));
 }
 
-std::pair<SwPipelinePipeline, SwGraphicsPipeline> SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {
+SwPipelinePipeline SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {
     vk::PipelineViewportStateCreateInfo viewportState;
     viewportState.pNext = nullptr;
     viewportState.viewportCount = 1;
@@ -86,9 +90,7 @@ std::pair<SwPipelinePipeline, SwGraphicsPipeline> SwGraphicsPipelineFactory::cre
     vk::raii::Pipeline pipeline = vk::raii::Pipeline(sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo));
     vk::Pipeline rawPipeline = *pipeline;
 
-    return std::pair<SwPipelinePipeline, SwGraphicsPipeline>(
-        SwPipelinePipeline(std::move(pipeline), options.mLayout), SwGraphicsPipeline(*pipeline, options.mLayout)
-    );
+    return SwPipelinePipeline(std::move(pipeline), options.mLayout);
 }
 
 void SwGraphicsPipelineFactory::setShaders(
@@ -186,7 +188,7 @@ void SwGraphicsPipelineFactory::enableDepthTest(
     pipelineDepthStencilStateCreateInfo.maxDepthBounds = 1.f;
 }
 
-std::pair<SwPipelinePipeline, SwComputePipeline> SwComputePipelineFactory::createComputePipeline(SwComputePipelineOptions options) {
+SwPipelinePipeline SwComputePipelineFactory::createComputePipeline(SwComputePipelineOptions options) {
     vk::PipelineShaderStageCreateInfo pipelineShaderStageCreateInfo;
 
     setShaders(pipelineShaderStageCreateInfo, options.mComputeShader);
@@ -199,9 +201,7 @@ std::pair<SwPipelinePipeline, SwComputePipeline> SwComputePipelineFactory::creat
     vk::raii::Pipeline pipeline = vk::raii::Pipeline(sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo));
     vk::Pipeline rawPipeline = *pipeline;
 
-    return std::pair<SwPipelinePipeline, SwComputePipeline>(
-        SwPipelinePipeline(std::move(pipeline), options.mLayout), SwComputePipeline(rawPipeline, options.mLayout)
-    );
+    return SwPipelinePipeline(std::move(pipeline), options.mLayout);
 }
 
 void SwComputePipelineFactory::setShaders(vk::PipelineShaderStageCreateInfo& pipelineShaderStageCreateInfo, vk::ShaderModule computeShader) {

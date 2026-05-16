@@ -1,4 +1,6 @@
 #include <Gui/SwGui.h>
+#include <Renderer/SwEvents.h>
+#include <Renderer/SwSwapchain.h>
 #include <fmt/core.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
@@ -59,14 +61,14 @@ void SwGui::initialize() {
         col.z = pow(col.z, gamma);
     }
 
-    mSelectModelFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection | ImGuiFileBrowserFlags_ConfirmOnEnter, MODELS_PATH);
-    mSelectModelFileBrowser.SetTitle("Select GLTF / GLB File");
-    mSelectModelFileBrowser.SetTypeFilters({".glb", ".gltf"});
+    mSelectAssetsFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection | ImGuiFileBrowserFlags_ConfirmOnEnter, MODELS_PATH);
+    mSelectAssetsFileBrowser.SetTitle("Select GLTF / GLB File");
+    mSelectAssetsFileBrowser.SetTypeFilters({".glb", ".gltf"});
 
     mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_SelectDirectory, SKYBOXES_PATH);
     mSelectSkyboxFileBrowser.SetTitle("Select Directory of Skybox Image");
 
-    // TODO
+    // TODO implement all passes first
 
     sGuiContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
@@ -77,12 +79,12 @@ void SwGui::initialize() {
         }
 
         if (keyState[SDL_SCANCODE_T] && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            // mRenderer->mScene.mPicker.changeImguizmoOperation(); // TODO
+            // mRenderer->mScene.mPicker.changeImguizmoOperation(); // TODO implement picker pass first
         }
 
         if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            mSelectModelFileBrowser.Open();
-            // mRenderer->mCamera.mRelativeMode = SDL_FALSE; // TODO
+            mSelectAssetsFileBrowser.Open();
+            sGuiContext.mCamera->setRelativeMode(SDL_FALSE);
         }
     });
 }
@@ -94,13 +96,13 @@ void SwGui::update() {
 
     createDockSpace();
     createRendererOptionsWindow();
-    // mRenderer->mScene.mPicker.imguizmoFrame(); // TODO
+    // mRenderer->mScene.mPicker.imguizmoFrame(); // TODO implement picker pass first
 
-    mSelectModelFileBrowser.Display();
-    if (mSelectModelFileBrowser.HasSelected()) {
-        auto selectedFiles = mSelectModelFileBrowser.GetMultiSelected();
-        // mRenderer->mScene.loadModels(selectedFiles); // TODO
-        mSelectModelFileBrowser.ClearSelected();
+    mSelectAssetsFileBrowser.Display();
+    if (mSelectAssetsFileBrowser.HasSelected()) {
+        auto selectedFiles = mSelectAssetsFileBrowser.GetMultiSelected();
+        // mRenderer->mScene.loadAssets(selectedFiles); // TODO implement scene loading first
+        mSelectAssetsFileBrowser.ClearSelected();
     }
 
     ImGui::Render();
@@ -132,16 +134,11 @@ void SwGui::createRendererOptionsWindow() const {
     if (mCollapsed) return;
     if (!ImGui::Begin("Renderer Options", nullptr, ImGuiWindowFlags_NoDecoration)) return;
     if (ImGui::IsWindowCollapsed()) return;
-    if (!ImGui::BeginTabBar(
-            "RendererOptionsTabBar", ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_NoCloseWithMiddleMouseButton | ImGuiTabBarFlags_FittingPolicyResizeDown
-        ))
-        return;
+
     for (auto& component : mGuiComponents) {
-        if (!ImGui::BeginTabItem(magic_enum::enum_name(component.first).data(), nullptr, ImGuiTabItemFlags_NoCloseButton)) return;
+        if (!ImGui::CollapsingHeader(magic_enum::enum_name(component.first).data())) return;
         component.second();
-        ImGui::EndTabItem();
     }
-    ImGui::EndTabBar();
 
     ImGui::End();
 }

@@ -11,6 +11,8 @@ private:
     vk::raii::PipelineLayout mLayout;
 
 public:
+    SwPipelineLayout();
+
     SwPipelineLayout(vk::raii::PipelineLayout layout);
 
     SwPipelineLayout(SwPipelineLayout&&) noexcept = default;
@@ -20,6 +22,8 @@ public:
     SwPipelineLayout& operator=(const SwPipelineLayout&) = delete;
 
     inline vk::PipelineLayout getRawLayout() { return *mLayout; };
+
+    void destroy();
 };
 
 class SwPipelinePipeline {
@@ -47,6 +51,8 @@ protected:
     vk::PipelineLayout mLayout;
 
 public:
+    SwPipelineBundle() = default;
+
     SwPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout);
 
     inline vk::Pipeline getRawPipeline() { return mPipeline; }
@@ -54,14 +60,18 @@ public:
     inline vk::PipelineLayout getRawLayout() { return mLayout; }
 };
 
-class SwGraphicsPipeline : public SwPipelineBundle {
+class SwGraphicsPipelineBundle : public SwPipelineBundle {
 public:
-    SwGraphicsPipeline(vk::Pipeline pipeline, vk::PipelineLayout layout);
+    SwGraphicsPipelineBundle() = default;
+
+    SwGraphicsPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout);
 };
 
-class SwComputePipeline : public SwPipelineBundle {
+class SwComputePipelineBundle : public SwPipelineBundle {
 public:
-    SwComputePipeline(vk::Pipeline pipeline, vk::PipelineLayout layout);
+    SwComputePipelineBundle() = default;
+
+    SwComputePipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout);
 };
 
 class SwPipelineFactory {
@@ -96,7 +106,7 @@ public:
         vk::CompareOp mDepthCompareOp;
     };
 
-    static std::pair<SwPipelinePipeline, SwGraphicsPipeline> createGraphicsPipeline(SwGraphicsPipelineOptions options);
+    static SwPipelinePipeline createGraphicsPipeline(SwGraphicsPipelineOptions options);
 
 private:
     static void setShaders(
@@ -128,7 +138,7 @@ public:
         vk::PipelineLayout mLayout;
     };
 
-    static std::pair<SwPipelinePipeline, SwComputePipeline> createComputePipeline(SwComputePipelineOptions options);
+    static SwPipelinePipeline createComputePipeline(SwComputePipelineOptions options);
 
 private:
     static void setShaders(
