@@ -32,9 +32,9 @@ struct SwPrimitive {
 
 class SwMesh {
 private:
-    static const std::uint32_t mLatestMeshId{0};
-    std::string mName;
+    static const std::uint32_t sLatestMeshId{0};
     std::uint32_t mId;
+    std::string mName;
     std::vector<SwPrimitive> mPrimitives;
     SwBounds mBounds;
     std::uint32_t mRelativeFirstBounds;
