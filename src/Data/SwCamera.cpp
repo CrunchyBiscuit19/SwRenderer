@@ -7,7 +7,7 @@ const float SwCamera::FOVY = 70.f;
 const float SwCamera::NEAR_PLANE = 0.1f;
 const float SwCamera::FAR_PLANE = 10000.f;
 const float SwCamera::MAX_CAMERA_SPEED = 10.f;
-SwCameraContext SwCamera::sCameraContext{};
+SwRendererContext SwCamera::sRendererContext{};
 
 SwCamera::SwCamera() {
     mVelocity = glm::vec3(0.f);
@@ -46,10 +46,10 @@ SwCamera::SwCamera() {
     };
 }
 
-void SwCamera::init(SwCameraContext cameraContext) { sCameraContext = cameraContext; }
+void SwCamera::init(SwRendererContext cameraContext) { sRendererContext = cameraContext; }
 
 void SwCamera::initialize() {
-    sCameraContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+    sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
         mVelocity = glm::vec3(0.f);
         mMovementFunctions[mMovementMode]();
@@ -124,7 +124,7 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
     glm::vec3 up = glm::normalize(glm::vec3(rot * glm::vec4(0, 1, 0, 0)));
 
     const float halfVSide = std::tanf(glm::radians(FOVY) * .5f);
-    const float halfHSide = halfVSide * sCameraContext.mSwapchain->getAspectRatio();
+    const float halfHSide = halfVSide * sRendererContext.mSwapchain->getAspectRatio();
 
     mFrustumPlanes[FRUSTUM_NEAR_FACE] = Plane(forward, mPosition + forward * NEAR_PLANE);
     mFrustumPlanes[FRUSTUM_FAR_FACE] = Plane(-forward, mPosition + forward * FAR_PLANE);
@@ -139,7 +139,7 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
 SwPerspective SwCamera::getPerspective() const {
     SwPerspective perspective;
     perspective.view = getViewMatrix();
-    perspective.proj = glm::perspective(glm::radians(FOVY), sCameraContext.mSwapchain->getAspectRatio(), NEAR_PLANE, FAR_PLANE);
+    perspective.proj = glm::perspective(glm::radians(FOVY), sRendererContext.mSwapchain->getAspectRatio(), NEAR_PLANE, FAR_PLANE);
     perspective.proj[1][1] *= -1;  // Flip Y for Vulkan
     return perspective;
 }

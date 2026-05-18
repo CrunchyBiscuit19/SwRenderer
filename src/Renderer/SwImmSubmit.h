@@ -7,11 +7,11 @@
 #include <functional>
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwImmSubmitContext;
+struct SwRendererContext;
 
 class SwImmSubmit {
 private:
-    static SwImmSubmitContext sImmSubmitContext;
+    static SwRendererContext sRendererContext;
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;
     SwFence mFence;
@@ -20,7 +20,7 @@ private:
 public:
     SwImmSubmit();
 
-    static void init(SwImmSubmitContext immSubmitContext);
+    static void init(SwRendererContext rendererContext);
 
     void initialize();
 

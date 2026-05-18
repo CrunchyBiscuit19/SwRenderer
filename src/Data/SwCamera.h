@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Pass/SwCull.h>
+#include <Pass/Cull/SwCull.h>
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwBuffer.h>
 #include <SDL_events.h>
@@ -18,7 +18,7 @@ struct SwPerspective {
     glm::mat4 proj;
 };
 
-struct SwCameraContext;
+struct SwRendererContext;
 
 class SwCamera {
 private:
@@ -34,7 +34,7 @@ private:
     static const std::uint32_t FRUSTUM_TOP_FACE{4};
     static const std::uint32_t FRUSTUM_BOTTOM_FACE{5};
 
-    static SwCameraContext sCameraContext;
+    static SwRendererContext sRendererContext;
     glm::vec3 mVelocity;
     glm::vec3 mPosition;
     float mPitch{0.f};
@@ -49,7 +49,7 @@ private:
 public:
     SwCamera();
 
-    static void init(SwCameraContext cameraContext);
+    static void init(SwRendererContext cameraContext);
 
     void initialize();
 

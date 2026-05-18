@@ -265,48 +265,43 @@ SwRenderer::SwRenderer()
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
-    mFactoryContext = SwFactoryContext(&mDevice, mLogger, mAllocator.mAllocator, &mImmSubmit);
-    mImmSubmitContext = SwImmSubmitContext(&mDevice, mLogger, mAllocator.mAllocator, &mGraphicsQueue);
-    mSwapchainContext = SwSwapchainContext(&mDevice, mLogger, &mChosenGPU, &mImmSubmit, &mEvents);
-    mGuiContext = SwGuiContext(&mDevice, mLogger, &mInstance, &mChosenGPU, &mGraphicsQueue, &mSwapchain, &mEvents, &mCamera, &mDescriptorAllocator);
-    mCameraContext = SwCameraContext(&mDevice, mLogger, &mEvents, &mSwapchain);
-    mMaterialResourcesContext = SwMaterialResourcesContext(&mDevice, mLogger, &mDescriptorAllocator);
-    mAssetContext = SwAssetContext(&mDevice, mLogger, &mDescriptorAllocator, &mImmSubmit);
+    mRendererContext = SwRendererContext(
+        &mInstance, &mChosenGPU, &mDevice, mAllocator.mAllocator, &mGraphicsQueue, &mDescriptorAllocator, &mSwapchain, &mImmSubmit, &mEvents, &mCamera, mLogger
+    );
 
-    SwSemaphoreFactory::init(mFactoryContext);
-    SwFenceFactory::init(mFactoryContext);
-    SwCommandPoolFactory::init(mFactoryContext);
-    SwCommandBufferFactory::init(mFactoryContext);
+    SwSemaphoreFactory::init(mRendererContext);
+    SwFenceFactory::init(mRendererContext);
+    SwCommandPoolFactory::init(mRendererContext);
+    SwCommandBufferFactory::init(mRendererContext);
 
-    SwImmSubmit::init(mImmSubmitContext);
+    SwImmSubmit::init(mRendererContext);
     mImmSubmit.initialize();
 
-    SwShaderFactory::init(mFactoryContext);
-    SwSamplerFactory::init(mFactoryContext);
-    SwDescriptorAllocator::init(mFactoryContext);
-    SwPipelineFactory::init(mFactoryContext);
-    SwBufferFactory::init(mFactoryContext);
-    SwImageFactory::init(mFactoryContext);
+    SwShaderFactory::init(mRendererContext);
+    SwSamplerFactory::init(mRendererContext);
+    SwDescriptorAllocator::init(mRendererContext);
+    SwPipelineFactory::init(mRendererContext);
+    SwBufferFactory::init(mRendererContext);
+    SwImageFactory::init(mRendererContext);
     
     SwMesh::init();
     SwBounds::init();
     SwNode::init();
     SwMaterialConstants::init();
 
-    SwSwapchain::init(mSwapchainContext);
+    SwSwapchain::init(mRendererContext);
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
     mStats.initialize();
 
-    SwGui::init(mGuiContext);
+    SwGui::init(mRendererContext);
     mGui.initialize();
     
-    SwCamera::init(mCameraContext);
+    SwCamera::init(mRendererContext);
     mCamera.initialize();
 
-    SwMaterialResources::init(mMaterialResourcesContext);
+    SwMaterialResources::init(mRendererContext);
     SwMaterial::init();
-    SwAsset::init(mAssetContext);
-
+    SwAsset::init(mRendererContext);
 }
 
 SwRenderer::~SwRenderer() {

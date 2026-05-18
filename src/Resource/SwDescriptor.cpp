@@ -49,14 +49,14 @@ void SwDescriptorSet::clearWrites() { mWrites.clear(); }
 
 SwDescriptorPool::SwDescriptorPool(vk::raii::DescriptorPool descriptorPool) : mPool(std::move(descriptorPool)) {}
 
-SwFactoryContext SwDescriptorAllocator::sRendererContext{};
+SwRendererContext SwDescriptorAllocator::sRendererContext{};
 
 SwDescriptorAllocator::SwDescriptorAllocator() {}
 
 SwDescriptorAllocator::SwDescriptorAllocator(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool)
     : mRatios(std::move(ratios)), mSetsPerPool(setsPerPool) {}
 
-void SwDescriptorAllocator::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
+void SwDescriptorAllocator::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 SwDescriptorPool SwDescriptorAllocator::createPool(std::uint32_t setCount) const {
     std::vector<vk::DescriptorPoolSize> sizes;
@@ -124,7 +124,7 @@ SwDescriptorLayout SwDescriptorAllocator::createDescriptorLayout(
     return SwDescriptorLayout(vk::raii::DescriptorSetLayout(*sRendererContext.mDevice, descriptorLayoutCreateInfo), std::move(bindings));
 }
 
-SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout layout) {
+SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& layout) {
     if (mReadyPools.empty()) {
         mReadyPools.emplace_back(std::move(createPool(mSetsPerPool)));
     }

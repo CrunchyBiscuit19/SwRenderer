@@ -139,20 +139,14 @@ class SwRenderer {
 
     SwDescriptorAllocator mDescriptorAllocator;
 
-    SwFactoryContext mFactoryContext;
-    SwImmSubmitContext mImmSubmitContext;
-    SwSwapchainContext mSwapchainContext;
-    SwGuiContext mGuiContext;
-    SwCameraContext mCameraContext;
-    SwMaterialResourcesContext mMaterialResourcesContext;
-    SwAssetContext mAssetContext;
+    SwRendererContext mRendererContext;
 
 public:
     SwRenderer();
 
     inline quill::Logger* getLogger() { return mLogger; };
 
-    inline SwFactoryContext getRendererInfo() { return mFactoryContext; };
+    inline SwRendererContext& getRendererInfo() { return mRendererContext; };
 
     inline std::uint32_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };
 

@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwCommandBuffer {
 private:
@@ -28,10 +28,10 @@ public:
 
 class SwCommandBufferFactory {
 private:
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwCommandBuffer createCommandBuffer(SwCommandPool& pool);
     static SwCommandBuffer createCommandBuffer(vk::CommandPool pool);

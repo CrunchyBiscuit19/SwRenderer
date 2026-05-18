@@ -9,7 +9,7 @@
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwImage {
 protected:
@@ -212,7 +212,7 @@ private:
     static const std::uint32_t IMAGE_STAGING_BUFFER_SIZE = 256 * (1 << 10) * (1 << 10);  // 256 MB
     static SwStagingBuffer sImageStagingBuffer;
 
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
     static SwImageConstructionInfo prepareImageConstructionInfo(
         SwImageType swImageType, const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
@@ -227,7 +227,7 @@ public:
 
     static const uint32_t NUM_CUBEMAP_FACES{6};
 
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwColorImage2D createColorImage2D(
         const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()

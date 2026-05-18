@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwFence {
 private:
@@ -20,10 +20,10 @@ public:
 
 class SwFenceFactory {
 private:
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwFence createFence(vk::FenceCreateFlags flags);
 };

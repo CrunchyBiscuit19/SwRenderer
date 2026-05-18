@@ -5,7 +5,7 @@
 #include <filesystem>
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwShader {
 private:
@@ -24,10 +24,10 @@ public:
 
 class SwShaderFactory {
 private:
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwShader createShader(const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag);
 };

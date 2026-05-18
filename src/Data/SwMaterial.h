@@ -12,7 +12,7 @@
 #include <filesystem>
 
 class SwDescriptorLayout;
-struct SwMaterialResourcesContext;
+struct SwRendererContext;
 class SwShader;
 
 struct SwMaterialConstants {
@@ -36,7 +36,7 @@ struct SwMaterialResources {
 private:
     static const std::uint32_t MAX_TEXTURE_ARRAY_SLOTS = 1 << 10;
 
-    static SwMaterialResourcesContext sMaterialResourcesContext;
+    static SwRendererContext sRendererContext;
 
 public:
     SwMaterialImage mBase;
@@ -49,7 +49,7 @@ public:
 
     SwMaterialResources(SwMaterialImage base, SwMaterialImage metallicRoughness, SwMaterialImage normal, SwMaterialImage occlusion, SwMaterialImage emissive);
 
-    static void init(SwMaterialResourcesContext materialResourcesContext);
+    static void init(SwRendererContext rendererContext);
 
     static void cleanup();
 };

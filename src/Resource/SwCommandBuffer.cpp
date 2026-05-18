@@ -1,7 +1,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwCommandBuffer.h>
 
-SwFactoryContext SwCommandBufferFactory::sRendererContext{};
+SwRendererContext SwCommandBufferFactory::sRendererContext{};
 
 SwCommandBuffer::SwCommandBuffer(): mCommandBuffer(nullptr) {}
 
@@ -25,7 +25,7 @@ vk::CommandBufferSubmitInfo SwCommandBuffer::getSubmitInfo() {
     };
 }
 
-void SwCommandBufferFactory::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
+void SwCommandBufferFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(SwCommandPool& pool) {
     vk::CommandBufferAllocateInfo info = {};

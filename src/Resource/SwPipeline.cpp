@@ -18,11 +18,11 @@ SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(SwPipelinePipeline& pipelineP
 
 SwComputePipelineBundle::SwComputePipelineBundle(SwPipelinePipeline& pipelinePipeline) : SwPipelineBundle(pipelinePipeline) {}
 
-SwFactoryContext SwPipelineFactory::sRendererContext{};
+SwRendererContext SwPipelineFactory::sRendererContext{};
 std::string SwPipelineFactory::DEFAULT_SHADER_ENTRY_POINT = "main";
 std::uint32_t SwPipelineFactory::MIN_NUM_SHADER_STAGES = 2;
 
-void SwPipelineFactory::init(SwFactoryContext context) {
+void SwPipelineFactory::init(SwRendererContext context) {
     sRendererContext = context;
     DEFAULT_SHADER_ENTRY_POINT = "main";
     MIN_NUM_SHADER_STAGES = 2;
@@ -68,8 +68,8 @@ SwPipelinePipeline SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsP
     formats.reserve(options.mColorAttachments.size());
     blendStates.reserve(options.mColorAttachments.size());
     for (auto& [format, blendState] : options.mColorAttachments) {
-        formats.push_back(format);
-        blendStates.push_back(blendState);
+        formats.emplace_back(format);
+        blendStates.emplace_back(blendState);
     }
     setColorAttachments(pipelineRenderingCreateInfo, pipelineColorBlendStateCreateInfo, formats, blendStates);
     setDepthFormat(pipelineRenderingCreateInfo, options.mDepthFormat);

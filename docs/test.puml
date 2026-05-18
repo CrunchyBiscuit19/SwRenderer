@@ -8,7 +8,7 @@ struct SwGeometryPushConstants {
     + mSceneVisibleRenderInstancesInstanceIndexBuffer: vk::DeviceAddress
 }
 
-class SwSceneFlags {
+struct SwSceneFlags {
     + mAssetLoadedFlag: bool
     + mAssetUnloadedFlag: bool
     + mInstanceLoadedFlag: bool

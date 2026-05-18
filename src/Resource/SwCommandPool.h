@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwCommandPool {
 private:
@@ -18,10 +18,10 @@ public:
 
 class SwCommandPoolFactory {
 private:
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwCommandPool createCommandPool(vk::CommandPoolCreateFlags commandPoolCreateFlags);
 };

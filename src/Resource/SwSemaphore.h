@@ -2,7 +2,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwSemaphore {
 private:
@@ -18,10 +18,10 @@ public:
 
 class SwSemaphoreFactory {
 private:
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwSemaphore createSemaphore();
 };

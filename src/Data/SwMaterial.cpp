@@ -11,7 +11,7 @@ void SwMaterialConstants::init() { sMaterialConstantsStagingBuffer = SwBufferFac
 
 void SwMaterialConstants::cleanup() { sMaterialConstantsStagingBuffer.destroy(); }
 
-SwMaterialResourcesContext SwMaterialResources::sMaterialResourcesContext{};
+SwRendererContext SwMaterialResources::sRendererContext{};
 SwDescriptorLayout SwMaterialResources::sMaterialResourcesDescriptorLayout{};
 
 SwMaterialResources::SwMaterialResources(
@@ -23,9 +23,9 @@ SwMaterialResources::SwMaterialResources(
       mOcclusion(std::move(occlusion)),
       mEmissive(std::move(emissive)) {}
 
-void SwMaterialResources::init(SwMaterialResourcesContext materialResourcesContext) {
-    sMaterialResourcesContext = materialResourcesContext;
-    sMaterialResourcesDescriptorLayout = sMaterialResourcesContext.mDescriptorAllocator->createDescriptorLayout(
+void SwMaterialResources::init(SwRendererContext materialResourcesContext) {
+    sRendererContext = materialResourcesContext;
+    sMaterialResourcesDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true
     );
 };

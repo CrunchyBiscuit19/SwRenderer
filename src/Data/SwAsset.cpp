@@ -9,7 +9,7 @@
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-SwAssetContext SwAsset::sAssetContext{};
+SwRendererContext SwAsset::sRendererContext{};
 std::uint32_t SwAsset::sLatestAssetId{0};
 std::unordered_map<SwSamplerOptions, SwSampler> SwAsset::sSamplers{};
 
@@ -54,7 +54,7 @@ vk::SamplerAddressMode SwAsset::extractAddressMode(fastgltf::Wrap wrap) {
     }
 }
 
-void SwAsset::init(SwAssetContext assetContext) { sAssetContext = assetContext; }
+void SwAsset::init(SwRendererContext assetContext) { sRendererContext = assetContext; }
 
 void SwAsset::cleanup() { sSamplers.clear(); }
 
@@ -68,14 +68,14 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     data.loadFromFile(assetPath);
     auto type = fastgltf::determineGltfFileType(&data);
     if (type == fastgltf::GltfType::Invalid) {
-        LOG_ERROR(sAssetContext.mLogger, "{} Failed to determine GLTF Container", mName);
+        LOG_ERROR(sRendererContext.mLogger, "{} Failed to determine GLTF Container", mName);
     }
     auto load = (type == fastgltf::GltfType::glTF) ? (parser.loadGLTF(&data, assetPath.parent_path(), gltfOptions))
                                                    : (parser.loadBinaryGLTF(&data, assetPath.parent_path(), gltfOptions));
     if (load) {
         gltf = std::move(load.get());
     } else {
-        LOG_ERROR(sAssetContext.mLogger, "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
+        LOG_ERROR(sRendererContext.mLogger, "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
     }
     mRawAsset = std::move(gltf);
 }
@@ -306,7 +306,7 @@ void SwAsset::constructMaterials() {
     materialConstantsCopy.srcOffset = 0;
     materialConstantsCopy.size = materialConstants.size() * sizeof(SwMaterialConstants);
 
-    sAssetContext.mImmSubmit->individualSubmit([this, materialConstantsCopy](vk::CommandBuffer cmd) {
+    sRendererContext.mImmSubmit->individualSubmit([this, materialConstantsCopy](vk::CommandBuffer cmd) {
         SwMaterialConstants::sMaterialConstantsStagingBuffer.barrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         mMaterialConstantsBuffer.copyFrom(cmd, SwMaterialConstants::sMaterialConstantsStagingBuffer, materialConstantsCopy, materialConstantsCopy.size);
         mMaterialConstantsBuffer.barrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
@@ -415,7 +415,7 @@ void SwAsset::constructMeshes() {
         mMeshes.emplace_back(mName, name, primitives, bounds, relativeFirstBounds, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0);
         
         SwMesh& createdMesh = mMeshes.back();
-        sAssetContext.mImmSubmit->individualSubmit([&createdMesh, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
+        sRendererContext.mImmSubmit->individualSubmit([&createdMesh, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
             SwMesh::sMeshStagingBuffer.barrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
             createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, vertexCopy, vertexCopy.size);
             createdMesh.getIndexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, indexCopy, indexCopy.size);
@@ -436,7 +436,7 @@ void SwAsset::constructMeshes() {
     boundsCopy.srcOffset = 0;
     boundsCopy.size = boundsSize;
 
-    sAssetContext.mImmSubmit->individualSubmit([this, boundsCopy](vk::CommandBuffer cmd) {
+    sRendererContext.mImmSubmit->individualSubmit([this, boundsCopy](vk::CommandBuffer cmd) {
         SwBounds::sBoundsStagingBuffer.barrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         mBoundsBuffer.copyFrom(cmd, SwBounds::sBoundsStagingBuffer, boundsCopy, boundsCopy.size);
         mBoundsBuffer.barrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
@@ -507,7 +507,7 @@ void SwAsset::constructNodes() {
     nodeTransformsCopy.srcOffset = 0;
     nodeTransformsCopy.size = mNodes.size() * sizeof(glm::mat4);
 
-    sAssetContext.mImmSubmit->individualSubmit([this, nodeTransformsCopy](vk::CommandBuffer cmd) {
+    sRendererContext.mImmSubmit->individualSubmit([this, nodeTransformsCopy](vk::CommandBuffer cmd) {
         SwNode::sNodeTransformsStagingBuffer.barrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         mNodeTransformsBuffer.copyFrom(cmd, SwNode::sNodeTransformsStagingBuffer, nodeTransformsCopy, nodeTransformsCopy.size);
         mNodeTransformsBuffer.barrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);

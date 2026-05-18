@@ -17,7 +17,7 @@ private:
     static const std::uint32_t NUM_MODEL_BOUNDS = 1 << 13;
 
     static std::uint32_t sLatestAssetId;
-    static SwAssetContext sAssetContext;
+    static SwRendererContext sRendererContext;
 
     std::string mName;
     std::uint32_t mId{0};
@@ -60,7 +60,7 @@ private:
     void constructNodes();  
 
 public:
-    static void init(SwAssetContext assetContext);
+    static void init(SwRendererContext assetContext);
 
     static void cleanup();
 

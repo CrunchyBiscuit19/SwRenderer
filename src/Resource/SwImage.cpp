@@ -306,7 +306,7 @@ SwColorImageCubemap::SwColorImageCubemap(
 
 void SwColorImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
 
-SwFactoryContext SwImageFactory::sRendererContext{};
+SwRendererContext SwImageFactory::sRendererContext{};
 SwStagingBuffer SwImageFactory::sImageStagingBuffer;
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
@@ -426,7 +426,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     });
 }
 
-void SwImageFactory::init(SwFactoryContext rendererContext) {
+void SwImageFactory::init(SwRendererContext rendererContext) {
     sRendererContext = rendererContext;
     sImageStagingBuffer = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
     constexpr std::uint32_t white = std::byteswap(0xFFFFFFFF);

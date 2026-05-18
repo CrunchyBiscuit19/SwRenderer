@@ -10,9 +10,9 @@ SwShader::SwShader(vk::raii::ShaderModule module, vk::ShaderStageFlagBits shader
 
 void SwShader::destroy() { mModule.clear(); }
 
-SwFactoryContext SwShaderFactory::sRendererContext{};
+SwRendererContext SwShaderFactory::sRendererContext{};
 
-void SwShaderFactory::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
+void SwShaderFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 SwShader SwShaderFactory::createShader(const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);

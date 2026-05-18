@@ -17,11 +17,11 @@ void SwFrame::initialize() {
     );
 }
 
-SwSwapchainContext SwSwapchain::sSwapchainContext{};
+SwRendererContext SwSwapchain::sRendererContext{};
 
 SwSwapchain::SwSwapchain() : mSwapchain(nullptr), mSurface(nullptr) {}
 
-void SwSwapchain::init(SwSwapchainContext swapchainContext) { sSwapchainContext = swapchainContext; }
+void SwSwapchain::init(SwRendererContext swapchainContext) { sRendererContext = swapchainContext; }
 
 void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen) {
     mWindow = window;
@@ -31,7 +31,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     mAspectRatio = static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height);
     mWindowFullScreen ? mResizeRequested = true : mResizeRequested = false;  // Initial resize for fullscreen
 
-    sSwapchainContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+    sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
         if ((modState & KMOD_ALT) && keyState[SDL_SCANCODE_RETURN] && e.type == SDL_KEYDOWN && !e.key.repeat) {
@@ -46,7 +46,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     formatListCreateInfo.pViewFormats = formats.data();
     formatListCreateInfo.viewFormatCount = formats.size();
 
-    vkb::SwapchainBuilder swapchainBuilder(**sSwapchainContext.mChosenGPU, **sSwapchainContext.mDevice, *mSurface);
+    vkb::SwapchainBuilder swapchainBuilder(**sRendererContext.mChosenGPU, **sRendererContext.mDevice, *mSurface);
     vkb::Swapchain vkbSwapchain =
         swapchainBuilder
             .set_desired_format(
@@ -62,7 +62,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
             .add_pNext(&formatListCreateInfo)
             .build()
             .value();
-    mSwapchain = vk::raii::SwapchainKHR(*sSwapchainContext.mDevice, vkbSwapchain.swapchain);
+    mSwapchain = vk::raii::SwapchainKHR(*sRendererContext.mDevice, vkbSwapchain.swapchain);
 
     mImages.reserve(NUM_SWAPCHAIN_IMAGES);
     for (std::uint32_t i = 0; i < vkbSwapchain.get_images().value().size(); i++) {
@@ -78,9 +78,9 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
         std::vector<vk::raii::ImageView> imageViews;
         imageViews.reserve(2);
-        imageViews.emplace_back(sSwapchainContext.mDevice->createImageView(imageViewCreateInfo));
+        imageViews.emplace_back(sRendererContext.mDevice->createImageView(imageViewCreateInfo));
         imageViewCreateInfo.format = UNORM_FORMAT;
-        imageViews.emplace_back(sSwapchainContext.mDevice->createImageView(imageViewCreateInfo));
+        imageViews.emplace_back(sRendererContext.mDevice->createImageView(imageViewCreateInfo));
         SwSwapchainImage swapchainImage(
             vkbSwapchain.get_images().value()[i], std::move(imageViews), SwSemaphoreFactory::createSemaphore(), formats, vk::Extent3D(vkbSwapchain.extent, 1)
         );
@@ -108,7 +108,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
-    sSwapchainContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mImages.size(); i++) {
             mImages.at(i).transition(
                 cmd,

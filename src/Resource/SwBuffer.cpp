@@ -128,9 +128,9 @@ SwStagingBuffer::SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size
       ) {}
 
-SwFactoryContext SwBufferFactory::sRendererContext{};
+SwRendererContext SwBufferFactory::sRendererContext{};
 
-void SwBufferFactory::init(SwFactoryContext rendererContext) { sRendererContext = rendererContext; }
+void SwBufferFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size) {
     vk::BufferCreateInfo bufferInfo = {};

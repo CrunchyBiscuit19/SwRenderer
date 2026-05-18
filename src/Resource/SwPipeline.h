@@ -4,7 +4,7 @@
 
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwPipelineLayout {
 private:
@@ -83,13 +83,13 @@ public:
 
 class SwPipelineFactory {
 protected:
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
     static std::string DEFAULT_SHADER_ENTRY_POINT;
     static std::uint32_t MIN_NUM_SHADER_STAGES;
 
 public:
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwPipelineLayout createPipelineLayout(vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges);
 };

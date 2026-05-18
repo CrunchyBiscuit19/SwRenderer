@@ -13,7 +13,7 @@ class SwGui {
 private:
     enum class SwGuiComponent { Scene, Camera, Stats, Controls };
 
-    static SwGuiContext sGuiContext;
+    static SwRendererContext sRendererContext;
 
     SwDescriptorPool mDescriptorPool;
     bool mCollapsed;
@@ -28,7 +28,7 @@ public:
 
     SwGui();
 
-    static void init(SwGuiContext guiContext);
+    static void init(SwRendererContext guiContext);
 
     void initialize();
 

@@ -6,7 +6,7 @@
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwFactoryContext;
+struct SwRendererContext;
 
 class SwBuffer {
 protected:
@@ -81,10 +81,10 @@ class SwBufferFactory {
 private:
     enum class SwBufferType { SwAddressedBuffer, SwStagingBuffer };
 
-    static SwFactoryContext sRendererContext;
+    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwFactoryContext rendererContext);
+    static void init(SwRendererContext rendererContext);
 
     static SwAllocatedBuffer createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size);
 

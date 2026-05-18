@@ -16,7 +16,7 @@
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
 
-struct SwSwapchainContext;
+struct SwRendererContext;
 
 class SwFrame {
 private:
@@ -38,7 +38,7 @@ public:
 
 class SwSwapchain {
 private:
-    static SwSwapchainContext sSwapchainContext;
+    static SwRendererContext sRendererContext;
 
     SDL_Window* mWindow{nullptr};
     vk::raii::SurfaceKHR mSurface;
@@ -74,7 +74,7 @@ public:
 
     SwSwapchain();
 
-    static void init(SwSwapchainContext swapchainContext);
+    static void init(SwRendererContext rendererContext);
 
     void initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen);
 

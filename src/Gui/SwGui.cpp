@@ -11,15 +11,15 @@
 #include <ranges>
 #include <vulkan/vulkan_raii.hpp>
 
-SwGuiContext SwGui::sGuiContext{};
+SwRendererContext SwGui::sRendererContext{};
 
 SwGui::SwGui() {}
 
-void SwGui::init(SwGuiContext guiContext) { sGuiContext = guiContext; }
+void SwGui::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwGui::initialize() {
     ImGui::CreateContext();
-    ImGui_ImplSDL2_InitForVulkan(sGuiContext.mSwapchain->getWindow());
+    ImGui_ImplSDL2_InitForVulkan(sRendererContext.mSwapchain->getWindow());
 
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
     pipelineRenderingCreateInfo.colorAttachmentCount = 1;
@@ -29,13 +29,13 @@ void SwGui::initialize() {
     std::array<SwPoolSizeRatio, 1> ratios{
         {vk::DescriptorType::eCombinedImageSampler, 1000},
     };
-    mDescriptorPool = sGuiContext.mDescriptorAllocator->createDescriptorPool(ratios, 100);
+    mDescriptorPool = sRendererContext.mDescriptorAllocator->createDescriptorPool(ratios, 100);
 
     ImGui_ImplVulkan_InitInfo initInfo = {};
-    initInfo.Instance = **sGuiContext.mInstance;
-    initInfo.PhysicalDevice = **sGuiContext.mChosenGPU;
-    initInfo.Device = **sGuiContext.mDevice;
-    initInfo.Queue = **sGuiContext.mGraphicsQueue;
+    initInfo.Instance = **sRendererContext.mInstance;
+    initInfo.PhysicalDevice = **sRendererContext.mChosenGPU;
+    initInfo.Device = **sRendererContext.mDevice;
+    initInfo.Queue = **sRendererContext.mGraphicsQueue;
     initInfo.DescriptorPool = mDescriptorPool.getRawPool();
     initInfo.MinImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
     initInfo.ImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
@@ -70,7 +70,7 @@ void SwGui::initialize() {
 
     // TODO implement all passes first
 
-    sGuiContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+    sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
 
@@ -84,7 +84,7 @@ void SwGui::initialize() {
 
         if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
             mSelectAssetsFileBrowser.Open();
-            sGuiContext.mCamera->setRelativeMode(SDL_FALSE);
+            sRendererContext.mCamera->setRelativeMode(SDL_FALSE);
         }
     });
 }
