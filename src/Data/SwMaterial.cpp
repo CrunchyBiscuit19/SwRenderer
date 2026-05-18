@@ -5,8 +5,23 @@
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
 
+SwStagingBuffer SwMaterialConstants::sMaterialConstantsStagingBuffer{};
+
+void SwMaterialConstants::init() { sMaterialConstantsStagingBuffer = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }    
+
+void SwMaterialConstants::cleanup() { sMaterialConstantsStagingBuffer.destroy(); }
+
 SwMaterialResourcesContext SwMaterialResources::sMaterialResourcesContext{};
 SwDescriptorLayout SwMaterialResources::sMaterialResourcesDescriptorLayout{};
+
+SwMaterialResources::SwMaterialResources(
+    SwMaterialImage base, SwMaterialImage metallicRoughness, SwMaterialImage normal, SwMaterialImage occlusion, SwMaterialImage emissive
+)
+    : mBase(std::move(base)),
+      mMetallicRoughness(std::move(metallicRoughness)),
+      mNormal(std::move(normal)),
+      mOcclusion(std::move(occlusion)),
+      mEmissive(std::move(emissive)) {}
 
 void SwMaterialResources::init(SwMaterialResourcesContext materialResourcesContext) {
     sMaterialResourcesContext = materialResourcesContext;
@@ -30,24 +45,22 @@ SwShader SwMaterial::sTransparentFragmentShader;
 
 SwMaterial::SwMaterial(
     std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, SwMaterialConstants materialConstants,
-    SwMaterialResources materialResources, SwAllocatedBuffer& constantsBuffer, std::uint32_t constantsBufferOffset
+    SwMaterialResources materialResources
 )
     : mName(std::move(name)),
       mRelativeMaterialIndex(relativeMaterialIndex),
       mMaterialPipelineOptions(materialPipelineOptions),
       mMaterialConstants(materialConstants),
-      mMaterialResources(std::move(materialResources)),
-      mConstantsBuffer(constantsBuffer),
-      mConstantsBufferOffset(constantsBufferOffset) {
+      mMaterialResources(std::move(materialResources)) {
     if (auto it = sMaterialPipelines.find(materialPipelineOptions); it != sMaterialPipelines.end()) {
-        mPipelineBundle = SwGraphicsPipelineBundle(it->second.getRawPipeline(), it->second.getRawLayout());
+        mPipelineBundle = SwGraphicsPipelineBundle(it->second);
         return;
     }
 
-    createMaterialPipeline(materialPipelineOptions);
+    constructMaterialPipeline(materialPipelineOptions);
 
     SwPipelinePipeline& retrievedPipeline = sMaterialPipelines.at(materialPipelineOptions);
-    mPipelineBundle = SwGraphicsPipelineBundle(retrievedPipeline.getRawPipeline(), retrievedPipeline.getRawLayout());
+    mPipelineBundle = SwGraphicsPipelineBundle(retrievedPipeline);
 
     sLatestMaterialId++;
 }
@@ -56,7 +69,8 @@ void SwMaterial::init() {
     vk::PushConstantRange materialPushConstantRange{};
     materialPushConstantRange.offset = 0;
     // materialPushConstantRange.size = sizeof(SwGeometryPushConstants); // TODO implement SwGeometryPushConstants first
-    materialPushConstantRange.size = sizeof(vk::PushConstantRange);
+    materialPushConstantRange.size =
+        sizeof(vk::PushConstantRange);  // TODO remove this line after implementing SwGeometryPushConstants and uncomment the line above
     materialPushConstantRange.stageFlags = vk::ShaderStageFlagBits::eVertex;
     std::array<vk::DescriptorSetLayout, 1> materialDescriptorLayouts = {SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout()};
 
@@ -68,7 +82,7 @@ void SwMaterial::init() {
     sTransparentFragmentShader = SwShaderFactory::createShader(GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
 
-void SwMaterial::createMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
+void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
     vk::CullModeFlags cullMode = materialPipelineOptions.doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack;
     bool opaque = materialPipelineOptions.alphaMode != fastgltf::AlphaMode::Blend;
 

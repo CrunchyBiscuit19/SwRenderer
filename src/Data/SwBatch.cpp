@@ -1,10 +1,11 @@
 #include <Data/SwBatch.h>
+#include <Data/SwMesh.h>
 #include <vma/vk_mem_alloc.h>
 
 std::uint32_t SwBatch::sFirstRenderInstanceOffset = 0;
 
 SwBatch::SwBatch(SwPrimitive& primitive) {
-    //mGraphicsPipelineBundle = primitive.mMaterial->mGraphicsPipelineBundle; // TODO implement SwPrimitive first
+    mGraphicsPipelineBundle = primitive.mMaterial.getPipelineBundle();
 
     mRenderItemsStagingBuffer = SwBufferFactory::createStagingBuffer(RENDER_ITEMS_BUFFER_SIZE);
     mPreCullRenderItemsBuffer = SwBufferFactory::createAllocatedBuffer(

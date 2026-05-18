@@ -16,11 +16,20 @@ struct SwMaterialResourcesContext;
 class SwShader;
 
 struct SwMaterialConstants {
+private:
+    static const std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
+
+public:
+    static SwStagingBuffer sMaterialConstantsStagingBuffer;
+
     glm::vec4 mBaseFactor;
     glm::vec4 mEmissiveFactor;
     glm::vec2 mMetallicRoughnessFactor;
     float mNormalScale;
     float mOcclusionStrength;
+
+    static void init();
+    static void cleanup();
 };
 
 struct SwMaterialResources {
@@ -37,6 +46,8 @@ public:
     SwMaterialImage mEmissive;
 
     static SwDescriptorLayout sMaterialResourcesDescriptorLayout;
+
+    SwMaterialResources(SwMaterialImage base, SwMaterialImage metallicRoughness, SwMaterialImage normal, SwMaterialImage occlusion, SwMaterialImage emissive);
 
     static void init(SwMaterialResourcesContext materialResourcesContext);
 
@@ -68,8 +79,6 @@ private:
     SwMaterialConstants mMaterialConstants;
     SwMaterialResources mMaterialResources;
     SwGraphicsPipelineBundle mPipelineBundle;
-    SwAllocatedBuffer& mConstantsBuffer;
-    std::uint32_t mConstantsBufferOffset;
 
     static std::unordered_map<SwMaterialPipelineOptions, SwPipelinePipeline> sMaterialPipelines;
     static SwPipelineLayout sOpaquePipelineLayout;
@@ -81,15 +90,18 @@ private:
     static std::filesystem::path GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH;
     static SwShader sTransparentFragmentShader;
 
-    void createMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 
+    void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 
 
 public:
     SwMaterial(
         std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, SwMaterialConstants materialConstants,
-        SwMaterialResources materialResources, SwAllocatedBuffer& constantsBuffer, std::uint32_t constantsBufferOffset
+        SwMaterialResources materialResources
     );
 
     static void init();
-
     static void cleanup();
+
+    inline SwGraphicsPipelineBundle getPipelineBundle() { return mPipelineBundle; }
+
+    inline fastgltf::AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
 };

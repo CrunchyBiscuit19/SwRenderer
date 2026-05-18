@@ -47,10 +47,9 @@ public:
 class SwNonOwningImage : public SwImage {
 private:
     vk::Image mImage;
-    std::vector<vk::raii::ImageView> mImageViews;
 
 public:
-    SwNonOwningImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent);
+    SwNonOwningImage(vk::Image image, std::vector<vk::Format> formats, vk::Extent3D extent);
 
     void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) override;
 
@@ -67,6 +66,7 @@ public:
 
 class SwSwapchainImage : public SwNonOwningImage {
 private:
+    std::vector<vk::raii::ImageView> mImageViews;
     SwSemaphore mRenderedSemaphore;
 
 public:
@@ -86,7 +86,7 @@ private:
     SwSampler& mSampler;
 
 public:
-    SwMaterialImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSampler& sampler, std::vector<vk::Format> formats, vk::Extent3D extent);
+    SwMaterialImage(vk::Image image, SwSampler& sampler, std::vector<vk::Format> formats, vk::Extent3D extent);
 
     SwMaterialImage(SwMaterialImage&&) noexcept = default;
     SwMaterialImage& operator=(SwMaterialImage&&) noexcept = default;

@@ -6,4 +6,4 @@ SwInstanceData::SwInstanceData(glm::mat4&& transform) : mTransformMatrix(transfo
 
 uint32_t SwInstance::sLatestInstanceId{0};
 
-SwInstance::SwInstance(std::filesystem::path& assetName, std::uint32_t id, SwInstanceData data) : mAssetName(assetName), mId(sLatestInstanceId++), mData(data) {}
+SwInstance::SwInstance(std::string assetName, SwInstanceData data) : mAssetName(assetName), mId(sLatestInstanceId++), mData(data) {}

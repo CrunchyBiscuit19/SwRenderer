@@ -7,13 +7,16 @@ SwPipelineLayout::SwPipelineLayout(vk::raii::PipelineLayout layout) : mLayout(st
 
 void SwPipelineLayout::destroy() { mLayout.clear(); }
 
-SwPipelinePipeline::SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : mPipeline(std::move(pipeline)), mLayout(layout) {}
+std::uint32_t SwPipelinePipeline::sLatestPipelineID{0};
 
-SwPipelineBundle::SwPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout) : mPipeline(pipeline), mLayout(layout) {}
+SwPipelinePipeline::SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : mId{sLatestPipelineID++}, mPipeline(std::move(pipeline)), mLayout(layout) {}
 
-SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(pipeline, layout) {}
+SwPipelineBundle::SwPipelineBundle(SwPipelinePipeline& pipelinePipeline)
+    : mId(pipelinePipeline.getID()), mPipeline(pipelinePipeline.getRawPipeline()), mLayout(pipelinePipeline.getRawLayout()) {}
 
-SwComputePipelineBundle::SwComputePipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(pipeline, layout) {}
+SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(SwPipelinePipeline& pipelinePipeline) : SwPipelineBundle(pipelinePipeline) {}
+
+SwComputePipelineBundle::SwComputePipelineBundle(SwPipelinePipeline& pipelinePipeline) : SwPipelineBundle(pipelinePipeline) {}
 
 SwFactoryContext SwPipelineFactory::sRendererContext{};
 std::string SwPipelineFactory::DEFAULT_SHADER_ENTRY_POINT = "main";

@@ -4,21 +4,33 @@
 
 #include <glm/glm.hpp>
 
+class SwAsset;
+
 struct SwVertex {
     glm::vec3 mPosition;
     glm::vec3 mNormal;
     glm::vec4 mColor;
     glm::vec2 mUv;
 
+    SwVertex() = default;
     SwVertex(glm::vec3 position, glm::vec3 normal, glm::vec4 color, glm::vec2 uv);
 };
 
 struct SwBounds {
+private:
+    static const std::uint32_t BOUNDS_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
+
+public:
+    static SwStagingBuffer sBoundsStagingBuffer;
+
     glm::vec3 mMin;
     glm::vec3 mMax;
 
     SwBounds() = default;
     SwBounds(glm::vec3 min, glm::vec3 max);
+
+    static void init();
+    static void cleanup();
 };
 
 struct SwPrimitive {
@@ -32,7 +44,10 @@ struct SwPrimitive {
 
 class SwMesh {
 private:
-    static const std::uint32_t sLatestMeshId{0};
+    static const std::uint32_t MESH_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
+
+    static std::uint32_t sLatestMeshId;
+    std::string mAssetName;
     std::uint32_t mId;
     std::string mName;
     std::vector<SwPrimitive> mPrimitives;
@@ -46,5 +61,19 @@ private:
     std::uint32_t mFirstIndexInScene{0};
 
 public:
-    SwMesh(fastgltf::Mesh& mesh);
+    static SwStagingBuffer sMeshStagingBuffer;
+
+    SwMesh(
+        std::string assetName, std::string name, std::vector<SwPrimitive> primitives, SwBounds bounds, std::uint32_t relativeFirstBounds, SwAllocatedBuffer vertexBuffer,
+        std::uint32_t numVertices, std::uint32_t vertexOffsetInScene, SwAllocatedBuffer indexBuffer, std::uint32_t numIndices, std::uint32_t firstIndexInScene
+    );
+
+    inline SwAllocatedBuffer& getVertexBuffer() { return mVertexBuffer; }
+    inline SwAllocatedBuffer& getIndexBuffer() { return mIndexBuffer; }
+    inline SwBounds getBounds() const { return mBounds; }
+    inline std::span<SwPrimitive> getPrimitives() { return mPrimitives; }
+    inline std::string getAssetName() const { return mAssetName; }
+
+    static void init();
+    static void cleanup();
 };

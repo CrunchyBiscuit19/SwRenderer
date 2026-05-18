@@ -11,8 +11,8 @@ SwImage::SwImage(std::vector<vk::Format> formats, vk::Extent3D extent)
       mCurrentStage(vk::PipelineStageFlagBits2::eTopOfPipe),
       mCurrentAccess(vk::AccessFlags2()) {}
 
-SwNonOwningImage::SwNonOwningImage(vk::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent)
-    : SwImage(std::move(formats), extent), mImage(image), mImageViews(std::move(imageViews)) {}
+SwNonOwningImage::SwNonOwningImage(vk::Image image, std::vector<vk::Format> formats, vk::Extent3D extent)
+    : SwImage(std::move(formats), extent), mImage(image) {}
 
 void SwNonOwningImage::barrier(vk::CommandBuffer cmd, vk::PipelineStageFlagBits2 nextStage, vk::AccessFlags2 nextAccess) {
     transition(cmd, mCurrentLayout, nextStage, nextAccess);
@@ -47,12 +47,12 @@ void SwNonOwningImage::transition(vk::CommandBuffer cmd, vk::ImageLayout nextLay
 SwSwapchainImage::SwSwapchainImage(
     vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
 )
-    : SwNonOwningImage(image, std::move(imageViews), std::move(formats), extent), mRenderedSemaphore(std::move(renderedSemaphore)) {}
+    : SwNonOwningImage(image, std::move(formats), extent), mImageViews(std::move(imageViews)), mRenderedSemaphore(std::move(renderedSemaphore)) {}
 
 SwMaterialImage::SwMaterialImage(
-    vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSampler& sampler, std::vector<vk::Format> formats, vk::Extent3D extent
+    vk::Image image, SwSampler& sampler, std::vector<vk::Format> formats, vk::Extent3D extent
 )
-    : SwNonOwningImage(image, std::move(imageViews), std::move(formats), extent), mSampler(sampler) {}
+    : SwNonOwningImage(image, std::move(formats), extent), mSampler(sampler) {}
 
 SwAllocatedImage::SwAllocatedImage() : mImage(nullptr), mAllocation(nullptr), mAllocator(nullptr), mMipLevels(1), mMipmapped(false) {}
 

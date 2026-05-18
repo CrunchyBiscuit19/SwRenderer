@@ -145,6 +145,7 @@ class SwRenderer {
     SwGuiContext mGuiContext;
     SwCameraContext mCameraContext;
     SwMaterialResourcesContext mMaterialResourcesContext;
+    SwAssetContext mAssetContext;
 
 public:
     SwRenderer();

@@ -28,6 +28,8 @@ public:
 
 class SwPipelinePipeline {
 private:
+    static std::uint32_t sLatestPipelineID;
+    std::uint32_t mId;
     vk::raii::Pipeline mPipeline;
     vk::PipelineLayout mLayout;
 
@@ -40,6 +42,8 @@ public:
     SwPipelinePipeline(const SwPipelinePipeline&) = delete;
     SwPipelinePipeline& operator=(const SwPipelinePipeline&) = delete;
 
+    inline std::uint32_t getID() { return mId; };
+
     inline vk::Pipeline getRawPipeline() { return *mPipeline; };
 
     inline vk::PipelineLayout getRawLayout() { return mLayout; };
@@ -47,13 +51,16 @@ public:
 
 class SwPipelineBundle {
 protected:
+    std::uint32_t mId;
     vk::Pipeline mPipeline;
     vk::PipelineLayout mLayout;
 
 public:
     SwPipelineBundle() = default;
 
-    SwPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout);
+    SwPipelineBundle(SwPipelinePipeline& pipelinePipeline);
+
+    inline std::uint32_t getID() { return mId; }
 
     inline vk::Pipeline getRawPipeline() { return mPipeline; }
 
@@ -64,14 +71,14 @@ class SwGraphicsPipelineBundle : public SwPipelineBundle {
 public:
     SwGraphicsPipelineBundle() = default;
 
-    SwGraphicsPipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout);
+    SwGraphicsPipelineBundle(SwPipelinePipeline& pipelinePipeline);
 };
 
 class SwComputePipelineBundle : public SwPipelineBundle {
 public:
     SwComputePipelineBundle() = default;
 
-    SwComputePipelineBundle(vk::Pipeline pipeline, vk::PipelineLayout layout);
+    SwComputePipelineBundle(SwPipelinePipeline& pipelinePipeline);
 };
 
 class SwPipelineFactory {

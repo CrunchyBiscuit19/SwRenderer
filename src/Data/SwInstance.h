@@ -2,8 +2,6 @@
 
 #include <glm/glm.hpp>
 
-#include <filesystem>
-
 struct SwInstanceData {
     glm::mat4 mTransformMatrix;
 
@@ -15,11 +13,16 @@ class SwInstance {
 private:
     static uint32_t sLatestInstanceId;
 
-    std::filesystem::path& mAssetName;
+    std::string mAssetName;
     std::uint32_t mId;
     bool mDelete;
 
     SwInstanceData mData;
 
-    SwInstance(std::filesystem::path& assetName, std::uint32_t id, SwInstanceData data = SwInstanceData());
+public:
+    SwInstance(std::string assetName, SwInstanceData data = SwInstanceData());
+
+    inline void* getDataAddress() { return &mData; }
+
+    inline void markDelete() { mDelete = true; }
 };

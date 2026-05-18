@@ -32,8 +32,6 @@ private:
     static const std::uint32_t RENDER_ITEMS_BUFFER_SIZE = sizeof(SwRenderItem) * BATCH_MAX_RENDER_ITEMS;
     static const std::uint32_t RENDER_INSTANCES_BUFFER_SIZE = sizeof(SwRenderInstance) * BATCH_MAX_RENDER_INSTANCES;
 
-    static std::uint32_t sFirstRenderInstanceOffset;
-
     SwGraphicsPipelineBundle mGraphicsPipelineBundle;
 
     std::vector<SwRenderItem> mRenderItems;
@@ -45,6 +43,9 @@ private:
     std::vector<SwRenderInstance> mRenderInstances;
     SwStagingBuffer mRenderInstancesStagingBuffer;
     SwAllocatedBuffer mRenderInstancesBuffer;
+
+public:
+    static std::uint32_t sFirstRenderInstanceOffset;
 
     SwBatch(SwPrimitive& primitive);
 };

@@ -6,11 +6,11 @@
 #include <Resource/SwFence.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
-#include <Resource/SwResourceStager.h>
 #include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
 #include <Data/SwMaterial.h>
+#include <Data/SwAsset.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
@@ -265,12 +265,13 @@ SwRenderer::SwRenderer()
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
-    mFactoryContext = SwFactoryContext(&mDevice, mAllocator.mAllocator, &mImmSubmit);
-    mImmSubmitContext = SwImmSubmitContext(&mDevice, mAllocator.mAllocator, &mGraphicsQueue);
-    mSwapchainContext = SwSwapchainContext(&mDevice, &mChosenGPU, &mImmSubmit, &mEvents);
-    mGuiContext = SwGuiContext(&mInstance, &mDevice, &mChosenGPU, &mGraphicsQueue, &mSwapchain, &mEvents, &mCamera, &mDescriptorAllocator);
-    mCameraContext = SwCameraContext(&mDevice, &mEvents, &mSwapchain);
-    mMaterialResourcesContext = SwMaterialResourcesContext(&mDevice, &mDescriptorAllocator);
+    mFactoryContext = SwFactoryContext(&mDevice, mLogger, mAllocator.mAllocator, &mImmSubmit);
+    mImmSubmitContext = SwImmSubmitContext(&mDevice, mLogger, mAllocator.mAllocator, &mGraphicsQueue);
+    mSwapchainContext = SwSwapchainContext(&mDevice, mLogger, &mChosenGPU, &mImmSubmit, &mEvents);
+    mGuiContext = SwGuiContext(&mDevice, mLogger, &mInstance, &mChosenGPU, &mGraphicsQueue, &mSwapchain, &mEvents, &mCamera, &mDescriptorAllocator);
+    mCameraContext = SwCameraContext(&mDevice, mLogger, &mEvents, &mSwapchain);
+    mMaterialResourcesContext = SwMaterialResourcesContext(&mDevice, mLogger, &mDescriptorAllocator);
+    mAssetContext = SwAssetContext(&mDevice, mLogger, &mDescriptorAllocator, &mImmSubmit);
 
     SwSemaphoreFactory::init(mFactoryContext);
     SwFenceFactory::init(mFactoryContext);
@@ -286,7 +287,11 @@ SwRenderer::SwRenderer()
     SwPipelineFactory::init(mFactoryContext);
     SwBufferFactory::init(mFactoryContext);
     SwImageFactory::init(mFactoryContext);
-    SwResourceStager::init(mFactoryContext);
+    
+    SwMesh::init();
+    SwBounds::init();
+    SwNode::init();
+    SwMaterialConstants::init();
 
     SwSwapchain::init(mSwapchainContext);
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
@@ -297,14 +302,21 @@ SwRenderer::SwRenderer()
     
     SwCamera::init(mCameraContext);
     mCamera.initialize();
+
     SwMaterialResources::init(mMaterialResourcesContext);
     SwMaterial::init();
+    SwAsset::init(mAssetContext);
+
 }
 
 SwRenderer::~SwRenderer() {
-    SwResourceStager::cleanup();
+    SwMesh::cleanup();
+    SwBounds::cleanup();
+    SwNode::cleanup();
+    SwMaterialConstants::cleanup();
     SwImageFactory::cleanup();
     SwMaterialResources::cleanup();
     SwMaterial::cleanup();
+    SwAsset::cleanup();
     SDL_Quit();
 }
