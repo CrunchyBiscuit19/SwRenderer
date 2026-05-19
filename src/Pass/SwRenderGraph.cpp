@@ -279,16 +279,16 @@ void SwRenderGraph::compile() {
 void SwRenderGraph::execute(vk::CommandBuffer cmd) {
     for (SwPass* pass : mSortedPasses) {
         for (auto& dep : pass->getReadImages()) {
-            dep.mImage->transition(cmd, dep.mLayout, dep.mStage, dep.mAccess);
+            dep.mImage->emitTransition(cmd, dep.mLayout, dep.mStage, dep.mAccess);
         }
         for (auto& dep : pass->getWriteImages()) {
-            dep.mImage->transition(cmd, dep.mLayout, dep.mStage, dep.mAccess);
+            dep.mImage->emitTransition(cmd, dep.mLayout, dep.mStage, dep.mAccess);
         }
         for (auto& dep : pass->getReadBuffers()) {
-            dep.mBuffer->barrier(cmd, dep.mStage, dep.mAccess);
+            dep.mBuffer->emitBarrier(cmd, dep.mStage, dep.mAccess);
         }
         for (auto& dep : pass->getWriteBuffers()) {
-            dep.mBuffer->barrier(cmd, dep.mStage, dep.mAccess);
+            dep.mBuffer->emitBarrier(cmd, dep.mStage, dep.mAccess);
         }
 
         pass->execute(cmd);

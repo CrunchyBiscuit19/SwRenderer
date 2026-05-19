@@ -24,9 +24,9 @@ protected:
     SwImage(std::vector<vk::Format> formats, vk::Extent3D extent);
 
 public:
-    virtual void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
+    virtual void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
 
-    virtual void transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
+    virtual void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
 
     inline vk::Extent3D getExtent() { return mExtent; }
     inline vk::Format getFormat(size_t i = 0) { return mFormats[i]; }
@@ -51,9 +51,9 @@ private:
 public:
     SwNonOwningImage(vk::Image image, std::vector<vk::Format> formats, vk::Extent3D extent);
 
-    void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+    void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
-    void transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+    void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
     inline vk::Image getRawImage() const { return mImage; }
 
@@ -116,9 +116,9 @@ protected:
     void generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces);
 
 public:
-    void barrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+    void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
-    void transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+    void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect);
     void copyFrom(vk::CommandBuffer cmd, SwSwapchainImage& source);

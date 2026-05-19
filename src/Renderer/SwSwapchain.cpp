@@ -110,15 +110,15 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     );
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mImages.size(); i++) {
-            mImages.at(i).transition(
+            mImages.at(i).emitTransition(
                 cmd,
                 vk::ImageLayout::ePresentSrcKHR,
                 vk::PipelineStageFlagBits2::eNone,
                 vk::AccessFlagBits2::eNone
             );
         }
-        mDrawImage.transition(cmd, vk::ImageLayout::eTransferSrcOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-        mDepthImage.transition(
+        mDrawImage.emitTransition(cmd, vk::ImageLayout::eTransferSrcOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        mDepthImage.emitTransition(
             cmd,
             vk::ImageLayout::eDepthAttachmentOptimal,
             vk::PipelineStageFlagBits2::eEarlyFragmentTests,

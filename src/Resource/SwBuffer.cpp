@@ -28,7 +28,7 @@ SwBuffer::SwBuffer(
       mCurrentStage(vk::PipelineStageFlagBits2::eTopOfPipe),
       mCurrentAccess(vk::AccessFlags2()) {}
 
-void SwBuffer::barrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+void SwBuffer::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
     vk::BufferMemoryBarrier2 barrierInfo = {};
     barrierInfo.pNext = nullptr;
     barrierInfo.srcStageMask = mCurrentStage;

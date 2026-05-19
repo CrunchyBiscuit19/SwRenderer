@@ -14,11 +14,11 @@ SwImage::SwImage(std::vector<vk::Format> formats, vk::Extent3D extent)
 SwNonOwningImage::SwNonOwningImage(vk::Image image, std::vector<vk::Format> formats, vk::Extent3D extent)
     : SwImage(std::move(formats), extent), mImage(image) {}
 
-void SwNonOwningImage::barrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
-    transition(cmd, mCurrentLayout, nextStage, nextAccess);
+void SwNonOwningImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+    emitTransition(cmd, mCurrentLayout, nextStage, nextAccess);
 }
 
-void SwNonOwningImage::transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+void SwNonOwningImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
     vk::ImageMemoryBarrier2 barrierInfo = {};
     barrierInfo.srcStageMask = mCurrentStage;
     barrierInfo.dstStageMask = nextStage;
@@ -70,11 +70,11 @@ SwAllocatedImage::SwAllocatedImage(
       mMipmapped(mipmapped),
       mMipLevels(mipmapped ? swHelper::calculateMipMapLevels(extent) : 1) {}
 
-void SwAllocatedImage::barrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
-    transition(cmd, mCurrentLayout, nextStage, nextAccess);
+void SwAllocatedImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+    emitTransition(cmd, mCurrentLayout, nextStage, nextAccess);
 }
 
-void SwAllocatedImage::transition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
     vk::ImageMemoryBarrier2 barrierInfo = {};
     barrierInfo.srcStageMask = mCurrentStage;
     barrierInfo.dstStageMask = nextStage;
@@ -401,7 +401,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     std::memcpy(sImageStagingBuffer.getMappedPointer(), data, dataSize);
 
     sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        image.transition(cmd, vk::ImageLayout::eTransferDstOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
+        image.emitTransition(cmd, vk::ImageLayout::eTransferDstOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
 
         std::vector<vk::BufferImageCopy> copyRegions;
         copyRegions.reserve(numFaces);
@@ -422,7 +422,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
 
         if (image.isMipmapped()) image.generateMipmaps(cmd);
 
-        image.transition(cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2KHR::eFragmentShader, vk::AccessFlagBits2::eShaderRead);
+        image.emitTransition(cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2KHR::eFragmentShader, vk::AccessFlagBits2::eShaderRead);
     });
 }
 
