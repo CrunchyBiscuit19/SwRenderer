@@ -25,13 +25,15 @@ void SwCullWorkPass::initialize() {
     SwShader computeShaderModule = SwShaderFactory::createShader(CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
 
     mWorkPipelineBundle = SwComputePipelineFactory::createComputePipeline({computeShaderModule.getRawModule(), mWorkPipelineLayout.getRawLayout()});
+
+    writePushConstants();
 }
 
 void SwCullWorkPass::writeDescriptorSet() {
     /* mWorkDescriptorSet.writeImage(
         0, depthPyramidImageView, depthPyramidSampler, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
     );
-    mWorkDescriptorSet.pushWrites();*/ // TODO
+    mWorkDescriptorSet.pushWrites();*/ // TODO pass implementation
 }
 
 void SwCullWorkPass::writePushConstants() {
@@ -44,5 +46,6 @@ void SwCullWorkPass::writePushConstants() {
     mCullPushConstants.mainInstancesBuffer = mRenderer->mScene.mMainInstancesBuffer.address.value();
     mCullPushConstants.mainVisibleRenderInstancesInstanceIndexBuffer = mRenderer->mScene.mMainVisibleRenderInstancesInstanceIndexBuffer.address.value();
     mCullPushConstants.drawExtents = glm::vec2(drawExtent.width, drawExtent.height);
-    mCullPushConstants.depthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);*/ // TODO
+    mCullPushConstants.depthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);*/ // TODO scene and pass implementation
 }
+

@@ -266,7 +266,7 @@ SwRenderer::SwRenderer()
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
     mRendererContext = SwRendererContext(
-        &mInstance, &mChosenGPU, &mDevice, mAllocator.mAllocator, &mGraphicsQueue, &mDescriptorAllocator, &mSwapchain, &mImmSubmit, &mEvents, &mCamera, mLogger
+        &mInstance, &mChosenGPU, &mDevice, mAllocator.mAllocator, &mGraphicsQueue, &mComputeQueue, &mDescriptorAllocator, &mSwapchain, &mImmSubmit, &mEvents, &mCamera, mLogger
     );
 
     SwSemaphoreFactory::init(mRendererContext);

@@ -17,6 +17,7 @@ struct SwRendererContext {
     vk::raii::Device* mDevice;
     VmaAllocator mAllocator;
     vk::raii::Queue* mGraphicsQueue;
+    vk::raii::Queue* mComputeQueue;
     SwDescriptorAllocator* mDescriptorAllocator;
     SwSwapchain* mSwapchain;
     SwImmSubmit* mImmSubmit;
@@ -27,6 +28,7 @@ struct SwRendererContext {
     SwRendererContext() = default;
     SwRendererContext(
         vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
-        SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events, SwCamera* camera, quill::Logger* logger
+        vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events,
+        SwCamera* camera, quill::Logger* logger
     );
 };
