@@ -127,8 +127,10 @@ public:
     virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
 
     inline vk::Image getRawImage() { return *mImage; }
-
+    inline vk::ImageView getRawImageView(size_t i = 0) { return *mImageViews.at(i); }
     inline bool isMipmapped() const { return mMipmapped; }
+
+    void addImageView(vk::raii::ImageView imageView, vk::Format format);
 
     void destroy();
 

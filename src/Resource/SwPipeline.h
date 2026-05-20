@@ -34,6 +34,8 @@ private:
     vk::PipelineLayout mLayout;
 
 public:
+    SwPipelinePipeline();
+
     SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout);
 
     SwPipelinePipeline(SwPipelinePipeline&&) noexcept = default;
@@ -92,6 +94,8 @@ public:
     static void init(SwRendererContext rendererContext);
 
     static SwPipelineLayout createPipelineLayout(vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges);
+
+    static vk::PushConstantRange createPushConstantRange(vk::ShaderStageFlags stageFlags, std::uint32_t offset, std::uint32_t size);
 };
 
 class SwGraphicsPipelineFactory : public SwPipelineFactory {

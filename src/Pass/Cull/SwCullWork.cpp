@@ -4,30 +4,6 @@
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
 
-SwRendererContext SwCullWorkPass::sRendererContext{};
-std::filesystem::path SwCullWorkPass::CULL_WORK_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "CullerCull.comp.spv";
-
-void SwCullWorkPass::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
-
-void SwCullWorkPass::initialize() {
-    mWorkDescriptorLayout =
-        sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eCompute);
-    mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mWorkDescriptorLayout);
-
-    writeDescriptorSet();
-
-    vk::PushConstantRange cullPushConstantRange{};
-    cullPushConstantRange.offset = 0;
-    cullPushConstantRange.size = sizeof(SwCullWorkPushConstants);
-    cullPushConstantRange.stageFlags = vk::ShaderStageFlagBits::eCompute;
-    mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout({mWorkDescriptorLayout.getRawLayout()}, cullPushConstantRange);
-
-    SwShader computeShaderModule = SwShaderFactory::createShader(CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-
-    mWorkPipelineBundle = SwComputePipelineFactory::createComputePipeline({computeShaderModule.getRawModule(), mWorkPipelineLayout.getRawLayout()});
-
-    writePushConstants();
-}
 
 void SwCullWorkPass::writeDescriptorSet() {
     /* mWorkDescriptorSet.writeImage(

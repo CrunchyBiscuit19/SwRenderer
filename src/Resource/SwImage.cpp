@@ -319,7 +319,7 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
     imageCreateInfo.format = format;
     imageCreateInfo.arrayLayers = 1;
     imageCreateInfo.extent = extent;
-    imageCreateInfo.mipLevels = mipmapped ? static_cast<std::uint32_t>(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1 : 1;
+    imageCreateInfo.mipLevels = mipmapped ? swHelper::calculateMipMapLevels(extent) : 1;
     imageCreateInfo.samples = vk::SampleCountFlagBits::e1;
     imageCreateInfo.tiling = vk::ImageTiling::eOptimal;
     imageCreateInfo.usage = usage;
@@ -350,7 +350,7 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
     imageViewCreateInfo.image = tempImage;
     imageViewCreateInfo.format = format;
     imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-    imageViewCreateInfo.subresourceRange.levelCount = 1;
+    imageViewCreateInfo.subresourceRange.levelCount = imageCreateInfo.mipLevels;
     imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
     imageViewCreateInfo.subresourceRange.layerCount = 1;
     imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
@@ -365,10 +365,16 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
             imageViewCreateInfo.subresourceRange.layerCount = NUM_CUBEMAP_FACES;
             break;
     }
-    imageViewCreateInfo.subresourceRange.levelCount = imageCreateInfo.mipLevels;
+
     std::vector<vk::raii::ImageView> imageViews;
-    imageViews.reserve(1);
+    imageViews.reserve(1 + imageCreateInfo.mipLevels);
     imageViews.emplace_back(sRendererContext.mDevice->createImageView(imageViewCreateInfo));
+    for (uint32_t i = 1; i < imageCreateInfo.mipLevels + 1; i++) {
+        vk::ImageViewCreateInfo mipViewCreateInfo = imageViewCreateInfo;
+        mipViewCreateInfo.subresourceRange.baseMipLevel = i;
+        mipViewCreateInfo.subresourceRange.levelCount = 1;
+        imageViews.emplace_back(sRendererContext.mDevice->createImageView(mipViewCreateInfo));
+    }
 
     std::vector<vk::Format> formats{format};
 

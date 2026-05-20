@@ -9,18 +9,22 @@
 
 class SwRenderGraph {
 private:
-    std::vector<std::unique_ptr<SwPass>> mPasses;
+    std::vector<SwPass*> mPasses;
     std::vector<SwAllocatedImage*> mOutputs;
     std::vector<SwPass*> mSortedPasses; 
 
     void pruneUnreachablePasses();
+    
     void sortTopological();
 
     void exportGraphviz(const std::filesystem::path& path) const;
 
 public:
-    SwRenderGraph(std::vector<std::unique_ptr<SwPass>> passes, std::vector<SwAllocatedImage*> outputs);
+    SwRenderGraph(std::vector<SwAllocatedImage*> outputs);
 
+    void addPass(SwPass* pass);
+    
     void compile();
+    
     void execute(vk::CommandBuffer cmd);
 };

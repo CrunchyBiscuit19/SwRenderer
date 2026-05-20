@@ -9,8 +9,8 @@
 #include <unordered_map>
 #include <unordered_set>
 
-SwRenderGraph::SwRenderGraph(std::vector<std::unique_ptr<SwPass>> passes, std::vector<SwAllocatedImage*> outputs)
-    : mPasses(std::move(passes)), mOutputs(std::move(outputs)) {}
+SwRenderGraph::SwRenderGraph(std::vector<SwAllocatedImage*> outputs)
+    : mOutputs(std::move(outputs)) {}
 
 void SwRenderGraph::pruneUnreachablePasses() {
     for (auto& p : mPasses) p->setPruned(true);
@@ -19,8 +19,8 @@ void SwRenderGraph::pruneUnreachablePasses() {
     std::unordered_map<SwAllocatedImage*, std::vector<SwPass*>> imageWriters;
     std::unordered_map<SwAllocatedBuffer*, std::vector<SwPass*>> bufferWriters;
     for (auto& p : mPasses) {
-        for (auto& dep : p->getWriteImages()) imageWriters[dep.mImage].emplace_back(p.get());
-        for (auto& dep : p->getWriteBuffers()) bufferWriters[dep.mBuffer].emplace_back(p.get());
+        for (auto& dep : p->getWriteImages()) imageWriters[dep.mImage].emplace_back(p);
+        for (auto& dep : p->getWriteBuffers()) bufferWriters[dep.mBuffer].emplace_back(p);
     }
 
     // Setup BFS to run backwards through DAG render graph from outputs (and from must-run passes).
@@ -40,7 +40,7 @@ void SwRenderGraph::pruneUnreachablePasses() {
 
     // BFS starts by enqueuing any pass which must run regardless.
     for (auto& p : mPasses) {
-        if (p->isMustRun()) visit(p.get());
+        if (p->isMustRun()) visit(p);
     }
 
     // For each enqueued pass, follow its read dependencies back to whichever passes produce those reads.
@@ -63,9 +63,9 @@ void SwRenderGraph::pruneUnreachablePasses() {
     mSortedPasses.clear();
     mSortedPasses.reserve(visited.size());
     for (auto& p : mPasses) {
-        if (visited.count(p.get()) >= 1) {
+        if (visited.count(p) >= 1) {
             p->setPruned(false);
-            mSortedPasses.emplace_back(p.get());
+            mSortedPasses.emplace_back(p);
         }
     }
 }
@@ -139,21 +139,19 @@ void SwRenderGraph::sortTopological() {
         }
     }
 
+    // Do the sorting part with priority queue (min heap based on regIndex) to get a deterministic order.
     auto cmp = [&](SwPass* a, SwPass* b) { return regIndex[a] > regIndex[b]; };
     std::priority_queue<SwPass*, std::vector<SwPass*>, decltype(cmp)> ready(cmp);
-
     for (auto& [p, deg] : inDegree) {
         if (deg == 0) ready.push(p);
     }
 
     std::vector<SwPass*> sorted;
     sorted.reserve(mSortedPasses.size());
-
     while (!ready.empty()) {
         SwPass* p = ready.top();
         ready.pop();
         sorted.emplace_back(p);
-
         for (SwPass* next : adj[p]) {
             if (--inDegree.at(next) == 0) ready.push(next);
         }
@@ -163,8 +161,7 @@ void SwRenderGraph::sortTopological() {
         std::string msg = "Cycle detected in render graph among passes:";
         for (auto& [p, deg] : inDegree) {
             if (deg > 0) {
-                msg += ' ';
-                msg += p->getName();
+                msg += fmt::format("\n  - {} ({} dependencies)", p->getName(), deg);
             }
         }
         throw std::runtime_error(msg);
@@ -219,11 +216,11 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
         if (pruned) {
             suffix = "\\n(pruned)";
         } else {
-            suffix = fmt::format("\\n[{}]", sortIndex.at(p.get()));
+            suffix = fmt::format("\\n[{}]", sortIndex.at(p));
         }
         if (p->isMustRun()) suffix += "\\nmust-run";
 
-        fmt::print(out, "  {} [label=\"{}{}\", fillcolor=\"{}\", color=\"{}\"];\n", passId(p.get()), p->getName(), suffix, fillColor, borderColor);
+        fmt::print(out, "  {} [label=\"{}{}\", fillcolor=\"{}\", color=\"{}\"];\n", passId(p), p->getName(), suffix, fillColor, borderColor);
     }
 
     // Resources — ellipses for images, cylinders for buffers, marked if output.
@@ -244,16 +241,16 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
     fmt::print(out, "\n  // Reads and writes\n");
     for (auto& p : mPasses) {
         for (auto& d : p->getWriteImages()) {
-            fmt::print(out, "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p.get()), imageId(d.mImage));
+            fmt::print(out, "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), imageId(d.mImage));
         }
         for (auto& d : p->getReadImages()) {
-            fmt::print(out, "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", imageId(d.mImage), passId(p.get()));
+            fmt::print(out, "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", imageId(d.mImage), passId(p));
         }
         for (auto& d : p->getWriteBuffers()) {
-            fmt::print(out, "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p.get()), bufferId(d.mBuffer));
+            fmt::print(out, "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), bufferId(d.mBuffer));
         }
         for (auto& d : p->getReadBuffers()) {
-            fmt::print(out, "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", bufferId(d.mBuffer), passId(p.get()));
+            fmt::print(out, "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", bufferId(d.mBuffer), passId(p));
         }
     }
 
@@ -270,6 +267,8 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
 
     fmt::print(out, "}}\n");
 }
+
+void SwRenderGraph::addPass(SwPass* pass) { mPasses.emplace_back(pass); }
 
 void SwRenderGraph::compile() {
     pruneUnreachablePasses();

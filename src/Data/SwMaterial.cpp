@@ -66,14 +66,10 @@ SwMaterial::SwMaterial(
 }
 
 void SwMaterial::init() {
-    vk::PushConstantRange materialPushConstantRange{};
-    materialPushConstantRange.offset = 0;
-    // materialPushConstantRange.size = sizeof(SwGeometryPushConstants); // TODO implement SwGeometryPushConstants first
-    materialPushConstantRange.size =
-        sizeof(vk::PushConstantRange);  // TODO remove this line after implementing SwGeometryPushConstants and uncomment the line above
-    materialPushConstantRange.stageFlags = vk::ShaderStageFlagBits::eVertex;
+    vk::PushConstantRange materialPushConstantRange = SwPipelineFactory::createPushConstantRange(
+        vk::ShaderStageFlagBits::eVertex, 0, sizeof(vk::PushConstantRange)
+    );  // TODO replace with SwGeometryPushConstants after implementing it   
     std::array<vk::DescriptorSetLayout, 1> materialDescriptorLayouts = {SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout()};
-
     sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout(materialDescriptorLayouts, materialPushConstantRange);
     sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout(materialDescriptorLayouts, materialPushConstantRange);
 

@@ -9,7 +9,10 @@ void SwPipelineLayout::destroy() { mLayout.clear(); }
 
 std::uint32_t SwPipelinePipeline::sLatestPipelineID{0};
 
-SwPipelinePipeline::SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : mId{sLatestPipelineID++}, mPipeline(std::move(pipeline)), mLayout(layout) {}
+SwPipelinePipeline::SwPipelinePipeline(): mPipeline(nullptr) {}
+
+SwPipelinePipeline::SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout)
+    : mId{sLatestPipelineID++}, mPipeline(std::move(pipeline)), mLayout(layout) {}
 
 SwPipelineBundle::SwPipelineBundle(SwPipelinePipeline& pipelinePipeline)
     : mId(pipelinePipeline.getID()), mPipeline(pipelinePipeline.getRawPipeline()), mLayout(pipelinePipeline.getRawLayout()) {}
@@ -33,6 +36,10 @@ SwPipelineLayout SwPipelineFactory::createPipelineLayout(
 ) {
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo({}, layouts.size(), layouts.data(), pushConstantRanges.size(), pushConstantRanges.data());
     return SwPipelineLayout(vk::raii::PipelineLayout(*sRendererContext.mDevice, pipelineLayoutCreateInfo));
+}
+
+vk::PushConstantRange SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlags stageFlags, std::uint32_t offset, std::uint32_t size) {
+    return vk::PushConstantRange{stageFlags, offset, size};
 }
 
 SwPipelinePipeline SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {

@@ -78,12 +78,13 @@ public:
 
     void initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen);
 
+    inline SwColorImage2D& getDrawImage() { return mDrawImage; }
+    inline SwDepthImage2D& getDepthImage() { return mDepthImage; }  
     inline std::uint32_t getFrameNumber() const { return mFrameNumber; }
     inline SDL_Window* getWindow() const { return mWindow; }
     inline float getAspectRatio() const { return mAspectRatio; }
-
-    SwFrame& getCurrentFrame();
-    SwFrame& getPreviousFrame();
+    inline SwFrame& getCurrentFrame() { return mFrames.at(mFrameNumber % NUM_FRAME_OVERLAP); }
+    inline SwFrame& getPreviousFrame() { return mFrames.at((mFrameNumber - 1) % NUM_FRAME_OVERLAP); }
 
     SwSwapchainImage& getCurrentSwapchainImage();
 
