@@ -1,5 +1,5 @@
 #include <Data/SwMaterial.h>
-#include <Pass/SwGeometry.h>
+#include <Scene/SwGeometry.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwDescriptor.h>

@@ -4,7 +4,7 @@
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRendererContext.h>
-#include <Renderer/SwScene.h>
+#include <Scene/SwScene.h>
 #include <Renderer/SwStats.h>
 #include <Renderer/SwSwapchain.h>
 #define SDL_MAIN_HANDLED

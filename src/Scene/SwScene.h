@@ -3,10 +3,11 @@
 #include <Data/SwAsset.h>
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
-#include <Pass/SwCull.h>
-#include <Pass/SwGeometry.h>
-#include <Pass/SwPass.h>
-#include <Pass/SwRenderGraph.h>
+#include <Scene/SwCull.h>
+#include <Scene/SwGeometry.h>
+#include <Scene/SwPick.h>
+#include <Scene/SwPass.h>
+#include <Scene/SwRenderGraph.h>
 #include <Resource/SwDescriptor.h>
 
 struct SwSceneFlags {
@@ -31,6 +32,10 @@ private:
     static const std::uint32_t SCENE_NUM_INSTANCES{1 << 8};
     static const std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
     static const std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 20};
+
+    static std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH;
+    static std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH;
+    static std::filesystem::path PICK_WORK_COMPUTE_SHADER_PATH;
     
     static SwRendererContext sRendererContext;
 
@@ -46,6 +51,7 @@ private:
     // --- Passes and Resources ---
     std::unordered_map<std::string, SwPass> mPasses;
     SwCull::Resources mCullResources;
+    SwPick::Resources mPickResources;
     SwGeometry::Resources mGeometryResources;
 
     // --- Scene --- 
@@ -65,7 +71,10 @@ private:
     void initializeSceneResources();
 
     void initializeCullResources();
-    void reInitializableCullResources();
+    void reInitializeCullResources();
+
+    void initializePickResources();
+    void reInitializePickResources();
 
     void initializeGeometryResources();
 

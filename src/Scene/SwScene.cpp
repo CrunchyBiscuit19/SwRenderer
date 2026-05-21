@@ -1,60 +1,63 @@
 #include <Misc/SwHelper.h>
 #include <Renderer/SwImmSubmit.h>
-#include <Renderer/SwScene.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
+#include <Scene/SwScene.h>
 
 std::filesystem::path SwScene::CULL_RESET_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "CullerReset.comp.spv";
 std::filesystem::path SwScene::CULL_WORK_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "CullerCull.comp.spv";
 std::filesystem::path SwScene::CULL_COMPACT_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "CullerCompact.comp.spv";
 std::filesystem::path SwScene::CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "CullerDepthPyramid.comp.spv";
+std::filesystem::path SwScene::PICK_DRAW_VERTEX_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "PickerDraw.vert.spv";
+std::filesystem::path SwScene::PICK_DRAW_FRAGMENT_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "PickerDraw.frag.spv";
+std::filesystem::path SwScene::PICK_WORK_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "PickerPick.comp.spv";
 
 SwRendererContext SwScene::sRendererContext{};
 
 void SwScene::initializeSceneResources() {
-        mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_VERTEX_BUFFER_SIZE
-        );
+    mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_VERTEX_BUFFER_SIZE
+    );
 
-        mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_INDEX_BUFFER_SIZE
-        );
+    mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INDEX_BUFFER_SIZE
+    );
 
-        mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants)
-        );
+    mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants)
+    );
 
-        mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_NUM_NODES * sizeof(glm::mat4)
-        );
+    mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_NUM_NODES * sizeof(glm::mat4)
+    );
 
-        mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_NUM_INSTANCES * sizeof(SwInstanceData)
-        );
+    mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_NUM_INSTANCES * sizeof(SwInstanceData)
+    );
 
-        mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_NUM_BOUNDS * sizeof(SwBounds)
-        );
+    mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_NUM_BOUNDS * sizeof(SwBounds)
+    );
 
-        mSceneVisibleRenderInstancesInstanceIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t)
-        );
+    mSceneVisibleRenderInstancesInstanceIndexBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t)
+    );
 
-        mSceneMaterialResourcesDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(SwMaterialResources::sMaterialResourcesDescriptorLayout, SwMaterialResources::MAX_TEXTURE_ARRAY_SLOTS);
+    mSceneMaterialResourcesDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(
+        SwMaterialResources::sMaterialResourcesDescriptorLayout, SwMaterialResources::MAX_TEXTURE_ARRAY_SLOTS
+    );
 }
 
 void SwScene::initializeCullResources() {
@@ -108,10 +111,10 @@ void SwScene::initializeCullResources() {
         SwComputePipelineFactory::createComputePipeline({compactShader.getRawModule(), mCullResources.mCompactPipelineLayout.getRawLayout()});
 
     // Everything that needs to be re-built on resize
-    reInitializableCullResources();
+    reInitializeCullResources();
 }
 
-void SwScene::reInitializableCullResources() {
+void SwScene::reInitializeCullResources() {
     // Depth pyramid pass
     std::uint32_t depthPyramidWidth = swHelper::previousPow2(sRendererContext.mSwapchain->getDepthImage().getExtent().width);
     std::uint32_t depthPyramidHeight = swHelper::previousPow2(sRendererContext.mSwapchain->getDepthImage().getExtent().height);
@@ -177,23 +180,122 @@ void SwScene::reInitializableCullResources() {
     mCullResources.mWorkPushConstants.mDepthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }
 
+void SwScene::initializePickResources() {
+    mPickResources.mWorkBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+        sizeof(SwPick::Data)
+    );
+
+    mPickResources.mDescriptorSetLayout =
+        sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
+    mPickResources.mDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mPickResources.mDescriptorSetLayout);
+
+    vk::PushConstantRange drawPushConstantRange =
+        SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(SwPick::DrawPC));
+    mPickResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, drawPushConstantRange);
+
+    SwShader drawVertexShader = SwShaderFactory::createShader(PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    SwShader drawFragmentShader = SwShaderFactory::createShader(PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+
+    vk::PipelineColorBlendAttachmentState noBlendState{};
+    noBlendState.colorWriteMask =
+        vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    noBlendState.blendEnable = VK_FALSE;
+
+    SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
+    drawPipelineOptions.mVertexShader = drawVertexShader.getRawModule();
+    drawPipelineOptions.mFragmentShader = drawFragmentShader.getRawModule();
+    drawPipelineOptions.mLayout = mPickResources.mDrawPipelineLayout.getRawLayout();
+    drawPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
+    drawPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
+    drawPipelineOptions.mCullMode = vk::CullModeFlagBits::eBack;
+    drawPipelineOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
+    drawPipelineOptions.mMultisamplingEnabled = false;
+    drawPipelineOptions.mSampleShadingEnabled = false;
+    drawPipelineOptions.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{
+        {vk::Format::eR32G32Uint, noBlendState}};
+    drawPipelineOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;
+    drawPipelineOptions.mDepthTestEnabled = true;
+    drawPipelineOptions.mDepthWriteEnabled = true;
+    drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+    mPickResources.mDrawPipelinePipeline = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
+
+    vk::PushConstantRange pickPushConstantRange =
+        SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwPick::WorkPC));
+    mPickResources.mWorkPipelineLayout =
+        SwPipelineFactory::createPipelineLayout({mPickResources.mDescriptorSetLayout.getRawLayout()}, pickPushConstantRange);
+
+    SwShader workShader = SwShaderFactory::createShader(PICK_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mPickResources.mWorkPipelinePipeline =
+        SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mPickResources.mWorkPipelineLayout.getRawLayout()});
+
+    mPickResources.mDrawPushConstants.mSceneVertexBuffer = mSceneVertexBuffer.getDeviceAddress().value();
+    mPickResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mSceneNodeTransformsBuffer.getDeviceAddress().value();
+    mPickResources.mDrawPushConstants.mSceneInstancesBuffer = mSceneInstancesBuffer.getDeviceAddress().value();
+    mPickResources.mDrawPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
+        mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
+    mPickResources.mDrawPushConstants.mPostCullRenderItemsBuffer = 0;
+
+    mPickResources.mWorkPushConstants.mPickerBuffer = mPickResources.mWorkBuffer.getDeviceAddress().value();
+
+    reInitializePickResources();
+}
+
+void SwScene::reInitializePickResources() {
+    vk::Extent3D drawExtent = sRendererContext.mSwapchain->getDrawImage().getExtent();
+    mPickResources.mWorkImage = SwImageFactory::createColorImage2D(
+        nullptr,
+        vk::Format::eR32G32Uint,
+        drawExtent,
+        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
+        false
+    );
+
+    mPickResources.mDepthImage = SwImageFactory::createDepthImage2D(
+        nullptr, SwSwapchain::DEPTH_FORMAT, mPickResources.mWorkImage.getExtent(), vk::ImageUsageFlagBits::eDepthStencilAttachment
+    );
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        mPickResources.mWorkImage.emitTransition(
+            cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead
+        );
+        mPickResources.mDepthImage.emitTransition(
+            cmd,
+            vk::ImageLayout::eDepthAttachmentOptimal,
+            vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+            vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+        );
+    });
+
+    mPickResources.mDescriptorSet.writeImage(
+        0, mPickResources.mWorkImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
+    );
+    mPickResources.mDescriptorSet.pushWrites();
+}
+
 void SwScene::initializeGeometryResources() {
     mGeometryResources.mWorkPushConstants.mSceneVertexBuffer = mSceneVertexBuffer.getDeviceAddress().value();
     mGeometryResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mSceneMaterialConstantsBuffer.getDeviceAddress().value();
     mGeometryResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mSceneNodeTransformsBuffer.getDeviceAddress().value();
     mGeometryResources.mWorkPushConstants.mSceneInstancesBuffer = mSceneInstancesBuffer.getDeviceAddress().value();
-    mGeometryResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer = mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
+    mGeometryResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
+        mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
 }
 
 void SwScene::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwScene::initialize() {
     initializeSceneResources();
-    initializeCullResources(); 
+    initializeCullResources();
     initializeGeometryResources();
 }
 
 void SwScene::resize() {
     mCullResources.mDepthPyramidImage.destroy();
-    reInitializableCullResources();
+    reInitializeCullResources();
+
+    mPickResources.mWorkImage.destroy();
+    mPickResources.mDepthImage.destroy();
+    reInitializePickResources();
 }

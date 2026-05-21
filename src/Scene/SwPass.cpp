@@ -1,4 +1,4 @@
-#include <Pass/SwPass.h>
+#include <Scene/SwPass.h>
 
 SwPass::SwPass(
     std::string name, std::vector<SwImageDep> readImageDeps, std::vector<SwImageDep> writeImageDeps, std::vector<SwBufferDep> readBufferDeps,

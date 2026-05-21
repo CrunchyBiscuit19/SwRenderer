@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Pass/SwPass.h>
+#include <Scene/SwPass.h>
 
 #include <filesystem>
 #include <string>
