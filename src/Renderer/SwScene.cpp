@@ -11,6 +11,52 @@ std::filesystem::path SwScene::CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH = std::fil
 
 SwRendererContext SwScene::sRendererContext{};
 
+void SwScene::initializeSceneResources() {
+        mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_VERTEX_BUFFER_SIZE
+        );
+
+        mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_INDEX_BUFFER_SIZE
+        );
+
+        mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants)
+        );
+
+        mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_NUM_NODES * sizeof(glm::mat4)
+        );
+
+        mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_NUM_INSTANCES * sizeof(SwInstanceData)
+        );
+
+        mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_NUM_BOUNDS * sizeof(SwBounds)
+        );
+
+        mSceneVisibleRenderInstancesInstanceIndexBuffer = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t)
+        );
+
+        mSceneMaterialResourcesDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(SwMaterialResources::sMaterialResourcesDescriptorLayout, SwMaterialResources::MAX_TEXTURE_ARRAY_SLOTS);
+}
+
 void SwScene::initializeCullResources() {
     // Push pass
     vk::PushConstantRange resetPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwCull::ResetPC));
@@ -22,7 +68,7 @@ void SwScene::initializeCullResources() {
 
     // Depth pyramid pass
     mCullResources.mDepthPyramidDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eSampledImage},
+        {{0, vk::DescriptorType::eSampledImage, 1},
          {1, vk::DescriptorType::eSampledImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
          {2, vk::DescriptorType::eStorageImage, CULL_MAX_DEPTH_PYRAMID_LEVELS}},
         vk::ShaderStageFlagBits::eCompute
@@ -35,14 +81,13 @@ void SwScene::initializeCullResources() {
     mCullResources.mDepthPyramidPipelineLayout =
         SwPipelineFactory::createPipelineLayout({mCullResources.mDepthPyramidDescriptorLayout.getRawLayout()}, depthPyramidPushConstantRange);
 
-    vk::ShaderModule depthPyramidShader =
-        SwShaderFactory::createShader(CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute).getRawModule();
+    SwShader depthPyramidShader = SwShaderFactory::createShader(CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mCullResources.mDepthPyramidPipelinePipeline =
-        SwComputePipelineFactory::createComputePipeline({depthPyramidShader, mCullResources.mDepthPyramidPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline({depthPyramidShader.getRawModule(), mCullResources.mDepthPyramidPipelineLayout.getRawLayout()});
 
     // Work pass
     mCullResources.mWorkDescriptorLayout =
-        sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eCompute);
+        sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
 
     mCullResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mCullResources.mWorkDescriptorLayout);
 
@@ -60,7 +105,7 @@ void SwScene::initializeCullResources() {
 
     SwShader compactShader = SwShaderFactory::createShader(CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mCullResources.mCompactPipelinePipeline =
-        SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mCullResources.mCompactPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline({compactShader.getRawModule(), mCullResources.mCompactPipelineLayout.getRawLayout()});
 
     // Everything that needs to be re-built on resize
     reInitializableCullResources();
@@ -77,39 +122,78 @@ void SwScene::reInitializableCullResources() {
     };
     mCullResources.mDepthPyramidLevels = swHelper::calculateMipMapLevels(mCullResources.mDepthPyramidExtent);
     mCullResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
-        nullptr, mCullResources.mDepthPyramidExtent, vk::Format::eR32Sfloat, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
+        nullptr, vk::Format::eR32Sfloat, mCullResources.mDepthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
     );
-
-    /*mDepthPyramidMipViews.clear();
-    mDepthPyramidMipViews.reserve(1 + mDepthPyramidLevels);
-    for (std::uint32_t i = 0; i < mDepthPyramidLevels; i++) {
-        vk::ImageViewCreateInfo levelInfo = vkhelper::imageViewCreateInfo(mDepthPyramidImage.format, mDepthPyramidImage.image, vk::ImageAspectFlagBits::eColor);
-        levelInfo.subresourceRange.levelCount = 1;
-        levelInfo.subresourceRange.baseMipLevel = i;
-        mDepthPyramidMipViews.emplace_back(std::move(mRenderer->mCore.mDevice.createImageView(levelInfo)));
-        mRenderer->mCore.labelResourceDebug(mDepthPyramidMipViews.back(), fmt::format("CullerDepthPyramidMipView{}", i).c_str());
-    }*/ // TODO after overhauling image abstraction
-
+    for (std::uint32_t i = 0; i < mCullResources.mDepthPyramidLevels; i++) {
+        mCullResources.mDepthPyramidImage.addImageView(
+            mCullResources.mDepthPyramidImage.getMainFormat(), vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, i, 1
+        );
+    }
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         mCullResources.mDepthPyramidImage.emitTransition(
             cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead
         );
     });
 
+    mCullResources.mDepthPyramidDescriptorSet.writeImage(
+        0,
+        sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(),
+        nullptr,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::DescriptorType::eSampledImage
+    );
+    for (std::uint32_t i = 0; i < mCullResources.mDepthPyramidLevels; i++) {
+        mCullResources.mDepthPyramidDescriptorSet.writeImage(
+            1, mCullResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eSampledImage, i
+        );
+        mCullResources.mDepthPyramidDescriptorSet.writeImage(
+            2, mCullResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage, i
+        );
+    }
+    mCullResources.mDepthPyramidDescriptorSet.pushWrites();
+
+    vk::Extent3D depthPyramidExtent = mCullResources.mDepthPyramidImage.getExtent();
+    vk::Extent3D depthExtent = sRendererContext.mSwapchain->getDepthImage().getExtent();
+    mCullResources.mDepthPyramidPushConstants.mDepthPyramidExtent = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
+    mCullResources.mDepthPyramidPushConstants.mDepthFullExtent = glm::uvec2(depthExtent.width, depthExtent.height);
+    mCullResources.mDepthPyramidPushConstants.mDepthFullRatio =
+        glm::vec2(depthPyramidExtent.width / static_cast<float>(depthExtent.width), depthPyramidExtent.height / static_cast<float>(depthExtent.height));
+
     // Work pass
     mCullResources.mWorkDescriptorSet.writeImage(
-        0, mCullResources.mDepthPyramidImage.getRawImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
+        0, mCullResources.mDepthPyramidImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
     );
     mCullResources.mWorkDescriptorSet.pushWrites();
 
-    // vk::Extent3D drawExtent = mRenderer->mInfrastructure.mDrawImage.extent;
-    // mCullResources.mWorkPushConstants.mRenderInstancesCountBuffer = mRenderer->mStats.mRenderInstancesCountBuffer.address.value();
-    // mCullResources.mWorkPushConstants.mSceneBoundsBuffer = mRenderer->mScene.mMainBoundsBuffer.address.value();
-    // mCullResources.mWorkPushConstants.mFrustumBuffer = mRenderer->mCamera.mFrustumBuffer.address.value();
-    // mCullResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mRenderer->mScene.mMainNodeTransformsBuffer.address.value();
-    // mCullResources.mWorkPushConstants.mSceneInstancesBuffer = mRenderer->mScene.mMainInstancesBuffer.address.value();
-    // mCullResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
-    // mRenderer->mScene.mMainVisibleRenderInstancesInstanceIndexBuffer.address.value(); mCullResources.mWorkPushConstants.mDrawExtents =
-    // glm::vec2(sRendererContext.mSwapchain->ge, drawExtent.height); mCullResources.mWorkPushConstants.mDepthPyramidExtents =
-    //     glm::vec2(mCullResources.mDepthPyramidImage.getExtent().width, mCullResources.mDepthPyramidImage.getExtent().height);
+    mCullResources.mWorkPushConstants.mRenderInstancesCountBuffer = sRendererContext.mStats->mRenderInstancesCountBuffer.getDeviceAddress().value();
+    mCullResources.mWorkPushConstants.mSceneBoundsBuffer = mSceneBoundsBuffer.getDeviceAddress().value();
+    mCullResources.mWorkPushConstants.mFrustumBuffer = sRendererContext.mCamera->getFrustumBuffer().getDeviceAddress().value();
+    mCullResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mSceneNodeTransformsBuffer.getDeviceAddress().value();
+    mCullResources.mWorkPushConstants.mSceneInstancesBuffer = mSceneInstancesBuffer.getDeviceAddress().value();
+    mCullResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
+        mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
+    vk::Extent3D drawExtent = sRendererContext.mSwapchain->getDrawImage().getExtent();
+    mCullResources.mWorkPushConstants.mDrawExtents = glm::vec2(drawExtent.width, drawExtent.height);
+    mCullResources.mWorkPushConstants.mDepthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);
+}
+
+void SwScene::initializeGeometryResources() {
+    mGeometryResources.mWorkPushConstants.mSceneVertexBuffer = mSceneVertexBuffer.getDeviceAddress().value();
+    mGeometryResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mSceneMaterialConstantsBuffer.getDeviceAddress().value();
+    mGeometryResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mSceneNodeTransformsBuffer.getDeviceAddress().value();
+    mGeometryResources.mWorkPushConstants.mSceneInstancesBuffer = mSceneInstancesBuffer.getDeviceAddress().value();
+    mGeometryResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer = mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
+}
+
+void SwScene::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
+
+void SwScene::initialize() {
+    initializeSceneResources();
+    initializeCullResources(); 
+    initializeGeometryResources();
+}
+
+void SwScene::resize() {
+    mCullResources.mDepthPyramidImage.destroy();
+    reInitializableCullResources();
 }

@@ -9,7 +9,7 @@
 SwRendererContext::SwRendererContext(
     vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
     vk::raii::Queue* computeQueue,
-    SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events, SwCamera* camera, quill::Logger* logger
+    SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events, SwCamera* camera, SwStats* stats, quill::Logger* logger
 )
     : mInstance(instance),
       mChosenGPU(chosenGPU),
@@ -22,4 +22,5 @@ SwRendererContext::SwRendererContext(
       mImmSubmit(immSubmit),
       mEvents(events),
       mCamera(camera),
+      mStats(stats),
       mLogger(logger) {}

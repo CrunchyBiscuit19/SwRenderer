@@ -5,6 +5,7 @@
 #include <Resource/SwSemaphore.h>
 #include <vk_mem_alloc.h>
 
+#include <deque>
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
@@ -13,7 +14,8 @@ struct SwRendererContext;
 
 class SwImage {
 protected:
-    std::vector<vk::Format> mFormats;
+    vk::Format mMainFormat;
+    std::vector<vk::Format> mOtherFormats;
     vk::Extent3D mExtent;
     vk::ImageLayout mCurrentLayout;
     vk::PipelineStageFlags2 mCurrentStage;
@@ -21,7 +23,7 @@ protected:
 
     SwImage();
 
-    SwImage(std::vector<vk::Format> formats, vk::Extent3D extent);
+    SwImage(vk::Format mainFormat, vk::Extent3D extent, std::vector<vk::Format> otherFormats = {});
 
 public:
     virtual void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
@@ -29,7 +31,7 @@ public:
     virtual void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
 
     inline vk::Extent3D getExtent() { return mExtent; }
-    inline vk::Format getFormat(size_t i = 0) { return mFormats[i]; }
+    inline vk::Format getMainFormat() { return mMainFormat; }
 
     inline void setCurrentLayout(vk::ImageLayout layout) { mCurrentLayout = layout; }
     inline void setCurrentStage(vk::PipelineStageFlags2 stage) { mCurrentStage = stage; }
@@ -49,7 +51,7 @@ private:
     vk::Image mImage;
 
 public:
-    SwNonOwningImage(vk::Image image, std::vector<vk::Format> formats, vk::Extent3D extent);
+    SwNonOwningImage(vk::Image image, vk::Format mainFormat, vk::Extent3D extent, std::vector<vk::Format> otherFormats = {});
 
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
@@ -66,12 +68,14 @@ public:
 
 class SwSwapchainImage : public SwNonOwningImage {
 private:
-    std::vector<vk::raii::ImageView> mImageViews;
+    vk::raii::ImageView mMainImageView;
+    std::deque<vk::raii::ImageView> mOtherImageViews;
     SwSemaphore mRenderedSemaphore;
 
 public:
     SwSwapchainImage(
-        vk::Image image, std::vector<vk::raii::ImageView> imageViews, SwSemaphore renderedSemaphore, std::vector<vk::Format> formats, vk::Extent3D extent
+        vk::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, SwSemaphore renderedSemaphore,
+        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
     SwSwapchainImage(SwSwapchainImage&&) noexcept = default;
@@ -86,7 +90,7 @@ private:
     SwSampler& mSampler;
 
 public:
-    SwMaterialImage(vk::Image image, SwSampler& sampler, std::vector<vk::Format> formats, vk::Extent3D extent);
+    SwMaterialImage(vk::Image image, vk::Format mainFormat, vk::Extent3D extent, SwSampler& sampler, std::vector<vk::Format> otherFormats = {});
 
     SwMaterialImage(SwMaterialImage&&) noexcept = default;
     SwMaterialImage& operator=(SwMaterialImage&&) noexcept = default;
@@ -98,7 +102,8 @@ public:
 class SwAllocatedImage : public SwImage {
 protected:
     vk::raii::Image mImage;
-    std::vector<vk::raii::ImageView> mImageViews;
+    vk::raii::ImageView mMainImageView;
+    std::deque<vk::raii::ImageView> mOtherImageViews;
     vk::ClearValue mClearValue;
     vk::ImageAspectFlags mAspect;
     VmaAllocator mAllocator;
@@ -109,8 +114,9 @@ protected:
     SwAllocatedImage();
 
     SwAllocatedImage(
-        vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
-        vk::ClearValue clearValue, vk::ImageAspectFlags aspect, const VmaAllocator mAllocator, VmaAllocation mAllocation
+        vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+        vk::ImageAspectFlags aspect, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
     void generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces);
@@ -127,10 +133,14 @@ public:
     virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
 
     inline vk::Image getRawImage() { return *mImage; }
-    inline vk::ImageView getRawImageView(size_t i = 0) { return *mImageViews.at(i); }
+    inline vk::ImageView getRawMainImageView() { return *mMainImageView; }
+    inline vk::ImageView getRawOtherImageView(std::uint32_t i) { return *mOtherImageViews[i]; }
     inline bool isMipmapped() const { return mMipmapped; }
 
-    void addImageView(vk::raii::ImageView imageView, vk::Format format);
+    void addImageView(
+        vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType = vk::ImageViewType::e2D, std::uint32_t baseMipLevel = 0,
+        std::uint32_t levelCount = 1, std::uint32_t baseArrayLayer = 0, std::uint32_t layerCount = 1
+    );
 
     void destroy();
 
@@ -148,8 +158,9 @@ public:
     SwColorImage2D();
 
     SwColorImage2D(
-        vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
-        vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
+        vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+        const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
     void generateMipmaps(vk::CommandBuffer cmd) override;
@@ -166,8 +177,9 @@ public:
     SwDepthImage2D();
 
     SwDepthImage2D(
-        vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
-        vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
+        vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+        const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
     void generateMipmaps(vk::CommandBuffer cmd) override;
@@ -184,8 +196,9 @@ public:
     SwColorImageCubemap();
 
     SwColorImageCubemap(
-        vk::raii::Image image, std::vector<vk::raii::ImageView> imageViews, std::vector<vk::Format> formats, vk::Extent3D extent, bool mipmapped,
-        vk::ClearValue clearValue, const VmaAllocator mAllocator, VmaAllocation mAllocation
+        vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+        const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
     void generateMipmaps(vk::CommandBuffer cmd) override;
@@ -202,8 +215,8 @@ private:
     enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap };
     struct SwImageConstructionInfo {
         vk::raii::Image mImage;
-        std::vector<vk::raii::ImageView> mImageViews;
-        std::vector<vk::Format> mFormats;
+        vk::raii::ImageView mMainImageView;
+        vk::Format mMainFormat;
         vk::Extent3D mExtent;
         bool mMipmapped;
         vk::ClearValue mClearValue;
@@ -217,7 +230,8 @@ private:
     static SwRendererContext sRendererContext;
 
     static SwImageConstructionInfo prepareImageConstructionInfo(
-        SwImageType swImageType, const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
+        SwImageType swImageType, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
+        vk::ClearValue clearValue
     );
 
     static void fillImageData(SwImageType swImageType, const void* data, SwAllocatedImage& image);
@@ -231,17 +245,22 @@ public:
 
     static void init(SwRendererContext rendererContext);
 
+    static vk::raii::ImageView createImageView(
+        vk::Image image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType = vk::ImageViewType::e2D, std::uint32_t baseMipLevel = 0,
+        std::uint32_t levelCount = 1, std::uint32_t baseArrayLayer = 0, std::uint32_t layerCount = 1
+    );
+
     static SwColorImage2D createColorImage2D(
-        const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()
+        const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()
     );
 
     static SwDepthImage2D createDepthImage2D(
-        const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped = false,
+        const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
         vk::ClearValue clearValue = vk::ClearValue()
     );
 
     static SwColorImageCubemap createColorImageCubemap(
-        const void* data, vk::Extent3D extent, vk::Format format, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()
+        const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()
     );
 
     static void cleanup();

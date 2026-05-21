@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Pass/Cull/SwCull.h>
+#include <Pass/SwCull.h>
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwBuffer.h>
 #include <SDL_events.h>
@@ -61,6 +61,7 @@ public:
     void update(float deltaTime, float expectedDeltaTime);
 
     inline std::array<Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
+    inline SwAllocatedBuffer& getFrustumBuffer() { return mFrustumBuffer; }
 
     SwPerspective getPerspective() const;
 

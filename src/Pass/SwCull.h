@@ -1,5 +1,9 @@
 #pragma once
 
+#include <Resource/SwPipeline.h>
+#include <Resource/SwDescriptor.h>
+#include <Resource/SwImage.h>
+
 #include <glm/glm.hpp>
 
 struct Plane {

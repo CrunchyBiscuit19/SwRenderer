@@ -181,7 +181,7 @@ void SwAsset::constructImages() {
             imageSize.width = static_cast<std::uint32_t>(width);
             imageSize.height = static_cast<std::uint32_t>(height);
             imageSize.depth = 1;
-            newImage = SwImageFactory::createColorImage2D(data, imageSize, vk::Format::eR8G8B8A8Srgb, vk::ImageUsageFlagBits::eSampled, true);
+            newImage = SwImageFactory::createColorImage2D(data, vk::Format::eR8G8B8A8Srgb, imageSize, vk::ImageUsageFlagBits::eSampled, true);
             stbi_image_free(data);
         }
         // Move the lambda taking const auto to the bottom. Otherwise it always get runs and the other lambdas don't.
@@ -230,9 +230,9 @@ void SwAsset::constructMaterials() {
         }
         SwMaterialImage baseImage(
             mImages.at(imageIndex).getRawImage(),
-            sSamplers.at(mSamplerOptions.at(samplerIndex)),
-            std::vector<vk::Format>{mImages.at(imageIndex).getFormat()},
-            mImages.at(imageIndex).getExtent()
+            mImages.at(imageIndex).getMainFormat(),
+            mImages.at(imageIndex).getExtent(),
+            sSamplers.at(mSamplerOptions.at(samplerIndex))
         );
 
         imageIndex = 0;
@@ -243,9 +243,9 @@ void SwAsset::constructMaterials() {
         }
         SwMaterialImage metallicRoughnessImage(
             mImages.at(imageIndex).getRawImage(),
-            sSamplers.at(mSamplerOptions.at(samplerIndex)),
-            std::vector<vk::Format>{mImages.at(imageIndex).getFormat()},
-            mImages.at(imageIndex).getExtent()
+            mImages.at(imageIndex).getMainFormat(),
+            mImages.at(imageIndex).getExtent(),
+            sSamplers.at(mSamplerOptions.at(samplerIndex))
         );
 
         imageIndex = 0;
@@ -256,9 +256,9 @@ void SwAsset::constructMaterials() {
         }
         SwMaterialImage emissiveImage(
             mImages.at(imageIndex).getRawImage(),
-            sSamplers.at(mSamplerOptions.at(samplerIndex)),
-            std::vector<vk::Format>{mImages.at(imageIndex).getFormat()},
-            mImages.at(imageIndex).getExtent()
+            mImages.at(imageIndex).getMainFormat(),
+            mImages.at(imageIndex).getExtent(),
+            sSamplers.at(mSamplerOptions.at(samplerIndex))
         );
 
         imageIndex = 0;
@@ -269,9 +269,9 @@ void SwAsset::constructMaterials() {
         }
         SwMaterialImage normalImage(
             mImages.at(imageIndex).getRawImage(),
-            sSamplers.at(mSamplerOptions.at(samplerIndex)),
-            std::vector<vk::Format>{mImages.at(imageIndex).getFormat()},
-            mImages.at(imageIndex).getExtent()
+            mImages.at(imageIndex).getMainFormat(),
+            mImages.at(imageIndex).getExtent(),
+            sSamplers.at(mSamplerOptions.at(samplerIndex))
         );
 
         imageIndex = 0;
@@ -280,12 +280,12 @@ void SwAsset::constructMaterials() {
             imageIndex = mRawAsset.textures[material.occlusionTexture.value().textureIndex].imageIndex.value_or(0);
             samplerIndex = mRawAsset.textures[material.occlusionTexture.value().textureIndex].samplerIndex.value_or(0);
         }
-        std::vector<vk::Format> occlusionFormats{mImages.at(imageIndex).getFormat()};
+        std::vector<vk::Format> occlusionFormats{mImages.at(imageIndex).getMainFormat()};
         SwMaterialImage occlusionImage(
             mImages.at(imageIndex).getRawImage(),
-            sSamplers.at(mSamplerOptions.at(samplerIndex)),
-            std::vector<vk::Format>{mImages.at(imageIndex).getFormat()},
-            mImages.at(imageIndex).getExtent()
+            mImages.at(imageIndex).getMainFormat(),
+            mImages.at(imageIndex).getExtent(),
+            sSamplers.at(mSamplerOptions.at(samplerIndex))
         );
 
         SwMaterialResources resources(

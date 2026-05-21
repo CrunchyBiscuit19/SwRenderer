@@ -1,4 +1,5 @@
 #include <Data/SwMaterial.h>
+#include <Pass/SwGeometry.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwDescriptor.h>
@@ -7,7 +8,7 @@
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStagingBuffer{};
 
-void SwMaterialConstants::init() { sMaterialConstantsStagingBuffer = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }    
+void SwMaterialConstants::init() { sMaterialConstantsStagingBuffer = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }
 
 void SwMaterialConstants::cleanup() { sMaterialConstantsStagingBuffer.destroy(); }
 
@@ -66,9 +67,8 @@ SwMaterial::SwMaterial(
 }
 
 void SwMaterial::init() {
-    vk::PushConstantRange materialPushConstantRange = SwPipelineFactory::createPushConstantRange(
-        vk::ShaderStageFlagBits::eVertex, 0, sizeof(vk::PushConstantRange)
-    );  // TODO replace with SwGeometryPushConstants after implementing it   
+    vk::PushConstantRange materialPushConstantRange =
+        SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(SwGeometry::WorkPC));
     std::array<vk::DescriptorSetLayout, 1> materialDescriptorLayouts = {SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout()};
     sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout(materialDescriptorLayouts, materialPushConstantRange);
     sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout(materialDescriptorLayouts, materialPushConstantRange);

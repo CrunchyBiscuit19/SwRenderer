@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Renderer/SwStats.h>
 #include <quill/Logger.h>
 #include <vk_mem_alloc.h>
 
@@ -23,12 +24,13 @@ struct SwRendererContext {
     SwImmSubmit* mImmSubmit;
     SwEvents* mEvents;
     SwCamera* mCamera;
+    SwStats* mStats;
     quill::Logger* mLogger;
 
     SwRendererContext() = default;
     SwRendererContext(
         vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
         vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events,
-        SwCamera* camera, quill::Logger* logger
+        SwCamera* camera, SwStats* stats, quill::Logger* logger
     );
 };

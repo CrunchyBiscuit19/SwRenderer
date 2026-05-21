@@ -3,40 +3,40 @@
 
 SwDescriptorLayout::SwDescriptorLayout() : mLayout(nullptr) {};
 
-SwDescriptorLayout::SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings)
-    : mLayout(std::move(layout)), mBindings(std::move(bindings)) {}
+SwDescriptorLayout::SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings, bool bindless)
+    : mLayout(std::move(layout)), mBindings(std::move(bindings)), mUseBindless(bindless) {}
 
 void SwDescriptorLayout::destroy() { mLayout.clear(); }
 
 SwDescriptorSet::SwDescriptorSet() : mSet(nullptr) {};
 
-SwDescriptorSet::SwDescriptorSet(vk::raii::DescriptorSet set, std::span<const vk::DescriptorSetLayoutBinding> bindings)
-    : mSet(std::move(set)), mBindings(bindings) {}
+SwDescriptorSet::SwDescriptorSet(vk::raii::DescriptorSet set, std::span<const vk::DescriptorSetLayoutBinding> bindings, bool useBindless)
+    : mSet(std::move(set)), mBindings(bindings), mUseBindless(useBindless) {}
 
 void SwDescriptorSet::writeImage(
-    std::uint32_t bindingIndex, vk::ImageView image, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayIndex
+    std::uint32_t bindingIndex, vk::ImageView imageView, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayIndex
 ) {
     if (mBindings[bindingIndex].descriptorType != type) {
         throw std::runtime_error("Descriptor type mismatch when writing image to descriptor set");
     };
-    vk::DescriptorImageInfo imageInfo(sampler, image, layout);
-    mWrites.emplace_back(*mSet, bindingIndex + arrayIndex, 0, 1, type, &imageInfo);
+    mWriteImageInfos.emplace_back(sampler, imageView, layout);
+    mWrites.emplace_back(*mSet, bindingIndex, arrayIndex, 1, type, &mWriteImageInfos.back());
 }
 
 void SwDescriptorSet::writeSampler(std::uint32_t bindingIndex, vk::Sampler sampler, vk::DescriptorType type) {
     if (mBindings[bindingIndex].descriptorType != type) {
         throw std::runtime_error("Descriptor type mismatch when writing sampler to descriptor set");
     };
-    vk::DescriptorImageInfo imageInfo(sampler, {}, {});
-    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, type, &imageInfo);
+    mWriteImageInfos.emplace_back(sampler);
+    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, type, &mWriteImageInfos.back());
 }
 
 void SwDescriptorSet::writeBuffer(std::uint32_t bindingIndex, vk::Buffer buffer, size_t size, size_t offset, vk::DescriptorType type) {
     if (mBindings[bindingIndex].descriptorType != type) {
         throw std::runtime_error("Descriptor type mismatch when writing buffer to descriptor set");
     };
-    vk::DescriptorBufferInfo bufferInfo(buffer, offset, size);
-    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, type, nullptr, &bufferInfo);
+    mWriteBufferInfos.emplace_back(buffer, offset, size);
+    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, type, nullptr, &mWriteBufferInfos.back());
 }
 
 void SwDescriptorSet::pushWrites() {
@@ -51,8 +51,6 @@ SwDescriptorPool::SwDescriptorPool(vk::raii::DescriptorPool descriptorPool) : mP
 
 SwRendererContext SwDescriptorAllocator::sRendererContext{};
 
-SwDescriptorAllocator::SwDescriptorAllocator() {}
-
 SwDescriptorAllocator::SwDescriptorAllocator(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool)
     : mRatios(std::move(ratios)), mSetsPerPool(setsPerPool) {}
 
@@ -66,7 +64,7 @@ SwDescriptorPool SwDescriptorAllocator::createPool(std::uint32_t setCount) const
     }
 
     vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo;
-    descriptorPoolCreateInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
+    descriptorPoolCreateInfo.flags = vk::DescriptorPoolCreateFlagBits::eUpdateAfterBind | vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
     descriptorPoolCreateInfo.maxSets = setCount;
     descriptorPoolCreateInfo.poolSizeCount = static_cast<std::uint32_t>(sizes.size());
     descriptorPoolCreateInfo.pPoolSizes = sizes.data();
@@ -121,10 +119,10 @@ SwDescriptorLayout SwDescriptorAllocator::createDescriptorLayout(
         descriptorLayoutCreateInfo.pNext = &descriptorLayoutBindingFlagsCreateInfo;
     }
 
-    return SwDescriptorLayout(vk::raii::DescriptorSetLayout(*sRendererContext.mDevice, descriptorLayoutCreateInfo), std::move(bindings));
+    return SwDescriptorLayout(sRendererContext.mDevice->createDescriptorSetLayout(descriptorLayoutCreateInfo, nullptr), std::move(bindings), useBindless);
 }
 
-SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& layout) {
+SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& layout, std::uint32_t bindlessDescriptorCount) {
     if (mReadyPools.empty()) {
         mReadyPools.emplace_back(std::move(createPool(mSetsPerPool)));
     }
@@ -135,9 +133,14 @@ SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& l
     auto rawLayout = layout.getRawLayout();
     descriptorSetAllocateInfo.pSetLayouts = &rawLayout;
 
+    vk::DescriptorSetVariableDescriptorCountAllocateInfo countInfo;
+    countInfo.descriptorSetCount = 1;
+    countInfo.pDescriptorCounts = &bindlessDescriptorCount;
+    if (layout.usesBindless()) descriptorSetAllocateInfo.pNext = &countInfo;
+
     try {
         auto sets = sRendererContext.mDevice->allocateDescriptorSets(descriptorSetAllocateInfo);
-        return SwDescriptorSet(std::move(sets.front()), layout.getBindings());
+        return SwDescriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
     } catch (const vk::OutOfPoolMemoryError&) {
         /* grow below */
     } catch (const vk::FragmentedPoolError&) {
@@ -151,7 +154,7 @@ SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& l
     descriptorSetAllocateInfo.descriptorPool = mReadyPools.back().getRawPool();
 
     auto sets = sRendererContext.mDevice->allocateDescriptorSets(descriptorSetAllocateInfo);
-    return SwDescriptorSet(std::move(sets.front()), layout.getBindings());
+    return SwDescriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
 }
 
 void SwDescriptorAllocator::resetPools() {

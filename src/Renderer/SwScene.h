@@ -4,6 +4,7 @@
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
 #include <Pass/SwCull.h>
+#include <Pass/SwGeometry.h>
 #include <Pass/SwPass.h>
 #include <Pass/SwRenderGraph.h>
 #include <Resource/SwDescriptor.h>
@@ -22,7 +23,14 @@ private:
     static std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH;
     static std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH;
     static std::filesystem::path CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH;
-    static const std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS = 16;
+    static const std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
+    static const std::uint32_t SCENE_VERTEX_BUFFER_SIZE{1 << 30};
+    static const std::uint32_t SCENE_INDEX_BUFFER_SIZE{1 << 30};
+    static const std::uint32_t SCENE_NUM_MATERIALS{1 << 8};
+    static const std::uint32_t SCENE_NUM_NODES{1 << 12};
+    static const std::uint32_t SCENE_NUM_INSTANCES{1 << 8};
+    static const std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
+    static const std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 20};
     
     static SwRendererContext sRendererContext;
 
@@ -38,6 +46,7 @@ private:
     // --- Passes and Resources ---
     std::unordered_map<std::string, SwPass> mPasses;
     SwCull::Resources mCullResources;
+    SwGeometry::Resources mGeometryResources;
 
     // --- Scene --- 
     SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
@@ -53,9 +62,12 @@ private:
     // --- Render graph ---
     SwRenderGraph mRenderGraph;
 
-    void initializeCullResources();
+    void initializeSceneResources();
 
+    void initializeCullResources();
     void reInitializableCullResources();
+
+    void initializeGeometryResources();
 
 public:
     SwSceneFlags mFlags;
@@ -64,5 +76,5 @@ public:
 
     void initialize();
 
-    void writeOnResize();
+    void resize();
 };

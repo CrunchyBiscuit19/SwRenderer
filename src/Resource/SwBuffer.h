@@ -37,6 +37,8 @@ public:
 
     inline vk::Buffer getRawBuffer() { return *mBuffer; }
 
+    std::optional<vk::DeviceAddress> getDeviceAddress() { return mAddress; }
+
     void destroy();
 
     SwBuffer(SwBuffer&&) noexcept;

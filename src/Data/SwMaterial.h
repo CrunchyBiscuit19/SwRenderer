@@ -34,11 +34,11 @@ public:
 
 struct SwMaterialResources {
 private:
-    static const std::uint32_t MAX_TEXTURE_ARRAY_SLOTS = 1 << 10;
-
     static SwRendererContext sRendererContext;
 
 public:
+    static const std::uint32_t MAX_TEXTURE_ARRAY_SLOTS = 1 << 8;
+
     SwMaterialImage mBase;
     SwMaterialImage mMetallicRoughness;
     SwMaterialImage mNormal;

@@ -2,6 +2,7 @@
 
 #include <vk_mem_alloc.h>
 
+#include <deque>
 #include <vulkan/vulkan_raii.hpp>
 
 struct SwRendererContext;
@@ -10,11 +11,12 @@ class SwDescriptorLayout {
 private:
     vk::raii::DescriptorSetLayout mLayout;
     std::vector<vk::DescriptorSetLayoutBinding> mBindings;
+    bool mUseBindless;
 
 public:
     SwDescriptorLayout();
 
-    SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings);
+    SwDescriptorLayout(vk::raii::DescriptorSetLayout layout, std::vector<vk::DescriptorSetLayoutBinding> bindings, bool useBindless);
 
     SwDescriptorLayout(SwDescriptorLayout&&) noexcept = default;
     SwDescriptorLayout& operator=(SwDescriptorLayout&&) noexcept = default;
@@ -23,8 +25,8 @@ public:
     SwDescriptorLayout& operator=(const SwDescriptorLayout&) = delete;
 
     inline vk::DescriptorSetLayout getRawLayout() { return *mLayout; };
-
     inline std::span<const vk::DescriptorSetLayoutBinding> getBindings() const { return mBindings; };
+    inline bool usesBindless() const { return mUseBindless; };
 
     void destroy();
 };
@@ -34,14 +36,17 @@ private:
     vk::raii::DescriptorSet mSet;
     std::span<const vk::DescriptorSetLayoutBinding> mBindings;
     std::vector<vk::WriteDescriptorSet> mWrites;
+    std::deque<vk::DescriptorImageInfo> mWriteImageInfos;
+    std::deque<vk::DescriptorBufferInfo> mWriteBufferInfos;
+    bool mUseBindless;
 
 public:
     SwDescriptorSet();
 
-    SwDescriptorSet(vk::raii::DescriptorSet mSet, std::span<const vk::DescriptorSetLayoutBinding> bindings);
+    SwDescriptorSet(vk::raii::DescriptorSet mSet, std::span<const vk::DescriptorSetLayoutBinding> bindings, bool useBindless);
 
     void writeImage(
-        std::uint32_t binding, vk::ImageView image, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayIndex = 0
+        std::uint32_t binding, vk::ImageView imageView, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayIndex = 0
     );
 
     void writeSampler(std::uint32_t binding, vk::Sampler sampler, vk::DescriptorType type);
@@ -83,7 +88,7 @@ public:
 class SwDescriptorAllocator {
 private:
     static SwRendererContext sRendererContext;
-    static const std::uint32_t MAX_SETS_PER_POOL{4096};
+    static const std::uint32_t MAX_SETS_PER_POOL{1 << 12};
 
     std::vector<SwPoolSizeRatio> mRatios;
     std::uint32_t mSetsPerPool;
@@ -97,8 +102,6 @@ private:
     static std::uint32_t nextPoolSize(std::uint32_t current);
 
 public:
-    SwDescriptorAllocator();
-
     SwDescriptorAllocator(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool);
 
     SwDescriptorAllocator(SwDescriptorAllocator&&) noexcept = default;
@@ -115,7 +118,7 @@ public:
         std::vector<vk::DescriptorSetLayoutBinding> bindings, vk::ShaderStageFlags shaderStages, bool useBindless = false
     );
 
-    SwDescriptorSet createDescriptorSet(SwDescriptorLayout& layout);
+    SwDescriptorSet createDescriptorSet(SwDescriptorLayout& layout, std::uint32_t bindlessDescriptorCount = 0);
 
     void resetPools();
 

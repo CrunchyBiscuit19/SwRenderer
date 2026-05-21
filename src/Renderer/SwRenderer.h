@@ -4,6 +4,7 @@
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRendererContext.h>
+#include <Renderer/SwScene.h>
 #include <Renderer/SwStats.h>
 #include <Renderer/SwSwapchain.h>
 #define SDL_MAIN_HANDLED
@@ -114,8 +115,7 @@ class SwRenderer {
     static const std::uint32_t VK_PATCH_VERSION{0};
     static const bool FULLSCREEN_ON_STARTUP{false};
 
-    quill::Logger* mLogger;
-
+    SwRendererContext mRendererContext;
     vk::raii::Context mContext;
     vk::raii::Instance mInstance;
     vk::raii::PhysicalDevice mChosenGPU;
@@ -127,6 +127,8 @@ class SwRenderer {
     vk::raii::Queue mGraphicsQueue;
     std::uint32_t mGraphicsQueueFamily;
     SwVmaAllocator mAllocator;
+    quill::Logger* mLogger;
+    SwDescriptorAllocator mDescriptorAllocator;
     bool mIsInitialized{false};
     bool mStopRendering{false};
 
@@ -137,9 +139,7 @@ class SwRenderer {
     SwGui mGui;
     SwCamera mCamera;
 
-    SwDescriptorAllocator mDescriptorAllocator;
-
-    SwRendererContext mRendererContext;
+    SwScene mScene;
 
 public:
     SwRenderer();

@@ -75,7 +75,7 @@ void SwCamera::initialize() {
     });
 
     const vk::DeviceSize frustumBufferSize = sizeof(Plane) * NUM_FRUSTUM_PLANES;
-    SwBufferFactory::createAllocatedBuffer(
+    mFrustumBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         frustumBufferSize

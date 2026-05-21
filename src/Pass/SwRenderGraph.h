@@ -20,6 +20,8 @@ private:
     void exportGraphviz(const std::filesystem::path& path) const;
 
 public:
+    SwRenderGraph() = default;
+
     SwRenderGraph(std::vector<SwAllocatedImage*> outputs);
 
     void addPass(SwPass* pass);

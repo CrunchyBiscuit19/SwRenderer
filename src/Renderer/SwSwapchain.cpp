@@ -66,23 +66,30 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
 
     mImages.reserve(NUM_SWAPCHAIN_IMAGES);
     for (std::uint32_t i = 0; i < vkbSwapchain.get_images().value().size(); i++) {
-        vk::ImageViewCreateInfo imageViewCreateInfo = {};
-        imageViewCreateInfo.pNext = nullptr;
-        imageViewCreateInfo.viewType = vk::ImageViewType::e2D;
-        imageViewCreateInfo.image = vkbSwapchain.get_images().value()[i];
-        imageViewCreateInfo.format = SRGB_FORMAT;
-        imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-        imageViewCreateInfo.subresourceRange.levelCount = 1;
-        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        imageViewCreateInfo.subresourceRange.layerCount = 1;
-        imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
-        std::vector<vk::raii::ImageView> imageViews;
-        imageViews.reserve(2);
-        imageViews.emplace_back(sRendererContext.mDevice->createImageView(imageViewCreateInfo));
-        imageViewCreateInfo.format = UNORM_FORMAT;
-        imageViews.emplace_back(sRendererContext.mDevice->createImageView(imageViewCreateInfo));
+        vk::ImageViewCreateInfo srgbImageViewCreateInfo = {};
+        srgbImageViewCreateInfo.pNext = nullptr;
+        srgbImageViewCreateInfo.viewType = vk::ImageViewType::e2D;
+        srgbImageViewCreateInfo.image = vkbSwapchain.get_images().value()[i];
+        srgbImageViewCreateInfo.format = SRGB_FORMAT;
+        srgbImageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+        srgbImageViewCreateInfo.subresourceRange.levelCount = 1;
+        srgbImageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+        srgbImageViewCreateInfo.subresourceRange.layerCount = 1;
+        srgbImageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
+        vk::ImageViewCreateInfo unormImageViewCreateInfo = srgbImageViewCreateInfo;
+        unormImageViewCreateInfo.format = UNORM_FORMAT;
+
+        std::deque<vk::raii::ImageView> otherImageViews;
+        otherImageViews.emplace_back(sRendererContext.mDevice->createImageView(unormImageViewCreateInfo));
+
         SwSwapchainImage swapchainImage(
-            vkbSwapchain.get_images().value()[i], std::move(imageViews), SwSemaphoreFactory::createSemaphore(), formats, vk::Extent3D(vkbSwapchain.extent, 1)
+            vkbSwapchain.get_images().value()[i],
+            formats[0],
+            vk::Extent3D(vkbSwapchain.extent, 1), 
+            sRendererContext.mDevice->createImageView(srgbImageViewCreateInfo),
+            SwSemaphoreFactory::createSemaphore(),
+            {formats[1]},
+            std::move(otherImageViews)
         );
         mImages.emplace_back(std::move(swapchainImage));
     }
@@ -95,16 +102,16 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
 
     mDrawImage = SwImageFactory::createColorImage2D(
         nullptr,
-        vk::Extent3D{mWindowExtent, 1},
         DRAW_FORMAT,
+        vk::Extent3D{mWindowExtent, 1},
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eStorage,
         false
     );
     mDepthImage = SwImageFactory::createDepthImage2D(
         nullptr,
-        mDrawImage.getExtent(),
         DEPTH_FORMAT,
+        mDrawImage.getExtent(),
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
@@ -125,14 +132,6 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
             vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
         );
     });
-}
-
-SwFrame& SwSwapchain::getCurrentFrame() {
-    return mFrames.at(mFrameNumber % NUM_FRAME_OVERLAP);
-}
-
-SwFrame& SwSwapchain::getPreviousFrame() {
-    return mFrames.at((mFrameNumber - 1) % NUM_FRAME_OVERLAP);
 }
 
 SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() {

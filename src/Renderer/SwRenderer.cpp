@@ -1,3 +1,5 @@
+#include <Data/SwAsset.h>
+#include <Data/SwMaterial.h>
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwCommandBuffer.h>
@@ -9,8 +11,6 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
-#include <Data/SwMaterial.h>
-#include <Data/SwAsset.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
@@ -83,15 +83,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            LOG_ERROR(renderer->getLogger(), "{}", message);
+            //LOG_ERROR(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            LOG_WARNING(renderer->getLogger(), "{}", message);
+            //LOG_WARNING(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            LOG_TRACE_L3(renderer->getLogger(), "{}", message);
+            //LOG_TRACE_L3(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -103,7 +103,22 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 }
 
 SwRenderer::SwRenderer()
-    : mContext(), mDebugMessenger(nullptr), mInstance(nullptr), mDevice(nullptr), mChosenGPU(nullptr), mComputeQueue(nullptr), mGraphicsQueue(nullptr) {
+    : mContext(),
+      mDebugMessenger(nullptr),
+      mInstance(nullptr),
+      mDevice(nullptr),
+      mChosenGPU(nullptr),
+      mComputeQueue(nullptr),
+      mGraphicsQueue(nullptr),
+      mDescriptorAllocator(
+          {
+              {vk::DescriptorType::eCombinedImageSampler, 1},
+              {vk::DescriptorType::eSampledImage, 1},
+              {vk::DescriptorType::eStorageImage, 1},
+              {vk::DescriptorType::eUniformBuffer, 1},
+          },
+          1 << 10
+      ) {
     quill::Backend::start();
     auto fileSink = quill::Frontend::create_or_get_sink<quill::FileSink>(
         fmt::format("{}Run.log", LOGS_PATH).c_str(),
@@ -266,7 +281,19 @@ SwRenderer::SwRenderer()
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
     mRendererContext = SwRendererContext(
-        &mInstance, &mChosenGPU, &mDevice, mAllocator.mAllocator, &mGraphicsQueue, &mComputeQueue, &mDescriptorAllocator, &mSwapchain, &mImmSubmit, &mEvents, &mCamera, mLogger
+        &mInstance,
+        &mChosenGPU,
+        &mDevice,
+        mAllocator.mAllocator,
+        &mGraphicsQueue,
+        &mComputeQueue,
+        &mDescriptorAllocator,
+        &mSwapchain,
+        &mImmSubmit,
+        &mEvents,
+        &mCamera,
+        &mStats,
+        mLogger
     );
 
     SwSemaphoreFactory::init(mRendererContext);
@@ -283,7 +310,7 @@ SwRenderer::SwRenderer()
     SwPipelineFactory::init(mRendererContext);
     SwBufferFactory::init(mRendererContext);
     SwImageFactory::init(mRendererContext);
-    
+
     SwMesh::init();
     SwBounds::init();
     SwNode::init();
@@ -295,13 +322,16 @@ SwRenderer::SwRenderer()
 
     SwGui::init(mRendererContext);
     mGui.initialize();
-    
+
     SwCamera::init(mRendererContext);
     mCamera.initialize();
 
     SwMaterialResources::init(mRendererContext);
     SwMaterial::init();
     SwAsset::init(mRendererContext);
+
+    SwScene::init(mRendererContext);
+    mScene.initialize();
 }
 
 SwRenderer::~SwRenderer() {
