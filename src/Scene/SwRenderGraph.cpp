@@ -153,7 +153,7 @@ void SwRenderGraph::sortTopological() {
         ready.pop();
         sorted.emplace_back(p);
         for (SwPass* next : adj[p]) {
-            if (--inDegree.at(next) == 0) ready.push(next);
+            if (--inDegree[next] == 0) ready.push(next);
         }
     }
 
@@ -216,7 +216,7 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
         if (pruned) {
             suffix = "\\n(pruned)";
         } else {
-            suffix = fmt::format("\\n[{}]", sortIndex.at(p));
+            suffix = fmt::format("\\n[{}]", sortIndex[p]);
         }
         if (p->isMustRun()) suffix += "\\nmust-run";
 

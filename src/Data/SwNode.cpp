@@ -44,7 +44,7 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
         std::unordered_map<std::uint32_t, SwBatch>& workingBatch = sRendererContext.mScene->getBatches(primitive.mMaterial.getAlphaMode());
 
         workingBatch.try_emplace(pipelineId, primitive);
-        workingBatch.at(pipelineId)
+        workingBatch[pipelineId]
             .getRenderItems()
             .emplace_back(
                 primitive.mIndexCount,
@@ -59,11 +59,11 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
                 workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
             );
 
-        SwRenderItem& currRenderItem = workingBatch.at(pipelineId).getRenderItems().back();
-        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch.at(pipelineId).getRenderItems().size() - 1);
+        SwRenderItem& currRenderItem = workingBatch[pipelineId].getRenderItems().back();
+        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch[pipelineId].getRenderItems().size() - 1);
         std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
         for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
-            workingBatch.at(pipelineId).getRenderInstances().emplace_back(renderItemIndex, instanceIndex + i);
+            workingBatch[pipelineId].getRenderInstances().emplace_back(renderItemIndex, instanceIndex + i);
         }
         SwBatch::sFirstRenderInstanceOffset += workingAsset.getInstances().size();
     }

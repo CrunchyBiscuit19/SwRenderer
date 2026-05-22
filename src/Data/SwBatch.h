@@ -47,6 +47,7 @@ private:
 public:
     static std::uint32_t sFirstRenderInstanceOffset;
 
+    SwBatch() = default;
     SwBatch(SwPrimitive& primitive);
 
     inline std::vector<SwRenderItem>& getRenderItems() { return mRenderItems; }

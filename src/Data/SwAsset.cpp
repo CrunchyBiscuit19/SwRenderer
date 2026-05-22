@@ -230,8 +230,8 @@ void SwAsset::constructMaterials() {
             samplerIndex = mRawAsset.textures[material.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value_or(0);
         }
         SwMaterialTexture baseImage(
-            mImages.at(imageIndex),
-            sSamplers.at(mSamplerOptions.at(samplerIndex))
+            mImages[imageIndex],
+            sSamplers[mSamplerOptions[samplerIndex]]
         );
 
         imageIndex = 0;
@@ -241,8 +241,8 @@ void SwAsset::constructMaterials() {
             samplerIndex = mRawAsset.textures[material.pbrData.metallicRoughnessTexture.value().textureIndex].samplerIndex.value_or(0);
         }
         SwMaterialTexture metallicRoughnessImage(
-            mImages.at(imageIndex),
-            sSamplers.at(mSamplerOptions.at(samplerIndex))
+            mImages[imageIndex],
+            sSamplers[mSamplerOptions[samplerIndex]]
         );
 
         imageIndex = 0;
@@ -252,8 +252,8 @@ void SwAsset::constructMaterials() {
             samplerIndex = mRawAsset.textures[material.emissiveTexture.value().textureIndex].samplerIndex.value_or(0);
         }
         SwMaterialTexture emissiveImage(
-            mImages.at(imageIndex),
-            sSamplers.at(mSamplerOptions.at(samplerIndex))
+            mImages[imageIndex],
+            sSamplers[mSamplerOptions[samplerIndex]]
         );
 
         imageIndex = 0;
@@ -263,8 +263,8 @@ void SwAsset::constructMaterials() {
             samplerIndex = mRawAsset.textures[material.normalTexture.value().textureIndex].samplerIndex.value_or(0);
         }
         SwMaterialTexture normalImage(
-            mImages.at(imageIndex),
-            sSamplers.at(mSamplerOptions.at(samplerIndex))
+            mImages[imageIndex],
+            sSamplers[mSamplerOptions[samplerIndex]]
         );
 
         imageIndex = 0;
@@ -273,10 +273,10 @@ void SwAsset::constructMaterials() {
             imageIndex = mRawAsset.textures[material.occlusionTexture.value().textureIndex].imageIndex.value_or(0);
             samplerIndex = mRawAsset.textures[material.occlusionTexture.value().textureIndex].samplerIndex.value_or(0);
         }
-        std::vector<vk::Format> occlusionFormats{mImages.at(imageIndex).getMainFormat()};
+        std::vector<vk::Format> occlusionFormats{mImages[imageIndex].getMainFormat()};
         SwMaterialTexture occlusionImage(
-            mImages.at(imageIndex),
-            sSamplers.at(mSamplerOptions.at(samplerIndex))
+            mImages[imageIndex],
+            sSamplers[mSamplerOptions[samplerIndex]]
         );
 
         SwMaterialResources resources(
@@ -323,7 +323,7 @@ void SwAsset::constructMeshes() {
                 static_cast<std::uint32_t>(indices.size()),
                 static_cast<std::uint32_t>(mRawAsset.accessors[p.indicesAccessor.value()].count),
                 static_cast<std::uint32_t>(vertices.size()),
-                p.materialIndex.has_value() ? mMaterials.at(p.materialIndex.value()) : mMaterials.at(0)
+                p.materialIndex.has_value() ? mMaterials[p.materialIndex.value()] : mMaterials[0]
             );
 
             size_t vertexStartOffset = vertices.size();
@@ -464,7 +464,7 @@ void SwAsset::constructNodes() {
 
         std::shared_ptr<SwNode> localNode = std::make_shared<SwNode>(name, relativeNodeIndex, localTransform);
         if (rawNode.meshIndex.has_value()) {
-            localNode = std::make_shared<SwMeshNode>(name, relativeNodeIndex, localTransform, mMeshes.at(*rawNode.meshIndex));
+            localNode = std::make_shared<SwMeshNode>(name, relativeNodeIndex, localTransform, mMeshes[*rawNode.meshIndex]);
         }
 
         mNodes.emplace_back(localNode);
@@ -475,7 +475,7 @@ void SwAsset::constructNodes() {
         fastgltf::Node& rawNode = mRawAsset.nodes[i];
         std::shared_ptr<SwNode> localNode = mNodes[i];
         for (auto& nodeChildIndex : rawNode.children) {
-            localNode->addChild(mNodes.at(nodeChildIndex));
+            localNode->addChild(mNodes[nodeChildIndex]);
         }
     }
 
@@ -490,7 +490,7 @@ void SwAsset::constructNodes() {
     for (std::uint32_t i = 0; i < mNodes.size(); i++) {
         std::memcpy(
             static_cast<char*>(SwNode::sNodeTransformsStagingBuffer.getMappedPointer()) + i * sizeof(glm::mat4),
-            mNodes.at(i)->getWorldTransformAddress(),
+            mNodes[i]->getWorldTransformAddress(),
             sizeof(glm::mat4)
         );
     }

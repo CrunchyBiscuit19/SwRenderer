@@ -119,7 +119,7 @@ public:
         std::unreachable();
     }
     
-    inline SwAsset& getAsset(const std::string& assetName) { return mAssets.at(assetName); }
+    inline SwAsset& getAsset(const std::string& assetName) { return mAssets[assetName]; }
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void deleteAssets();
     void deleteInstances();

@@ -125,7 +125,7 @@ void SwSwapchain::onResizeInitialize() {
     );
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mSwapchainImages.size(); i++) {
-            mSwapchainImages.at(i).emitTransition(cmd, vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone);
+            mSwapchainImages[i].emitTransition(cmd, vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone);
         }
         mDrawImage.emitTransition(cmd, vk::ImageLayout::eTransferSrcOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         mDepthImage.emitTransition(
@@ -150,7 +150,7 @@ void SwSwapchain::resize() {
 }
 
 SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() {
-    return mSwapchainImages.at(mSwapchainIndex);
+    return mSwapchainImages[mSwapchainIndex];
 }
 
 void SwSwapchain::acquireNextImage(uint64_t timeout, vk::Semaphore semaphore, vk::Fence fence) {

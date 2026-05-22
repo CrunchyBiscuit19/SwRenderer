@@ -87,8 +87,8 @@ public:
     inline std::uint32_t getFrameNumber() const { return mFrameNumber; }
     inline SDL_Window* getWindow() const { return mWindow; }
     inline float getAspectRatio() const { return mAspectRatio; }
-    inline SwFrame& getCurrentFrame() { return mFrames.at(mFrameNumber % NUM_FRAME_OVERLAP); }
-    inline SwFrame& getPreviousFrame() { return mFrames.at((mFrameNumber - 1) % NUM_FRAME_OVERLAP); }
+    inline SwFrame& getCurrentFrame() { return mFrames[mFrameNumber % NUM_FRAME_OVERLAP]; }
+    inline SwFrame& getPreviousFrame() { return mFrames[(mFrameNumber - 1) % NUM_FRAME_OVERLAP]; }
 
     SwSwapchainImage& getCurrentSwapchainImage();
 

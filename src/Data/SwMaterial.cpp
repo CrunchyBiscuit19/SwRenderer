@@ -63,7 +63,7 @@ SwMaterial::SwMaterial(
 
     constructMaterialPipeline(materialPipelineOptions);
 
-    SwPipelinePipeline& retrievedPipeline = sMaterialPipelines.at(materialPipelineOptions);
+    SwPipelinePipeline& retrievedPipeline = sMaterialPipelines[materialPipelineOptions];
     mPipelineBundle = SwGraphicsPipelineBundle(retrievedPipeline);
 
     sLatestMaterialId++;
