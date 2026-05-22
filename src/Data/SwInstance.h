@@ -22,7 +22,8 @@ private:
 public:
     SwInstance(std::string assetName, SwInstanceData data = SwInstanceData());
 
-    inline void* getDataAddress() { return &mData; }
+    inline SwInstanceData* getDataAddress() { return &mData; }
+    inline std::string getAssetName() const { return mAssetName; }
 
     inline void markDelete() { mDelete = true; }
 };

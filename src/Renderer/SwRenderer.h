@@ -137,7 +137,6 @@ class SwRenderer {
     SwStats mStats;
     SwEvents mEvents;
     SwGui mGui;
-    SwCamera mCamera;
 
     SwScene mScene;
 

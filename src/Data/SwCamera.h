@@ -14,8 +14,8 @@ enum SwMovementMode {
 };
 
 struct SwPerspective {
-    glm::mat4 view;
-    glm::mat4 proj;
+    glm::mat4 mView;
+    glm::mat4 mProj;
 };
 
 struct SwRendererContext;

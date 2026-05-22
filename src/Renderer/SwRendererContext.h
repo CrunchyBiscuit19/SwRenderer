@@ -11,6 +11,7 @@ class SwEvents;
 class SwCamera;
 class SwSwapchain;
 class SwDescriptorAllocator;
+class SwScene;
 
 struct SwRendererContext {
     vk::raii::Instance* mInstance;
@@ -23,14 +24,14 @@ struct SwRendererContext {
     SwSwapchain* mSwapchain;
     SwImmSubmit* mImmSubmit;
     SwEvents* mEvents;
-    SwCamera* mCamera;
+    SwScene* mScene;
     SwStats* mStats;
     quill::Logger* mLogger;
 
     SwRendererContext() = default;
     SwRendererContext(
         vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
-        vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events,
-        SwCamera* camera, SwStats* stats, quill::Logger* logger
+        vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events, SwScene* scene,
+        SwStats* stats, quill::Logger* logger
     );
 };

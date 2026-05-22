@@ -3,12 +3,14 @@
 #include <Data/SwAsset.h>
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
+#include <Resource/SwDescriptor.h>
 #include <Scene/SwCull.h>
 #include <Scene/SwGeometry.h>
-#include <Scene/SwPick.h>
 #include <Scene/SwPass.h>
+#include <Scene/SwPick.h>
 #include <Scene/SwRenderGraph.h>
-#include <Resource/SwDescriptor.h>
+#include <Scene/SwSkybox.h>
+#include <Scene/SwWBOIT.h>
 
 struct SwSceneFlags {
     bool mAssetLoadedFlag;
@@ -25,6 +27,17 @@ private:
     static std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH;
     static std::filesystem::path CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH;
     static const std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
+
+    static std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH;
+    static std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH;
+    static std::filesystem::path PICK_WORK_COMPUTE_SHADER_PATH;
+
+    static std::filesystem::path SKYBOX_VERTEX_SHADER_PATH;
+    static std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH;
+
+    static std::filesystem::path WBOIT_VERTEX_SHADER_PATH;
+    static std::filesystem::path WBOIT_FRAGMENT_SHADER_PATH;
+
     static const std::uint32_t SCENE_VERTEX_BUFFER_SIZE{1 << 30};
     static const std::uint32_t SCENE_INDEX_BUFFER_SIZE{1 << 30};
     static const std::uint32_t SCENE_NUM_MATERIALS{1 << 8};
@@ -33,16 +46,12 @@ private:
     static const std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
     static const std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 20};
 
-    static std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH;
-    static std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH;
-    static std::filesystem::path PICK_WORK_COMPUTE_SHADER_PATH;
-    
     static SwRendererContext sRendererContext;
 
     // --- Camera and Assets ---
     SwCamera mCamera;
     std::unordered_map<std::string, SwAsset> mAssets;
-    
+
     // --- Batches ---
     std::unordered_map<std::uint32_t, SwBatch> mOpaqueBatches;
     std::unordered_map<std::uint32_t, SwBatch> mMaskBatches;
@@ -52,9 +61,11 @@ private:
     std::unordered_map<std::string, SwPass> mPasses;
     SwCull::Resources mCullResources;
     SwPick::Resources mPickResources;
+    SwSkybox::Resources mSkyboxResources;
+    SwWBOIT::Resources mWBOITResources;
     SwGeometry::Resources mGeometryResources;
 
-    // --- Scene --- 
+    // --- Scene ---
     SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
     SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;
     SwAllocatedBuffer mSceneVertexBuffer;
@@ -64,17 +75,23 @@ private:
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
     SwAllocatedBuffer mSceneVisibleRenderInstancesInstanceIndexBuffer;
-    
+
     // --- Render graph ---
     SwRenderGraph mRenderGraph;
 
     void initializeSceneResources();
 
     void initializeCullResources();
-    void reInitializeCullResources();
+    void onResizeInitializeCullResources();
 
     void initializePickResources();
-    void reInitializePickResources();
+    void onResizeInitializePickResources();
+
+    void initializeSkyboxResources();
+    void onUpdateInitializeSkyboxResources();
+
+    void initializeWBOITResources();
+    void onResizeInitializeWBOITResources();
 
     void initializeGeometryResources();
 
@@ -84,6 +101,11 @@ public:
     static void init(SwRendererContext rendererContext);
 
     void initialize();
+
+    void changePickOperation();
+    void generatePickFrame();
+
+    inline SwCamera& getCamera() { return mCamera; }
 
     void resize();
 };

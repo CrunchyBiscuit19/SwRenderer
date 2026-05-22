@@ -1,6 +1,7 @@
 #include <Gui/SwGui.h>
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwSwapchain.h>
+#include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
@@ -79,12 +80,12 @@ void SwGui::initialize() {
         }
 
         if (keyState[SDL_SCANCODE_T] && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            // mRenderer->mScene.mPicker.changeImguizmoOperation(); // TODO implement picker pass first
+            sRendererContext.mScene->changePickOperation(); 
         }
 
         if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
             mSelectAssetsFileBrowser.Open();
-            sRendererContext.mCamera->setRelativeMode(SDL_FALSE);
+            sRendererContext.mScene->getCamera().setRelativeMode(SDL_FALSE);
         }
     });
 }
@@ -96,7 +97,7 @@ void SwGui::update() {
 
     createDockSpace();
     createRendererOptionsWindow();
-    // mRenderer->mScene.mPicker.imguizmoFrame(); // TODO implement picker pass first
+    sRendererContext.mScene->generatePickFrame();
 
     mSelectAssetsFileBrowser.Display();
     if (mSelectAssetsFileBrowser.HasSelected()) {

@@ -24,11 +24,11 @@ project(SwRenderer)
 # Shaders
 # ---------------------------------------------------------------------------
 file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/source/*.slang"
+    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.slang"
 )
 add_custom_target(Shaders ALL SOURCES ${SLANG_SOURCES})
 
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/shaders/source"
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/shaders"
              PREFIX "Shaders"
              FILES ${SLANG_SOURCES})
 

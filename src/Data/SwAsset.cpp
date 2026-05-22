@@ -1,5 +1,6 @@
 #include <Data/SwAsset.h>
 #include <Renderer/SwImmSubmit.h>
+#include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <quill/LogMacros.h>
 #define STB_IMAGE_IMPLEMENTATION
@@ -412,8 +413,10 @@ void SwAsset::constructMeshes() {
         indexCopy.srcOffset = srcVertexVectorSize;
         indexCopy.size = srcIndexVectorSize;
 
-        mMeshes.emplace_back(mName, name, primitives, bounds, relativeFirstBounds, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0);
-        
+        mMeshes.emplace_back(
+            mName, name, primitives, bounds, relativeFirstBounds, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0
+        );
+
         SwMesh& createdMesh = mMeshes.back();
         sRendererContext.mImmSubmit->individualSubmit([&createdMesh, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
             SwMesh::sMeshStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
@@ -521,8 +524,6 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     constructMaterials();
     constructMeshes();
     constructNodes();
-
-    // createInstanceAtCamera(mRenderer->mCamera);
 }
 
 void SwAsset::generateRenderItemsAndRenderInstances() {
@@ -535,7 +536,7 @@ void SwAsset::generateRenderItemsAndRenderInstances() {
 void SwAsset::createInstance(SwInstanceData instanceData) {
     mInstances.emplace_back(mName, instanceData);
     mReloadInstancesFlag = true;
-    // mRenderer->mScene.mFlags.instanceAddedFlag = true; // TODO when scene is implemented
+    sRendererContext.mScene->mFlags.mInstanceLoadedFlag = true;
 }
 
 void SwAsset::reloadInstances() {

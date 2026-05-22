@@ -12,6 +12,8 @@
 #include <vulkan/vulkan.hpp>
 
 namespace SwPick {
+constexpr float PICK_IMGUIZMO_SIZE = 0.15f;
+
 struct DrawPC {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;

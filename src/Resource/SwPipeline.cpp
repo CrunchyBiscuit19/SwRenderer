@@ -139,7 +139,7 @@ void SwGraphicsPipelineFactory::disableMultisampling(vk::PipelineMultisampleStat
     pipelineMultiSampleStateCreateInfo.rasterizationSamples = vk::SampleCountFlagBits::e1;
     pipelineMultiSampleStateCreateInfo.pSampleMask = nullptr;
     pipelineMultiSampleStateCreateInfo.alphaToCoverageEnable = vk::False;
-    pipelineMultiSampleStateCreateInfo.alphaToOneEnable = vk::True;
+    pipelineMultiSampleStateCreateInfo.alphaToOneEnable = vk::False;
 }
 
 void SwGraphicsPipelineFactory::enableMultisampling(vk::PipelineMultisampleStateCreateInfo& pipelineMultiSampleStateCreateInfo) {

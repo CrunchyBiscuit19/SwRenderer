@@ -67,6 +67,8 @@ private:
     vk::raii::Sampler mSampler;
 
 public:
+    SwSampler();
+
     SwSampler(vk::raii::Sampler);
 
     inline vk::Sampler getRawSampler() { return *mSampler; }

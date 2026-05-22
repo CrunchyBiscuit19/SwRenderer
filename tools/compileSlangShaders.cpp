@@ -44,7 +44,7 @@ struct ShaderFile {
 
 int main() {
     fs::path script_path = fs::current_path(); // Assuming executable runs in script dir
-    fs::path shaders_source_dir = script_path / "../shaders/source";
+    fs::path shaders_source_dir = script_path / "../shaders";
     fs::path shaders_out_dir = script_path / "../shaders/out";
     std::string slang_compiler = "slangc";
 

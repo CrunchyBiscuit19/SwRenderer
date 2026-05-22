@@ -291,7 +291,7 @@ SwRenderer::SwRenderer()
         &mSwapchain,
         &mImmSubmit,
         &mEvents,
-        &mCamera,
+        &mScene,
         &mStats,
         mLogger
     );
@@ -324,7 +324,6 @@ SwRenderer::SwRenderer()
     mGui.initialize();
 
     SwCamera::init(mRendererContext);
-    mCamera.initialize();
 
     SwMaterialResources::init(mRendererContext);
     SwMaterial::init();

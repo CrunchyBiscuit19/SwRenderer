@@ -1,12 +1,11 @@
 #pragma once
 
+#include <Data/SwInstance.h>
 #include <Data/SwMesh.h>
 #include <Data/SwNode.h>
-#include <Data/SwInstance.h>
 #include <Renderer/SwRendererContext.h>
 
 #include <fastgltf/parser.hpp>
-
 #include <string>
 
 class SwAsset {
@@ -57,20 +56,23 @@ private:
     void constructImages();
     void constructMaterials();
     void constructMeshes();
-    void constructNodes();  
+    void constructNodes();
 
 public:
     static void init(SwRendererContext assetContext);
 
     static void cleanup();
 
+    SwAsset() = default;
     SwAsset(std::filesystem::path& assetPath);
 
     void generateRenderItemsAndRenderInstances();
 
     void createInstance(SwInstanceData instanceData = SwInstanceData());
-    
+
     void reloadInstances();
 
     void markDelete();
+
+    inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
 };
