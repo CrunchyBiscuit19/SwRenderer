@@ -44,7 +44,7 @@ private:
     vk::raii::SurfaceKHR mSurface;
 
     vk::raii::SwapchainKHR mSwapchain;
-    std::vector<SwSwapchainImage> mImages;
+    std::vector<SwSwapchainImage> mSwapchainImages;
     std::uint32_t mSwapchainIndex{0};
     bool mResizeRequested{false};
 
@@ -58,9 +58,8 @@ private:
 
     SwColorImage2D mDrawImage;
     SwDepthImage2D mDepthImage;
-
-    void addResizeObserver(SwIResizable& resizable);
-    void updateResizeObservers();
+    SwColorImage2D mAccumImage;
+    SwColorImage2D mRvlImage;
 
 public:
     static const vk::Format SRGB_FORMAT{vk::Format::eB8G8R8A8Srgb};
@@ -77,9 +76,14 @@ public:
     static void init(SwRendererContext rendererContext);
 
     void initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen);
+    void onResizeInitialize();
+
+    void resize();
 
     inline SwColorImage2D& getDrawImage() { return mDrawImage; }
-    inline SwDepthImage2D& getDepthImage() { return mDepthImage; }  
+    inline SwDepthImage2D& getDepthImage() { return mDepthImage; }
+    inline SwColorImage2D& getAccumImage() { return mAccumImage; }
+    inline SwColorImage2D& getRvlImage() { return mRvlImage; }  
     inline std::uint32_t getFrameNumber() const { return mFrameNumber; }
     inline SDL_Window* getWindow() const { return mWindow; }
     inline float getAspectRatio() const { return mAspectRatio; }

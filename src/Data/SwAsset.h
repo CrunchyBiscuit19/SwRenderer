@@ -31,20 +31,16 @@ private:
     std::vector<SwColorImage2D> mImages;
     std::vector<SwMaterial> mMaterials;
     SwAllocatedBuffer mMaterialConstantsBuffer;
-    std::uint32_t mFirstMaterialInScene{0};
 
     std::vector<std::shared_ptr<SwNode>> mTopNodes;
     std::vector<std::shared_ptr<SwNode>> mNodes;
     SwAllocatedBuffer mNodeTransformsBuffer;
-    std::uint32_t mFirstNodeTransformInScene{0};
 
     std::vector<SwInstance> mInstances;
     SwAllocatedBuffer mInstancesBuffer;
-    std::uint32_t mFirstInstanceInScene{0};
 
     std::uint32_t mNumBounds;
     SwAllocatedBuffer mBoundsBuffer;
-    std::uint32_t mFirstBoundInScene{0};
 
     static vk::Filter extractFilter(fastgltf::Filter filter);
     static vk::SamplerMipmapMode extractMipmapMode(fastgltf::Filter filter);
@@ -59,6 +55,11 @@ private:
     void constructNodes();
 
 public:
+    std::uint32_t mFirstMaterialInScene{0};
+    std::uint32_t mFirstNodeTransformInScene{0};
+    std::uint32_t mFirstInstanceInScene{0};
+    std::uint32_t mFirstBoundInScene{0};
+
     static void init(SwRendererContext assetContext);
 
     static void cleanup();
@@ -75,4 +76,14 @@ public:
     void markDelete();
 
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
+    inline std::uint32_t getId() { return mId; }
+    inline std::vector<SwInstance>& getInstances() { return mInstances; }
+    inline bool isMarkedDelete() { return mDelete; }
+    inline std::span<SwMesh> getMeshes() { return mMeshes; }
+    inline std::span<SwMaterial> getMaterials() { return mMaterials; }
+    inline std::span<std::shared_ptr<SwNode>> getNodes() { return mNodes; }
+    inline SwAllocatedBuffer& getMaterialConstantsBuffer() { return mMaterialConstantsBuffer; }
+    inline SwAllocatedBuffer& getNodeTransformsBuffer() { return mNodeTransformsBuffer; }
+    inline SwAllocatedBuffer& getInstancesBuffer() { return mInstancesBuffer; }
+    inline SwAllocatedBuffer& getBoundsBuffer() { return mBoundsBuffer; }
 };

@@ -71,10 +71,10 @@ struct std::hash<SwMaterialPipelineOptions> {
 
 class SwMaterial {
 private:
+    static SwRendererContext sRendererContext;
     static std::uint32_t sLatestMaterialId;
 
     std::string mName;
-    std::uint32_t mRelativeMaterialIndex;
     SwMaterialPipelineOptions mMaterialPipelineOptions;
     SwMaterialConstants mMaterialConstants;
     SwMaterialResources mMaterialResources;
@@ -93,15 +93,19 @@ private:
     void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 
 
 public:
+    std::uint32_t mRelativeMaterialIndex;
+
     SwMaterial(
         std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, SwMaterialConstants materialConstants,
         SwMaterialResources materialResources
     );
 
-    static void init();
+    static void init(SwRendererContext rendererContext);
     static void cleanup();
 
     inline SwGraphicsPipelineBundle getPipelineBundle() { return mPipelineBundle; }
 
     inline fastgltf::AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
+
+    inline SwMaterialResources& getResources() { return mMaterialResources; }
 };

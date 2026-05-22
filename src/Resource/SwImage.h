@@ -97,6 +97,8 @@ public:
 
     SwMaterialImage(const SwMaterialImage&) = delete;
     SwMaterialImage& operator=(const SwMaterialImage&) = delete;
+
+    inline SwSampler& getSampler() { return mSampler; }
 };
 
 class SwAllocatedImage : public SwImage {

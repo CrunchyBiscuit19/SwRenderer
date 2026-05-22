@@ -24,8 +24,8 @@ SwMaterialResources::SwMaterialResources(
       mOcclusion(std::move(occlusion)),
       mEmissive(std::move(emissive)) {}
 
-void SwMaterialResources::init(SwRendererContext materialResourcesContext) {
-    sRendererContext = materialResourcesContext;
+void SwMaterialResources::init(SwRendererContext rendererContext) {
+    sRendererContext = rendererContext;
     sMaterialResourcesDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true
     );
@@ -33,6 +33,7 @@ void SwMaterialResources::init(SwRendererContext materialResourcesContext) {
 
 void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
 
+SwRendererContext SwMaterial::sRendererContext{};   
 std::uint32_t SwMaterial::sLatestMaterialId{0};
 std::unordered_map<SwMaterialPipelineOptions, SwPipelinePipeline> SwMaterial::sMaterialPipelines{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
@@ -66,7 +67,9 @@ SwMaterial::SwMaterial(
     sLatestMaterialId++;
 }
 
-void SwMaterial::init() {
+void SwMaterial::init(SwRendererContext rendererContext) {
+    sRendererContext = rendererContext;
+
     vk::PushConstantRange materialPushConstantRange =
         SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(SwGeometry::WorkPC));
     std::array<vk::DescriptorSetLayout, 1> materialDescriptorLayouts = {SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout()};
@@ -126,8 +129,8 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
     } else {
         graphicsPipelineOptions.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{
-            //{mRenderer->mScene.mTransparency.mAccumImage.format, accumBlendState}, // TODO implement transparency pass first
-            //{mRenderer->mScene.mTransparency.mRevealageImage.format, rvlBlendState}, // TODO implement transparency pass first
+            {sRendererContext.mSwapchain->getAccumImage().getMainFormat(), accumBlendState},
+            {sRendererContext.mSwapchain->getRvlImage().getMainFormat(), rvlBlendState},
         };
     }
     graphicsPipelineOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;

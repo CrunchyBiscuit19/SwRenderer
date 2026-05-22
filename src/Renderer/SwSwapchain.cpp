@@ -24,12 +24,11 @@ SwSwapchain::SwSwapchain() : mSwapchain(nullptr), mSurface(nullptr) {}
 void SwSwapchain::init(SwRendererContext swapchainContext) { sRendererContext = swapchainContext; }
 
 void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen) {
-    mWindow = window;
-    mSurface = std::move(surface);
-    mWindowExtent = windowExtent;
-    mWindowFullScreen = windowFullScreen;
-    mAspectRatio = static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height);
-    mWindowFullScreen ? mResizeRequested = true : mResizeRequested = false;  // Initial resize for fullscreen
+    mFrames.reserve(NUM_FRAME_OVERLAP);
+    for (size_t i = 0; i < NUM_FRAME_OVERLAP; i++) {
+        mFrames.emplace_back();
+        mFrames.back().initialize();
+    }
 
     sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
@@ -41,8 +40,19 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         }
     });
 
+    mWindow = window;
+    mSurface = std::move(surface);
+    mWindowExtent = windowExtent;
+    mWindowFullScreen = windowFullScreen;
+    mAspectRatio = static_cast<float>(mWindowExtent.width) / static_cast<float>(mWindowExtent.height);
+    mWindowFullScreen ? mResizeRequested = true : mResizeRequested = false;  // Initial resize for fullscreen
+
+    onResizeInitialize();
+}
+
+void SwSwapchain::onResizeInitialize() {
     vk::ImageFormatListCreateInfo formatListCreateInfo{};
-    std::vector<vk::Format> formats = {vk::Format::eB8G8R8A8Srgb, vk::Format::eB8G8R8A8Unorm};
+    std::vector<vk::Format> formats = {SRGB_FORMAT, UNORM_FORMAT};
     formatListCreateInfo.pViewFormats = formats.data();
     formatListCreateInfo.viewFormatCount = formats.size();
 
@@ -50,9 +60,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     vkb::Swapchain vkbSwapchain =
         swapchainBuilder
             .set_desired_format(
-                VkSurfaceFormatKHR{
-                    .format = static_cast<VkFormat>(SRGB_FORMAT), .colorSpace = static_cast<VkColorSpaceKHR>(vk::ColorSpaceKHR::eSrgbNonlinear)
-                }
+                VkSurfaceFormatKHR{.format = static_cast<VkFormat>(SRGB_FORMAT), .colorSpace = static_cast<VkColorSpaceKHR>(vk::ColorSpaceKHR::eSrgbNonlinear)}
             )
             .set_desired_present_mode(static_cast<VkPresentModeKHR>(vk::PresentModeKHR::eMailbox))
             .set_desired_extent(mWindowExtent.width, mWindowExtent.height)
@@ -64,7 +72,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
             .value();
     mSwapchain = vk::raii::SwapchainKHR(*sRendererContext.mDevice, vkbSwapchain.swapchain);
 
-    mImages.reserve(NUM_SWAPCHAIN_IMAGES);
+    mSwapchainImages.reserve(NUM_SWAPCHAIN_IMAGES);
     for (std::uint32_t i = 0; i < vkbSwapchain.get_images().value().size(); i++) {
         vk::ImageViewCreateInfo srgbImageViewCreateInfo = {};
         srgbImageViewCreateInfo.pNext = nullptr;
@@ -85,19 +93,13 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         SwSwapchainImage swapchainImage(
             vkbSwapchain.get_images().value()[i],
             formats[0],
-            vk::Extent3D(vkbSwapchain.extent, 1), 
+            vk::Extent3D(vkbSwapchain.extent, 1),
             sRendererContext.mDevice->createImageView(srgbImageViewCreateInfo),
             SwSemaphoreFactory::createSemaphore(),
             {formats[1]},
             std::move(otherImageViews)
         );
-        mImages.emplace_back(std::move(swapchainImage));
-    }
-
-    mFrames.reserve(NUM_FRAME_OVERLAP);
-    for (size_t i = 0; i < NUM_FRAME_OVERLAP; i++) {
-        mFrames.emplace_back();
-        mFrames.back().initialize();
+        mSwapchainImages.emplace_back(std::move(swapchainImage));
     }
 
     mDrawImage = SwImageFactory::createColorImage2D(
@@ -115,14 +117,15 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
+    mAccumImage = SwImageFactory::createColorImage2D(
+        nullptr, SwSwapchain::DRAW_FORMAT, mDrawImage.getExtent(), vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, false
+    );
+    mRvlImage = SwImageFactory::createColorImage2D(
+        nullptr, vk::Format::eR16Sfloat, mDrawImage.getExtent(), vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, false
+    );
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        for (std::uint32_t i = 0; i < mImages.size(); i++) {
-            mImages.at(i).emitTransition(
-                cmd,
-                vk::ImageLayout::ePresentSrcKHR,
-                vk::PipelineStageFlagBits2::eNone,
-                vk::AccessFlagBits2::eNone
-            );
+        for (std::uint32_t i = 0; i < mSwapchainImages.size(); i++) {
+            mSwapchainImages.at(i).emitTransition(cmd, vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone);
         }
         mDrawImage.emitTransition(cmd, vk::ImageLayout::eTransferSrcOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         mDepthImage.emitTransition(
@@ -131,11 +134,23 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
             vk::PipelineStageFlagBits2::eEarlyFragmentTests,
             vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
         );
+        mAccumImage.emitTransition(cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead);
+        mRvlImage.emitTransition(cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead);
     });
 }
 
+void SwSwapchain::resize() {
+    mRvlImage.destroy();
+    mAccumImage.destroy();
+    mDepthImage.destroy();
+    mDrawImage.destroy();
+
+    mSwapchain.clear();
+    mSwapchainImages.clear();
+}
+
 SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() {
-    return mImages.at(mSwapchainIndex);
+    return mSwapchainImages.at(mSwapchainIndex);
 }
 
 void SwSwapchain::acquireNextImage(uint64_t timeout, vk::Semaphore semaphore, vk::Fence fence) {

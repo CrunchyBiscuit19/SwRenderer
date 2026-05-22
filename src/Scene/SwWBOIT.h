@@ -6,13 +6,10 @@
 
 namespace SwWBOIT {
 struct Resources {
-    SwColorImage2D mAccumImage;
-    SwColorImage2D mRevealageImage;
+    SwPipelinePipeline mWorkPipelinePipeline;
+    SwPipelineLayout mWorkPipelineLayout;
 
-    SwPipelinePipeline mPipelinePipeline;
-    SwPipelineLayout mPipelineLayout;
-
-    SwDescriptorSet mDescriptorSet;
-    SwDescriptorLayout mDescriptorSetLayout;
+    SwDescriptorSet mWorkDescriptorSet;
+    SwDescriptorLayout mWorkDescriptorLayout;
 };
 }  // namespace SwWBOIT

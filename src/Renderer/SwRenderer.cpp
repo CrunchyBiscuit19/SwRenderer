@@ -326,7 +326,7 @@ SwRenderer::SwRenderer()
     SwCamera::init(mRendererContext);
 
     SwMaterialResources::init(mRendererContext);
-    SwMaterial::init();
+    SwMaterial::init(mRendererContext);
     SwAsset::init(mRendererContext);
 
     SwScene::init(mRendererContext);

@@ -107,5 +107,40 @@ public:
 
     inline SwCamera& getCamera() { return mCamera; }
 
+    inline std::unordered_map<std::uint32_t, SwBatch>& getBatches(fastgltf::AlphaMode alphaMode) {
+        switch (alphaMode) {
+            case fastgltf::AlphaMode::Opaque:
+                return mOpaqueBatches;
+            case fastgltf::AlphaMode::Mask:
+                return mMaskBatches;
+            case fastgltf::AlphaMode::Blend:
+                return mTransparentBatches;
+        }
+        std::unreachable();
+    }
+    
+    inline SwAsset& getAsset(const std::string& assetName) { return mAssets.at(assetName); }
+    void loadAssets(const std::vector<std::filesystem::path>& files);
+    void deleteAssets();
+    void deleteInstances();
+
+    void regenerateRenderItemsInstances();
+
+    void realignVertexIndexOffset();
+    void realignMaterialOffset();
+    void realignNodeTransformsOffset();
+    void realignBoundsOffset();
+    void realignInstancesOffset();
+    void realignOffsets();
+
+    void reloadMainVertexBuffer();
+    void reloadMainIndexBuffer();
+    void reloadMainMaterialConstantsBuffer();
+    void reloadMainNodeTransformsBuffer();
+    void reloadMainBoundsBuffer();
+    void reloadMainInstancesBuffer();
+    void reloadMainMaterialResourcesArray();
+    void reloadMainBuffers();
+
     void resize();
 };

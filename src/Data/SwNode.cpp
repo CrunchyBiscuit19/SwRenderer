@@ -1,6 +1,8 @@
-#include <Data/SwNode.h>
-#include <Data/SwMesh.h>
 #include <Data/SwBatch.h>
+#include <Data/SwMesh.h>
+#include <Data/SwNode.h>
+#include <Renderer/SwRendererContext.h>
+#include <Scene/SwScene.h>
 
 SwStagingBuffer SwNode::sNodeTransformsStagingBuffer{};
 
@@ -18,12 +20,15 @@ SwNode::SwNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 loca
 
 void SwNode::setParent(std::weak_ptr<SwNode> parent) { mParent = parent; }
 
-void SwNode::addChild(std::shared_ptr<SwNode> child) { 
-    mChildren.emplace_back(child); 
+void SwNode::addChild(std::shared_ptr<SwNode> child) {
+    mChildren.emplace_back(child);
     child->setParent(shared_from_this());
 }
 
-void SwNode::init() { sNodeTransformsStagingBuffer = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE); }
+void SwNode::init(SwRendererContext rendererContext) {
+    sRendererContext = rendererContext;
+    sNodeTransformsStagingBuffer = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
+}
 
 void SwNode::cleanup() { sNodeTransformsStagingBuffer.destroy(); }
 
@@ -32,45 +37,34 @@ SwMeshNode::SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::m
 
 void SwMeshNode::generateRenderItemsAndRenderInstances() {
     for (auto& primitive : mMesh.getPrimitives()) {
-
         std::uint32_t pipelineId = primitive.mMaterial.getPipelineBundle().getID();
 
-        /* // TODO after scene implemented
-        // Select which batch type to use based on the material's alpha mode
-        switch (primitive.mMaterial.getAlphaMode()) {
-            case fastgltf::AlphaMode::Opaque:
-                
-            case fastgltf::AlphaMode::Mask:
-                
-            case fastgltf::AlphaMode::Blend:
-                
-        }
+        SwAsset& workingAsset = sRendererContext.mScene->getAsset(mMesh.getAssetName());
+        std::unordered_map<std::uint32_t, SwBatch>& workingBatch = sRendererContext.mScene->getBatches(primitive.mMaterial.getAlphaMode());
 
-        renderer->mScene.mBatchTypes[batchType]->try_emplace(pipelineId, renderer, primitive, pipelineId);
-        renderer->mScene.mBatchTypes[batchType]
-            ->at(pipelineId)
-            .renderItems.emplace_back(
+        workingBatch.try_emplace(pipelineId, primitive);
+        workingBatch.at(pipelineId)
+            .getRenderItems()
+            .emplace_back(
                 primitive.mIndexCount,
                 0,  // Instance count set to 0, incremented inside culling compute shader
-                mMesh->mMainFirstIndex + primitive.mRelativeFirstIndex,
-                mMesh->mMainVertexOffset + primitive.mRelativeVertexOffset,
+                mMesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
+                mMesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
                 SwBatch::sFirstRenderInstanceOffset,
-                model->mMainFirstMaterial + primitive.mMaterial->mRelativeMaterialIndex,
-                model->mMainFirstNodeTransform + this->mRelativeNodeIndex,
-                model->mId,
-                model->mMainFirstInstance,
-                model->mMainFirstBounds + mMesh->mRelativeFirstBounds
+                workingAsset.mFirstMaterialInScene + primitive.mMaterial.mRelativeMaterialIndex,
+                workingAsset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
+                workingAsset.getId(),
+                workingAsset.mFirstInstanceInScene,
+                workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
             );
 
-
-        SwRenderItem& currRenderItem = renderer->mScene.mBatchTypes[batchType]->at(pipelineId).renderItems.back();
-        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(renderer->mScene.mBatchTypes[batchType]->at(pipelineId).renderItems.size() - 1);
-        std::uint32_t instanceIndex = model->mMainFirstInstance;
-        for (std::uint32_t i = 0; i < model->mInstances.size(); i++) {
-            renderer->mScene.mBatchTypes[batchType]->at(pipelineId).renderInstances.emplace_back(renderItemIndex, instanceIndex + i);
+        SwRenderItem& currRenderItem = workingBatch.at(pipelineId).getRenderItems().back();
+        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch.at(pipelineId).getRenderItems().size() - 1);
+        std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
+        for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
+            workingBatch.at(pipelineId).getRenderInstances().emplace_back(renderItemIndex, instanceIndex + i);
         }
-        SwBatch::sFirstRenderInstanceOffset += model->mInstances.size();
-        */
+        SwBatch::sFirstRenderInstanceOffset += workingAsset.getInstances().size();
     }
 
     SwNode::generateRenderItemsAndRenderInstances();

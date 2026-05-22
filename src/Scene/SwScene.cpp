@@ -8,6 +8,7 @@
 #include <stb_image.h>
 
 #include <glm/glm.hpp>
+#include <ranges>
 
 std::filesystem::path SwScene::CULL_RESET_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "CullerReset.comp.spv";
 std::filesystem::path SwScene::CULL_WORK_COMPUTE_SHADER_PATH = std::filesystem::path(SHADERS_PATH) / "CullerCull.comp.spv";
@@ -456,12 +457,12 @@ void SwScene::onUpdateInitializeSkyboxResources() {
 }
 
 void SwScene::initializeWBOITResources() {
-    mWBOITResources.mDescriptorSetLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    mWBOITResources.mWorkDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eFragment
     );
-    mWBOITResources.mDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mWBOITResources.mDescriptorSetLayout);
+    mWBOITResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mWBOITResources.mWorkDescriptorLayout);
 
-    mWBOITResources.mPipelineLayout = SwPipelineFactory::createPipelineLayout({mWBOITResources.mDescriptorSetLayout.getRawLayout()}, nullptr);
+    mWBOITResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout({mWBOITResources.mWorkDescriptorLayout.getRawLayout()}, nullptr);
 
     SwShader wboitVertexShader = SwShaderFactory::createShader(WBOIT_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader wboitFragmentShader = SwShaderFactory::createShader(WBOIT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -480,7 +481,7 @@ void SwScene::initializeWBOITResources() {
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions wboitPipelineOptions;
     wboitPipelineOptions.mVertexShader = wboitVertexShader.getRawModule();
     wboitPipelineOptions.mFragmentShader = wboitFragmentShader.getRawModule();
-    wboitPipelineOptions.mLayout = mWBOITResources.mPipelineLayout.getRawLayout();
+    wboitPipelineOptions.mLayout = mWBOITResources.mWorkPipelineLayout.getRawLayout();
     wboitPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     wboitPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     wboitPipelineOptions.mCullMode = vk::CullModeFlagBits::eNone;
@@ -493,36 +494,23 @@ void SwScene::initializeWBOITResources() {
     wboitPipelineOptions.mDepthTestEnabled = false;
     wboitPipelineOptions.mDepthWriteEnabled = false;
     wboitPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mWBOITResources.mPipelinePipeline = SwGraphicsPipelineFactory::createGraphicsPipeline(wboitPipelineOptions);
+    mWBOITResources.mWorkPipelinePipeline = SwGraphicsPipelineFactory::createGraphicsPipeline(wboitPipelineOptions);
 
     onResizeInitializeWBOITResources();
 }
 
 void SwScene::onResizeInitializeWBOITResources() {
-    vk::Extent3D drawExtent = sRendererContext.mSwapchain->getDrawImage().getExtent();
-    mWBOITResources.mAccumImage = SwImageFactory::createColorImage2D(
-        nullptr, SwSwapchain::DRAW_FORMAT, drawExtent, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, false
+    mWBOITResources.mWorkDescriptorSet.writeImage(
+        0,
+        sRendererContext.mSwapchain->getAccumImage().getRawMainImageView(),
+        nullptr,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::DescriptorType::eSampledImage
     );
-    mWBOITResources.mRevealageImage = SwImageFactory::createColorImage2D(
-        nullptr, vk::Format::eR16Sfloat, drawExtent, vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, false
+    mWBOITResources.mWorkDescriptorSet.writeImage(
+        1, sRendererContext.mSwapchain->getRvlImage().getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
     );
-
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        mWBOITResources.mAccumImage.emitTransition(
-            cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead
-        );
-        mWBOITResources.mRevealageImage.emitTransition(
-            cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead
-        );
-    });
-
-    mWBOITResources.mDescriptorSet.writeImage(
-        0, mWBOITResources.mAccumImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
-    );
-    mWBOITResources.mDescriptorSet.writeImage(
-        1, mWBOITResources.mRevealageImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
-    );
-    mWBOITResources.mDescriptorSet.pushWrites();
+    mWBOITResources.mWorkDescriptorSet.pushWrites();
 }
 
 void SwScene::initializeGeometryResources() {
@@ -544,6 +532,349 @@ void SwScene::initialize() {
     initializeSkyboxResources();
 }
 
+void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
+    for (const auto& modelPath : paths) {
+        auto modelShortPath = modelPath.stem().string();
+        auto modelFullPath = MODELS_PATH / modelPath;
+        auto [_, inserted] = mAssets.try_emplace(modelShortPath, modelFullPath);
+        if (inserted) {
+            mFlags.mAssetLoadedFlag = true;
+        }
+    }
+}
+
+void SwScene::deleteAssets() {
+    std::erase_if(mAssets, [&](std::pair<const std::string, SwAsset>& pair) {
+        if (pair.second.isMarkedDelete()) {
+            mFlags.mAssetUnloadedFlag = true;
+        }
+        return pair.second.isMarkedDelete();
+    });
+}
+
+void SwScene::deleteInstances() {
+    for (auto& asset : mAssets | std::views::values) {
+        std::erase_if(asset.getInstances(), [&](const SwInstance& instance) { return instance.isMarkedDelete(); });
+    }
+}
+
+void SwScene::regenerateRenderItemsInstances() {
+    SwBatch::sFirstRenderInstanceOffset = 0;
+
+    std::vector<std::unordered_map<std::uint32_t, SwBatch>*> batchMaps = {&mOpaqueBatches, &mTransparentBatches, &mMaskBatches};
+    for (auto batchMap : batchMaps) {
+        for (auto& batch : *batchMap | std::views::values) {
+            batch.getRenderItems().clear();
+            batch.getRenderInstances().clear();
+        }
+    }
+    for (auto& asset : mAssets | std::views::values) {
+        asset.generateRenderItemsAndRenderInstances();
+    }
+
+    for (auto batchMap : batchMaps) {
+        for (auto& batch : *batchMap | std::views::values) {
+            if (batch.getRenderItems().empty()) {
+                continue;
+            }
+
+            std::memcpy(
+                batch.getRenderItemsStagingBuffer().getMappedPointer(), batch.getRenderItems().data(), batch.getRenderItems().size() * sizeof(SwRenderItem)
+            );
+            vk::BufferCopy renderItemsCopy{};
+            renderItemsCopy.dstOffset = 0;
+            renderItemsCopy.srcOffset = 0;
+            renderItemsCopy.size = batch.getRenderItems().size() * sizeof(SwRenderItem);
+            std::memcpy(
+                batch.getRenderInstancesStagingBuffer().getMappedPointer(),
+                batch.getRenderInstances().data(),
+                batch.getRenderInstances().size() * sizeof(SwRenderInstance)
+            );
+            vk::BufferCopy renderInstancesCopy{};
+            renderInstancesCopy.dstOffset = 0;
+            renderInstancesCopy.srcOffset = 0;
+            renderInstancesCopy.size = batch.getRenderInstances().size() * sizeof(SwRenderInstance);
+
+            sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
+                cmd.fillBuffer(batch.getPreCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
+                batch.getPreCullRenderItemsBuffer().copyFrom(cmd, batch.getRenderItemsStagingBuffer(), renderItemsCopy, renderItemsCopy.size);
+                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead);
+
+                cmd.fillBuffer(batch.getRenderInstancesBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+                batch.getRenderInstancesBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
+                batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy, renderInstancesCopy.size);
+                batch.getRenderInstancesBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead);
+            });
+        }
+    }
+}
+
+void SwScene::realignVertexIndexOffset() {
+    std::uint32_t vertexCumulative = 0;
+    std::uint32_t indexCumulative = 0;
+    for (auto& asset : mAssets | std::views::values) {
+        for (auto& mesh : asset.getMeshes()) {
+            mesh.mVertexOffsetInScene = vertexCumulative;
+            mesh.mFirstIndexInScene = indexCumulative;
+            vertexCumulative += mesh.mNumVertices;
+            indexCumulative += mesh.mNumIndices;
+        }
+    }
+}
+
+void SwScene::realignMaterialOffset() {
+    std::uint32_t materialCumulative = 0;
+    for (auto& asset : mAssets | std::views::values) {
+        asset.mFirstMaterialInScene = materialCumulative;
+        materialCumulative += asset.getMaterials().size();
+    }
+}
+
+void SwScene::realignNodeTransformsOffset() {
+    std::uint32_t nodeTransformCumulative = 0;
+    for (auto& asset : mAssets | std::views::values) {
+        asset.mFirstNodeTransformInScene = nodeTransformCumulative;
+        nodeTransformCumulative += asset.getNodes().size();
+    }
+}
+
+void SwScene::realignBoundsOffset() {
+    std::uint32_t boundsCumulative = 0;
+    for (auto& asset : mAssets | std::views::values) {
+        asset.mFirstBoundInScene = boundsCumulative;
+        boundsCumulative += asset.getMeshes().size();
+    }
+}
+
+void SwScene::realignInstancesOffset() {
+    std::uint32_t instanceCumulative = 0;
+    for (auto& asset : mAssets | std::views::values) {
+        asset.mFirstInstanceInScene = instanceCumulative;
+        instanceCumulative += asset.getInstances().size();
+    }
+}
+
+void SwScene::realignOffsets() {
+    realignVertexIndexOffset();
+    realignMaterialOffset();
+    realignNodeTransformsOffset();
+    realignBoundsOffset();
+    realignInstancesOffset();
+}
+
+void SwScene::reloadMainVertexBuffer() {
+    std::uint32_t dstOffset = 0;
+    std::uint32_t maxPos = 0;
+
+    for (auto& asset : mAssets | std::views::values) {
+        for (auto& mesh : asset.getMeshes()) {
+            vk::BufferCopy meshVertexCopy{};
+            meshVertexCopy.dstOffset = dstOffset;
+            meshVertexCopy.srcOffset = 0;
+            meshVertexCopy.size = mesh.mNumVertices * sizeof(SwVertex);
+
+            dstOffset += meshVertexCopy.size;
+            maxPos = dstOffset;
+
+            sRendererContext.mImmSubmit->addCallback([&mesh, this, meshVertexCopy, maxPos](vk::CommandBuffer cmd) {
+                mSceneVertexBuffer.copyFrom(cmd, mesh.getVertexBuffer(), meshVertexCopy, maxPos);
+            });
+        }
+    }
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        // Wait for main vertex buffer to finish uploading
+        mSceneVertexBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
+    });
+}
+
+void SwScene::reloadMainIndexBuffer() {
+    std::uint32_t dstOffset = 0;
+    std::uint32_t maxPos = 0;
+
+    for (auto& asset : mAssets | std::views::values) {
+        for (auto& mesh : asset.getMeshes()) {
+            vk::BufferCopy meshIndexCopy{};
+            meshIndexCopy.dstOffset = dstOffset;
+            meshIndexCopy.srcOffset = 0;
+            meshIndexCopy.size = mesh.mNumIndices * sizeof(std::uint32_t);
+
+            dstOffset += meshIndexCopy.size;
+            maxPos = dstOffset;
+
+            sRendererContext.mImmSubmit->addCallback([&mesh, this, meshIndexCopy, maxPos](vk::CommandBuffer cmd) {
+                mSceneIndexBuffer.copyFrom(cmd, mesh.getIndexBuffer(), meshIndexCopy, maxPos);
+            });
+        }
+    }
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        // Wait for main index buffer to finish uploading
+        mSceneIndexBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
+    });
+}
+
+void SwScene::reloadMainMaterialConstantsBuffer() {
+    std::uint32_t dstOffset = 0;
+    std::uint32_t maxPos = 0;
+
+    for (auto& asset : mAssets | std::views::values) {
+        vk::BufferCopy materialConstantCopy{};
+        materialConstantCopy.dstOffset = dstOffset;
+        materialConstantCopy.srcOffset = 0;
+        materialConstantCopy.size = asset.getMaterials().size() * sizeof(SwMaterialConstants);
+
+        dstOffset += materialConstantCopy.size;
+        maxPos = dstOffset;
+
+        sRendererContext.mImmSubmit->addCallback([&asset, this, materialConstantCopy, maxPos](vk::CommandBuffer cmd) {
+            mSceneMaterialConstantsBuffer.copyFrom(cmd, asset.getMaterialConstantsBuffer(), materialConstantCopy, maxPos);
+        });
+    }
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        // Wait for main material constants buffer to finish uploading
+        mSceneMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
+    });
+}
+
+void SwScene::reloadMainNodeTransformsBuffer() {
+    std::uint32_t dstOffset = 0;
+    std::uint32_t maxPos = 0;
+
+    for (auto& asset : mAssets | std::views::values) {
+        vk::BufferCopy nodeTransformsCopy{};
+        nodeTransformsCopy.dstOffset = dstOffset;
+        nodeTransformsCopy.srcOffset = 0;
+        nodeTransformsCopy.size = asset.getNodes().size() * sizeof(glm::mat4);
+
+        dstOffset += nodeTransformsCopy.size;
+        maxPos = dstOffset;
+
+        sRendererContext.mImmSubmit->addCallback([&asset, this, nodeTransformsCopy, maxPos](vk::CommandBuffer cmd) {
+            mSceneNodeTransformsBuffer.copyFrom(cmd, asset.getNodeTransformsBuffer(), nodeTransformsCopy, maxPos);
+        });
+    }
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        // Wait for main node transforms buffer to finish uploading
+        mSceneNodeTransformsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
+    });
+}
+
+void SwScene::reloadMainBoundsBuffer() {
+    std::uint32_t dstOffset = 0;
+    std::uint32_t maxPos = 0;
+
+    for (auto& asset : mAssets | std::views::values) {
+        vk::BufferCopy boundsCopy{};
+        boundsCopy.dstOffset = dstOffset;
+        boundsCopy.srcOffset = 0;
+        boundsCopy.size = asset.getMeshes().size() * sizeof(SwBounds);
+
+        dstOffset += boundsCopy.size;
+        maxPos = dstOffset;
+
+        sRendererContext.mImmSubmit->addCallback([&asset, this, boundsCopy, maxPos](vk::CommandBuffer cmd) {
+            mSceneBoundsBuffer.copyFrom(cmd, asset.getBoundsBuffer(), boundsCopy, maxPos);
+        });
+    }
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        // Wait for main bounds buffer to finish uploading
+        mSceneBoundsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead);
+    });
+}
+
+void SwScene::reloadMainInstancesBuffer() {
+    std::uint32_t dstOffset = 0;
+    std::uint32_t maxPos = 0;
+
+    for (auto& asset : mAssets | std::views::values) {
+        if (asset.getInstances().empty()) {
+            continue;
+        }
+
+        vk::BufferCopy instancesCopy{};
+        instancesCopy.dstOffset = dstOffset;
+        instancesCopy.srcOffset = 0;
+        instancesCopy.size = asset.getInstances().size() * sizeof(SwInstanceData);
+
+        dstOffset += instancesCopy.size;
+        maxPos = dstOffset;
+
+        sRendererContext.mImmSubmit->addCallback([&asset, this, instancesCopy, maxPos](vk::CommandBuffer cmd) {
+            mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy, maxPos);
+        });
+    }
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        // Wait for main instances buffer to finish uploading
+        mSceneInstancesBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
+    });
+}
+
+void SwScene::reloadMainMaterialResourcesArray() {
+    for (auto& asset : mAssets | std::views::values) {
+        for (auto& material : asset.getMaterials()) {
+            std::uint32_t materialTextureArrayIndex = (asset.mFirstMaterialInScene + material.mRelativeMaterialIndex) * 5;
+
+            mSceneMaterialResourcesDescriptorSet.writeImage(
+                0,
+                material.getResources().mBase.getRawMainImageView(),
+                material.getResources().mBase.getSampler().getRawSampler(),
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::DescriptorType::eCombinedImageSampler,
+                materialTextureArrayIndex + 0
+            );
+            mSceneMaterialResourcesDescriptorSet.writeImage(
+                0,
+                material.getResources().mMetallicRoughness.getRawMainImageView(),
+                material.getResources().mMetallicRoughness.getSampler().getRawSampler(),
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::DescriptorType::eCombinedImageSampler,
+                materialTextureArrayIndex + 1
+            );
+            mSceneMaterialResourcesDescriptorSet.writeImage(
+                0,
+                material.getResources().mEmissive.getRawMainImageView(),
+                material.getResources().mEmissive.getSampler().getRawSampler(),
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::DescriptorType::eCombinedImageSampler,
+                materialTextureArrayIndex + 2
+            );
+            mSceneMaterialResourcesDescriptorSet.writeImage(
+                0,
+                material.getResources().mNormal.getRawMainImageView(),
+                material.getResources().mNormal.getSampler().getRawSampler(),
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::DescriptorType::eCombinedImageSampler,
+                materialTextureArrayIndex + 3
+            );
+            mSceneMaterialResourcesDescriptorSet.writeImage(
+                0,
+                material.getResources().mOcclusion.getRawMainImageView(),
+                material.getResources().mOcclusion.getSampler().getRawSampler(),
+                vk::ImageLayout::eShaderReadOnlyOptimal,
+                vk::DescriptorType::eCombinedImageSampler,
+                materialTextureArrayIndex + 4
+            );
+            mSceneMaterialResourcesDescriptorSet.pushWrites();
+        }
+    }
+}
+
+void SwScene::reloadMainBuffers() {
+    reloadMainVertexBuffer();
+    reloadMainIndexBuffer();
+    reloadMainMaterialConstantsBuffer();
+    reloadMainInstancesBuffer();
+    reloadMainNodeTransformsBuffer();
+    reloadMainBoundsBuffer();
+    reloadMainMaterialResourcesArray();
+}
+
 void SwScene::resize() {
     mCullResources.mDepthPyramidImage.destroy();
     onResizeInitializeCullResources();
@@ -551,4 +882,6 @@ void SwScene::resize() {
     mPickResources.mWorkImage.destroy();
     mPickResources.mDepthImage.destroy();
     onResizeInitializePickResources();
+
+    onResizeInitializeWBOITResources();
 }

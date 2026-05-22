@@ -52,6 +52,10 @@ private:
     std::string mName;
     std::vector<SwPrimitive> mPrimitives;
     SwBounds mBounds;
+
+public:
+    static SwStagingBuffer sMeshStagingBuffer;
+
     std::uint32_t mRelativeFirstBounds;
     SwAllocatedBuffer mVertexBuffer;
     std::uint32_t mNumVertices{0};
@@ -59,9 +63,6 @@ private:
     SwAllocatedBuffer mIndexBuffer;
     std::uint32_t mNumIndices{0};
     std::uint32_t mFirstIndexInScene{0};
-
-public:
-    static SwStagingBuffer sMeshStagingBuffer;
 
     SwMesh(
         std::string assetName, std::string name, std::vector<SwPrimitive> primitives, SwBounds bounds, std::uint32_t relativeFirstBounds, SwAllocatedBuffer vertexBuffer,

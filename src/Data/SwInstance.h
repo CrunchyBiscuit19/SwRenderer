@@ -24,6 +24,7 @@ public:
 
     inline SwInstanceData* getDataAddress() { return &mData; }
     inline std::string getAssetName() const { return mAssetName; }
+    inline bool isMarkedDelete() const { return mDelete; }
 
     inline void markDelete() { mDelete = true; }
 };

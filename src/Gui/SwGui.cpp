@@ -102,7 +102,7 @@ void SwGui::update() {
     mSelectAssetsFileBrowser.Display();
     if (mSelectAssetsFileBrowser.HasSelected()) {
         auto selectedFiles = mSelectAssetsFileBrowser.GetMultiSelected();
-        // mRenderer->mScene.loadAssets(selectedFiles); // TODO implement scene loading first
+        sRendererContext.mScene->loadAssets(selectedFiles);
         mSelectAssetsFileBrowser.ClearSelected();
     }
 

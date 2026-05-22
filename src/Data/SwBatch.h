@@ -48,5 +48,13 @@ public:
     static std::uint32_t sFirstRenderInstanceOffset;
 
     SwBatch(SwPrimitive& primitive);
+
+    inline std::vector<SwRenderItem>& getRenderItems() { return mRenderItems; }
+    inline std::vector<SwRenderInstance>& getRenderInstances() { return mRenderInstances; }
+    inline SwStagingBuffer& getRenderItemsStagingBuffer() { return mRenderItemsStagingBuffer; }
+    inline SwStagingBuffer& getRenderInstancesStagingBuffer() { return mRenderInstancesStagingBuffer; }
+    inline SwAllocatedBuffer& getPreCullRenderItemsBuffer() { return mPreCullRenderItemsBuffer; }
+    inline SwAllocatedBuffer& getPostCullRenderItemsBuffer() { return mPostCullRenderItemsBuffer; }
+    inline SwAllocatedBuffer& getRenderInstancesBuffer() { return mRenderInstancesBuffer; }
 };
 
