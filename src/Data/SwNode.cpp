@@ -4,6 +4,7 @@
 #include <Renderer/SwRendererContext.h>
 #include <Scene/SwScene.h>
 
+SwRendererContext SwNode::sRendererContext{};
 SwStagingBuffer SwNode::sNodeTransformsStagingBuffer{};
 
 void SwNode::refreshTransform(const glm::mat4& parentTransform) {

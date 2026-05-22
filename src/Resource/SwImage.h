@@ -46,28 +46,9 @@ public:
     virtual ~SwImage() = default;
 };
 
-class SwNonOwningImage : public SwImage {
+class SwSwapchainImage : public SwImage {
 private:
     vk::Image mImage;
-
-public:
-    SwNonOwningImage(vk::Image image, vk::Format mainFormat, vk::Extent3D extent, std::vector<vk::Format> otherFormats = {});
-
-    void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
-
-    void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
-
-    inline vk::Image getRawImage() const { return mImage; }
-
-    SwNonOwningImage(SwNonOwningImage&&) noexcept = default;
-    SwNonOwningImage& operator=(SwNonOwningImage&&) noexcept = default;
-
-    SwNonOwningImage(const SwNonOwningImage&) = delete;
-    SwNonOwningImage& operator=(const SwNonOwningImage&) = delete;
-};
-
-class SwSwapchainImage : public SwNonOwningImage {
-private:
     vk::raii::ImageView mMainImageView;
     std::deque<vk::raii::ImageView> mOtherImageViews;
     SwSemaphore mRenderedSemaphore;
@@ -78,27 +59,17 @@ public:
         std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
+    inline vk::Image getRawImage() { return mImage; }
+
+    void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+
+    void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+
     SwSwapchainImage(SwSwapchainImage&&) noexcept = default;
     SwSwapchainImage& operator=(SwSwapchainImage&&) noexcept = default;
 
     SwSwapchainImage(const SwSwapchainImage&) = delete;
     SwSwapchainImage& operator=(const SwSwapchainImage&) = delete;
-};
-
-class SwMaterialImage : public SwNonOwningImage {
-private:
-    SwSampler& mSampler;
-
-public:
-    SwMaterialImage(vk::Image image, vk::Format mainFormat, vk::Extent3D extent, SwSampler& sampler, std::vector<vk::Format> otherFormats = {});
-
-    SwMaterialImage(SwMaterialImage&&) noexcept = default;
-    SwMaterialImage& operator=(SwMaterialImage&&) noexcept = default;
-
-    SwMaterialImage(const SwMaterialImage&) = delete;
-    SwMaterialImage& operator=(const SwMaterialImage&) = delete;
-
-    inline SwSampler& getSampler() { return mSampler; }
 };
 
 class SwAllocatedImage : public SwImage {

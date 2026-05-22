@@ -1,10 +1,12 @@
 #include <Data/SwMaterial.h>
-#include <Scene/SwGeometry.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
+#include <Scene/SwGeometry.h>
+
+SwMaterialTexture::SwMaterialTexture(SwColorImage2D& image, SwSampler& sampler) : mImage(image), mSampler(sampler) {}
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStagingBuffer{};
 
@@ -16,7 +18,7 @@ SwRendererContext SwMaterialResources::sRendererContext{};
 SwDescriptorLayout SwMaterialResources::sMaterialResourcesDescriptorLayout{};
 
 SwMaterialResources::SwMaterialResources(
-    SwMaterialImage base, SwMaterialImage metallicRoughness, SwMaterialImage normal, SwMaterialImage occlusion, SwMaterialImage emissive
+    SwMaterialTexture base, SwMaterialTexture metallicRoughness, SwMaterialTexture normal, SwMaterialTexture occlusion, SwMaterialTexture emissive
 )
     : mBase(std::move(base)),
       mMetallicRoughness(std::move(metallicRoughness)),
@@ -33,7 +35,7 @@ void SwMaterialResources::init(SwRendererContext rendererContext) {
 
 void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
 
-SwRendererContext SwMaterial::sRendererContext{};   
+SwRendererContext SwMaterial::sRendererContext{};
 std::uint32_t SwMaterial::sLatestMaterialId{0};
 std::unordered_map<SwMaterialPipelineOptions, SwPipelinePipeline> SwMaterial::sMaterialPipelines{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;

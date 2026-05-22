@@ -819,10 +819,9 @@ void SwScene::reloadMainMaterialResourcesArray() {
     for (auto& asset : mAssets | std::views::values) {
         for (auto& material : asset.getMaterials()) {
             std::uint32_t materialTextureArrayIndex = (asset.mFirstMaterialInScene + material.mRelativeMaterialIndex) * 5;
-
             mSceneMaterialResourcesDescriptorSet.writeImage(
                 0,
-                material.getResources().mBase.getRawMainImageView(),
+                material.getResources().mBase.getImage().getRawMainImageView(),
                 material.getResources().mBase.getSampler().getRawSampler(),
                 vk::ImageLayout::eShaderReadOnlyOptimal,
                 vk::DescriptorType::eCombinedImageSampler,
@@ -830,7 +829,7 @@ void SwScene::reloadMainMaterialResourcesArray() {
             );
             mSceneMaterialResourcesDescriptorSet.writeImage(
                 0,
-                material.getResources().mMetallicRoughness.getRawMainImageView(),
+                material.getResources().mMetallicRoughness.getImage().getRawMainImageView(),
                 material.getResources().mMetallicRoughness.getSampler().getRawSampler(),
                 vk::ImageLayout::eShaderReadOnlyOptimal,
                 vk::DescriptorType::eCombinedImageSampler,
@@ -838,7 +837,7 @@ void SwScene::reloadMainMaterialResourcesArray() {
             );
             mSceneMaterialResourcesDescriptorSet.writeImage(
                 0,
-                material.getResources().mEmissive.getRawMainImageView(),
+                material.getResources().mEmissive.getImage().getRawMainImageView(),
                 material.getResources().mEmissive.getSampler().getRawSampler(),
                 vk::ImageLayout::eShaderReadOnlyOptimal,
                 vk::DescriptorType::eCombinedImageSampler,
@@ -846,7 +845,7 @@ void SwScene::reloadMainMaterialResourcesArray() {
             );
             mSceneMaterialResourcesDescriptorSet.writeImage(
                 0,
-                material.getResources().mNormal.getRawMainImageView(),
+                material.getResources().mNormal.getImage().getRawMainImageView(),
                 material.getResources().mNormal.getSampler().getRawSampler(),
                 vk::ImageLayout::eShaderReadOnlyOptimal,
                 vk::DescriptorType::eCombinedImageSampler,
@@ -854,7 +853,7 @@ void SwScene::reloadMainMaterialResourcesArray() {
             );
             mSceneMaterialResourcesDescriptorSet.writeImage(
                 0,
-                material.getResources().mOcclusion.getRawMainImageView(),
+                material.getResources().mOcclusion.getImage().getRawMainImageView(),
                 material.getResources().mOcclusion.getSampler().getRawSampler(),
                 vk::ImageLayout::eShaderReadOnlyOptimal,
                 vk::DescriptorType::eCombinedImageSampler,

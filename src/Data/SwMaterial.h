@@ -15,6 +15,24 @@ class SwDescriptorLayout;
 struct SwRendererContext;
 class SwShader;
 
+class SwMaterialTexture {
+private:
+    SwColorImage2D& mImage;
+    SwSampler& mSampler;
+
+public:
+    SwMaterialTexture(SwColorImage2D& image, SwSampler& sampler);
+
+    inline SwColorImage2D& getImage() { return mImage; }
+    inline SwSampler& getSampler() { return mSampler; }
+
+    SwMaterialTexture(SwMaterialTexture&&) noexcept = default;
+    SwMaterialTexture& operator=(SwMaterialTexture&&) noexcept = default;
+
+    SwMaterialTexture(const SwMaterialTexture&) = delete;
+    SwMaterialTexture& operator=(const SwMaterialTexture&) = delete;
+};
+
 struct SwMaterialConstants {
 private:
     static const std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
@@ -39,15 +57,15 @@ private:
 public:
     static const std::uint32_t MAX_TEXTURE_ARRAY_SLOTS = 1 << 8;
 
-    SwMaterialImage mBase;
-    SwMaterialImage mMetallicRoughness;
-    SwMaterialImage mNormal;
-    SwMaterialImage mOcclusion;
-    SwMaterialImage mEmissive;
+    SwMaterialTexture mBase;
+    SwMaterialTexture mMetallicRoughness;
+    SwMaterialTexture mNormal;
+    SwMaterialTexture mOcclusion;
+    SwMaterialTexture mEmissive;
 
     static SwDescriptorLayout sMaterialResourcesDescriptorLayout;
 
-    SwMaterialResources(SwMaterialImage base, SwMaterialImage metallicRoughness, SwMaterialImage normal, SwMaterialImage occlusion, SwMaterialImage emissive);
+    SwMaterialResources(SwMaterialTexture base, SwMaterialTexture metallicRoughness, SwMaterialTexture normal, SwMaterialTexture occlusion, SwMaterialTexture emissive);
 
     static void init(SwRendererContext rendererContext);
 

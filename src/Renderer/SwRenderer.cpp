@@ -313,7 +313,7 @@ SwRenderer::SwRenderer()
 
     SwMesh::init();
     SwBounds::init();
-    SwNode::init();
+    SwNode::init(mRendererContext);
     SwMaterialConstants::init();
 
     SwSwapchain::init(mRendererContext);
