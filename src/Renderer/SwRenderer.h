@@ -141,8 +141,8 @@ class SwRenderer {
     SwScene mScene;
 
 public:
-    static constexpr std::uint32_t ONE_SECOND_IN_MS = 1000;
-    static constexpr std::uint32_t EXPECTED_FRAME_RATE = 60;
+    static constexpr std::uint32_t ONE_SECOND_IN_MS{1000};
+    static constexpr std::uint32_t EXPECTED_FRAME_RATE{60};
 
     SwRenderer();
 

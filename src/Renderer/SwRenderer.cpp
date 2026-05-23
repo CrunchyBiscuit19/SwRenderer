@@ -14,6 +14,8 @@
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
+#include <imgui_impl_sdl2.h>
+#include <imgui_impl_vulkan.h>
 #include <quill/Backend.h>
 #include <quill/Frontend.h>
 #include <quill/LogMacros.h>
@@ -83,15 +85,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            //LOG_ERROR(renderer->getLogger(), "{}", message);
+            // LOG_ERROR(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            //LOG_WARNING(renderer->getLogger(), "{}", message);
+            // LOG_WARNING(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            //LOG_TRACE_L3(renderer->getLogger(), "{}", message);
+            // LOG_TRACE_L3(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -280,6 +282,18 @@ SwRenderer::SwRenderer()
     allocatorInfo.flags = VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
+    mEvents.addEventCallback([this](SDL_Event& e) -> void {
+        if (e.type == SDL_QUIT) {
+            mScene.markAllAssetsDelete();
+            mSwapchain.setProgramEndFrameNumber(mSwapchain.getFrameNumber() + SwSwapchain::NUM_FRAME_OVERLAP + 1);
+        }
+        if (e.type == SDL_WINDOWEVENT) {
+            if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) mStopRendering = true;
+            if (e.window.event == SDL_WINDOWEVENT_RESTORED) mStopRendering = false;
+        }
+        ImGui_ImplSDL2_ProcessEvent(&e);
+    });
+
     mRendererContext = SwRendererContext(
         &mInstance,
         &mChosenGPU,
@@ -351,7 +365,7 @@ void SwRenderer::run() {
 
         if (mStopRendering) {
             // Do not draw if minimized, throttle to avoid endless spinning
-            std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
             continue;
         }
 
@@ -375,7 +389,7 @@ void SwRenderer::run() {
 
         auto end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;   
+        mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;
     }
 }
 

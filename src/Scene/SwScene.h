@@ -139,6 +139,7 @@ public:
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssets();
     void unloadInstances();
+    void markAllAssetsDelete();
 
     void regenerateRenderItemsInstances();
 

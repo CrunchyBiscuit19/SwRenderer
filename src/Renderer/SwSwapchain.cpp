@@ -27,9 +27,10 @@ void SwFrame::update() {
 }
 
 SwRendererContext SwSwapchain::sRendererContext{};
+vk::ClearColorValue SwSwapchain::DRAW_CLEAR_VALUE{.463f, .616f, .859f, 0.f};
 
 SwSwapchain::SwSwapchain() : mSwapchain(nullptr), mSurface(nullptr) {}
-
+ 
 void SwSwapchain::init(SwRendererContext swapchainContext) { sRendererContext = swapchainContext; }
 
 void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen) {
@@ -117,7 +118,8 @@ void SwSwapchain::onResizeInitialize() {
         vk::Extent3D{mWindowExtent, 1},
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eStorage,
-        false
+        false,
+        vk::ClearColorValue(.463f, .616f, .859f, 0.f)
     );
     mDepthImage = SwImageFactory::createDepthImage2D(
         nullptr,

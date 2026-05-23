@@ -197,7 +197,7 @@ private:
         VmaAllocation mAllocation;
     };
 
-    static const std::uint32_t IMAGE_STAGING_BUFFER_SIZE = 256 * (1 << 10) * (1 << 10);  // 256 MB
+    static const std::uint32_t IMAGE_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
     static SwStagingBuffer sImageStagingBuffer;
 
     static SwRendererContext sRendererContext;

@@ -68,6 +68,7 @@ private:
     SwColorImage2D mRvlImage;
 
 public:
+    static vk::ClearColorValue DRAW_CLEAR_VALUE;
     static const vk::Format SRGB_FORMAT{vk::Format::eB8G8R8A8Srgb};
     static const vk::Format UNORM_FORMAT{vk::Format::eB8G8R8A8Unorm};
     static const vk::Format DRAW_FORMAT{vk::Format::eR16G16B16A16Sfloat};
@@ -93,6 +94,7 @@ public:
     inline std::uint32_t getFrameNumber() const { return mFrameNumber; }
     inline void incrementFrameNumber() { mFrameNumber++; }
     inline std::optional<std::uint32_t> getProgramEndFrameNumber() const { return mProgramEndFrameNumber; }
+    inline void setProgramEndFrameNumber(std::uint32_t programEndFrameNumber) { mProgramEndFrameNumber = std::optional<std::uint32_t>(programEndFrameNumber); }
     inline SDL_Window* getWindow() const { return mWindow; }
     inline float getAspectRatio() const { return mAspectRatio; }
     inline SwFrame& getCurrentFrame() { return mFrames[mFrameNumber % NUM_FRAME_OVERLAP]; }

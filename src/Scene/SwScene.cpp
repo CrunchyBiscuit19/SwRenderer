@@ -570,6 +570,12 @@ void SwScene::unloadInstances() {
     }
 }
 
+void SwScene::markAllAssetsDelete() {
+    for (auto& asset : mAssets | std::views::values) {
+        asset.markDelete();
+    }
+}
+
 void SwScene::regenerateRenderItemsInstances() {
     SwBatch::sFirstRenderInstanceOffset = 0;
 
