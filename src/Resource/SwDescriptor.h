@@ -88,7 +88,7 @@ public:
 class SwDescriptorAllocator {
 private:
     static SwRendererContext sRendererContext;
-    static const std::uint32_t MAX_SETS_PER_POOL{1 << 12};
+    static constexpr std::uint32_t MAX_SETS_PER_POOL{1 << 12};
 
     std::vector<SwPoolSizeRatio> mRatios;
     std::uint32_t mSetsPerPool;

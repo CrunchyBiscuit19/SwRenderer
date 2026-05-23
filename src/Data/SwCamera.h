@@ -22,17 +22,17 @@ struct SwRendererContext;
 
 class SwCamera {
 private:
-    static const float FOVY;
-    static const float NEAR_PLANE;
-    static const float FAR_PLANE;
-    static const float MAX_CAMERA_SPEED;
-    static const std::uint32_t NUM_FRUSTUM_PLANES{6};
-    static const std::uint32_t FRUSTUM_NEAR_FACE{0};
-    static const std::uint32_t FRUSTUM_FAR_FACE{1};
-    static const std::uint32_t FRUSTUM_LEFT_FACE{2};
-    static const std::uint32_t FRUSTUM_RIGHT_FACE{3};
-    static const std::uint32_t FRUSTUM_TOP_FACE{4};
-    static const std::uint32_t FRUSTUM_BOTTOM_FACE{5};
+    static constexpr float FOVY{70.f};
+    static constexpr float NEAR_PLANE{.1f};
+    static constexpr float FAR_PLANE{10000.f};
+    static constexpr float MAX_CAMERA_SPEED{10.f};
+    static constexpr std::uint32_t NUM_FRUSTUM_PLANES{6};
+    static constexpr std::uint32_t FRUSTUM_NEAR_FACE{0};
+    static constexpr std::uint32_t FRUSTUM_FAR_FACE{1};
+    static constexpr std::uint32_t FRUSTUM_LEFT_FACE{2};
+    static constexpr std::uint32_t FRUSTUM_RIGHT_FACE{3};
+    static constexpr std::uint32_t FRUSTUM_TOP_FACE{4};
+    static constexpr std::uint32_t FRUSTUM_BOTTOM_FACE{5};
 
     static SwRendererContext sRendererContext;
     glm::vec3 mVelocity;

@@ -108,12 +108,12 @@ class SwRenderer {
     enum class ValidationMode { None, Basic, Strict };
     enum class LogLocation { Console, File, Both };
 
-    static const ValidationMode VALIDATION_MODE{ValidationMode::Basic};
-    static const LogLocation LOG_LOCATION{LogLocation::Both};
-    static const std::uint32_t VK_MAJOR_VERSION{1};
-    static const std::uint32_t VK_MINOR_VERSION{4};
-    static const std::uint32_t VK_PATCH_VERSION{0};
-    static const bool FULLSCREEN_ON_STARTUP{false};
+    static constexpr ValidationMode VALIDATION_MODE{ValidationMode::Basic};
+    static constexpr LogLocation LOG_LOCATION{LogLocation::Both};
+    static constexpr std::uint32_t VK_MAJOR_VERSION{1};
+    static constexpr std::uint32_t VK_MINOR_VERSION{4};
+    static constexpr std::uint32_t VK_PATCH_VERSION{0};
+    static constexpr bool FULLSCREEN_ON_STARTUP{false};
 
     SwRendererContext mRendererContext;
     vk::raii::Context mContext;
@@ -150,7 +150,7 @@ public:
 
     inline SwRendererContext& getRendererInfo() { return mRendererContext; };
 
-    inline std::uint32_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };
+    inline std::uint64_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };
 
     template <typename T>
     inline void labelResourceDebug(T& resource, const char* name) {

@@ -197,7 +197,7 @@ private:
         VmaAllocation mAllocation;
     };
 
-    static const std::uint32_t IMAGE_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
+    static constexpr std::uint32_t IMAGE_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
     static SwStagingBuffer sImageStagingBuffer;
 
     static SwRendererContext sRendererContext;
@@ -214,7 +214,7 @@ public:
 
     static std::unordered_map<SwDefaultImageOption, SwColorImage2D> sDefaultImages;
 
-    static const uint32_t NUM_CUBEMAP_FACES{6};
+    static constexpr uint32_t NUM_CUBEMAP_FACES{6};
 
     static void init(SwRendererContext rendererContext);
 

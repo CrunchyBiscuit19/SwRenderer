@@ -41,7 +41,7 @@ private:
     static std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH;
     static std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH;
     static std::filesystem::path CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH;
-    static const std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
+    static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
 
     static std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH;
     static std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH;
@@ -53,13 +53,13 @@ private:
     static std::filesystem::path WBOIT_VERTEX_SHADER_PATH;
     static std::filesystem::path WBOIT_FRAGMENT_SHADER_PATH;
 
-    static const std::uint32_t SCENE_VERTEX_BUFFER_SIZE{1 << 30};
-    static const std::uint32_t SCENE_INDEX_BUFFER_SIZE{1 << 30};
-    static const std::uint32_t SCENE_NUM_MATERIALS{1 << 8};
-    static const std::uint32_t SCENE_NUM_NODES{1 << 12};
-    static const std::uint32_t SCENE_NUM_INSTANCES{1 << 8};
-    static const std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
-    static const std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 20};
+    static constexpr std::uint32_t SCENE_VERTEX_BUFFER_SIZE{1 << 30};
+    static constexpr std::uint32_t SCENE_INDEX_BUFFER_SIZE{1 << 30};
+    static constexpr std::uint32_t SCENE_NUM_MATERIALS{1 << 8};
+    static constexpr std::uint32_t SCENE_NUM_NODES{1 << 12};
+    static constexpr std::uint32_t SCENE_NUM_INSTANCES{1 << 8};
+    static constexpr std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
+    static constexpr std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 20};
 
     static SwRendererContext sRendererContext;
 

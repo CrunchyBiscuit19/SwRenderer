@@ -10,10 +10,10 @@
 
 class SwAsset {
 private:
-    static const std::uint32_t NUM_MODEL_INSTANCES{1 << 7};
-    static const std::uint32_t NUM_MODEL_MATERIALS{1 << 7};
-    static const std::uint32_t NUM_MODEL_NODES{1 << 13};
-    static const std::uint32_t NUM_MODEL_BOUNDS{1 << 13};
+    static constexpr std::uint32_t NUM_MODEL_INSTANCES{1 << 7};
+    static constexpr std::uint32_t NUM_MODEL_MATERIALS{1 << 7};
+    static constexpr std::uint32_t NUM_MODEL_NODES{1 << 13};
+    static constexpr std::uint32_t NUM_MODEL_BOUNDS{1 << 13};
 
     static std::uint32_t sLatestAssetId;
     static SwRendererContext sRendererContext;

@@ -3,10 +3,6 @@
 #include <Renderer/SwSwapchain.h>
 #include <Renderer/SwRendererContext.h>
 
-const float SwCamera::FOVY = 70.f;
-const float SwCamera::NEAR_PLANE = 0.1f;
-const float SwCamera::FAR_PLANE = 10000.f;
-const float SwCamera::MAX_CAMERA_SPEED = 10.f;
 SwRendererContext SwCamera::sRendererContext{};
 
 SwCamera::SwCamera() {

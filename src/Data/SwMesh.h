@@ -18,7 +18,7 @@ struct SwVertex {
 
 struct SwBounds {
 private:
-    static const std::uint32_t BOUNDS_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
+    static constexpr std::uint32_t BOUNDS_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
 
 public:
     static SwStagingBuffer sBoundsStagingBuffer;
@@ -44,7 +44,7 @@ struct SwPrimitive {
 
 class SwMesh {
 private:
-    static const std::uint32_t MESH_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
+    static constexpr std::uint32_t MESH_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
 
     static std::uint32_t sLatestMeshId;
     std::string mAssetName;

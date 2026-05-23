@@ -35,7 +35,7 @@ public:
 
 struct SwMaterialConstants {
 private:
-    static const std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
+    static constexpr std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
 
 public:
     static SwStagingBuffer sMaterialConstantsStagingBuffer;
@@ -55,7 +55,7 @@ private:
     static SwRendererContext sRendererContext;
 
 public:
-    static const std::uint32_t MAX_TEXTURE_ARRAY_SLOTS{1 << 8};
+    static constexpr std::uint32_t MAX_TEXTURE_ARRAY_SLOTS{1 << 8};
 
     SwMaterialTexture mBase;
     SwMaterialTexture mMetallicRoughness;
@@ -111,7 +111,7 @@ private:
     void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 
 
 public:
-    static const std::uint32_t NUM_PBR_IMAGES{5};
+    static constexpr std::uint32_t NUM_PBR_IMAGES{5};
 
     std::uint32_t mRelativeMaterialIndex;
 
