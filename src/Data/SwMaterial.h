@@ -111,6 +111,8 @@ private:
     void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 
 
 public:
+    static const std::uint32_t NUM_PBR_IMAGES = 5;
+
     std::uint32_t mRelativeMaterialIndex;
 
     SwMaterial(

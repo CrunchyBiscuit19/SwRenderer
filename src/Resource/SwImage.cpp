@@ -304,7 +304,7 @@ SwDepthImage2D::SwDepthImage2D(
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwAllocatedImage(
-          std::move(image), mainFormat, extent, std::move(mainImageView), clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
+          std::move(image), mainFormat, extent, std::move(mainImageView), clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
       ) {}
 

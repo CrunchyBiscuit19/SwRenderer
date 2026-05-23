@@ -316,6 +316,7 @@ SwRenderer::SwRenderer()
     SwNode::init(mRendererContext);
     SwMaterialConstants::init();
 
+    SwFrame::init(mRendererContext);
     SwSwapchain::init(mRendererContext);
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
     mStats.initialize();
@@ -331,6 +332,51 @@ SwRenderer::SwRenderer()
 
     SwScene::init(mRendererContext);
     mScene.initialize();
+}
+
+void SwRenderer::run() {
+    SDL_Event e;
+
+    while (true) {
+        auto start = std::chrono::system_clock::now();
+
+        if (mSwapchain.getProgramEndFrameNumber().has_value() && (mSwapchain.getFrameNumber() < mSwapchain.getProgramEndFrameNumber().value())) {
+            mDevice.waitIdle();
+            break;
+        }
+
+        while (SDL_PollEvent(&e) != 0) {
+            mEvents.executeEventCallbacks(e);
+        }
+
+        if (mStopRendering) {
+            // Do not draw if minimized, throttle to avoid endless spinning
+            std::this_thread::sleep_for(std::chrono::milliseconds(100)); 
+            continue;
+        }
+
+        SDL_SetRelativeMouseMode(mScene.getCamera().getRelativeMode());
+        if (mSwapchain.getResizeRequested()) {
+            mDevice.waitIdle();
+            mSwapchain.resize();
+            mScene.resize();
+            mSwapchain.setResizeRequested(false);
+            mDevice.waitIdle();
+        }
+
+        mGui.perFrameUpdate();
+        mStats.perFrameReset();
+        mScene.perFrameUpdate();
+        mSwapchain.getCurrentFrame().update();
+
+        mScene.draw();
+
+        mSwapchain.incrementFrameNumber();
+
+        auto end = std::chrono::system_clock::now();
+        auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+        mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;   
+    }
 }
 
 SwRenderer::~SwRenderer() {

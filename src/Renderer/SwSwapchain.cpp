@@ -3,7 +3,11 @@
 #include <Data/SwCamera.h>
 #include <VkBootstrap.h>
 
+SwRendererContext SwFrame::sRendererContext{};
+
 SwFrame::SwFrame() : mCommandPool(nullptr), mCommandBuffer(nullptr), mRenderFence(nullptr), mAvailableSemaphore(nullptr) {}
+
+void SwFrame::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwFrame::initialize() {
     mCommandPool = SwCommandPoolFactory::createCommandPool(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
@@ -15,6 +19,11 @@ void SwFrame::initialize() {
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         PER_FRAME_BUFFER_SIZE
     );
+}
+
+void SwFrame::update() {
+    SwPerspective perspective = sRendererContext.mScene->getCamera().getPerspective();
+    std::memcpy(mPerFrameBuffer.getMappedPointer(), &perspective, 1 * sizeof(SwPerspective));
 }
 
 SwRendererContext SwSwapchain::sRendererContext{};

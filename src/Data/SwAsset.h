@@ -79,6 +79,7 @@ public:
     inline std::uint32_t getId() { return mId; }
     inline std::vector<SwInstance>& getInstances() { return mInstances; }
     inline bool isMarkedDelete() { return mDelete; }
+    inline bool getReloadInstancesFlag() { return mReloadInstancesFlag; }
     inline std::span<SwMesh> getMeshes() { return mMeshes; }
     inline std::span<SwMaterial> getMaterials() { return mMaterials; }
     inline std::span<std::shared_ptr<SwNode>> getNodes() { return mNodes; }

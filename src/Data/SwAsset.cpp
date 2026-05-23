@@ -526,7 +526,7 @@ void SwAsset::generateRenderItemsAndRenderInstances() {
 void SwAsset::createInstance(SwInstanceData instanceData) {
     mInstances.emplace_back(mName, instanceData);
     mReloadInstancesFlag = true;
-    sRendererContext.mScene->mFlags.mInstanceLoadedFlag = true;
+    sRendererContext.mScene->mFlags.mInstanceLoaded = true;
 }
 
 void SwAsset::reloadInstances() {

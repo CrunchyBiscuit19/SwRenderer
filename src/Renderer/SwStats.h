@@ -15,5 +15,5 @@ public:
 
     void initialize();
 
-    void reset();
+    void perFrameReset();
 };

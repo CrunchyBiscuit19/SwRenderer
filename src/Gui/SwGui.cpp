@@ -69,7 +69,7 @@ void SwGui::initialize() {
     mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_SelectDirectory, SKYBOXES_PATH);
     mSelectSkyboxFileBrowser.SetTitle("Select Directory of Skybox Image");
 
-    // TODO implement all passes first
+    // TODO implement all passes first. components go here
 
     sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
@@ -90,7 +90,7 @@ void SwGui::initialize() {
     });
 }
 
-void SwGui::update() {
+void SwGui::perFrameUpdate() {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();

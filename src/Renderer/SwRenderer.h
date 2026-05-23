@@ -141,6 +141,9 @@ class SwRenderer {
     SwScene mScene;
 
 public:
+    static constexpr std::uint32_t ONE_SECOND_IN_MS = 1000;
+    static constexpr std::uint32_t EXPECTED_FRAME_RATE = 60;
+
     SwRenderer();
 
     inline quill::Logger* getLogger() { return mLogger; };
@@ -154,6 +157,9 @@ public:
         vk::DebugUtilsObjectNameInfoEXT nameInfo{VulkanResourceInfo<T>::resourceType, VulkanResourceInfo<T>::getHandle(resource), name};
         mDevice.setDebugUtilsObjectNameEXT(nameInfo);
     };
+
+    void run();
+    void draw();
 
     ~SwRenderer();
 };

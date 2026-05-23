@@ -62,6 +62,7 @@ public:
 
     inline std::array<Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
     inline SwAllocatedBuffer& getFrustumBuffer() { return mFrustumBuffer; }
+    inline SDL_bool getRelativeMode() const { return mRelativeMode; }   
 
     SwPerspective getPerspective() const;
 

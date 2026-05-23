@@ -32,7 +32,7 @@ public:
 
     void initialize();
 
-    void update();
+    void perFrameUpdate();
 
     ~SwGui();
 };

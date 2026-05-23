@@ -1,6 +1,7 @@
 #include <Misc/SwHelper.h>
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
@@ -78,7 +79,7 @@ void SwScene::initializeSceneResources() {
 }
 
 void SwScene::initializeCullResources() {
-    // Push pass
+    // Reset pass
     vk::PushConstantRange resetPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwCull::ResetPC));
     mCullResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, resetPushConstantRange);
 
@@ -532,27 +533,38 @@ void SwScene::initialize() {
     initializeSkyboxResources();
 }
 
+void SwScene::resize() {
+    mCullResources.mDepthPyramidImage.destroy();
+    onResizeInitializeCullResources();
+
+    mPickResources.mWorkImage.destroy();
+    mPickResources.mDepthImage.destroy();
+    onResizeInitializePickResources();
+
+    onResizeInitializeWBOITResources();
+}
+
 void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
     for (const auto& modelPath : paths) {
         auto modelShortPath = modelPath.stem().string();
         auto modelFullPath = MODELS_PATH / modelPath;
         auto [_, inserted] = mAssets.try_emplace(modelShortPath, modelFullPath);
         if (inserted) {
-            mFlags.mAssetLoadedFlag = true;
+            mFlags.mAssetLoaded = true;
         }
     }
 }
 
-void SwScene::deleteAssets() {
+void SwScene::unloadAssets() {
     std::erase_if(mAssets, [&](std::pair<const std::string, SwAsset>& pair) {
         if (pair.second.isMarkedDelete()) {
-            mFlags.mAssetUnloadedFlag = true;
+            mFlags.mAssetUnloaded = true;
         }
         return pair.second.isMarkedDelete();
     });
 }
 
-void SwScene::deleteInstances() {
+void SwScene::unloadInstances() {
     for (auto& asset : mAssets | std::views::values) {
         std::erase_if(asset.getInstances(), [&](const SwInstance& instance) { return instance.isMarkedDelete(); });
     }
@@ -818,47 +830,26 @@ void SwScene::reloadMainInstancesBuffer() {
 void SwScene::reloadMainMaterialResourcesArray() {
     for (auto& asset : mAssets | std::views::values) {
         for (auto& material : asset.getMaterials()) {
-            std::uint32_t materialTextureArrayIndex = (asset.mFirstMaterialInScene + material.mRelativeMaterialIndex) * 5;
-            mSceneMaterialResourcesDescriptorSet.writeImage(
-                0,
-                material.getResources().mBase.getImage().getRawMainImageView(),
-                material.getResources().mBase.getSampler().getRawSampler(),
-                vk::ImageLayout::eShaderReadOnlyOptimal,
-                vk::DescriptorType::eCombinedImageSampler,
-                materialTextureArrayIndex + 0
-            );
-            mSceneMaterialResourcesDescriptorSet.writeImage(
-                0,
-                material.getResources().mMetallicRoughness.getImage().getRawMainImageView(),
-                material.getResources().mMetallicRoughness.getSampler().getRawSampler(),
-                vk::ImageLayout::eShaderReadOnlyOptimal,
-                vk::DescriptorType::eCombinedImageSampler,
-                materialTextureArrayIndex + 1
-            );
-            mSceneMaterialResourcesDescriptorSet.writeImage(
-                0,
-                material.getResources().mEmissive.getImage().getRawMainImageView(),
-                material.getResources().mEmissive.getSampler().getRawSampler(),
-                vk::ImageLayout::eShaderReadOnlyOptimal,
-                vk::DescriptorType::eCombinedImageSampler,
-                materialTextureArrayIndex + 2
-            );
-            mSceneMaterialResourcesDescriptorSet.writeImage(
-                0,
-                material.getResources().mNormal.getImage().getRawMainImageView(),
-                material.getResources().mNormal.getSampler().getRawSampler(),
-                vk::ImageLayout::eShaderReadOnlyOptimal,
-                vk::DescriptorType::eCombinedImageSampler,
-                materialTextureArrayIndex + 3
-            );
-            mSceneMaterialResourcesDescriptorSet.writeImage(
-                0,
-                material.getResources().mOcclusion.getImage().getRawMainImageView(),
-                material.getResources().mOcclusion.getSampler().getRawSampler(),
-                vk::ImageLayout::eShaderReadOnlyOptimal,
-                vk::DescriptorType::eCombinedImageSampler,
-                materialTextureArrayIndex + 4
-            );
+            std::uint32_t materialTextureArrayIndex = (asset.mFirstMaterialInScene + material.mRelativeMaterialIndex) * SwMaterial::NUM_PBR_IMAGES;
+            std::array<SwMaterialTexture*, SwMaterial::NUM_PBR_IMAGES> materialTextures = {
+                &material.getResources().mBase,
+                &material.getResources().mMetallicRoughness,
+                &material.getResources().mEmissive,
+                &material.getResources().mNormal,
+                &material.getResources().mOcclusion
+            };
+            for (std::uint32_t i = 0; i < SwMaterial::NUM_PBR_IMAGES; i++) {
+                if (materialTextures[i]->getImage().getRawImage() == VK_NULL_HANDLE) {
+                    mSceneMaterialResourcesDescriptorSet.writeImage(
+                        0,
+                        materialTextures[i]->getImage().getRawMainImageView(),
+                        materialTextures[i]->getSampler().getRawSampler(),
+                        vk::ImageLayout::eShaderReadOnlyOptimal,
+                        vk::DescriptorType::eCombinedImageSampler,
+                        materialTextureArrayIndex + i
+                    );
+                }
+            }
             mSceneMaterialResourcesDescriptorSet.pushWrites();
         }
     }
@@ -874,13 +865,48 @@ void SwScene::reloadMainBuffers() {
     reloadMainMaterialResourcesArray();
 }
 
-void SwScene::resize() {
-    mCullResources.mDepthPyramidImage.destroy();
-    onResizeInitializeCullResources();
-
-    mPickResources.mWorkImage.destroy();
-    mPickResources.mDepthImage.destroy();
-    onResizeInitializePickResources();
-
-    onResizeInitializeWBOITResources();
+void SwScene::resetFlags() {
+    mFlags.mAssetLoaded = false;
+    mFlags.mAssetUnloaded = false;
+    mFlags.mInstanceLoaded = false;
+    mFlags.mInstanceUnloaded = false;
+    mFlags.mReloadMainInstancesBuffer = false;
 }
+
+void SwScene::perFrameUpdate() {
+    const auto start = std::chrono::system_clock::now();
+
+    mCamera.update(sRendererContext.mStats->mFrameTime, static_cast<float>(SwRenderer::ONE_SECOND_IN_MS / SwRenderer::EXPECTED_FRAME_RATE));
+
+    unloadAssets();
+    unloadInstances();
+
+    for (auto& asset : mAssets | std::views::values) {
+        if (asset.getReloadInstancesFlag()) {
+            asset.reloadInstances();
+            mFlags.mReloadMainInstancesBuffer = true;
+        }
+    }
+
+    if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
+        realignOffsets();
+        reloadMainBuffers();
+        regenerateRenderItemsInstances();
+    } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
+        realignInstancesOffset();
+        reloadMainInstancesBuffer();
+        regenerateRenderItemsInstances();
+    } else if (mFlags.mReloadMainInstancesBuffer) {
+        reloadMainInstancesBuffer();
+    }
+
+    resetFlags();
+
+    sRendererContext.mImmSubmit->queuedSubmit();
+
+    const auto end = std::chrono::system_clock::now();
+    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    sRendererContext.mStats->mSceneUpdateTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
+}
+
+void SwScene::draw() {}

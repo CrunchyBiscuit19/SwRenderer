@@ -22,6 +22,8 @@ class SwFrame {
 private:
     static const std::uint32_t PER_FRAME_BUFFER_SIZE{sizeof(SwPerspective)};
 
+    static SwRendererContext sRendererContext;
+
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;
     SwFence mRenderFence;
@@ -31,7 +33,11 @@ private:
 public:
     SwFrame();
 
+    static void init(SwRendererContext rendererContext);
+
     void initialize();
+
+    void update();
 
     inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };
 };
@@ -85,10 +91,14 @@ public:
     inline SwColorImage2D& getAccumImage() { return mAccumImage; }
     inline SwColorImage2D& getRvlImage() { return mRvlImage; }  
     inline std::uint32_t getFrameNumber() const { return mFrameNumber; }
+    inline void incrementFrameNumber() { mFrameNumber++; }
+    inline std::optional<std::uint32_t> getProgramEndFrameNumber() const { return mProgramEndFrameNumber; }
     inline SDL_Window* getWindow() const { return mWindow; }
     inline float getAspectRatio() const { return mAspectRatio; }
     inline SwFrame& getCurrentFrame() { return mFrames[mFrameNumber % NUM_FRAME_OVERLAP]; }
     inline SwFrame& getPreviousFrame() { return mFrames[(mFrameNumber - 1) % NUM_FRAME_OVERLAP]; }
+    inline bool getResizeRequested() const { return mResizeRequested; }
+    inline void setResizeRequested(bool resizeRequested) { mResizeRequested = resizeRequested; }
 
     SwSwapchainImage& getCurrentSwapchainImage();
 

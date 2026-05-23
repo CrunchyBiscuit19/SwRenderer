@@ -11,7 +11,7 @@ void SwStats::initialize() {
     );
 }
 
-void SwStats::reset() {
+void SwStats::perFrameReset() {
     mDrawCallCount = 0;
     mPreCullRenderInstancesCount = 0;
 }

@@ -12,12 +12,27 @@
 #include <Scene/SwSkybox.h>
 #include <Scene/SwWBOIT.h>
 
+enum class SwPassType {
+    ClearScreen,
+    CullReset,
+    CullDepthPyramid,
+    CullWork,
+    CullCompact,
+    PickDraw,
+    PickWork,
+    Skybox,
+    GeometryOpaque,
+    GeometryTransparent,
+    WBOITComposite,
+    ImGui
+};
+
 struct SwSceneFlags {
-    bool mAssetLoadedFlag;
-    bool mAssetUnloadedFlag;
-    bool mInstanceLoadedFlag;
-    bool mInstanceUnloadedFlag;
-    bool mReloadMainBufferFlag;
+    bool mAssetLoaded;
+    bool mAssetUnloaded;
+    bool mInstanceLoaded;
+    bool mInstanceUnloaded;
+    bool mReloadMainInstancesBuffer;
 };
 
 class SwScene {
@@ -58,7 +73,7 @@ private:
     std::unordered_map<std::uint32_t, SwBatch> mTransparentBatches;
 
     // --- Passes and Resources ---
-    std::unordered_map<std::string, SwPass> mPasses;
+    std::unordered_map<SwPassType, SwPass> mPasses;
     SwCull::Resources mCullResources;
     SwPick::Resources mPickResources;
     SwSkybox::Resources mSkyboxResources;
@@ -101,6 +116,7 @@ public:
     static void init(SwRendererContext rendererContext);
 
     void initialize();
+    void resize();
 
     void changePickOperation();
     void generatePickFrame();
@@ -121,8 +137,8 @@ public:
     
     inline SwAsset& getAsset(const std::string& assetName) { return mAssets[assetName]; }
     void loadAssets(const std::vector<std::filesystem::path>& files);
-    void deleteAssets();
-    void deleteInstances();
+    void unloadAssets();
+    void unloadInstances();
 
     void regenerateRenderItemsInstances();
 
@@ -142,5 +158,11 @@ public:
     void reloadMainMaterialResourcesArray();
     void reloadMainBuffers();
 
-    void resize();
+    void resetFlags();
+
+    void perFrameUpdate();
+    void draw();
 };
+
+// std::memcpy(mFrustumBuffer.info.pMappedData, planes.data(), FRUSTUM_NUM_PLANES * sizeof(Plane)); // TODO put this inside cull work pass
+// TODO define all pass executions and RW dependencies
