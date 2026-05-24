@@ -20,7 +20,7 @@ enum class SwPassType {
     GeometryTransparent,
     WBOITComposite,
     CopyToSwapchain,
-    ImGui
+    Gui
 };
 
 class SwPass {
@@ -30,11 +30,17 @@ public:
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
         vk::ImageLayout mLayout;
+
+        SwImageDep(SwImage* image);
+        SwImageDep(SwImage* image, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access, vk::ImageLayout layout);
     };
     struct SwBufferDep {
         SwBuffer* mBuffer;
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
+
+        SwBufferDep(SwBuffer* buffer);
+        SwBufferDep(SwBuffer* buffer, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access);
     };
     struct SwPassDeps {
         std::vector<SwImageDep> mReadImages;

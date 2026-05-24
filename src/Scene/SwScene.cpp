@@ -6,6 +6,7 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
+#include <imgui_impl_vulkan.h>
 #include <stb_image.h>
 
 #include <glm/glm.hpp>
@@ -28,6 +29,7 @@ SwRendererContext SwScene::sRendererContext{};
 void SwScene::initializeMiscPasses() {
     SwPass::SwPassDeps deps;
 
+    // Clear Images
     deps.mWriteImages.emplace_back(
         &sRendererContext.mSwapchain->getDrawImage(),
         vk::PipelineStageFlagBits2::eColorAttachmentOutput,
@@ -52,6 +54,18 @@ void SwScene::initializeMiscPasses() {
         vk::AccessFlagBits2::eColorAttachmentWrite,
         vk::ImageLayout::eColorAttachmentOptimal
     );
+    deps.mWriteImages.emplace_back(
+        &mPickResources.mWorkImage,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentReadNoncoherentEXT,
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+    deps.mWriteImages.emplace_back(
+        &mPickResources.mDepthImage,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+        vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::ImageLayout::eDepthAttachmentOptimal
+    );
     mPasses[SwPassType::ClearImages] = SwPass(SwPassType::ClearImages, deps, [&](vk::CommandBuffer cmd) {
         std::array<vk::RenderingAttachmentInfo, 4> colorAttachments = {
             sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
@@ -61,7 +75,7 @@ void SwScene::initializeMiscPasses() {
         };
         vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
         vk::RenderingInfo renderInfo =
-            generateRenderingInfo(swHelper::extent3dTo2d(sRendererContext.mSwapchain->getDrawImage().getExtent()), colorAttachments, depthAttachment);
+            generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
@@ -74,6 +88,7 @@ void SwScene::initializeMiscPasses() {
     });
     deps.clear();
 
+    // Copy to Swapchain
     deps.mReadImages.emplace_back(
         &sRendererContext.mSwapchain->getDrawImage(),
         vk::PipelineStageFlagBits2::eTransfer,
@@ -90,6 +105,26 @@ void SwScene::initializeMiscPasses() {
         sRendererContext.mSwapchain->getDrawImage().copyFrom(cmd, sRendererContext.mSwapchain->getCurrentSwapchainImage());
     });
     deps.clear();
+
+    // Gui
+    deps.mWriteImages.emplace_back(
+        &sRendererContext.mSwapchain->getCurrentSwapchainImage(),
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+    mPasses[SwPassType::Gui] = SwPass(SwPassType::Gui, deps, [&](vk::CommandBuffer cmd) {
+        std::array<vk::RenderingAttachmentInfo, 2> colorAttachments = {
+            sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
+            sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(0, vk::AttachmentLoadOp::eDontCare),
+        };
+        const vk::RenderingInfo renderInfo =
+            generateRenderingInfo(swHelper::extent3dTo2d(sRendererContext.mSwapchain->getCurrentSwapchainImage().getExtent()), colorAttachments, nullptr);
+
+        cmd.beginRendering(renderInfo);
+        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+        cmd.endRendering();
+    });
 }
 
 void SwScene::initializeSceneResources() {
@@ -260,7 +295,7 @@ void SwScene::onResizeInitializeCullResources() {
     mCullResources.mWorkPushConstants.mSceneInstancesBuffer = mSceneInstancesBuffer.getDeviceAddress().value();
     mCullResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
         mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
-    vk::Extent3D drawExtent = sRendererContext.mSwapchain->getDrawImage().getExtent();
+    vk::Extent2D drawExtent = sRendererContext.mSwapchain->getWindowExtent();
     mCullResources.mWorkPushConstants.mDrawExtents = glm::vec2(drawExtent.width, drawExtent.height);
     mCullResources.mWorkPushConstants.mDepthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }
@@ -324,11 +359,11 @@ void SwScene::initializePickResources() {
 }
 
 void SwScene::onResizeInitializePickResources() {
-    vk::Extent3D drawExtent = sRendererContext.mSwapchain->getDrawImage().getExtent();
+    vk::Extent2D drawExtent = sRendererContext.mSwapchain->getWindowExtent();
     mPickResources.mWorkImage = SwImageFactory::createColorImage2D(
         nullptr,
         vk::Format::eR32G32Uint,
-        drawExtent,
+        vk::Extent3D{drawExtent, 1},
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         false
     );
@@ -381,8 +416,8 @@ void SwScene::generatePickFrame() {
     ImGuizmo::SetRect(
         0,
         0,
-        static_cast<float>(sRendererContext.mSwapchain->getDrawImage().getExtent().width),
-        static_cast<float>(sRendererContext.mSwapchain->getDrawImage().getExtent().height)
+        static_cast<float>(sRendererContext.mSwapchain->getWindowExtent().width),
+        static_cast<float>(sRendererContext.mSwapchain->getWindowExtent().height)
     );
 
     mPickResources.mClickedInstance->getDataAddress()->mTransformMatrix;
@@ -571,14 +606,14 @@ void SwScene::onResizeInitializeWBOITResources() {
     mWBOITResources.mAccumImage = SwImageFactory::createColorImage2D(
         nullptr,
         SwSwapchain::DRAW_FORMAT,
-        sRendererContext.mSwapchain->getDrawImage().getExtent(),
+        vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1},
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
     mWBOITResources.mRvlImage = SwImageFactory::createColorImage2D(
         nullptr,
         SwWBOIT::RVL_FORMAT,
-        sRendererContext.mSwapchain->getDrawImage().getExtent(),
+        vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1},
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false,
         SwWBOIT::RVL_CLEAR_VALUE
@@ -602,6 +637,43 @@ void SwScene::onResizeInitializeWBOITResources() {
     mWBOITResources.mWorkDescriptorSet.pushWrites();
 }
 
+void SwScene::initializeWBOITPasses() {
+    SwPass::SwPassDeps deps;
+
+    deps.mReadImages.emplace_back(
+        mWBOITResources.mAccumImage,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderSampledRead
+    );
+    deps.mReadImages.emplace_back(
+        mWBOITResources.mRvlImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderSampledRead
+    );
+    deps.mWriteImages.emplace_back(
+        &sRendererContext.mSwapchain->getDrawImage(),
+        vk::ImageLayout::eColorAttachmentOptimal,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentWrite
+    );
+    mPasses[SwPassType::WBOITComposite] = SwPass(SwPassType::WBOITComposite, deps, [&](vk::CommandBuffer cmd) {
+        const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
+        const vk::RenderingInfo renderInfo =
+            generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
+
+        cmd.beginRendering(renderInfo);
+
+        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mWBOITResources.mWorkPipelinePipeline.getRawPipeline());
+        cmd.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, mWBOITResources.mWorkPipelinePipeline.getRawLayout(), 0, mWBOITResources.mWorkDescriptorSet.getRawSet(), nullptr
+        );
+        swHelper::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+        cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
+        sRendererContext.mStats->mDrawCallCount++;
+
+        cmd.endRendering();
+    });
+}
+
 void SwScene::initializeGeometryResources() {
     mGeometryResources.mWorkPushConstants.mSceneVertexBuffer = mSceneVertexBuffer.getDeviceAddress().value();
     mGeometryResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mSceneMaterialConstantsBuffer.getDeviceAddress().value();
@@ -612,7 +684,7 @@ void SwScene::initializeGeometryResources() {
 }
 
 vk::RenderingInfo SwScene::generateRenderingInfo(
-    vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::RenderingAttachmentInfo& depthAttachment
+    vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment
 ) {
     vk::RenderingInfo renderInfo{};
     renderInfo.pNext = nullptr;
@@ -620,7 +692,7 @@ vk::RenderingInfo SwScene::generateRenderingInfo(
     renderInfo.layerCount = 1;
     renderInfo.colorAttachmentCount = colorAttachments.size();
     renderInfo.pColorAttachments = colorAttachments.data();
-    renderInfo.pDepthAttachment = &depthAttachment;
+    renderInfo.pDepthAttachment = depthAttachment.data();
     renderInfo.pStencilAttachment = nullptr;
     return renderInfo;
 }

@@ -34,14 +34,29 @@ public:
     virtual void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) = 0;
     void copyFrom(vk::CommandBuffer cmd, SwImage& source);
 
+    vk::RenderingAttachmentInfo generateRenderingAttachment(
+        vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
+    );
+    vk::RenderingAttachmentInfo generateRenderingAttachment(
+        std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
+    );
+
     inline vk::Extent3D getExtent() { return mExtent; }
     inline vk::Format getMainFormat() { return mMainFormat; }
     inline vk::ImageAspectFlags getAspect() const { return mAspect; }
-    virtual vk::Image getRawImage() = 0;
 
+    inline vk::ImageLayout getCurrentLayout() { return mCurrentLayout; }
     inline void setCurrentLayout(vk::ImageLayout layout) { mCurrentLayout = layout; }
+    inline vk::PipelineStageFlags2 getCurrentStage() { return mCurrentStage; }
     inline void setCurrentStage(vk::PipelineStageFlags2 stage) { mCurrentStage = stage; }
+    inline vk::AccessFlags2 getCurrentAccess() { return mCurrentAccess; }
     inline void setCurrentAccess(vk::AccessFlags2 access) { mCurrentAccess = access; }
+    
+    virtual vk::Image getRawImage() = 0;
+    virtual vk::ImageView getRawMainImageView() = 0;
+    virtual vk::ImageView getRawOtherImageView(std::uint32_t i) = 0;
+    virtual vk::ClearValue getClearValue() = 0;
+
 
     SwImage(SwImage&&) noexcept = default;
     SwImage& operator=(SwImage&&) noexcept = default;
@@ -66,6 +81,9 @@ public:
     );
 
     inline vk::Image getRawImage() override { return mImage; } 
+    inline vk::ImageView getRawMainImageView() override { return *mMainImageView; }
+    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return *mOtherImageViews[i]; }
+    inline vk::ClearValue getClearValue() override { return vk::ClearColorValue(); };
 
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
@@ -110,15 +128,12 @@ public:
     using SwImage::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
 
-    vk::RenderingAttachmentInfo generateRenderingAttachment(
-        vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
-    );
-
     virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
 
     inline vk::Image getRawImage() override { return *mImage; }
-    inline vk::ImageView getRawMainImageView() { return *mMainImageView; }
-    inline vk::ImageView getRawOtherImageView(std::uint32_t i) { return *mOtherImageViews[i]; }
+    inline vk::ImageView getRawMainImageView() override { return *mMainImageView; }
+    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return *mOtherImageViews[i]; }
+    inline vk::ClearValue getClearValue() override { return mClearValue; };
     inline bool isMipmapped() const { return mMipmapped; }
 
     void addImageView(

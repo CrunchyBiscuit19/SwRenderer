@@ -372,8 +372,10 @@ void SwRenderer::run() {
         SDL_SetRelativeMouseMode(mScene.getCamera().getRelativeMode());
         if (mSwapchain.getResizeRequested()) {
             mDevice.waitIdle();
+
             mSwapchain.resize();
             mScene.resize();
+            
             mSwapchain.setResizeRequested(false);
             mDevice.waitIdle();
         }

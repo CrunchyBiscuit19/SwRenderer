@@ -17,6 +17,28 @@ void SwImage::copyFrom(vk::CommandBuffer cmd, SwImage& source) {
     copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
 }
 
+vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
+    vk::RenderingAttachmentInfo renderingAttachment{};
+    renderingAttachment.pNext = nullptr;
+    renderingAttachment.imageView = this->getRawMainImageView();
+    renderingAttachment.imageLayout = mCurrentLayout;
+    renderingAttachment.loadOp = loadOp;
+    renderingAttachment.storeOp = storeOp;
+    renderingAttachment.clearValue = this->getClearValue();
+    return renderingAttachment;
+}
+
+vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
+    vk::RenderingAttachmentInfo renderingAttachment{};
+    renderingAttachment.pNext = nullptr;
+    renderingAttachment.imageView = this->getRawOtherImageView(otherImageViewIndex);
+    renderingAttachment.imageLayout = mCurrentLayout;
+    renderingAttachment.loadOp = loadOp;
+    renderingAttachment.storeOp = storeOp;
+    renderingAttachment.clearValue = this->getClearValue();
+    return renderingAttachment;
+}
+
 SwSwapchainImage::SwSwapchainImage(
     vk::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, SwSemaphore renderedSemaphore,
     std::vector<vk::Format> otherFormats, std::deque<vk::raii::ImageView> otherImageViews
@@ -32,6 +54,10 @@ void SwSwapchainImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags
 }
 
 void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+    if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
+        return;
+    }
+
     vk::ImageMemoryBarrier2 barrierInfo = {};
     barrierInfo.srcStageMask = mCurrentStage;
     barrierInfo.dstStageMask = nextStage;
@@ -108,6 +134,10 @@ void SwAllocatedImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags
 }
 
 void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+    if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
+        return;
+    }
+    
     vk::ImageMemoryBarrier2 barrierInfo = {};
     barrierInfo.srcStageMask = mCurrentStage;
     barrierInfo.dstStageMask = nextStage;
@@ -160,17 +190,6 @@ void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Ext
     blitInfo.pRegions = &blitRegion;
 
     cmd.blitImage2(blitInfo);
-}
-
-vk::RenderingAttachmentInfo SwAllocatedImage::generateRenderingAttachment(vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
-    vk::RenderingAttachmentInfo renderingAttachment{};
-    renderingAttachment.pNext = nullptr;
-    renderingAttachment.imageView = *mMainImageView;
-    renderingAttachment.imageLayout = mCurrentLayout;
-    renderingAttachment.loadOp = loadOp;
-    renderingAttachment.storeOp = storeOp;
-    renderingAttachment.clearValue = mClearValue;
-    return renderingAttachment;
 }
 
 void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces) {

@@ -75,6 +75,7 @@ public:
     static constexpr std::uint32_t NUM_FRAME_OVERLAP{2};
     static constexpr std::uint32_t WINDOW_WIDTH_STARTUP{1700};
     static constexpr std::uint32_t WINDOW_HEIGHT_STARTUP{900};
+    static constexpr std::uint32_t NUM_FULLSCREEN_QUAD_VERTICES{3};
 
     SwSwapchain();
 
@@ -97,6 +98,7 @@ public:
     inline SwFrame& getPreviousFrame() { return mFrames[(mFrameNumber - 1) % NUM_FRAME_OVERLAP]; }
     inline bool getResizeRequested() const { return mResizeRequested; }
     inline void setResizeRequested(bool resizeRequested) { mResizeRequested = resizeRequested; }
+    inline vk::Extent2D getWindowExtent() const { return mWindowExtent; }
 
     SwSwapchainImage& getCurrentSwapchainImage();
 

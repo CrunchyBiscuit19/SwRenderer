@@ -103,7 +103,7 @@ private:
     void initializeGeometryPasses();
 
     vk::RenderingInfo generateRenderingInfo(
-        vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::RenderingAttachmentInfo& depthAttachment
+        vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment
     );
 
 public:

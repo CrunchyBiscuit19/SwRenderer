@@ -145,9 +145,16 @@ void SwSwapchain::onResizeInitialize() {
 void SwSwapchain::resize() {
     mDepthImage.destroy();
     mDrawImage.destroy();
-
     mSwapchain.clear();
     mSwapchainImages.clear();
+
+    std::int32_t w, h;
+    SDL_GetWindowSize(mWindow, &w, &h);
+    mWindowExtent.width = w;
+    mWindowExtent.height = h;
+    mAspectRatio = static_cast<float>(w) / static_cast<float>(h);
+
+    onResizeInitialize();
 }
 
 SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() {
