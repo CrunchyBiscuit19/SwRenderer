@@ -10,7 +10,7 @@
 class SwRenderGraph {
 private:
     std::vector<SwPass*> mPasses;
-    std::vector<SwAllocatedImage*> mOutputs;
+    std::vector<SwImage*> mOutputs;
     std::vector<SwPass*> mSortedPasses; 
 
     void pruneUnreachablePasses();
@@ -22,7 +22,7 @@ private:
 public:
     SwRenderGraph() = default;
 
-    SwRenderGraph(std::vector<SwAllocatedImage*> outputs);
+    SwRenderGraph(std::vector<SwImage*> outputs);
 
     void addPass(SwPass* pass);
     

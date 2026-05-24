@@ -17,21 +17,27 @@ protected:
     vk::Format mMainFormat;
     std::vector<vk::Format> mOtherFormats;
     vk::Extent3D mExtent;
+    vk::ImageAspectFlags mAspect;
     vk::ImageLayout mCurrentLayout;
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
 
     SwImage();
 
-    SwImage(vk::Format mainFormat, vk::Extent3D extent, std::vector<vk::Format> otherFormats = {});
+    SwImage(vk::Format mainFormat, vk::Extent3D extent, vk::ImageAspectFlags aspect, std::vector<vk::Format> otherFormats = {});
 
 public:
     virtual void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
 
     virtual void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
 
+    virtual void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) = 0;
+    void copyFrom(vk::CommandBuffer cmd, SwImage& source);
+
     inline vk::Extent3D getExtent() { return mExtent; }
     inline vk::Format getMainFormat() { return mMainFormat; }
+    inline vk::ImageAspectFlags getAspect() const { return mAspect; }
+    virtual vk::Image getRawImage() = 0;
 
     inline void setCurrentLayout(vk::ImageLayout layout) { mCurrentLayout = layout; }
     inline void setCurrentStage(vk::PipelineStageFlags2 stage) { mCurrentStage = stage; }
@@ -59,11 +65,14 @@ public:
         std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
-    inline vk::Image getRawImage() { return mImage; }
+    inline vk::Image getRawImage() override { return mImage; } 
 
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
     void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+
+    using SwImage::copyFrom;
+    void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
 
     SwSwapchainImage(SwSwapchainImage&&) noexcept = default;
     SwSwapchainImage& operator=(SwSwapchainImage&&) noexcept = default;
@@ -78,7 +87,6 @@ protected:
     vk::raii::ImageView mMainImageView;
     std::deque<vk::raii::ImageView> mOtherImageViews;
     vk::ClearValue mClearValue;
-    vk::ImageAspectFlags mAspect;
     VmaAllocator mAllocator;
     VmaAllocation mAllocation;
     bool mMipmapped;
@@ -99,13 +107,16 @@ public:
 
     void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
-    void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect);
-    void copyFrom(vk::CommandBuffer cmd, SwSwapchainImage& source);
-    void copyFrom(vk::CommandBuffer cmd, SwAllocatedImage& source);
+    using SwImage::copyFrom;
+    void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
+
+    vk::RenderingAttachmentInfo generateRenderingAttachment(
+        vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
+    );
 
     virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
 
-    inline vk::Image getRawImage() { return *mImage; }
+    inline vk::Image getRawImage() override { return *mImage; }
     inline vk::ImageView getRawMainImageView() { return *mMainImageView; }
     inline vk::ImageView getRawOtherImageView(std::uint32_t i) { return *mOtherImageViews[i]; }
     inline bool isMipmapped() const { return mMipmapped; }
@@ -224,7 +235,7 @@ public:
     );
 
     static SwColorImage2D createColorImage2D(
-        const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()
+        const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f)
     );
 
     static SwDepthImage2D createDepthImage2D(
@@ -233,7 +244,8 @@ public:
     );
 
     static SwColorImageCubemap createColorImageCubemap(
-        const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue = vk::ClearValue()
+        const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
+        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f)
     );
 
     static void cleanup();

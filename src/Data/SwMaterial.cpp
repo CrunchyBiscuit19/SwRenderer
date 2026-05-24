@@ -5,6 +5,7 @@
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwGeometry.h>
+#include <Scene/SwScene.h>
 
 SwMaterialTexture::SwMaterialTexture(SwColorImage2D& image, SwSampler& sampler) : mImage(image), mSampler(sampler) {}
 
@@ -131,8 +132,8 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
     } else {
         graphicsPipelineOptions.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{
-            {sRendererContext.mSwapchain->getAccumImage().getMainFormat(), accumBlendState},
-            {sRendererContext.mSwapchain->getRvlImage().getMainFormat(), rvlBlendState},
+            {SwSwapchain::DRAW_FORMAT, accumBlendState},
+            {SwWBOIT::RVL_FORMAT, rvlBlendState},
         };
     }
     graphicsPipelineOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;

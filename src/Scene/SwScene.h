@@ -12,21 +12,6 @@
 #include <Scene/SwSkybox.h>
 #include <Scene/SwWBOIT.h>
 
-enum class SwPassType {
-    ClearScreen,
-    CullReset,
-    CullDepthPyramid,
-    CullWork,
-    CullCompact,
-    PickDraw,
-    PickWork,
-    Skybox,
-    GeometryOpaque,
-    GeometryTransparent,
-    WBOITComposite,
-    ImGui
-};
-
 struct SwSceneFlags {
     bool mAssetLoaded;
     bool mAssetUnloaded;
@@ -94,21 +79,32 @@ private:
     // --- Render graph ---
     SwRenderGraph mRenderGraph;
 
+    void initializeMiscPasses();
+
     void initializeSceneResources();
 
     void initializeCullResources();
     void onResizeInitializeCullResources();
+    void initializeCullPasses();
 
     void initializePickResources();
     void onResizeInitializePickResources();
+    void initializePickPasses();
 
     void initializeSkyboxResources();
     void onUpdateInitializeSkyboxResources();
+    void initializeSkyboxPasses();
 
     void initializeWBOITResources();
     void onResizeInitializeWBOITResources();
+    void initializeWBOITPasses();
 
     void initializeGeometryResources();
+    void initializeGeometryPasses();
+
+    vk::RenderingInfo generateRenderingInfo(
+        vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::RenderingAttachmentInfo& depthAttachment
+    );
 
 public:
     SwSceneFlags mFlags;
@@ -134,7 +130,7 @@ public:
         }
         std::unreachable();
     }
-    
+
     inline SwAsset& getAsset(const std::string& assetName) { return mAssets[assetName]; }
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssets();

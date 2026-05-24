@@ -64,8 +64,6 @@ private:
 
     SwColorImage2D mDrawImage;
     SwDepthImage2D mDepthImage;
-    SwColorImage2D mAccumImage;
-    SwColorImage2D mRvlImage;
 
 public:
     static vk::ClearColorValue DRAW_CLEAR_VALUE;
@@ -89,8 +87,6 @@ public:
 
     inline SwColorImage2D& getDrawImage() { return mDrawImage; }
     inline SwDepthImage2D& getDepthImage() { return mDepthImage; }
-    inline SwColorImage2D& getAccumImage() { return mAccumImage; }
-    inline SwColorImage2D& getRvlImage() { return mRvlImage; }  
     inline std::uint64_t getFrameNumber() const { return mFrameNumber; }
     inline void incrementFrameNumber() { mFrameNumber++; }
     inline std::optional<std::uint64_t> getProgramEndFrameNumber() const { return mProgramEndFrameNumber; }

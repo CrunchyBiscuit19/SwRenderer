@@ -128,12 +128,6 @@ void SwSwapchain::onResizeInitialize() {
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
-    mAccumImage = SwImageFactory::createColorImage2D(
-        nullptr, SwSwapchain::DRAW_FORMAT, mDrawImage.getExtent(), vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, false
-    );
-    mRvlImage = SwImageFactory::createColorImage2D(
-        nullptr, vk::Format::eR16Sfloat, mDrawImage.getExtent(), vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled, false
-    );
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mSwapchainImages.size(); i++) {
             mSwapchainImages[i].emitTransition(cmd, vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone);
@@ -145,14 +139,10 @@ void SwSwapchain::onResizeInitialize() {
             vk::PipelineStageFlagBits2::eEarlyFragmentTests,
             vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
         );
-        mAccumImage.emitTransition(cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead);
-        mRvlImage.emitTransition(cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead);
     });
 }
 
 void SwSwapchain::resize() {
-    mRvlImage.destroy();
-    mAccumImage.destroy();
     mDepthImage.destroy();
     mDrawImage.destroy();
 

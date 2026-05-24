@@ -1,5 +1,4 @@
 #include <Misc/SwHelper.h>
-
 #include <cmath>
 
 
@@ -30,58 +29,6 @@ vk::PresentInfoKHR swHelper::presentInfo() {
     info.waitSemaphoreCount = 0;
     info.pImageIndices = nullptr;
     return info;
-}
-
-vk::RenderingAttachmentInfo swHelper::colorAttachmentInfo(
-    vk::ImageView view, vk::ImageLayout layout, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp, std::optional<vk::ImageView> resolveImageView
-) {
-    vk::RenderingAttachmentInfo colorAttachment{};
-    colorAttachment.pNext = nullptr;
-    colorAttachment.imageView = view;
-    colorAttachment.imageLayout = layout;
-    colorAttachment.loadOp = loadOp;
-    colorAttachment.storeOp = storeOp;
-    //colorAttachment.clearValue = CLEAR_COLOR;
-    if (resolveImageView.has_value()) {
-        colorAttachment.resolveImageView = resolveImageView.value();
-        colorAttachment.resolveMode = vk::ResolveModeFlagBits::eAverage;
-        colorAttachment.resolveImageLayout = vk::ImageLayout::eColorAttachmentOptimal;
-    }
-
-    return colorAttachment;
-}
-
-vk::RenderingAttachmentInfo swHelper::depthAttachmentInfo(
-    vk::ImageView view, vk::ImageLayout layout, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp, std::optional<vk::ImageView> resolveImageView
-) {
-    vk::RenderingAttachmentInfo depthAttachment{};
-    depthAttachment.pNext = nullptr;
-    depthAttachment.imageView = view;
-    depthAttachment.imageLayout = layout;
-    depthAttachment.loadOp = loadOp;
-    depthAttachment.storeOp = storeOp;
-    depthAttachment.clearValue.depthStencil.depth = 0.f;
-    if (resolveImageView.has_value()) {
-        depthAttachment.resolveImageView = resolveImageView.value();
-        depthAttachment.resolveMode = vk::ResolveModeFlagBits::eSampleZero;
-        depthAttachment.resolveImageLayout = vk::ImageLayout::eDepthAttachmentOptimal;
-    }
-
-    return depthAttachment;
-}
-
-vk::RenderingInfo swHelper::renderingInfo(
-    vk::Extent2D renderExtent, vk::RenderingAttachmentInfo* colorAttachment, vk::RenderingAttachmentInfo* depthAttachment, std::uint32_t count
-) {
-    vk::RenderingInfo renderInfo{};
-    renderInfo.pNext = nullptr;
-    renderInfo.renderArea = vk::Rect2D{vk::Offset2D{0, 0}, renderExtent};
-    renderInfo.layerCount = 1;
-    renderInfo.colorAttachmentCount = count;
-    renderInfo.pColorAttachments = colorAttachment;
-    renderInfo.pDepthAttachment = depthAttachment;
-    renderInfo.pStencilAttachment = nullptr;
-    return renderInfo;
 }
 
 std::uint32_t swHelper::getFormatTexelSize(vk::Format format) {

@@ -3,21 +3,21 @@
 #include <fmt/ostream.h>  // for fmt::print to a std::ostream
 
 #include <fstream>
+#include <magic_enum.hpp>
 #include <ostream>
 #include <queue>
 #include <stdexcept>
 #include <unordered_map>
 #include <unordered_set>
 
-SwRenderGraph::SwRenderGraph(std::vector<SwAllocatedImage*> outputs)
-    : mOutputs(std::move(outputs)) {}
+SwRenderGraph::SwRenderGraph(std::vector<SwImage*> outputs) : mOutputs(std::move(outputs)) {}
 
 void SwRenderGraph::pruneUnreachablePasses() {
     for (auto& p : mPasses) p->setPruned(true);
 
     // Identify passes that write each image / buffer.
-    std::unordered_map<SwAllocatedImage*, std::vector<SwPass*>> imageWriters;
-    std::unordered_map<SwAllocatedBuffer*, std::vector<SwPass*>> bufferWriters;
+    std::unordered_map<SwImage*, std::vector<SwPass*>> imageWriters;
+    std::unordered_map<SwBuffer*, std::vector<SwPass*>> bufferWriters;
     for (auto& p : mPasses) {
         for (auto& dep : p->getWriteImages()) imageWriters[dep.mImage].emplace_back(p);
         for (auto& dep : p->getWriteBuffers()) bufferWriters[dep.mBuffer].emplace_back(p);
@@ -32,7 +32,7 @@ void SwRenderGraph::pruneUnreachablePasses() {
     };
 
     // BFS starts by enqueuing any pass that writes to the outputs.
-    for (SwAllocatedImage* out : mOutputs) {
+    for (SwImage* out : mOutputs) {
         if (auto it = imageWriters.find(out); it != imageWriters.end()) {
             for (SwPass* writer : it->second) visit(writer);
         }
@@ -78,8 +78,8 @@ void SwRenderGraph::sortTopological() {
     }
 
     // Identify passes that read / write each image / buffer.    }
-    std::unordered_map<SwAllocatedImage*, std::vector<SwPass*>> imageWriters, imageReaders;
-    std::unordered_map<SwAllocatedBuffer*, std::vector<SwPass*>> bufferWriters, bufferReaders;
+    std::unordered_map<SwImage*, std::vector<SwPass*>> imageWriters, imageReaders;
+    std::unordered_map<SwBuffer*, std::vector<SwPass*>> bufferWriters, bufferReaders;
     for (SwPass* p : mSortedPasses) {
         for (auto& d : p->getWriteImages()) imageWriters[d.mImage].emplace_back(p);
         for (auto& d : p->getReadImages()) imageReaders[d.mImage].emplace_back(p);
@@ -161,7 +161,7 @@ void SwRenderGraph::sortTopological() {
         std::string msg = "Cycle detected in render graph among passes:";
         for (auto& [p, deg] : inDegree) {
             if (deg > 0) {
-                msg += fmt::format("\n  - {} ({} dependencies)", p->getName(), deg);
+                msg += fmt::format("\n  - {} ({} dependencies)", magic_enum::enum_name(p->getPassType()).data(), deg);
             }
         }
         throw std::runtime_error(msg);
@@ -178,8 +178,8 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
 
     // Collect every resource referenced by any pass (pruned or not), so the
     // graph shows the full picture and you can see what got culled.
-    std::unordered_set<SwAllocatedImage*> allImages;
-    std::unordered_set<SwAllocatedBuffer*> allBuffers;
+    std::unordered_set<SwImage*> allImages;
+    std::unordered_set<SwBuffer*> allBuffers;
     for (auto& p : mPasses) {
         for (auto& d : p->getReadImages()) allImages.insert(d.mImage);
         for (auto& d : p->getWriteImages()) allImages.insert(d.mImage);
@@ -196,8 +196,8 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
     // Identifier helpers — Graphviz node IDs can't contain arbitrary chars,
     // so we use pointer values to guarantee uniqueness.
     auto passId = [](const SwPass* p) { return fmt::format("pass_{}", reinterpret_cast<uintptr_t>(p)); };
-    auto imageId = [](const SwAllocatedImage* i) { return fmt::format("img_{}", reinterpret_cast<uintptr_t>(i)); };
-    auto bufferId = [](const SwAllocatedBuffer* b) { return fmt::format("buf_{}", reinterpret_cast<uintptr_t>(b)); };
+    auto imageId = [](const SwImage* i) { return fmt::format("img_{}", reinterpret_cast<uintptr_t>(i)); };
+    auto bufferId = [](const SwBuffer* b) { return fmt::format("buf_{}", reinterpret_cast<uintptr_t>(b)); };
 
     fmt::print(out, "digraph RenderGraph {{\n");
     fmt::print(out, "  rankdir=LR;\n");
@@ -220,20 +220,28 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
         }
         if (p->isMustRun()) suffix += "\\nmust-run";
 
-        fmt::print(out, "  {} [label=\"{}{}\", fillcolor=\"{}\", color=\"{}\"];\n", passId(p), p->getName(), suffix, fillColor, borderColor);
+        fmt::print(
+            out,
+            "  {} [label=\"{}{}\", fillcolor=\"{}\", color=\"{}\"];\n",
+            passId(p),
+            magic_enum::enum_name(p->getPassType()).data(),
+            suffix,
+            fillColor,
+            borderColor
+        );
     }
 
     // Resources — ellipses for images, cylinders for buffers, marked if output.
     fmt::print(out, "\n  // Resources\n");
-    std::unordered_set<SwAllocatedImage*> outputSet(mOutputs.begin(), mOutputs.end());
-    for (SwAllocatedImage* img : allImages) {
+    std::unordered_set<SwImage*> outputSet(mOutputs.begin(), mOutputs.end());
+    for (SwImage* img : allImages) {
         const bool isOutput = outputSet.count(img) > 0;
         const auto fill = isOutput ? "#ffd966" : "#f4f4f4";
         const auto label = isOutput ? "image\\n(output)" : "image";
 
         fmt::print(out, "  {} [shape=ellipse, style=filled, fillcolor=\"{}\", label=\"{}\"];\n", imageId(img), fill, label);
     }
-    for (SwAllocatedBuffer* buf : allBuffers) {
+    for (SwBuffer* buf : allBuffers) {
         fmt::print(out, "  {} [shape=cylinder, style=filled, fillcolor=\"#f4f4f4\", label=\"buffer\"];\n", bufferId(buf));
     }
 

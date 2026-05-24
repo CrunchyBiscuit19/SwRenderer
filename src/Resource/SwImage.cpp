@@ -4,19 +4,24 @@
 
 SwImage::SwImage() {}
 
-SwImage::SwImage(vk::Format mainFormat, vk::Extent3D extent, std::vector<vk::Format> otherFormats)
+SwImage::SwImage(vk::Format mainFormat, vk::Extent3D extent, vk::ImageAspectFlags aspect, std::vector<vk::Format> otherFormats)
     : mMainFormat(mainFormat),
       mOtherFormats(std::move(otherFormats)),
       mExtent(extent),
       mCurrentLayout(vk::ImageLayout::eUndefined),
       mCurrentStage(vk::PipelineStageFlagBits2::eTopOfPipe),
-      mCurrentAccess(vk::AccessFlags2()) {}
+      mCurrentAccess(vk::AccessFlags2()),
+      mAspect(aspect) {}
+
+void SwImage::copyFrom(vk::CommandBuffer cmd, SwImage& source) {
+    copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
+}
 
 SwSwapchainImage::SwSwapchainImage(
     vk::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, SwSemaphore renderedSemaphore,
     std::vector<vk::Format> otherFormats, std::deque<vk::raii::ImageView> otherImageViews
 )
-    : SwImage(mainFormat, extent, std::move(otherFormats)),
+    : SwImage(mainFormat, extent, vk::ImageAspectFlagBits::eColor, std::move(otherFormats)),
       mImage(image),
       mMainImageView(std::move(mainImageView)),
       mOtherImageViews(std::move(otherImageViews)),
@@ -52,6 +57,35 @@ void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nex
     mCurrentLayout = nextLayout;
 }
 
+void SwSwapchainImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) {
+    vk::ImageBlit2 blitRegion{};
+    blitRegion.pNext = nullptr;
+    blitRegion.srcOffsets[0] = vk::Offset3D{0, 0, 0};
+    blitRegion.srcOffsets[1] = vk::Offset3D{static_cast<std::int32_t>(srcSize.width), static_cast<std::int32_t>(srcSize.height), 1};
+    blitRegion.dstOffsets[0] = vk::Offset3D{0, 0, 0};
+    blitRegion.dstOffsets[1] = vk::Offset3D{static_cast<std::int32_t>(mExtent.width), static_cast<std::int32_t>(mExtent.height), 1};
+    blitRegion.srcSubresource.aspectMask = srcAspect;
+    blitRegion.srcSubresource.baseArrayLayer = 0;
+    blitRegion.srcSubresource.layerCount = 1;
+    blitRegion.srcSubresource.mipLevel = 0;
+    blitRegion.dstSubresource.aspectMask = mAspect;
+    blitRegion.dstSubresource.baseArrayLayer = 0;
+    blitRegion.dstSubresource.layerCount = 1;
+    blitRegion.dstSubresource.mipLevel = 0;
+
+    vk::BlitImageInfo2 blitInfo{};
+    blitInfo.pNext = nullptr;
+    blitInfo.dstImage = mImage;
+    blitInfo.dstImageLayout = vk::ImageLayout::eTransferDstOptimal;
+    blitInfo.srcImage = source;
+    blitInfo.srcImageLayout = vk::ImageLayout::eTransferSrcOptimal;
+    blitInfo.filter = vk::Filter::eLinear;
+    blitInfo.regionCount = 1;
+    blitInfo.pRegions = &blitRegion;
+
+    cmd.blitImage2(blitInfo);
+}
+
 SwAllocatedImage::SwAllocatedImage() : mImage(nullptr), mMainImageView(nullptr), mAllocation(nullptr), mAllocator(nullptr), mMipLevels(1), mMipmapped(false) {}
 
 SwAllocatedImage::SwAllocatedImage(
@@ -59,12 +93,11 @@ SwAllocatedImage::SwAllocatedImage(
     vk::ImageAspectFlags aspect, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
-    : SwImage(mainFormat, extent, std::move(otherFormats)),
+    : SwImage(mainFormat, extent, aspect, std::move(otherFormats)),
       mImage(std::move(image)),
       mMainImageView(std::move(mainImageView)),
       mOtherImageViews(std::move(otherImageViews)),
       mClearValue(clearValue),
-      mAspect(aspect),
       mAllocator(allocator),
       mAllocation(allocation),
       mMipmapped(mipmapped),
@@ -129,12 +162,15 @@ void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Ext
     cmd.blitImage2(blitInfo);
 }
 
-void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, SwSwapchainImage& source) {
-    copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
-}
-
-void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, SwAllocatedImage& source) {
-    copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), source.mAspect);
+vk::RenderingAttachmentInfo SwAllocatedImage::generateRenderingAttachment(vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
+    vk::RenderingAttachmentInfo renderingAttachment{};
+    renderingAttachment.pNext = nullptr;
+    renderingAttachment.imageView = *mMainImageView;
+    renderingAttachment.imageLayout = mCurrentLayout;
+    renderingAttachment.loadOp = loadOp;
+    renderingAttachment.storeOp = storeOp;
+    renderingAttachment.clearValue = mClearValue;
+    return renderingAttachment;
 }
 
 void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces) {
@@ -250,7 +286,6 @@ SwAllocatedImage::SwAllocatedImage(SwAllocatedImage&& other) noexcept
       mMainImageView(std::move(other.mMainImageView)),
       mOtherImageViews(std::move(other.mOtherImageViews)),
       mClearValue(other.mClearValue),
-      mAspect(other.mAspect),
       mMipLevels(other.mMipLevels),
       mMipmapped(other.mMipmapped),
       mAllocator(other.mAllocator),
@@ -268,7 +303,6 @@ SwAllocatedImage& SwAllocatedImage::operator=(SwAllocatedImage&& other) noexcept
         mMainImageView = std::move(other.mMainImageView);
         mOtherImageViews = std::move(other.mOtherImageViews);
         mClearValue = other.mClearValue;
-        mAspect = other.mAspect;
         mMipLevels = other.mMipLevels;
         mMipmapped = other.mMipmapped;
         mAllocator = other.mAllocator;
@@ -306,7 +340,9 @@ SwDepthImage2D::SwDepthImage2D(
     : SwAllocatedImage(
           std::move(image), mainFormat, extent, std::move(mainImageView), clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
-      ) {}
+      ) {
+    mClearValue.depthStencil.depth = 0.f;
+}
 
 void SwDepthImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
 

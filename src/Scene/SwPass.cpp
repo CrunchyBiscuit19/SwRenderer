@@ -1,15 +1,19 @@
 #include <Scene/SwPass.h>
 
-SwPass::SwPass(
-    std::string name, std::vector<SwImageDep> readImageDeps, std::vector<SwImageDep> writeImageDeps, std::vector<SwBufferDep> readBufferDeps,
-    std::vector<SwBufferDep> writeBufferDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun
-)
-    : mName(name),
-      mReadImages(std::move(readImageDeps)),
-      mWriteImages(std::move(writeImageDeps)),
-      mReadBuffers(std::move(readBufferDeps)),
-      mWriteBuffers(std::move(writeBufferDeps)),
+SwPass::SwPass(SwPassType passType, SwPassDeps passDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun)
+    : mPassType(passType),
+      mReadImages(std::move(passDeps.mReadImages)),
+      mWriteImages(std::move(passDeps.mWriteImages)),
+      mReadBuffers(std::move(passDeps.mReadBuffers)),
+      mWriteBuffers(std::move(passDeps.mWriteBuffers)),
       mCallback(std::move(callback)),
       mMustRun(mustRun) {}
 
 void SwPass::execute(vk::CommandBuffer cmd) { mCallback(cmd); }
+
+void SwPass::SwPassDeps::clear() {
+    mReadImages.clear();
+    mReadBuffers.clear();
+    mWriteImages.clear();
+    mWriteBuffers.clear();
+}

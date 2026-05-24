@@ -25,6 +25,73 @@ std::filesystem::path SwScene::WBOIT_FRAGMENT_SHADER_PATH = std::filesystem::pat
 
 SwRendererContext SwScene::sRendererContext{};
 
+void SwScene::initializeMiscPasses() {
+    SwPass::SwPassDeps deps;
+
+    deps.mWriteImages.emplace_back(
+        &sRendererContext.mSwapchain->getDrawImage(),
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+    deps.mWriteImages.emplace_back(
+        &sRendererContext.mSwapchain->getDepthImage(),
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+        vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::ImageLayout::eDepthAttachmentOptimal
+    );
+    deps.mWriteImages.emplace_back(
+        &mWBOITResources.mAccumImage,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+    deps.mWriteImages.emplace_back(
+        &mWBOITResources.mRvlImage,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+    mPasses[SwPassType::ClearImages] = SwPass(SwPassType::ClearImages, deps, [&](vk::CommandBuffer cmd) {
+        std::array<vk::RenderingAttachmentInfo, 4> colorAttachments = {
+            sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
+            mWBOITResources.mAccumImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
+            mWBOITResources.mRvlImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
+            mPickResources.mWorkImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
+        };
+        vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
+        vk::RenderingInfo renderInfo =
+            generateRenderingInfo(swHelper::extent3dTo2d(sRendererContext.mSwapchain->getDrawImage().getExtent()), colorAttachments, depthAttachment);
+
+        cmd.beginRendering(renderInfo);
+        cmd.endRendering();
+
+        depthAttachment = mPickResources.mDepthImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
+        renderInfo = generateRenderingInfo(swHelper::extent3dTo2d(mPickResources.mWorkImage.getExtent()), nullptr, depthAttachment);
+
+        cmd.beginRendering(renderInfo);
+        cmd.endRendering();
+    });
+    deps.clear();
+
+    deps.mReadImages.emplace_back(
+        &sRendererContext.mSwapchain->getDrawImage(),
+        vk::PipelineStageFlagBits2::eTransfer,
+        vk::AccessFlagBits2::eTransferRead,
+        vk::ImageLayout::eTransferSrcOptimal
+    );
+    deps.mWriteImages.emplace_back(
+        &sRendererContext.mSwapchain->getCurrentSwapchainImage(),
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderRead,
+        vk::ImageLayout::eShaderReadOnlyOptimal
+    );
+    mPasses[SwPassType::CopyToSwapchain] = SwPass(SwPassType::CopyToSwapchain, deps, [&](vk::CommandBuffer cmd) {
+        sRendererContext.mSwapchain->getDrawImage().copyFrom(cmd, sRendererContext.mSwapchain->getCurrentSwapchainImage());
+    });
+    deps.clear();
+}
+
 void SwScene::initializeSceneResources() {
     mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
@@ -501,15 +568,36 @@ void SwScene::initializeWBOITResources() {
 }
 
 void SwScene::onResizeInitializeWBOITResources() {
-    mWBOITResources.mWorkDescriptorSet.writeImage(
-        0,
-        sRendererContext.mSwapchain->getAccumImage().getRawMainImageView(),
+    mWBOITResources.mAccumImage = SwImageFactory::createColorImage2D(
         nullptr,
-        vk::ImageLayout::eShaderReadOnlyOptimal,
-        vk::DescriptorType::eSampledImage
+        SwSwapchain::DRAW_FORMAT,
+        sRendererContext.mSwapchain->getDrawImage().getExtent(),
+        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+        false
+    );
+    mWBOITResources.mRvlImage = SwImageFactory::createColorImage2D(
+        nullptr,
+        SwWBOIT::RVL_FORMAT,
+        sRendererContext.mSwapchain->getDrawImage().getExtent(),
+        vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
+        false,
+        SwWBOIT::RVL_CLEAR_VALUE
+    );
+
+    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        mWBOITResources.mAccumImage.emitTransition(
+            cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead
+        );
+        mWBOITResources.mRvlImage.emitTransition(
+            cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead
+        );
+    });
+
+    mWBOITResources.mWorkDescriptorSet.writeImage(
+        0, mWBOITResources.mAccumImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
     );
     mWBOITResources.mWorkDescriptorSet.writeImage(
-        1, sRendererContext.mSwapchain->getRvlImage().getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
+        1, mWBOITResources.mRvlImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
     );
     mWBOITResources.mWorkDescriptorSet.pushWrites();
 }
@@ -521,6 +609,20 @@ void SwScene::initializeGeometryResources() {
     mGeometryResources.mWorkPushConstants.mSceneInstancesBuffer = mSceneInstancesBuffer.getDeviceAddress().value();
     mGeometryResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
         mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
+}
+
+vk::RenderingInfo SwScene::generateRenderingInfo(
+    vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::RenderingAttachmentInfo& depthAttachment
+) {
+    vk::RenderingInfo renderInfo{};
+    renderInfo.pNext = nullptr;
+    renderInfo.renderArea = vk::Rect2D{vk::Offset2D{0, 0}, renderExtent};
+    renderInfo.layerCount = 1;
+    renderInfo.colorAttachmentCount = colorAttachments.size();
+    renderInfo.pColorAttachments = colorAttachments.data();
+    renderInfo.pDepthAttachment = &depthAttachment;
+    renderInfo.pStencilAttachment = nullptr;
+    return renderInfo;
 }
 
 void SwScene::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
@@ -541,6 +643,8 @@ void SwScene::resize() {
     mPickResources.mDepthImage.destroy();
     onResizeInitializePickResources();
 
+    mWBOITResources.mRvlImage.destroy();
+    mWBOITResources.mAccumImage.destroy();
     onResizeInitializeWBOITResources();
 }
 

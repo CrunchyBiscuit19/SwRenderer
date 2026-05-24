@@ -7,22 +7,46 @@
 #include <string>
 #include <vector>
 
+enum class SwPassType {
+    ClearImages,
+    CullReset,
+    CullDepthPyramid,
+    CullWork,
+    CullCompact,
+    PickDraw,
+    PickWork,
+    Skybox,
+    GeometryOpaque,
+    GeometryTransparent,
+    WBOITComposite,
+    CopyToSwapchain,
+    ImGui
+};
+
 class SwPass {
 public:
     struct SwImageDep {
-        SwAllocatedImage* mImage;
+        SwImage* mImage;
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
         vk::ImageLayout mLayout;
     };
     struct SwBufferDep {
-        SwAllocatedBuffer* mBuffer;
+        SwBuffer* mBuffer;
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
     };
+    struct SwPassDeps {
+        std::vector<SwImageDep> mReadImages;
+        std::vector<SwImageDep> mWriteImages;
+        std::vector<SwBufferDep> mReadBuffers;
+        std::vector<SwBufferDep> mWriteBuffers;
+
+        void clear();
+    };
 
 private:
-    std::string mName;
+    SwPassType mPassType;
     std::function<void(vk::CommandBuffer)> mCallback;
     bool mMustRun{false};
     bool mPruned{false};
@@ -33,12 +57,13 @@ private:
     std::vector<SwBufferDep> mWriteBuffers;
 
 public:
+    SwPass() = default;
+
     SwPass(
-        std::string name, std::vector<SwImageDep> readImageDeps, std::vector<SwImageDep> writeImageDeps, std::vector<SwBufferDep> readBufferDeps,
-        std::vector<SwBufferDep> writeBufferDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false
+        SwPassType passType, SwPassDeps passDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false
     );
 
-    std::string_view getName() const { return mName; }
+    SwPassType getPassType() const { return mPassType; }
     bool isPruned() const { return mPruned; }
     bool isMustRun() const { return mMustRun; }
     void setPruned(bool pruned) { mPruned = pruned; }
