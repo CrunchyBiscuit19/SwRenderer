@@ -64,6 +64,8 @@ public:
 
     static void cleanup();
 
+    static std::string getNameFromFilePath(const std::filesystem::path& assetPath);
+
     SwAsset() = default;
     SwAsset(std::filesystem::path& assetPath);
 
@@ -76,6 +78,7 @@ public:
     void markDelete();
 
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
+    inline std::string getName() { return mName; }
     inline std::uint32_t getId() { return mId; }
     inline std::vector<SwInstance>& getInstances() { return mInstances; }
     inline bool isMarkedDelete() { return mDelete; }

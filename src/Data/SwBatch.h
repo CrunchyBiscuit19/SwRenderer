@@ -32,7 +32,7 @@ private:
     static constexpr std::uint32_t RENDER_ITEMS_BUFFER_SIZE{sizeof(SwRenderItem) * BATCH_MAX_RENDER_ITEMS};
     static constexpr std::uint32_t RENDER_INSTANCES_BUFFER_SIZE{sizeof(SwRenderInstance) * BATCH_MAX_RENDER_INSTANCES};
 
-    SwGraphicsPipelineBundle mGraphicsPipelineBundle;
+    SwGraphicsPipelineBundle* mGraphicsPipelineBundle{nullptr};
 
     std::vector<SwRenderItem> mRenderItems;
     SwStagingBuffer mRenderItemsStagingBuffer;
@@ -49,12 +49,20 @@ public:
 
     SwBatch() = default;
     SwBatch(SwPrimitive& primitive);
+    
+    SwBatch(SwBatch&&) noexcept = default;
+    SwBatch& operator=(SwBatch&&) noexcept = default;
 
+    SwBatch(const SwBatch&) = delete;
+    SwBatch& operator=(const SwBatch&) = delete;
+
+    inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return *mGraphicsPipelineBundle; }
     inline std::vector<SwRenderItem>& getRenderItems() { return mRenderItems; }
     inline std::vector<SwRenderInstance>& getRenderInstances() { return mRenderInstances; }
     inline SwStagingBuffer& getRenderItemsStagingBuffer() { return mRenderItemsStagingBuffer; }
     inline SwStagingBuffer& getRenderInstancesStagingBuffer() { return mRenderInstancesStagingBuffer; }
     inline SwAllocatedBuffer& getPreCullRenderItemsBuffer() { return mPreCullRenderItemsBuffer; }
     inline SwAllocatedBuffer& getPostCullRenderItemsBuffer() { return mPostCullRenderItemsBuffer; }
+    inline SwAllocatedBuffer& getPostCullRenderItemsCountBuffer() { return mPostCullRenderItemsCountBuffer; }
     inline SwAllocatedBuffer& getRenderInstancesBuffer() { return mRenderInstancesBuffer; }
 };

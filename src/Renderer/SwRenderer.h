@@ -108,8 +108,6 @@ class SwRenderer {
     enum class ValidationMode { None, Basic, Strict };
     enum class LogLocation { Console, File, Both };
 
-    static constexpr ValidationMode VALIDATION_MODE{ValidationMode::Basic};
-    static constexpr LogLocation LOG_LOCATION{LogLocation::Both};
     static constexpr std::uint32_t VK_MAJOR_VERSION{1};
     static constexpr std::uint32_t VK_MINOR_VERSION{4};
     static constexpr std::uint32_t VK_PATCH_VERSION{0};
@@ -141,6 +139,8 @@ class SwRenderer {
     SwScene mScene;
 
 public:
+    static constexpr ValidationMode VALIDATION_MODE{ValidationMode::Basic};
+    static constexpr LogLocation LOG_LOCATION{LogLocation::Both};
     static constexpr std::uint32_t ONE_SECOND_IN_MS{1000};
     static constexpr std::uint32_t EXPECTED_FRAME_RATE{60};
 

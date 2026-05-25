@@ -96,9 +96,9 @@ private:
     SwMaterialPipelineOptions mMaterialPipelineOptions;
     SwMaterialConstants mMaterialConstants;
     SwMaterialResources mMaterialResources;
-    SwGraphicsPipelineBundle mPipelineBundle;
+    SwGraphicsPipelineBundle* mMaterialPipelineBundle{nullptr};
 
-    static std::unordered_map<SwMaterialPipelineOptions, SwPipelinePipeline> sMaterialPipelines;
+    static std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> sMaterialPipelineBundles;
     static SwPipelineLayout sOpaquePipelineLayout;
     static SwPipelineLayout sTransparentPipelineLayout;
     static std::filesystem::path GEOMETRY_VERTEX_SHADER_PATH;
@@ -123,7 +123,7 @@ public:
     static void init(SwRendererContext rendererContext);
     static void cleanup();
 
-    inline SwGraphicsPipelineBundle getPipelineBundle() { return mPipelineBundle; }
+    inline SwGraphicsPipelineBundle& getPipelineBundle() { return *mMaterialPipelineBundle; }
 
     inline fastgltf::AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
 

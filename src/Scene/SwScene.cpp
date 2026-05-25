@@ -27,7 +27,7 @@ std::filesystem::path SwScene::WBOIT_FRAGMENT_SHADER_PATH = std::filesystem::pat
 SwRendererContext SwScene::sRendererContext{};
 
 void SwScene::initializeMiscPasses() {
-    SwPass::SwPassDeps deps;
+    SwPass::PassDeps deps;
 
     // Clear Images
     deps.mWriteImages.emplace_back(
@@ -39,7 +39,7 @@ void SwScene::initializeMiscPasses() {
     deps.mWriteImages.emplace_back(
         &sRendererContext.mSwapchain->getDepthImage(),
         vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-        vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
         vk::ImageLayout::eDepthAttachmentOptimal
     );
     deps.mWriteImages.emplace_back(
@@ -55,15 +55,15 @@ void SwScene::initializeMiscPasses() {
         vk::ImageLayout::eColorAttachmentOptimal
     );
     deps.mWriteImages.emplace_back(
-        &mPickResources.mWorkImage,
+        &mPickResources.mReadbackImage,
         vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eColorAttachmentReadNoncoherentEXT,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
         vk::ImageLayout::eColorAttachmentOptimal
     );
     deps.mWriteImages.emplace_back(
         &mPickResources.mDepthImage,
         vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-        vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
         vk::ImageLayout::eDepthAttachmentOptimal
     );
     mPasses[SwPassType::ClearImages] = SwPass(SwPassType::ClearImages, deps, [&](vk::CommandBuffer cmd) {
@@ -71,17 +71,16 @@ void SwScene::initializeMiscPasses() {
             sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
             mWBOITResources.mAccumImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
             mWBOITResources.mRvlImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
-            mPickResources.mWorkImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
+            mPickResources.mReadbackImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
         };
         vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
-        vk::RenderingInfo renderInfo =
-            generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, depthAttachment);
+        vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
 
         depthAttachment = mPickResources.mDepthImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
-        renderInfo = generateRenderingInfo(swHelper::extent3dTo2d(mPickResources.mWorkImage.getExtent()), nullptr, depthAttachment);
+        renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), nullptr, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
@@ -118,11 +117,12 @@ void SwScene::initializeMiscPasses() {
             sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
             sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(0, vk::AttachmentLoadOp::eDontCare),
         };
-        const vk::RenderingInfo renderInfo =
-            generateRenderingInfo(swHelper::extent3dTo2d(sRendererContext.mSwapchain->getCurrentSwapchainImage().getExtent()), colorAttachments, nullptr);
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, nullptr);
 
         cmd.beginRendering(renderInfo);
+
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
+
         cmd.endRendering();
     });
 }
@@ -186,7 +186,7 @@ void SwScene::initializeCullResources() {
     mCullResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, resetPushConstantRange);
 
     SwShader resetShader = SwShaderFactory::createShader(CULL_RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mCullResources.mResetPipelinePipeline =
+    mCullResources.mResetPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({resetShader.getRawModule(), mCullResources.mResetPipelineLayout.getRawLayout()});
 
     // Depth pyramid pass
@@ -205,7 +205,7 @@ void SwScene::initializeCullResources() {
         SwPipelineFactory::createPipelineLayout({mCullResources.mDepthPyramidDescriptorLayout.getRawLayout()}, depthPyramidPushConstantRange);
 
     SwShader depthPyramidShader = SwShaderFactory::createShader(CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mCullResources.mDepthPyramidPipelinePipeline =
+    mCullResources.mDepthPyramidPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({depthPyramidShader.getRawModule(), mCullResources.mDepthPyramidPipelineLayout.getRawLayout()});
 
     // Work pass
@@ -218,7 +218,7 @@ void SwScene::initializeCullResources() {
     mCullResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout({mCullResources.mWorkDescriptorLayout.getRawLayout()}, workPushConstantRange);
 
     SwShader workShader = SwShaderFactory::createShader(CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mCullResources.mWorkPipelinePipeline =
+    mCullResources.mWorkPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mCullResources.mWorkPipelineLayout.getRawLayout()});
 
     // Compact pass
@@ -227,7 +227,7 @@ void SwScene::initializeCullResources() {
     mCullResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, compactPushConstantRange);
 
     SwShader compactShader = SwShaderFactory::createShader(CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mCullResources.mCompactPipelinePipeline =
+    mCullResources.mCompactPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({compactShader.getRawModule(), mCullResources.mCompactPipelineLayout.getRawLayout()});
 
     // Everything that needs to be re-built on resize
@@ -236,14 +236,12 @@ void SwScene::initializeCullResources() {
 
 void SwScene::onResizeInitializeCullResources() {
     // Depth pyramid pass
-    std::uint32_t depthPyramidWidth = swHelper::previousPow2(sRendererContext.mSwapchain->getDepthImage().getExtent().width);
-    std::uint32_t depthPyramidHeight = swHelper::previousPow2(sRendererContext.mSwapchain->getDepthImage().getExtent().height);
     mCullResources.mDepthPyramidExtent = vk::Extent3D{
-        depthPyramidWidth,
-        depthPyramidHeight,
+        SwHelper::previousPow2(sRendererContext.mSwapchain->getWindowExtent().width),
+        SwHelper::previousPow2(sRendererContext.mSwapchain->getWindowExtent().height),
         1,
     };
-    mCullResources.mDepthPyramidLevels = swHelper::calculateMipMapLevels(mCullResources.mDepthPyramidExtent);
+    mCullResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(mCullResources.mDepthPyramidExtent);
     mCullResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
         nullptr, vk::Format::eR32Sfloat, mCullResources.mDepthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
     );
@@ -276,7 +274,7 @@ void SwScene::onResizeInitializeCullResources() {
     mCullResources.mDepthPyramidDescriptorSet.pushWrites();
 
     vk::Extent3D depthPyramidExtent = mCullResources.mDepthPyramidImage.getExtent();
-    vk::Extent3D depthExtent = sRendererContext.mSwapchain->getDepthImage().getExtent();
+    vk::Extent3D depthExtent = vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1};
     mCullResources.mDepthPyramidPushConstants.mDepthPyramidExtent = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
     mCullResources.mDepthPyramidPushConstants.mDepthFullExtent = glm::uvec2(depthExtent.width, depthExtent.height);
     mCullResources.mDepthPyramidPushConstants.mDepthFullRatio =
@@ -301,15 +299,15 @@ void SwScene::onResizeInitializeCullResources() {
 }
 
 void SwScene::initializePickResources() {
-    mPickResources.mWorkBuffer = SwBufferFactory::createAllocatedBuffer(
+    mPickResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-        sizeof(SwPick::Data)
+        sizeof(SwPick::ReadbackData)
     );
 
-    mPickResources.mDescriptorSetLayout =
+    mPickResources.mReadbackDescriptorLayout =
         sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
-    mPickResources.mDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mPickResources.mDescriptorSetLayout);
+    mPickResources.mReadbackDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mPickResources.mReadbackDescriptorLayout);
 
     vk::PushConstantRange drawPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(SwPick::DrawPC));
     mPickResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, drawPushConstantRange);
@@ -337,14 +335,14 @@ void SwScene::initializePickResources() {
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mPickResources.mDrawPipelinePipeline = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
+    mPickResources.mDrawPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
 
-    vk::PushConstantRange pickPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwPick::WorkPC));
-    mPickResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout({mPickResources.mDescriptorSetLayout.getRawLayout()}, pickPushConstantRange);
+    vk::PushConstantRange pickPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwPick::ReadbackPC));
+    mPickResources.mReadbackPipelineLayout = SwPipelineFactory::createPipelineLayout({mPickResources.mReadbackDescriptorLayout.getRawLayout()}, pickPushConstantRange);
 
     SwShader workShader = SwShaderFactory::createShader(PICK_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mPickResources.mWorkPipelinePipeline =
-        SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mPickResources.mWorkPipelineLayout.getRawLayout()});
+    mPickResources.mReadbackPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mPickResources.mReadbackPipelineLayout.getRawLayout()});
 
     mPickResources.mDrawPushConstants.mSceneVertexBuffer = mSceneVertexBuffer.getDeviceAddress().value();
     mPickResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mSceneNodeTransformsBuffer.getDeviceAddress().value();
@@ -353,27 +351,26 @@ void SwScene::initializePickResources() {
         mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
     mPickResources.mDrawPushConstants.mPostCullRenderItemsBuffer = 0;
 
-    mPickResources.mWorkPushConstants.mPickerBuffer = mPickResources.mWorkBuffer.getDeviceAddress().value();
+    mPickResources.mReadbackPushConstants.mPickerBuffer = mPickResources.mReadbackBuffer.getDeviceAddress().value();
 
     onResizeInitializePickResources();
 }
 
 void SwScene::onResizeInitializePickResources() {
-    vk::Extent2D drawExtent = sRendererContext.mSwapchain->getWindowExtent();
-    mPickResources.mWorkImage = SwImageFactory::createColorImage2D(
+    vk::Extent3D imageExtent = vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1};
+    mPickResources.mReadbackImage = SwImageFactory::createColorImage2D(
         nullptr,
         vk::Format::eR32G32Uint,
-        vk::Extent3D{drawExtent, 1},
+        imageExtent,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         false
     );
 
-    mPickResources.mDepthImage = SwImageFactory::createDepthImage2D(
-        nullptr, SwSwapchain::DEPTH_FORMAT, mPickResources.mWorkImage.getExtent(), vk::ImageUsageFlagBits::eDepthStencilAttachment
-    );
+    mPickResources.mDepthImage =
+        SwImageFactory::createDepthImage2D(nullptr, SwSwapchain::DEPTH_FORMAT, imageExtent, vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        mPickResources.mWorkImage.emitTransition(
+        mPickResources.mReadbackImage.emitTransition(
             cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead
         );
         mPickResources.mDepthImage.emitTransition(
@@ -384,10 +381,113 @@ void SwScene::onResizeInitializePickResources() {
         );
     });
 
-    mPickResources.mDescriptorSet.writeImage(
-        0, mPickResources.mWorkImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
+    mPickResources.mReadbackDescriptorSet.writeImage(
+        0, mPickResources.mReadbackImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
     );
-    mPickResources.mDescriptorSet.pushWrites();
+    mPickResources.mReadbackDescriptorSet.pushWrites();
+}
+
+void SwScene::initializePickPasses() {
+    SwPass::PassDeps deps;
+    deps.mWriteImages.emplace_back(
+        &mPickResources.mReadbackImage,
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+    deps.mWriteImages.emplace_back(
+        &mPickResources.mDepthImage,
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::ImageLayout::eDepthAttachmentOptimal
+    );
+    deps.mReadBuffers.emplace_back(&mSceneVertexBuffer, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneNodeTransformsBuffer, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneInstancesBuffer, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderStorageRead);
+    deps.mReadBuffers.emplace_back(
+        &mSceneVisibleRenderInstancesInstanceIndexBuffer, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderStorageRead
+    );
+    deps.mReadBuffers.emplace_back(&mSceneIndexBuffer, vk::PipelineStageFlagBits2::eIndexInput, vk::AccessFlagBits2::eIndexRead);
+    for (auto& batch : mOpaqueBatches | std::views::values) {
+        deps.mReadBuffers.emplace_back(
+            &batch.getPostCullRenderItemsBuffer(), vk::PipelineStageFlagBits2::eDrawIndirect, vk::AccessFlagBits2::eIndirectCommandRead
+        );
+    }
+    mPasses[SwPassType::PickDraw] = SwPass(SwPassType::PickDraw, deps, [&](vk::CommandBuffer cmd) {
+        vk::RenderingAttachmentInfo colorAttachment = mPickResources.mReadbackImage.generateRenderingAttachment();
+        vk::RenderingAttachmentInfo depthAttachment = mPickResources.mDepthImage.generateRenderingAttachment();
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
+
+        cmd.beginRendering(renderInfo);
+
+        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mPickResources.mDrawPipelineBundle.getRawPipeline());
+        SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+        cmd.bindIndexBuffer(mSceneIndexBuffer.getRawBuffer(), 0, vk::IndexType::eUint32);
+        // TODO
+        //for (auto batchType : getAllBatches()) {
+        //    for (auto& batch : batchType | std::views::values) {
+        //        if (batch.getRenderItems().empty()) {
+        //            continue;
+        //        }
+        //        mPickResources.mDrawPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+        //        cmd.pushConstants<SwPick::DrawPC>(
+        //            batch.getGraphicsPipelineBundle().getRawLayout(), vk::ShaderStageFlagBits::eVertex, 0, mPickResources.mDrawPushConstants
+        //        );
+        //        cmd.drawIndexedIndirectCount(
+        //            batch.getPostCullRenderItemsBuffer().getRawBuffer(),
+        //            0,
+        //            batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
+        //            0,
+        //            DRAW_MAX_RENDER_ITEMS,
+        //            sizeof(SwRenderItem)
+        //        );
+        //    }
+        //}
+
+        cmd.endRendering();
+    });
+    deps.clear();
+
+    deps.mReadImages.emplace_back(
+        &mPickResources.mReadbackImage, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eShaderReadOnlyOptimal
+    );
+    deps.mWriteBuffers.emplace_back(&mPickResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageWrite);
+    mPasses[SwPassType::PickReadback] = SwPass(SwPassType::PickReadback, deps, [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(vk::PipelineBindPoint::eCompute, mPickResources.mReadbackPipelineBundle.getRawPipeline());
+        cmd.bindDescriptorSets(
+            vk::PipelineBindPoint::eCompute, mPickResources.mReadbackPipelineBundle.getRawLayout(), 0, mPickResources.mReadbackDescriptorSet.getRawSet(), nullptr
+        );
+        cmd.pushConstants<SwPick::ReadbackPC>(
+            mPickResources.mReadbackPipelineBundle.getRawLayout(), vk::ShaderStageFlagBits::eCompute, 0, mPickResources.mReadbackPushConstants
+        );
+        cmd.dispatch(1, 1, 1);
+    });
+    deps.clear();
+
+    deps.mReadBuffers.emplace_back(&mPickResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead);
+    mPasses[SwPassType::PickWork] = SwPass(SwPassType::PickWork, deps, [&](vk::CommandBuffer cmd) {
+        glm::uvec2 read(0);
+        std::memcpy(
+            glm::value_ptr(read),
+            static_cast<char*>(mPickResources.mReadbackBuffer.getMappedPointer()) + sizeof(SwPick::ReadbackData::mCoords),
+            sizeof(SwPick::ReadbackData::mRead)
+        );
+
+        if (read.x == 0 || read.y == 0) {
+            mPickResources.mClickedInstance = nullptr;
+            return;
+        }
+        std::uint32_t modelId = read.x - 1;
+        if (mAssets.contains(modelId)) {
+            mPickResources.mClickedInstance = nullptr;
+            return;
+        }
+        SwAsset& selectedAsset = mAssets[modelId];
+        
+        std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
+        mPickResources.mClickedInstance = &selectedAsset.getInstances()[localInstanceIndex];
+    });
+    deps.clear();
 }
 
 void SwScene::changePickOperation() {
@@ -430,7 +530,7 @@ void SwScene::generatePickFrame() {
     );
 
     if (ImGuizmo::IsUsing()) {
-        mAssets[mPickResources.mClickedInstance->getAssetName()].setReloadInstancesFlag(true);
+        mAssets[mPickResources.mClickedInstance->getAssetId()].setReloadInstancesFlag(true);
     }
 }
 
@@ -475,7 +575,7 @@ void SwScene::initializeSkyboxResources() {
     skyboxPipelineOptions.mDepthTestEnabled = false;
     skyboxPipelineOptions.mDepthWriteEnabled = false;
     skyboxPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mSkyboxResources.mWorkPipelinePipeline = SwGraphicsPipelineFactory::createGraphicsPipeline(skyboxPipelineOptions);
+    mSkyboxResources.mWorkPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(skyboxPipelineOptions);
 
     const std::uint32_t skyboxVertexSize = static_cast<std::uint32_t>(mSkyboxResources.mWorkVertices.size() * sizeof(float));
     mSkyboxResources.mWorkVertexBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -559,6 +659,52 @@ void SwScene::onUpdateInitializeSkyboxResources() {
     mSkyboxResources.mWorkDescriptorSet.pushWrites();
 }
 
+void SwScene::initializeSkyboxPasses() {
+    SwPass::PassDeps deps;
+
+    deps.mReadImages.emplace_back(
+        &mSkyboxResources.mWorkImage,
+        vk::PipelineStageFlagBits2::eFragmentShader,
+        vk::AccessFlagBits2::eShaderSampledRead,
+        vk::ImageLayout::eShaderReadOnlyOptimal
+    );
+    deps.mReadBuffers.emplace_back(&mSkyboxResources.mWorkVertexBuffer, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
+    deps.mWriteImages.emplace_back(
+        &sRendererContext.mSwapchain->getDrawImage(),
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::ImageLayout::eColorAttachmentOptimal
+    );
+    deps.mWriteImages.emplace_back(
+        &sRendererContext.mSwapchain->getDepthImage(),
+        vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+        vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+        vk::ImageLayout::eDepthAttachmentOptimal
+    );
+    mPasses[SwPassType::Skybox] = SwPass(SwPassType::Skybox, deps, [&](vk::CommandBuffer cmd) {
+        const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
+        const vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
+
+        cmd.beginRendering(renderInfo);
+
+        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mSkyboxResources.mWorkPipelineBundle.getRawPipeline());
+        cmd.bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, mSkyboxResources.mWorkPipelineBundle.getRawLayout(), 0, mSkyboxResources.mWorkDescriptorSet.getRawSet(), nullptr
+        );
+        SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+        mSkyboxResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+        cmd.pushConstants<SwSkybox::WorkPC>(
+            mSkyboxResources.mWorkPipelineBundle.getRawLayout(), vk::ShaderStageFlagBits::eVertex, 0, mSkyboxResources.mWorkPushConstants
+        );
+        cmd.draw(SwSkybox::NUM_SKYBOX_VERTICES, 1, 0, 0);
+        sRendererContext.mStats->mDrawCallCount++;
+
+        cmd.endRendering();
+    });
+    deps.clear();
+}
+
 void SwScene::initializeWBOITResources() {
     mWBOITResources.mWorkDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eFragment
@@ -597,7 +743,7 @@ void SwScene::initializeWBOITResources() {
     wboitPipelineOptions.mDepthTestEnabled = false;
     wboitPipelineOptions.mDepthWriteEnabled = false;
     wboitPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mWBOITResources.mWorkPipelinePipeline = SwGraphicsPipelineFactory::createGraphicsPipeline(wboitPipelineOptions);
+    mWBOITResources.mWorkPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(wboitPipelineOptions);
 
     onResizeInitializeWBOITResources();
 }
@@ -638,40 +784,40 @@ void SwScene::onResizeInitializeWBOITResources() {
 }
 
 void SwScene::initializeWBOITPasses() {
-    SwPass::SwPassDeps deps;
+    SwPass::PassDeps deps;
 
     deps.mReadImages.emplace_back(
-        mWBOITResources.mAccumImage,
-        vk::ImageLayout::eShaderReadOnlyOptimal,
+        &mWBOITResources.mAccumImage,
         vk::PipelineStageFlagBits2::eFragmentShader,
-        vk::AccessFlagBits2::eShaderSampledRead
+        vk::AccessFlagBits2::eShaderSampledRead,
+        vk::ImageLayout::eShaderReadOnlyOptimal
     );
     deps.mReadImages.emplace_back(
-        mWBOITResources.mRvlImage, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderSampledRead
+        &mWBOITResources.mRvlImage, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     deps.mWriteImages.emplace_back(
         &sRendererContext.mSwapchain->getDrawImage(),
-        vk::ImageLayout::eColorAttachmentOptimal,
         vk::PipelineStageFlagBits2::eColorAttachmentOutput,
-        vk::AccessFlagBits2::eColorAttachmentWrite
+        vk::AccessFlagBits2::eColorAttachmentWrite,
+        vk::ImageLayout::eColorAttachmentOptimal
     );
     mPasses[SwPassType::WBOITComposite] = SwPass(SwPassType::WBOITComposite, deps, [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo =
-            generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
 
         cmd.beginRendering(renderInfo);
 
-        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mWBOITResources.mWorkPipelinePipeline.getRawPipeline());
+        cmd.bindPipeline(vk::PipelineBindPoint::eGraphics, mWBOITResources.mWorkPipelineBundle.getRawPipeline());
         cmd.bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, mWBOITResources.mWorkPipelinePipeline.getRawLayout(), 0, mWBOITResources.mWorkDescriptorSet.getRawSet(), nullptr
+            vk::PipelineBindPoint::eGraphics, mWBOITResources.mWorkPipelineBundle.getRawLayout(), 0, mWBOITResources.mWorkDescriptorSet.getRawSet(), nullptr
         );
-        swHelper::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+        SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
         sRendererContext.mStats->mDrawCallCount++;
 
         cmd.endRendering();
     });
+    deps.clear();
 }
 
 void SwScene::initializeGeometryResources() {
@@ -683,18 +829,10 @@ void SwScene::initializeGeometryResources() {
         mSceneVisibleRenderInstancesInstanceIndexBuffer.getDeviceAddress().value();
 }
 
-vk::RenderingInfo SwScene::generateRenderingInfo(
-    vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment
-) {
-    vk::RenderingInfo renderInfo{};
-    renderInfo.pNext = nullptr;
-    renderInfo.renderArea = vk::Rect2D{vk::Offset2D{0, 0}, renderExtent};
-    renderInfo.layerCount = 1;
-    renderInfo.colorAttachmentCount = colorAttachments.size();
-    renderInfo.pColorAttachments = colorAttachments.data();
-    renderInfo.pDepthAttachment = depthAttachment.data();
-    renderInfo.pStencilAttachment = nullptr;
-    return renderInfo;
+void SwScene::initializeGeometryPasses() {
+    SwPass::PassDeps deps;
+
+    deps.clear();
 }
 
 void SwScene::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
@@ -711,7 +849,7 @@ void SwScene::resize() {
     mCullResources.mDepthPyramidImage.destroy();
     onResizeInitializeCullResources();
 
-    mPickResources.mWorkImage.destroy();
+    mPickResources.mReadbackImage.destroy();
     mPickResources.mDepthImage.destroy();
     onResizeInitializePickResources();
 
@@ -721,19 +859,26 @@ void SwScene::resize() {
 }
 
 void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
-    for (const auto& modelPath : paths) {
-        auto modelShortPath = modelPath.stem().string();
-        auto modelFullPath = MODELS_PATH / modelPath;
-        auto [_, inserted] = mAssets.try_emplace(modelShortPath, modelFullPath);
+    for (const auto& path : paths) {
+        auto shortPath = SwAsset::getNameFromFilePath(path);
+        if (mAlreadyLoadedAssets.contains(shortPath)) {
+            continue;
+        }
+
+        auto fullPath = MODELS_PATH / path;
+        SwAsset loadedAsset(fullPath);
+        auto [_, inserted] = mAssets.try_emplace(loadedAsset.getId(), std::move(loadedAsset));
         if (inserted) {
+            mAlreadyLoadedAssets.insert(shortPath);
             mFlags.mAssetLoaded = true;
         }
     }
 }
 
 void SwScene::unloadAssets() {
-    std::erase_if(mAssets, [&](std::pair<const std::string, SwAsset>& pair) {
+    std::erase_if(mAssets, [&](std::pair<const std::uint32_t, SwAsset>& pair) {
         if (pair.second.isMarkedDelete()) {
+            mAlreadyLoadedAssets.erase(pair.second.getName());
             mFlags.mAssetUnloaded = true;
         }
         return pair.second.isMarkedDelete();
@@ -756,7 +901,7 @@ void SwScene::regenerateRenderItemsInstances() {
     SwBatch::sFirstRenderInstanceOffset = 0;
 
     std::vector<std::unordered_map<std::uint32_t, SwBatch>*> batchMaps = {&mOpaqueBatches, &mTransparentBatches, &mMaskBatches};
-    for (auto batchMap : batchMaps) {
+    for (auto& batchMap : batchMaps) {
         for (auto& batch : *batchMap | std::views::values) {
             batch.getRenderItems().clear();
             batch.getRenderInstances().clear();
@@ -766,7 +911,7 @@ void SwScene::regenerateRenderItemsInstances() {
         asset.generateRenderItemsAndRenderInstances();
     }
 
-    for (auto batchMap : batchMaps) {
+    for (auto& batchMap : batchMaps) {
         for (auto& batch : *batchMap | std::views::values) {
             if (batch.getRenderItems().empty()) {
                 continue;

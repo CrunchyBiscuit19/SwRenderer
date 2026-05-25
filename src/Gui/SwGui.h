@@ -22,7 +22,7 @@ private:
     ImGui::FileBrowser mSelectSkyboxFileBrowser;
 
     void createDockSpace();
-    void createRendererOptionsWindow() const;
+    void createOptionsWindow() const;
 
 public:
 

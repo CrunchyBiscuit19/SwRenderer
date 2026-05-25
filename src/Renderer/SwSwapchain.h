@@ -40,6 +40,7 @@ public:
     void update();
 
     inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };
+    inline SwAllocatedBuffer& getPerFrameBuffer() { return mPerFrameBuffer; };
 };
 
 class SwSwapchain {

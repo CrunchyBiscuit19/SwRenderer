@@ -14,6 +14,7 @@ enum class SwPassType {
     CullWork,
     CullCompact,
     PickDraw,
+    PickReadback,
     PickWork,
     Skybox,
     GeometryOpaque,
@@ -25,28 +26,28 @@ enum class SwPassType {
 
 class SwPass {
 public:
-    struct SwImageDep {
+    struct ImageDep {
         SwImage* mImage;
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
         vk::ImageLayout mLayout;
 
-        SwImageDep(SwImage* image);
-        SwImageDep(SwImage* image, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access, vk::ImageLayout layout);
+        ImageDep(SwImage* image);
+        ImageDep(SwImage* image, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access, vk::ImageLayout layout);
     };
-    struct SwBufferDep {
+    struct BufferDep {
         SwBuffer* mBuffer;
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
 
-        SwBufferDep(SwBuffer* buffer);
-        SwBufferDep(SwBuffer* buffer, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access);
+        BufferDep(SwBuffer* buffer);
+        BufferDep(SwBuffer* buffer, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access);
     };
-    struct SwPassDeps {
-        std::vector<SwImageDep> mReadImages;
-        std::vector<SwImageDep> mWriteImages;
-        std::vector<SwBufferDep> mReadBuffers;
-        std::vector<SwBufferDep> mWriteBuffers;
+    struct PassDeps {
+        std::vector<ImageDep> mReadImages;
+        std::vector<ImageDep> mWriteImages;
+        std::vector<BufferDep> mReadBuffers;
+        std::vector<BufferDep> mWriteBuffers;
 
         void clear();
     };
@@ -57,16 +58,16 @@ private:
     bool mMustRun{false};
     bool mPruned{false};
 
-    std::vector<SwImageDep> mReadImages;
-    std::vector<SwImageDep> mWriteImages;
-    std::vector<SwBufferDep> mReadBuffers;
-    std::vector<SwBufferDep> mWriteBuffers;
+    std::vector<ImageDep> mReadImages;
+    std::vector<ImageDep> mWriteImages;
+    std::vector<BufferDep> mReadBuffers;
+    std::vector<BufferDep> mWriteBuffers;
 
 public:
     SwPass() = default;
 
     SwPass(
-        SwPassType passType, SwPassDeps passDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false
+        SwPassType passType, PassDeps passDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false
     );
 
     SwPassType getPassType() const { return mPassType; }
@@ -74,10 +75,15 @@ public:
     bool isMustRun() const { return mMustRun; }
     void setPruned(bool pruned) { mPruned = pruned; }
 
-    const std::vector<SwImageDep>& getReadImages() const { return mReadImages; }
-    const std::vector<SwImageDep>& getWriteImages() const { return mWriteImages; }
-    const std::vector<SwBufferDep>& getReadBuffers() const { return mReadBuffers; }
-    const std::vector<SwBufferDep>& getWriteBuffers() const { return mWriteBuffers; }
+    const std::vector<ImageDep>& getReadImages() const { return mReadImages; }
+    const std::vector<ImageDep>& getWriteImages() const { return mWriteImages; }
+    const std::vector<BufferDep>& getReadBuffers() const { return mReadBuffers; }
+    const std::vector<BufferDep>& getWriteBuffers() const { return mWriteBuffers; }
 
     void execute(vk::CommandBuffer cmd);
+
+    static vk::RenderingInfo generateRenderingInfo(
+        vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment
+    );
+    static void setViewportScissors(vk::CommandBuffer cmd, vk::Extent3D imageExtent);
 };

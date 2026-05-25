@@ -40,30 +40,28 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
     for (auto& primitive : mMesh.getPrimitives()) {
         std::uint32_t pipelineId = primitive.mMaterial.getPipelineBundle().getID();
 
-        SwAsset& workingAsset = sRendererContext.mScene->getAsset(mMesh.getAssetName());
-        std::unordered_map<std::uint32_t, SwBatch>& workingBatch = sRendererContext.mScene->getBatches(primitive.mMaterial.getAlphaMode());
+        SwAsset& workingAsset = sRendererContext.mScene->getAsset(mMesh.getAssetId());
+        std::unordered_map<std::uint32_t, SwBatch>& workingBatchMap = sRendererContext.mScene->getBatches(primitive.mMaterial.getAlphaMode());
 
-        workingBatch.try_emplace(pipelineId, primitive);
-        workingBatch[pipelineId]
-            .getRenderItems()
-            .emplace_back(
-                primitive.mIndexCount,
-                0,  // Instance count set to 0, incremented inside culling compute shader
-                mMesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
-                mMesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
-                SwBatch::sFirstRenderInstanceOffset,
-                workingAsset.mFirstMaterialInScene + primitive.mMaterial.mRelativeMaterialIndex,
-                workingAsset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
-                workingAsset.getId(),
-                workingAsset.mFirstInstanceInScene,
-                workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
-            );
+        auto [it, inserted] = workingBatchMap.try_emplace(pipelineId, primitive);
+        SwBatch& workingBatch = it->second;
+        workingBatch.getRenderItems().emplace_back(
+            primitive.mIndexCount,
+            0,  // Instance count set to 0, incremented inside culling compute shader
+            mMesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
+            mMesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
+            SwBatch::sFirstRenderInstanceOffset,
+            workingAsset.mFirstMaterialInScene + primitive.mMaterial.mRelativeMaterialIndex,
+            workingAsset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
+            workingAsset.getId(),
+            workingAsset.mFirstInstanceInScene,
+            workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
+        );
 
-        SwRenderItem& currRenderItem = workingBatch[pipelineId].getRenderItems().back();
-        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch[pipelineId].getRenderItems().size() - 1);
+        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch.getRenderItems().size() - 1);
         std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
         for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
-            workingBatch[pipelineId].getRenderInstances().emplace_back(renderItemIndex, instanceIndex + i);
+            workingBatch.getRenderInstances().emplace_back(renderItemIndex, instanceIndex + i);
         }
         SwBatch::sFirstRenderInstanceOffset += workingAsset.getInstances().size();
     }

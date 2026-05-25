@@ -59,8 +59,12 @@ void SwAsset::init(SwRendererContext assetContext) { sRendererContext = assetCon
 
 void SwAsset::cleanup() { sSamplers.clear(); }
 
+std::string SwAsset::getNameFromFilePath(const std::filesystem::path& assetPath) { 
+    return assetPath.stem().string(); 
+}
+
 void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
-    mName = assetPath.stem().string();
+    mName = getNameFromFilePath(assetPath);
     fastgltf::Parser parser{};
     fastgltf::Asset gltf;
     fastgltf::GltfDataBuffer data;
@@ -404,7 +408,7 @@ void SwAsset::constructMeshes() {
         indexCopy.size = srcIndexVectorSize;
 
         mMeshes.emplace_back(
-            mName, name, primitives, bounds, relativeFirstBounds, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0
+            mId, name, primitives, bounds, relativeFirstBounds, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0
         );
 
         SwMesh& createdMesh = mMeshes.back();
@@ -524,7 +528,7 @@ void SwAsset::generateRenderItemsAndRenderInstances() {
 }
 
 void SwAsset::createInstance(SwInstanceData instanceData) {
-    mInstances.emplace_back(mName, instanceData);
+    mInstances.emplace_back(mId, instanceData);
     mReloadInstancesFlag = true;
     sRendererContext.mScene->mFlags.mInstanceLoaded = true;
 }

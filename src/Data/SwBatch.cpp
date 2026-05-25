@@ -5,7 +5,7 @@
 std::uint32_t SwBatch::sFirstRenderInstanceOffset = 0;
 
 SwBatch::SwBatch(SwPrimitive& primitive) {
-    mGraphicsPipelineBundle = primitive.mMaterial.getPipelineBundle();
+    mGraphicsPipelineBundle = &primitive.mMaterial.getPipelineBundle();
 
     mRenderItemsStagingBuffer = SwBufferFactory::createStagingBuffer(RENDER_ITEMS_BUFFER_SIZE);
     mPreCullRenderItemsBuffer = SwBufferFactory::createAllocatedBuffer(

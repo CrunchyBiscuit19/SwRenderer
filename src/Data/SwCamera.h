@@ -25,7 +25,6 @@ private:
     static constexpr float FOVY{70.f};
     static constexpr float NEAR_PLANE{.1f};
     static constexpr float FAR_PLANE{10000.f};
-    static constexpr float MAX_CAMERA_SPEED{10.f};
     static constexpr std::uint32_t NUM_FRUSTUM_PLANES{6};
     static constexpr std::uint32_t FRUSTUM_NEAR_FACE{0};
     static constexpr std::uint32_t FRUSTUM_FAR_FACE{1};
@@ -47,6 +46,8 @@ private:
     std::array<Plane, NUM_FRUSTUM_PLANES> mFrustumPlanes;
 
 public:
+    static constexpr float MAX_CAMERA_SPEED{10.f};
+
     SwCamera();
 
     static void init(SwRendererContext cameraContext);
@@ -63,6 +64,11 @@ public:
     inline std::array<Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
     inline SwAllocatedBuffer& getFrustumBuffer() { return mFrustumBuffer; }
     inline SDL_bool getRelativeMode() const { return mRelativeMode; }   
+    inline SwMovementMode getMovementMode() const { return mMovementMode; }
+    inline glm::vec3 getPosition() const { return mPosition; }
+    inline float getPitch() const { return mPitch; }
+    inline float getYaw() const { return mYaw; }
+    inline float getSpeed() const { return mSpeed; }
 
     SwPerspective getPerspective() const;
 

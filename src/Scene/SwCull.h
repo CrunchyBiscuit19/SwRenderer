@@ -51,15 +51,15 @@ struct DepthPyramidPC {
 };
 
 struct Resources {
-    SwPipelinePipeline mResetPipelinePipeline;
+    SwComputePipelineBundle mResetPipelineBundle;
     SwPipelineLayout mResetPipelineLayout;
     SwCull::ResetPC mResetPushConstants;
 
-    SwPipelinePipeline mCompactPipelinePipeline;
+    SwComputePipelineBundle mCompactPipelineBundle;
     SwPipelineLayout mCompactPipelineLayout;
     SwCull::CompactPC mCompactPushConstants;
 
-    SwPipelinePipeline mDepthPyramidPipelinePipeline;
+    SwComputePipelineBundle mDepthPyramidPipelineBundle;
     SwPipelineLayout mDepthPyramidPipelineLayout;
     SwDescriptorSet mDepthPyramidDescriptorSet;
     SwDescriptorLayout mDepthPyramidDescriptorLayout;
@@ -68,7 +68,7 @@ struct Resources {
     vk::Extent3D mDepthPyramidExtent;
     SwCull::DepthPyramidPC mDepthPyramidPushConstants;
 
-    SwPipelinePipeline mWorkPipelinePipeline;
+    SwComputePipelineBundle mWorkPipelineBundle;
     SwPipelineLayout mWorkPipelineLayout;
     SwDescriptorSet mWorkDescriptorSet;
     SwDescriptorLayout mWorkDescriptorLayout;

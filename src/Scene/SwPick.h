@@ -22,31 +22,31 @@ struct DrawPC {
     vk::DeviceAddress mPostCullRenderItemsBuffer;
 };
 
-struct WorkPC {
+struct ReadbackPC {
     vk::DeviceAddress mPickerBuffer;
 };
 
-struct Data {
+struct ReadbackData {
     glm::ivec2 mCoords;
     glm::uvec2 mRead;
 };
 
 struct Resources {
-    SwAllocatedBuffer mWorkBuffer;
+    SwAllocatedBuffer mReadbackBuffer;
 
-    SwColorImage2D mWorkImage;
+    SwColorImage2D mReadbackImage;
     SwDepthImage2D mDepthImage;
 
-    SwDescriptorSet mDescriptorSet;
-    SwDescriptorLayout mDescriptorSetLayout;
+    SwDescriptorSet mReadbackDescriptorSet;
+    SwDescriptorLayout mReadbackDescriptorLayout;
 
     DrawPC mDrawPushConstants;
-    SwPipelinePipeline mDrawPipelinePipeline;
+    SwGraphicsPipelineBundle mDrawPipelineBundle;
     SwPipelineLayout mDrawPipelineLayout;
 
-    WorkPC mWorkPushConstants;
-    SwPipelinePipeline mWorkPipelinePipeline;
-    SwPipelineLayout mWorkPipelineLayout;
+    ReadbackPC mReadbackPushConstants;
+    SwComputePipelineBundle mReadbackPipelineBundle;
+    SwPipelineLayout mReadbackPipelineLayout;
 
     ImGuizmo::OPERATION mImguizmoOperation;
     SwInstance* mClickedInstance;

@@ -14,7 +14,7 @@ SwImage::SwImage(vk::Format mainFormat, vk::Extent3D extent, vk::ImageAspectFlag
       mAspect(aspect) {}
 
 void SwImage::copyFrom(vk::CommandBuffer cmd, SwImage& source) {
-    copyFrom(cmd, source.getRawImage(), swHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
+    copyFrom(cmd, source.getRawImage(), SwHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
 }
 
 vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
@@ -28,7 +28,9 @@ vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(vk::AttachmentL
     return renderingAttachment;
 }
 
-vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
+vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(
+    std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp
+) {
     vk::RenderingAttachmentInfo renderingAttachment{};
     renderingAttachment.pNext = nullptr;
     renderingAttachment.imageView = this->getRawOtherImageView(otherImageViewIndex);
@@ -127,7 +129,7 @@ SwAllocatedImage::SwAllocatedImage(
       mAllocator(allocator),
       mAllocation(allocation),
       mMipmapped(mipmapped),
-      mMipLevels(mipmapped ? swHelper::calculateMipMapLevels(extent) : 1) {}
+      mMipLevels(mipmapped ? SwHelper::calculateMipMapLevels(extent) : 1) {}
 
 void SwAllocatedImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
     emitTransition(cmd, mCurrentLayout, nextStage, nextAccess);
@@ -137,7 +139,7 @@ void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nex
     if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
-    
+
     vk::ImageMemoryBarrier2 barrierInfo = {};
     barrierInfo.srcStageMask = mCurrentStage;
     barrierInfo.dstStageMask = nextStage;
@@ -193,8 +195,8 @@ void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Ext
 }
 
 void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces) {
-    const std::uint32_t mipLevels = swHelper::calculateMipMapLevels(mExtent);
-    vk::Extent2D imageSize = swHelper::extent3dTo2d(mExtent);
+    const std::uint32_t mipLevels = SwHelper::calculateMipMapLevels(mExtent);
+    vk::Extent2D imageSize = SwHelper::extent3dTo2d(mExtent);
     constexpr auto aspectMask = vk::ImageAspectFlagBits::eColor;
 
     for (std::uint32_t mip = 0; mip < mipLevels - 1; mip++) {
@@ -383,6 +385,19 @@ SwRendererContext SwImageFactory::sRendererContext{};
 SwStagingBuffer SwImageFactory::sImageStagingBuffer;
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
+std::uint32_t SwImageFactory::getFormatTexelSize(vk::Format format) {
+    std::uint32_t bytesPerTexel = 0;
+    switch (format) {
+        case vk::Format::eR8G8B8A8Srgb:
+        case vk::Format::eR8G8B8A8Unorm:
+            bytesPerTexel = 4;
+            break;
+        default:
+            break;
+    }
+    return bytesPerTexel;
+}
+
 SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstructionInfo(
     SwImageType swImageType, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
 ) {
@@ -392,7 +407,7 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
     imageCreateInfo.format = mainFormat;
     imageCreateInfo.arrayLayers = 1;
     imageCreateInfo.extent = extent;
-    imageCreateInfo.mipLevels = mipmapped ? swHelper::calculateMipMapLevels(extent) : 1;
+    imageCreateInfo.mipLevels = mipmapped ? SwHelper::calculateMipMapLevels(extent) : 1;
     imageCreateInfo.samples = vk::SampleCountFlagBits::e1;
     imageCreateInfo.tiling = vk::ImageTiling::eOptimal;
     imageCreateInfo.usage = usage;
@@ -462,7 +477,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
             break;
     }
 
-    std::uint32_t bytesPerTexel = swHelper::getFormatTexelSize(image.getMainFormat());
+    std::uint32_t bytesPerTexel = getFormatTexelSize(image.getMainFormat());
     const size_t faceSize = image.getExtent().depth * image.getExtent().width * image.getExtent().height * bytesPerTexel;
     const size_t dataSize = faceSize * numFaces;
     std::memcpy(sImageStagingBuffer.getMappedPointer(), data, dataSize);

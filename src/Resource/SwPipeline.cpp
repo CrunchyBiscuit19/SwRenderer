@@ -7,28 +7,21 @@ SwPipelineLayout::SwPipelineLayout(vk::raii::PipelineLayout layout) : mLayout(st
 
 void SwPipelineLayout::destroy() { mLayout.clear(); }
 
-std::uint32_t SwPipelinePipeline::sLatestPipelineID{0};
+std::uint32_t SwPipelineBundle::sLatestPipelineID{0};
 
-SwPipelinePipeline::SwPipelinePipeline(): mPipeline(nullptr) {}
+SwPipelineBundle::SwPipelineBundle(): mPipeline(nullptr) {}
 
-SwPipelinePipeline::SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout)
+SwPipelineBundle::SwPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout)
     : mId{sLatestPipelineID++}, mPipeline(std::move(pipeline)), mLayout(layout) {}
 
-SwPipelineBundle::SwPipelineBundle(SwPipelinePipeline& pipelinePipeline)
-    : mId(pipelinePipeline.getID()), mPipeline(pipelinePipeline.getRawPipeline()), mLayout(pipelinePipeline.getRawLayout()) {}
+SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(std::move(pipeline), layout) {}
 
-SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(SwPipelinePipeline& pipelinePipeline) : SwPipelineBundle(pipelinePipeline) {}
-
-SwComputePipelineBundle::SwComputePipelineBundle(SwPipelinePipeline& pipelinePipeline) : SwPipelineBundle(pipelinePipeline) {}
+SwComputePipelineBundle::SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(std::move(pipeline), layout) {}
 
 SwRendererContext SwPipelineFactory::sRendererContext{};
-std::string SwPipelineFactory::DEFAULT_SHADER_ENTRY_POINT = "main";
-std::uint32_t SwPipelineFactory::MIN_NUM_SHADER_STAGES = 2;
 
 void SwPipelineFactory::init(SwRendererContext context) {
     sRendererContext = context;
-    DEFAULT_SHADER_ENTRY_POINT = "main";
-    MIN_NUM_SHADER_STAGES = 2;
 }
 
 SwPipelineLayout SwPipelineFactory::createPipelineLayout(
@@ -42,7 +35,7 @@ vk::PushConstantRange SwPipelineFactory::createPushConstantRange(vk::ShaderStage
     return vk::PushConstantRange{stageFlags, offset, size};
 }
 
-SwPipelinePipeline SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {
+SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {
     vk::PipelineViewportStateCreateInfo viewportState;
     viewportState.pNext = nullptr;
     viewportState.viewportCount = 1;
@@ -97,10 +90,7 @@ SwPipelinePipeline SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsP
     graphicsPipelineInfo.layout = options.mLayout;
     graphicsPipelineInfo.pDynamicState = &dynamicInfo;
 
-    vk::raii::Pipeline pipeline = vk::raii::Pipeline(sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo));
-    vk::Pipeline rawPipeline = *pipeline;
-
-    return SwPipelinePipeline(std::move(pipeline), options.mLayout);
+    return SwGraphicsPipelineBundle(vk::raii::Pipeline(sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo)), options.mLayout);
 }
 
 void SwGraphicsPipelineFactory::setShaders(
@@ -198,7 +188,7 @@ void SwGraphicsPipelineFactory::enableDepthTest(
     pipelineDepthStencilStateCreateInfo.maxDepthBounds = 1.f;
 }
 
-SwPipelinePipeline SwComputePipelineFactory::createComputePipeline(SwComputePipelineOptions options) {
+SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(SwComputePipelineOptions options) {
     vk::PipelineShaderStageCreateInfo pipelineShaderStageCreateInfo;
 
     setShaders(pipelineShaderStageCreateInfo, options.mComputeShader);
@@ -208,10 +198,7 @@ SwPipelinePipeline SwComputePipelineFactory::createComputePipeline(SwComputePipe
     computePipelineInfo.stage = pipelineShaderStageCreateInfo;
     computePipelineInfo.pNext = nullptr;
 
-    vk::raii::Pipeline pipeline = vk::raii::Pipeline(sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo));
-    vk::Pipeline rawPipeline = *pipeline;
-
-    return SwPipelinePipeline(std::move(pipeline), options.mLayout);
+    return SwComputePipelineBundle(vk::raii::Pipeline(sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo)), options.mLayout);
 }
 
 void SwComputePipelineFactory::setShaders(vk::PipelineShaderStageCreateInfo& pipelineShaderStageCreateInfo, vk::ShaderModule computeShader) {
@@ -219,3 +206,5 @@ void SwComputePipelineFactory::setShaders(vk::PipelineShaderStageCreateInfo& pip
     pipelineShaderStageCreateInfo.module = computeShader;
     pipelineShaderStageCreateInfo.pName = DEFAULT_SHADER_ENTRY_POINT.data();
 }
+
+

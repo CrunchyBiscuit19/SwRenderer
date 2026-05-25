@@ -12,6 +12,8 @@
 #include <Scene/SwSkybox.h>
 #include <Scene/SwWBOIT.h>
 
+#include <unordered_set>
+
 struct SwSceneFlags {
     bool mAssetLoaded;
     bool mAssetUnloaded;
@@ -46,18 +48,18 @@ private:
     static constexpr std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
     static constexpr std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 20};
 
+    static constexpr std::uint32_t DRAW_MAX_RENDER_ITEMS{1 << 13};
+
     static SwRendererContext sRendererContext;
 
-    // --- Camera and Assets ---
     SwCamera mCamera;
-    std::unordered_map<std::string, SwAsset> mAssets;
+    std::unordered_map<std::uint32_t, SwAsset> mAssets;
+    std::unordered_set<std::string> mAlreadyLoadedAssets;
 
-    // --- Batches ---
     std::unordered_map<std::uint32_t, SwBatch> mOpaqueBatches;
     std::unordered_map<std::uint32_t, SwBatch> mMaskBatches;
     std::unordered_map<std::uint32_t, SwBatch> mTransparentBatches;
 
-    // --- Passes and Resources ---
     std::unordered_map<SwPassType, SwPass> mPasses;
     SwCull::Resources mCullResources;
     SwPick::Resources mPickResources;
@@ -65,7 +67,6 @@ private:
     SwWBOIT::Resources mWBOITResources;
     SwGeometry::Resources mGeometryResources;
 
-    // --- Scene ---
     SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
     SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;
     SwAllocatedBuffer mSceneVertexBuffer;
@@ -76,7 +77,6 @@ private:
     SwAllocatedBuffer mSceneBoundsBuffer;
     SwAllocatedBuffer mSceneVisibleRenderInstancesInstanceIndexBuffer;
 
-    // --- Render graph ---
     SwRenderGraph mRenderGraph;
 
     void initializeMiscPasses();
@@ -100,11 +100,7 @@ private:
     void initializeWBOITPasses();
 
     void initializeGeometryResources();
-    void initializeGeometryPasses();
-
-    vk::RenderingInfo generateRenderingInfo(
-        vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment
-    );
+    void initializeGeometryPasses();   
 
 public:
     SwSceneFlags mFlags;
@@ -118,7 +114,6 @@ public:
     void generatePickFrame();
 
     inline SwCamera& getCamera() { return mCamera; }
-
     inline std::unordered_map<std::uint32_t, SwBatch>& getBatches(fastgltf::AlphaMode alphaMode) {
         switch (alphaMode) {
             case fastgltf::AlphaMode::Opaque:
@@ -130,8 +125,8 @@ public:
         }
         std::unreachable();
     }
-
-    inline SwAsset& getAsset(const std::string& assetName) { return mAssets[assetName]; }
+    inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
+    inline std::unordered_map<std::uint32_t, SwAsset>& getAssets() { return mAssets; }
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssets();
     void unloadInstances();

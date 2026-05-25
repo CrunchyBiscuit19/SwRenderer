@@ -13,7 +13,7 @@ struct Resources {
     SwColorImage2D mAccumImage;
     SwColorImage2D mRvlImage;
 
-    SwPipelinePipeline mWorkPipelinePipeline;
+    SwGraphicsPipelineBundle mWorkPipelineBundle;
     SwPipelineLayout mWorkPipelineLayout;
 
     SwDescriptorSet mWorkDescriptorSet;

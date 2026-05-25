@@ -8,6 +8,8 @@
 #include <glm/glm.hpp>
 
 namespace SwSkybox {
+constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
+
 struct WorkPC {
     vk::DeviceAddress mWorkVertexBuffer;
     vk::DeviceAddress mPerFrameBuffer;
@@ -39,7 +41,7 @@ struct Resources {
     };
     SwAllocatedBuffer mWorkVertexBuffer;
 
-    SwPipelinePipeline mWorkPipelinePipeline;
+    SwGraphicsPipelineBundle mWorkPipelineBundle;
     SwPipelineLayout mWorkPipelineLayout;
 
     SwDescriptorSet mWorkDescriptorSet;
@@ -48,6 +50,8 @@ struct Resources {
     WorkPC mWorkPushConstants;
 
     std::optional<std::filesystem::path> mLoadFromDir;
+
+    bool mActive{false};
 };
 
 };  // namespace SwSkybox

@@ -26,23 +26,23 @@ public:
     void destroy();
 };
 
-class SwPipelinePipeline {
-private:
+class SwPipelineBundle {
+protected:
     static std::uint32_t sLatestPipelineID;
     std::uint32_t mId;
     vk::raii::Pipeline mPipeline;
     vk::PipelineLayout mLayout;
 
 public:
-    SwPipelinePipeline();
+    SwPipelineBundle();
 
-    SwPipelinePipeline(vk::raii::Pipeline pipeline, vk::PipelineLayout layout);
+    SwPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout);
 
-    SwPipelinePipeline(SwPipelinePipeline&&) noexcept = default;
-    SwPipelinePipeline& operator=(SwPipelinePipeline&&) noexcept = default;
+    SwPipelineBundle(SwPipelineBundle&&) noexcept = default;
+    SwPipelineBundle& operator=(SwPipelineBundle&&) noexcept = default;
 
-    SwPipelinePipeline(const SwPipelinePipeline&) = delete;
-    SwPipelinePipeline& operator=(const SwPipelinePipeline&) = delete;
+    SwPipelineBundle(const SwPipelineBundle&) = delete;
+    SwPipelineBundle& operator=(const SwPipelineBundle&) = delete;
 
     inline std::uint32_t getID() { return mId; };
 
@@ -51,44 +51,26 @@ public:
     inline vk::PipelineLayout getRawLayout() { return mLayout; };
 };
 
-class SwPipelineBundle {
-protected:
-    std::uint32_t mId;
-    vk::Pipeline mPipeline;
-    vk::PipelineLayout mLayout;
-
-public:
-    SwPipelineBundle() = default;
-
-    SwPipelineBundle(SwPipelinePipeline& pipelinePipeline);
-
-    inline std::uint32_t getID() { return mId; }
-
-    inline vk::Pipeline getRawPipeline() { return mPipeline; }
-
-    inline vk::PipelineLayout getRawLayout() { return mLayout; }
-};
-
 class SwGraphicsPipelineBundle : public SwPipelineBundle {
 public:
     SwGraphicsPipelineBundle() = default;
 
-    SwGraphicsPipelineBundle(SwPipelinePipeline& pipelinePipeline);
+    SwGraphicsPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout);
 };
 
 class SwComputePipelineBundle : public SwPipelineBundle {
 public:
     SwComputePipelineBundle() = default;
 
-    SwComputePipelineBundle(SwPipelinePipeline& pipelinePipeline);
+    SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout); 
 };
 
 class SwPipelineFactory {
 protected:
     static SwRendererContext sRendererContext;
 
-    static std::string DEFAULT_SHADER_ENTRY_POINT;
-    static std::uint32_t MIN_NUM_SHADER_STAGES;
+    static constexpr std::string DEFAULT_SHADER_ENTRY_POINT{"main"};
+    static constexpr std::uint32_t MIN_NUM_SHADER_STAGES{2};
 
 public:
     static void init(SwRendererContext rendererContext);
@@ -117,7 +99,7 @@ public:
         vk::CompareOp mDepthCompareOp;
     };
 
-    static SwPipelinePipeline createGraphicsPipeline(SwGraphicsPipelineOptions options);
+    static SwGraphicsPipelineBundle createGraphicsPipeline(SwGraphicsPipelineOptions options);
 
 private:
     static void setShaders(
@@ -149,7 +131,7 @@ public:
         vk::PipelineLayout mLayout;
     };
 
-    static SwPipelinePipeline createComputePipeline(SwComputePipelineOptions options);
+    static SwComputePipelineBundle createComputePipeline(SwComputePipelineOptions options);
 
 private:
     static void setShaders(

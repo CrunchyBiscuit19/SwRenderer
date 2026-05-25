@@ -38,7 +38,7 @@ void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy
 
 SwRendererContext SwMaterial::sRendererContext{};
 std::uint32_t SwMaterial::sLatestMaterialId{0};
-std::unordered_map<SwMaterialPipelineOptions, SwPipelinePipeline> SwMaterial::sMaterialPipelines{};
+std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> SwMaterial::sMaterialPipelineBundles{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
 SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
 std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Geometry.vert.spv"};
@@ -57,15 +57,14 @@ SwMaterial::SwMaterial(
       mMaterialPipelineOptions(materialPipelineOptions),
       mMaterialConstants(materialConstants),
       mMaterialResources(std::move(materialResources)) {
-    if (auto it = sMaterialPipelines.find(materialPipelineOptions); it != sMaterialPipelines.end()) {
-        mPipelineBundle = SwGraphicsPipelineBundle(it->second);
+    if (auto it = sMaterialPipelineBundles.find(materialPipelineOptions); it != sMaterialPipelineBundles.end()) {
+        mMaterialPipelineBundle = &it->second;
         return;
     }
 
     constructMaterialPipeline(materialPipelineOptions);
 
-    SwPipelinePipeline& retrievedPipeline = sMaterialPipelines[materialPipelineOptions];
-    mPipelineBundle = SwGraphicsPipelineBundle(retrievedPipeline);
+    mMaterialPipelineBundle = &sMaterialPipelineBundles[materialPipelineOptions];
 
     sLatestMaterialId++;
 }
@@ -141,7 +140,7 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
     graphicsPipelineOptions.mDepthWriteEnabled = opaque;
     graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
 
-    auto [it, _] = sMaterialPipelines.try_emplace(materialPipelineOptions, SwGraphicsPipelineFactory::createGraphicsPipeline(graphicsPipelineOptions));
+    auto [it, _] = sMaterialPipelineBundles.try_emplace(materialPipelineOptions, std::move(SwGraphicsPipelineFactory::createGraphicsPipeline(graphicsPipelineOptions)));
 }
 
 void SwMaterial::cleanup() {
@@ -150,5 +149,5 @@ void SwMaterial::cleanup() {
     sVertexShader.destroy();
     sTransparentPipelineLayout.destroy();
     sOpaquePipelineLayout.destroy();
-    sMaterialPipelines.clear();
+    sMaterialPipelineBundles.clear();
 }

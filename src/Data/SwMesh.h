@@ -47,7 +47,7 @@ private:
     static constexpr std::uint32_t MESH_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
 
     static std::uint32_t sLatestMeshId;
-    std::string mAssetName;
+    std::uint32_t mAssetid;
     std::uint32_t mId;
     std::string mName;
     std::vector<SwPrimitive> mPrimitives;
@@ -65,7 +65,8 @@ public:
     std::uint32_t mFirstIndexInScene{0};
 
     SwMesh(
-        std::string assetName, std::string name, std::vector<SwPrimitive> primitives, SwBounds bounds, std::uint32_t relativeFirstBounds, SwAllocatedBuffer vertexBuffer,
+        std::uint32_t assetId, std::string name, std::vector<SwPrimitive> primitives, SwBounds bounds, std::uint32_t relativeFirstBounds,
+        SwAllocatedBuffer vertexBuffer,
         std::uint32_t numVertices, std::uint32_t vertexOffsetInScene, SwAllocatedBuffer indexBuffer, std::uint32_t numIndices, std::uint32_t firstIndexInScene
     );
 
@@ -73,7 +74,7 @@ public:
     inline SwAllocatedBuffer& getIndexBuffer() { return mIndexBuffer; }
     inline SwBounds getBounds() const { return mBounds; }
     inline std::span<SwPrimitive> getPrimitives() { return mPrimitives; }
-    inline std::string getAssetName() const { return mAssetName; }
+    inline std::uint32_t getAssetId() const { return mAssetid; }
 
     static void init();
     static void cleanup();

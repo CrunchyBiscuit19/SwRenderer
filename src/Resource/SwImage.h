@@ -228,6 +228,8 @@ private:
 
     static SwRendererContext sRendererContext;
 
+    static std::uint32_t getFormatTexelSize(vk::Format format);
+
     static SwImageConstructionInfo prepareImageConstructionInfo(
         SwImageType swImageType, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
         vk::ClearValue clearValue

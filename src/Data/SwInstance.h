@@ -13,17 +13,18 @@ class SwInstance {
 private:
     static uint32_t sLatestInstanceId;
 
-    std::string mAssetName;
+    std::uint32_t mAssetId;
     std::uint32_t mId;
     bool mDelete;
 
     SwInstanceData mData;
 
 public:
-    SwInstance(std::string assetName, SwInstanceData data = SwInstanceData());
+    SwInstance(std::uint32_t assetId, SwInstanceData data = SwInstanceData());
 
+    inline std::uint32_t getId() const { return mId; }
     inline SwInstanceData* getDataAddress() { return &mData; }
-    inline std::string getAssetName() const { return mAssetName; }
+    inline std::uint32_t getAssetId() const { return mAssetId; }
     inline bool isMarkedDelete() const { return mDelete; }
 
     inline void markDelete() { mDelete = true; }
