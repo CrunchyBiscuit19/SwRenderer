@@ -151,3 +151,17 @@ void SwMaterial::cleanup() {
     sOpaquePipelineLayout.destroy();
     sMaterialPipelineBundles.clear();
 }
+
+SwMaterial::Type SwMaterial::getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode) { 
+    switch (alphaMode) {
+        case fastgltf::AlphaMode::Opaque:
+            return Type::Opaque;
+            break;
+        case fastgltf::AlphaMode::Mask:
+            return Type::Mask;
+            break;
+        case fastgltf::AlphaMode::Blend:
+            return Type::Transparent;
+            break;
+    }
+}

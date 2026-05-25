@@ -71,7 +71,7 @@ public:
 
     void generateRenderItemsAndRenderInstances();
 
-    void createInstance(SwInstanceData instanceData = SwInstanceData());
+    void createInstance(SwInstance::Data instanceData = SwInstance::Data());
 
     void reloadInstances();
 

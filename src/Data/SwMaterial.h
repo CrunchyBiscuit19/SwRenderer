@@ -111,6 +111,8 @@ private:
     void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 
 
 public:
+    enum class Type { Opaque, Mask, Transparent };
+
     static constexpr std::uint32_t NUM_PBR_IMAGES{5};
 
     std::uint32_t mRelativeMaterialIndex;
@@ -122,6 +124,8 @@ public:
 
     static void init(SwRendererContext rendererContext);
     static void cleanup();
+
+    static Type getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode);
 
     inline SwGraphicsPipelineBundle& getPipelineBundle() { return *mMaterialPipelineBundle; }
 

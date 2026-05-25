@@ -7,78 +7,97 @@
 #include <string>
 #include <vector>
 
-enum class SwPassType {
-    ClearImages,
-    CullReset,
-    CullDepthPyramid,
-    CullWork,
-    CullCompact,
-    PickDraw,
-    PickReadback,
-    PickWork,
-    Skybox,
-    GeometryOpaque,
-    GeometryTransparent,
-    WBOITComposite,
-    CopyToSwapchain,
-    Gui
-};
-
-class SwPass {
+struct SwDependency {
 public:
-    struct ImageDep {
-        SwImage* mImage;
+    enum class ImageDepType {
+        ColorAttachmentWrite,
+        DepthAttachmentWrite,
+        DepthAttachmentReadWrite,
+        ShaderSampledRead,
+        TransferSrc,
+        TransferDst,
+        ComputeStorageWrite,
+        ComputeStorageRead,
+        FragmentStorageWrite,
+        PresentSrc
+    };
+    struct ImageDepDesc {
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
         vk::ImageLayout mLayout;
 
+        static constexpr ImageDepDesc get(ImageDepType type);
+    };
+    struct ImageDep {
+        SwImage* mImage;
+        ImageDepDesc mDesc;
+
         ImageDep(SwImage* image);
+        ImageDep(SwImage* image, ImageDepType depType);
         ImageDep(SwImage* image, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access, vk::ImageLayout layout);
     };
-    struct BufferDep {
-        SwBuffer* mBuffer;
+    
+    enum class BufferDepType { VertexShaderStorageRead, IndexRead, IndirectRead, ComputeStorageRead, ComputeStorageWrite };
+    struct BufferDepDesc {
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
 
+        static constexpr BufferDepDesc get(BufferDepType type);
+    };
+    struct BufferDep {
+        SwBuffer* mBuffer;
+        BufferDepDesc mDesc;
+
         BufferDep(SwBuffer* buffer);
+        BufferDep(SwBuffer* buffer, BufferDepType depType);
         BufferDep(SwBuffer* buffer, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access);
     };
-    struct PassDeps {
-        std::vector<ImageDep> mReadImages;
-        std::vector<ImageDep> mWriteImages;
-        std::vector<BufferDep> mReadBuffers;
-        std::vector<BufferDep> mWriteBuffers;
-
-        void clear();
-    };
-
-private:
-    SwPassType mPassType;
-    std::function<void(vk::CommandBuffer)> mCallback;
-    bool mMustRun{false};
-    bool mPruned{false};
 
     std::vector<ImageDep> mReadImages;
     std::vector<ImageDep> mWriteImages;
     std::vector<BufferDep> mReadBuffers;
     std::vector<BufferDep> mWriteBuffers;
 
+    void clear();
+};
+
+class SwPass {
+public:
+    enum class Type {
+        ClearImages,
+        CullReset,
+        CullDepthPyramid,
+        CullWork,
+        CullCompact,
+        PickDraw,
+        PickReadback,
+        PickWork,
+        Skybox,
+        GeometryOpaque,
+        GeometryTransparent,
+        WBOITComposite,
+        CopyToSwapchain,
+        Gui
+    };
+
+private:
+    Type mPassType;
+    std::function<void(vk::CommandBuffer)> mCallback;
+    bool mMustRun{false};
+    bool mPruned{false};
+
+    SwDependency mDeps;
+
 public:
     SwPass() = default;
 
-    SwPass(
-        SwPassType passType, PassDeps passDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false
-    );
+    SwPass(Type passType, SwDependency passDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
 
-    SwPassType getPassType() const { return mPassType; }
+    Type getPassType() const { return mPassType; }
     bool isPruned() const { return mPruned; }
     bool isMustRun() const { return mMustRun; }
     void setPruned(bool pruned) { mPruned = pruned; }
-
-    const std::vector<ImageDep>& getReadImages() const { return mReadImages; }
-    const std::vector<ImageDep>& getWriteImages() const { return mWriteImages; }
-    const std::vector<BufferDep>& getReadBuffers() const { return mReadBuffers; }
-    const std::vector<BufferDep>& getWriteBuffers() const { return mWriteBuffers; }
+    const SwDependency& getDeps() const { return mDeps; }
 
     void execute(vk::CommandBuffer cmd);
 

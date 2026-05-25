@@ -9,6 +9,7 @@ struct SwRendererContext;
 class SwPipelineLayout {
 private:
     vk::raii::PipelineLayout mLayout;
+    vk::ShaderStageFlags mShaderStageFlags;
 
 public:
     SwPipelineLayout();
@@ -44,6 +45,8 @@ public:
     SwPipelineBundle(const SwPipelineBundle&) = delete;
     SwPipelineBundle& operator=(const SwPipelineBundle&) = delete;
 
+    inline virtual vk::PipelineBindPoint getBindPoint() = 0;
+
     inline std::uint32_t getID() { return mId; };
 
     inline vk::Pipeline getRawPipeline() { return *mPipeline; };
@@ -56,6 +59,8 @@ public:
     SwGraphicsPipelineBundle() = default;
 
     SwGraphicsPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout);
+
+    inline vk::PipelineBindPoint getBindPoint() override { return vk::PipelineBindPoint::eGraphics; }
 };
 
 class SwComputePipelineBundle : public SwPipelineBundle {
@@ -63,6 +68,8 @@ public:
     SwComputePipelineBundle() = default;
 
     SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout); 
+
+    inline vk::PipelineBindPoint getBindPoint() override { return vk::PipelineBindPoint::eCompute; }
 };
 
 class SwPipelineFactory {

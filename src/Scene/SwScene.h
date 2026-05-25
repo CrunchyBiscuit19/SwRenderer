@@ -56,11 +56,9 @@ private:
     std::unordered_map<std::uint32_t, SwAsset> mAssets;
     std::unordered_set<std::string> mAlreadyLoadedAssets;
 
-    std::unordered_map<std::uint32_t, SwBatch> mOpaqueBatches;
-    std::unordered_map<std::uint32_t, SwBatch> mMaskBatches;
-    std::unordered_map<std::uint32_t, SwBatch> mTransparentBatches;
+    std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
 
-    std::unordered_map<SwPassType, SwPass> mPasses;
+    std::unordered_map<SwPass::Type, SwPass> mPasses;
     SwCull::Resources mCullResources;
     SwPick::Resources mPickResources;
     SwSkybox::Resources mSkyboxResources;
@@ -113,18 +111,8 @@ public:
     void changePickOperation();
     void generatePickFrame();
 
+    inline std::unordered_map<std::uint32_t, SwBatch>& getBatchesByType(SwMaterial::Type type) { return mBatchTypes[type]; }
     inline SwCamera& getCamera() { return mCamera; }
-    inline std::unordered_map<std::uint32_t, SwBatch>& getBatches(fastgltf::AlphaMode alphaMode) {
-        switch (alphaMode) {
-            case fastgltf::AlphaMode::Opaque:
-                return mOpaqueBatches;
-            case fastgltf::AlphaMode::Mask:
-                return mMaskBatches;
-            case fastgltf::AlphaMode::Blend:
-                return mTransparentBatches;
-        }
-        std::unreachable();
-    }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
     inline std::unordered_map<std::uint32_t, SwAsset>& getAssets() { return mAssets; }
     void loadAssets(const std::vector<std::filesystem::path>& files);

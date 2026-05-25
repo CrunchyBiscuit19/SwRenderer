@@ -104,7 +104,7 @@ void SwAsset::constructBuffers() {
     mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        NUM_MODEL_INSTANCES * sizeof(SwInstanceData)
+        NUM_MODEL_INSTANCES * sizeof(SwInstance::Data)
     );
 };
 
@@ -527,7 +527,7 @@ void SwAsset::generateRenderItemsAndRenderInstances() {
     }
 }
 
-void SwAsset::createInstance(SwInstanceData instanceData) {
+void SwAsset::createInstance(SwInstance::Data instanceData) {
     mInstances.emplace_back(mId, instanceData);
     mReloadInstancesFlag = true;
     sRendererContext.mScene->mFlags.mInstanceLoaded = true;
@@ -541,8 +541,8 @@ void SwAsset::reloadInstances() {
 
     std::uint32_t dstOffset = 0;
     for (auto& instance : mInstances) {
-        std::memcpy(static_cast<char*>(mInstancesBuffer.getMappedPointer()) + dstOffset, instance.getDataAddress(), sizeof(SwInstanceData));
-        dstOffset += sizeof(SwInstanceData);
+        std::memcpy(static_cast<char*>(mInstancesBuffer.getMappedPointer()) + dstOffset, instance.getDataAddress(), sizeof(SwInstance::Data));
+        dstOffset += sizeof(SwInstance::Data);
     }
 
     mReloadInstancesFlag = false;

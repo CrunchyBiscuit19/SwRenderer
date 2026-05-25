@@ -41,7 +41,8 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
         std::uint32_t pipelineId = primitive.mMaterial.getPipelineBundle().getID();
 
         SwAsset& workingAsset = sRendererContext.mScene->getAsset(mMesh.getAssetId());
-        std::unordered_map<std::uint32_t, SwBatch>& workingBatchMap = sRendererContext.mScene->getBatches(primitive.mMaterial.getAlphaMode());
+        std::unordered_map<std::uint32_t, SwBatch>& workingBatchMap =
+            sRendererContext.mScene->getBatchesByType(SwMaterial::getMaterialTypeFromAlphaMode(primitive.mMaterial.getAlphaMode()));
 
         auto [it, inserted] = workingBatchMap.try_emplace(pipelineId, primitive);
         SwBatch& workingBatch = it->second;

@@ -2,28 +2,35 @@
 
 #include <glm/glm.hpp>
 
-struct SwInstanceData {
-    glm::mat4 mTransformMatrix;
-
-    SwInstanceData();
-    SwInstanceData(glm::mat4&& transform);
-};
-
 class SwInstance {
+public:
+    struct Data {
+        glm::mat4 mTransformMatrix{1.0f};
+
+        Data() = default;
+        Data(glm::mat4 transform) : mTransformMatrix(std::move(transform)) {}
+    };
+
 private:
-    static uint32_t sLatestInstanceId;
+    static std::uint32_t sLatestInstanceId;
 
     std::uint32_t mAssetId;
     std::uint32_t mId;
-    bool mDelete;
+    bool mDelete{false};
 
-    SwInstanceData mData;
+    Data mData;
 
 public:
-    SwInstance(std::uint32_t assetId, SwInstanceData data = SwInstanceData());
+    SwInstance(std::uint32_t assetId, Data data = Data());
+
+    SwInstance(SwInstance&&) noexcept = default;
+    SwInstance& operator=(SwInstance&&) noexcept = default;
+
+    SwInstance(const SwInstance&) = delete;
+    SwInstance& operator=(const SwInstance&) = delete;
 
     inline std::uint32_t getId() const { return mId; }
-    inline SwInstanceData* getDataAddress() { return &mData; }
+    inline Data* getDataAddress() { return &mData; }
     inline std::uint32_t getAssetId() const { return mAssetId; }
     inline bool isMarkedDelete() const { return mDelete; }
 

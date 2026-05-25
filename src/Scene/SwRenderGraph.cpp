@@ -19,8 +19,8 @@ void SwRenderGraph::pruneUnreachablePasses() {
     std::unordered_map<SwImage*, std::vector<SwPass*>> imageWriters;
     std::unordered_map<SwBuffer*, std::vector<SwPass*>> bufferWriters;
     for (auto& p : mPasses) {
-        for (auto& dep : p->getWriteImages()) imageWriters[dep.mImage].emplace_back(p);
-        for (auto& dep : p->getWriteBuffers()) bufferWriters[dep.mBuffer].emplace_back(p);
+        for (auto& dep : p->getDeps().mWriteImages) imageWriters[dep.mImage].emplace_back(p);
+        for (auto& dep : p->getDeps().mWriteBuffers) bufferWriters[dep.mBuffer].emplace_back(p);
     }
 
     // Setup BFS to run backwards through DAG render graph from outputs (and from must-run passes).
@@ -47,12 +47,12 @@ void SwRenderGraph::pruneUnreachablePasses() {
     while (!work.empty()) {
         SwPass* p = work.front();
         work.pop();
-        for (auto& dep : p->getReadImages()) {
+        for (auto& dep : p->getDeps().mReadImages) {
             if (auto it = imageWriters.find(dep.mImage); it != imageWriters.end()) {
                 for (SwPass* writer : it->second) visit(writer);
             }
         }
-        for (auto& dep : p->getReadBuffers()) {
+        for (auto& dep : p->getDeps().mReadBuffers) {
             if (auto it = bufferWriters.find(dep.mBuffer); it != bufferWriters.end()) {
                 for (SwPass* writer : it->second) visit(writer);
             }
@@ -81,10 +81,10 @@ void SwRenderGraph::sortTopological() {
     std::unordered_map<SwImage*, std::vector<SwPass*>> imageWriters, imageReaders;
     std::unordered_map<SwBuffer*, std::vector<SwPass*>> bufferWriters, bufferReaders;
     for (SwPass* p : mSortedPasses) {
-        for (auto& d : p->getWriteImages()) imageWriters[d.mImage].emplace_back(p);
-        for (auto& d : p->getReadImages()) imageReaders[d.mImage].emplace_back(p);
-        for (auto& d : p->getWriteBuffers()) bufferWriters[d.mBuffer].emplace_back(p);
-        for (auto& d : p->getReadBuffers()) bufferReaders[d.mBuffer].emplace_back(p);
+        for (auto& d : p->getDeps().mWriteImages) imageWriters[d.mImage].emplace_back(p);
+        for (auto& d : p->getDeps().mReadImages) imageReaders[d.mImage].emplace_back(p);
+        for (auto& d : p->getDeps().mWriteBuffers) bufferWriters[d.mBuffer].emplace_back(p);
+        for (auto& d : p->getDeps().mReadBuffers) bufferReaders[d.mBuffer].emplace_back(p);
     }
 
     // Adjacency list / in-degree count of dependencies.
@@ -181,10 +181,10 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
     std::unordered_set<SwImage*> allImages;
     std::unordered_set<SwBuffer*> allBuffers;
     for (auto& p : mPasses) {
-        for (auto& d : p->getReadImages()) allImages.insert(d.mImage);
-        for (auto& d : p->getWriteImages()) allImages.insert(d.mImage);
-        for (auto& d : p->getReadBuffers()) allBuffers.insert(d.mBuffer);
-        for (auto& d : p->getWriteBuffers()) allBuffers.insert(d.mBuffer);
+        for (auto& d : p->getDeps().mReadImages) allImages.insert(d.mImage);
+        for (auto& d : p->getDeps().mWriteImages) allImages.insert(d.mImage);
+        for (auto& d : p->getDeps().mReadBuffers) allBuffers.insert(d.mBuffer);
+        for (auto& d : p->getDeps().mWriteBuffers) allBuffers.insert(d.mBuffer);
     }
 
     // Topological position of each surviving pass, for labels.
@@ -248,16 +248,16 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
     // Edges — pass → resource (writes), resource → pass (reads).
     fmt::print(out, "\n  // Reads and writes\n");
     for (auto& p : mPasses) {
-        for (auto& d : p->getWriteImages()) {
+        for (auto& d : p->getDeps().mWriteImages) {
             fmt::print(out, "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), imageId(d.mImage));
         }
-        for (auto& d : p->getReadImages()) {
+        for (auto& d : p->getDeps().mReadImages) {
             fmt::print(out, "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", imageId(d.mImage), passId(p));
         }
-        for (auto& d : p->getWriteBuffers()) {
+        for (auto& d : p->getDeps().mWriteBuffers) {
             fmt::print(out, "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), bufferId(d.mBuffer));
         }
-        for (auto& d : p->getReadBuffers()) {
+        for (auto& d : p->getDeps().mReadBuffers) {
             fmt::print(out, "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", bufferId(d.mBuffer), passId(p));
         }
     }
@@ -285,17 +285,17 @@ void SwRenderGraph::compile() {
 
 void SwRenderGraph::execute(vk::CommandBuffer cmd) {
     for (SwPass* pass : mSortedPasses) {
-        for (auto& dep : pass->getReadImages()) {
-            dep.mImage->emitTransition(cmd, dep.mLayout, dep.mStage, dep.mAccess);
+        for (auto& dep : pass->getDeps().mReadImages) {
+            dep.mImage->emitTransition(cmd, dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
         }
-        for (auto& dep : pass->getWriteImages()) {
-            dep.mImage->emitTransition(cmd, dep.mLayout, dep.mStage, dep.mAccess);
+        for (auto& dep : pass->getDeps().mWriteImages) {
+            dep.mImage->emitTransition(cmd, dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
         }
-        for (auto& dep : pass->getReadBuffers()) {
-            dep.mBuffer->emitBarrier(cmd, dep.mStage, dep.mAccess);
+        for (auto& dep : pass->getDeps().mReadBuffers) {
+            dep.mBuffer->emitBarrier(cmd, dep.mDesc.mStage, dep.mDesc.mAccess);
         }
-        for (auto& dep : pass->getWriteBuffers()) {
-            dep.mBuffer->emitBarrier(cmd, dep.mStage, dep.mAccess);
+        for (auto& dep : pass->getDeps().mWriteBuffers) {
+            dep.mBuffer->emitBarrier(cmd, dep.mDesc.mStage, dep.mDesc.mAccess);
         }
 
         pass->execute(cmd);
