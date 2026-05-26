@@ -1,12 +1,13 @@
 #pragma once
 
-#include <Resource/SwPipeline.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
+#include <Resource/SwPipeline.h>
 #include <Resource/SwPushConstant.h>
 
 #include <glm/glm.hpp>
 
+namespace SwCull {
 struct Plane {
     glm::vec3 normal;
     float d;
@@ -15,7 +16,6 @@ struct Plane {
     Plane(glm::vec3 n, glm::vec3 p) : normal(glm::normalize(n)), d(glm::dot(glm::normalize(n), p)) {}
 };
 
-namespace SwCull {
 struct ResetPC : public SwPC<ResetPC> {
     vk::DeviceAddress mPreCullRenderItemsBuffer;
     std::uint32_t mPreCullRenderItemsLimit;

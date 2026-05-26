@@ -43,7 +43,7 @@ private:
     SwMovementMode mMovementMode;
     std::unordered_map<SwMovementMode, std::function<void()>> mMovementFunctions;
     SwAllocatedBuffer mFrustumBuffer;
-    std::array<Plane, NUM_FRUSTUM_PLANES> mFrustumPlanes;
+    std::array<SwCull::Plane, NUM_FRUSTUM_PLANES> mFrustumPlanes;
 
 public:
     static constexpr float MAX_CAMERA_SPEED{10.f};
@@ -61,7 +61,7 @@ public:
     glm::vec3 getDirectionVector() const;
     void update(float deltaTime, float expectedDeltaTime);
 
-    inline std::array<Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
+    inline std::array<SwCull::Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
     inline SwAllocatedBuffer& getFrustumBuffer() { return mFrustumBuffer; }
     inline SDL_bool getRelativeMode() const { return mRelativeMode; }   
     inline SwMovementMode getMovementMode() const { return mMovementMode; }

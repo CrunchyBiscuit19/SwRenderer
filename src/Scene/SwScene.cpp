@@ -248,7 +248,9 @@ void SwScene::onResizeInitializeCullResources() {
     mCullResources.mWorkPushConstants.mDepthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }
 
-void SwScene::initializeCullPasses() {}
+void SwScene::initializeCullPasses() {
+
+}
 
 void SwScene::initializePickResources() {
     mPickResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -755,6 +757,7 @@ void SwScene::initializeGeometryResources() {
 }
 
 void SwScene::initializeGeometryPasses() {
+
 }
 
 void SwScene::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
