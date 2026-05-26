@@ -132,7 +132,7 @@ void main(CSInput in) {
     // Culling tests
     bool visible = frustumCull(frustum, aabbCorners, bounds, instance, nodeTransform);
     // if (visible) visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, cullerCullPc.drawExtents);
-    if (visible) occlusionCull(aabbCorners, perspective, depthPyramidImage, cullerCullPc.drawExtents);
+    if (visible) occlusionCull(aabbCorners, perspective, depthPyramidImage, cullerCullPc.drawExtents); // take the penalty hit without actually doing occlusion
 
     // Increment counter of unculled render instances
     if (!visible) return;

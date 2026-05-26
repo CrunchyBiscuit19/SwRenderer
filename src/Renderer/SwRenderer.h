@@ -141,8 +141,11 @@ class SwRenderer {
 public:
     static constexpr ValidationMode VALIDATION_MODE{ValidationMode::Basic};
     static constexpr LogLocation LOG_LOCATION{LogLocation::Both};
+    
     static constexpr std::uint32_t ONE_SECOND_IN_MS{1000};
     static constexpr std::uint32_t EXPECTED_FRAME_RATE{60};
+    static constexpr std::uint32_t MAX_1D_WORKGROUP_THREADS{1 << 10};
+    static constexpr std::uint32_t MAX_2D_WORKGROUP_THREADS{1 << 5};
 
     SwRenderer();
 

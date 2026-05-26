@@ -33,7 +33,7 @@ vk::PresentInfoKHR SwHelper::presentInfo() {
 
 vk::Extent2D SwHelper::extent3dTo2d(vk::Extent3D extent3d) { return vk::Extent2D(extent3d.width, extent3d.height); }
 
-std::uint32_t SwHelper::fastCeil(std::uint32_t x, std::uint32_t y) { return (x + y - 1) / y; }
+std::uint32_t SwHelper::fastDivCeil(std::uint32_t x, std::uint32_t y) { return (x + y - 1) / y; }
 
 std::uint32_t SwHelper::previousPow2(std::uint32_t x) {
     if (x == 0) return 0;
