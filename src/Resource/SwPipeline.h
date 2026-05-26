@@ -9,7 +9,6 @@ struct SwRendererContext;
 class SwPipelineLayout {
 private:
     vk::raii::PipelineLayout mLayout;
-    vk::ShaderStageFlags mShaderStageFlags;
 
 public:
     SwPipelineLayout();
@@ -83,8 +82,6 @@ public:
     static void init(SwRendererContext rendererContext);
 
     static SwPipelineLayout createPipelineLayout(vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges);
-
-    static vk::PushConstantRange createPushConstantRange(vk::ShaderStageFlags stageFlags, std::uint32_t offset, std::uint32_t size);
 };
 
 class SwGraphicsPipelineFactory : public SwPipelineFactory {

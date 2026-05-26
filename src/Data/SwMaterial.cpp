@@ -72,11 +72,10 @@ SwMaterial::SwMaterial(
 void SwMaterial::init(SwRendererContext rendererContext) {
     sRendererContext = rendererContext;
 
-    vk::PushConstantRange materialPushConstantRange =
-        SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(SwGeometry::WorkPC));
-    std::array<vk::DescriptorSetLayout, 1> materialDescriptorLayouts = {SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout()};
-    sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout(materialDescriptorLayouts, materialPushConstantRange);
-    sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout(materialDescriptorLayouts, materialPushConstantRange);
+    sOpaquePipelineLayout =
+        SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange());
+    sTransparentPipelineLayout =
+        SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange());
 
     sVertexShader = SwShaderFactory::createShader(GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     sOpaqueFragmentShader = SwShaderFactory::createShader(GEOMETRY_OPAQUE_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -164,4 +163,5 @@ SwMaterial::Type SwMaterial::getMaterialTypeFromAlphaMode(fastgltf::AlphaMode al
             return Type::Transparent;
             break;
     }
+    std::unreachable();
 }

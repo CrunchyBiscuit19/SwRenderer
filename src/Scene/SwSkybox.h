@@ -4,15 +4,18 @@
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwSampler.h>
+#include <Resource/SwPushConstant.h>
 
 #include <glm/glm.hpp>
 
 namespace SwSkybox {
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
 
-struct WorkPC {
+struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mWorkVertexBuffer;
     vk::DeviceAddress mPerFrameBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
 struct Resources {

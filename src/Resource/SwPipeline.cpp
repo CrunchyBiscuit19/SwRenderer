@@ -31,10 +31,6 @@ SwPipelineLayout SwPipelineFactory::createPipelineLayout(
     return SwPipelineLayout(vk::raii::PipelineLayout(*sRendererContext.mDevice, pipelineLayoutCreateInfo));
 }
 
-vk::PushConstantRange SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlags stageFlags, std::uint32_t offset, std::uint32_t size) {
-    return vk::PushConstantRange{stageFlags, offset, size};
-}
-
 SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {
     vk::PipelineViewportStateCreateInfo viewportState;
     viewportState.pNext = nullptr;
@@ -206,5 +202,3 @@ void SwComputePipelineFactory::setShaders(vk::PipelineShaderStageCreateInfo& pip
     pipelineShaderStageCreateInfo.module = computeShader;
     pipelineShaderStageCreateInfo.pName = DEFAULT_SHADER_ENTRY_POINT.data();
 }
-
-

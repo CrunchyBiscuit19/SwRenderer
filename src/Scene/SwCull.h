@@ -3,6 +3,7 @@
 #include <Resource/SwPipeline.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
+#include <Resource/SwPushConstant.h>
 
 #include <glm/glm.hpp>
 
@@ -15,12 +16,14 @@ struct Plane {
 };
 
 namespace SwCull {
-struct ResetPC {
+struct ResetPC : public SwPC<ResetPC> {
     vk::DeviceAddress mPreCullRenderItemsBuffer;
     std::uint32_t mPreCullRenderItemsLimit;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct WorkPC {
+struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mPreCullRenderItemsBuffer;
     vk::DeviceAddress mRenderInstancesBuffer;
     vk::DeviceAddress mRenderInstancesCountBuffer;
@@ -33,21 +36,27 @@ struct WorkPC {
     std::uint32_t mRenderInstancesLimit;
     glm::vec2 mDrawExtents;
     glm::vec2 mDepthPyramidExtents;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct CompactPC {
+struct CompactPC : SwPC<CompactPC> {
     vk::DeviceAddress mPreCullRenderItemsBuffer;
     vk::DeviceAddress mPostCullRenderItemsBuffer;
     vk::DeviceAddress mPostCullRenderItemsCountBuffer;
     std::uint32_t mPreCullRenderItemsLimit;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct DepthPyramidPC {
+struct DepthPyramidPC : SwPC<DepthPyramidPC> {
     glm::uvec2 mDepthPyramidExtent;
     glm::uvec2 mDepthFullExtent;
     glm::vec2 mDepthFullRatio;
     std::uint32_t mLevel;
     bool mReadFromFull;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct Resources {

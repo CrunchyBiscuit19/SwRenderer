@@ -7,6 +7,7 @@
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
+#include <Resource/SwPushConstant.h>
 
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
@@ -14,16 +15,20 @@
 namespace SwPick {
 constexpr float PICK_IMGUIZMO_SIZE = 0.15f;
 
-struct DrawPC {
+struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneVisibleRenderInstancesInstanceIndexBuffer;
     vk::DeviceAddress mPostCullRenderItemsBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
-struct ReadbackPC {
+struct ReadbackPC : SwPC<ReadbackPC> {
     vk::DeviceAddress mPickerBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ReadbackData {

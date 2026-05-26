@@ -137,8 +137,7 @@ void SwScene::initializeSceneResources() {
 
 void SwScene::initializeCullResources() {
     // Reset pass
-    vk::PushConstantRange resetPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwCull::ResetPC));
-    mCullResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, resetPushConstantRange);
+    mCullResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::ResetPC::getRange());
 
     SwShader resetShader = SwShaderFactory::createShader(CULL_RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mCullResources.mResetPipelineBundle =
@@ -154,10 +153,8 @@ void SwScene::initializeCullResources() {
 
     mCullResources.mDepthPyramidDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mCullResources.mDepthPyramidDescriptorLayout);
 
-    vk::PushConstantRange depthPyramidPushConstantRange =
-        SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwCull::DepthPyramidPC));
     mCullResources.mDepthPyramidPipelineLayout =
-        SwPipelineFactory::createPipelineLayout({mCullResources.mDepthPyramidDescriptorLayout.getRawLayout()}, depthPyramidPushConstantRange);
+        SwPipelineFactory::createPipelineLayout(mCullResources.mDepthPyramidDescriptorLayout.getRawLayout(), SwCull::DepthPyramidPC::getRange());
 
     SwShader depthPyramidShader = SwShaderFactory::createShader(CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mCullResources.mDepthPyramidPipelineBundle =
@@ -169,17 +166,15 @@ void SwScene::initializeCullResources() {
 
     mCullResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mCullResources.mWorkDescriptorLayout);
 
-    vk::PushConstantRange workPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwCull::WorkPC));
-    mCullResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout({mCullResources.mWorkDescriptorLayout.getRawLayout()}, workPushConstantRange);
+    mCullResources.mWorkPipelineLayout =
+        SwPipelineFactory::createPipelineLayout(mCullResources.mWorkDescriptorLayout.getRawLayout(), SwCull::WorkPC::getRange());
 
     SwShader workShader = SwShaderFactory::createShader(CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mCullResources.mWorkPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mCullResources.mWorkPipelineLayout.getRawLayout()});
 
     // Compact pass
-    vk::PushConstantRange compactPushConstantRange =
-        SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwCull::CompactPC));
-    mCullResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, compactPushConstantRange);
+    mCullResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::CompactPC::getRange());
 
     SwShader compactShader = SwShaderFactory::createShader(CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mCullResources.mCompactPipelineBundle =
@@ -253,6 +248,8 @@ void SwScene::onResizeInitializeCullResources() {
     mCullResources.mWorkPushConstants.mDepthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }
 
+void SwScene::initializeCullPasses() {}
+
 void SwScene::initializePickResources() {
     mPickResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
@@ -264,8 +261,7 @@ void SwScene::initializePickResources() {
         sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
     mPickResources.mReadbackDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mPickResources.mReadbackDescriptorLayout);
 
-    vk::PushConstantRange drawPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(SwPick::DrawPC));
-    mPickResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, drawPushConstantRange);
+    mPickResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwPick::DrawPC::getRange());
 
     SwShader drawVertexShader = SwShaderFactory::createShader(PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader drawFragmentShader = SwShaderFactory::createShader(PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -292,9 +288,8 @@ void SwScene::initializePickResources() {
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
     mPickResources.mDrawPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
 
-    vk::PushConstantRange pickPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eCompute, 0, sizeof(SwPick::ReadbackPC));
     mPickResources.mReadbackPipelineLayout =
-        SwPipelineFactory::createPipelineLayout({mPickResources.mReadbackDescriptorLayout.getRawLayout()}, pickPushConstantRange);
+        SwPipelineFactory::createPipelineLayout(mPickResources.mReadbackDescriptorLayout.getRawLayout(), SwPick::ReadbackPC::getRange());
 
     SwShader workShader = SwShaderFactory::createShader(PICK_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mPickResources.mReadbackPipelineBundle =
@@ -376,7 +371,7 @@ void SwScene::initializePickPasses() {
                 }
                 mPickResources.mDrawPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwPick::DrawPC>(
-                    batch.getGraphicsPipelineBundle().getRawLayout(), vk::ShaderStageFlagBits::eVertex, 0, mPickResources.mDrawPushConstants
+                    batch.getGraphicsPipelineBundle().getRawLayout(), SwPick::DrawPC::sStages, 0, mPickResources.mDrawPushConstants
                 );
                 cmd.drawIndexedIndirectCount(
                     batch.getPostCullRenderItemsBuffer().getRawBuffer(),
@@ -406,7 +401,7 @@ void SwScene::initializePickPasses() {
             nullptr
         );
         cmd.pushConstants<SwPick::ReadbackPC>(
-            mPickResources.mReadbackPipelineBundle.getRawLayout(), vk::ShaderStageFlagBits::eCompute, 0, mPickResources.mReadbackPushConstants
+            mPickResources.mReadbackPipelineBundle.getRawLayout(), SwPick::ReadbackPC::sStages, 0, mPickResources.mReadbackPushConstants
         );
         cmd.dispatch(1, 1, 1);
     });
@@ -490,9 +485,7 @@ void SwScene::initializeSkyboxResources() {
         sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment);
     mSkyboxResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mSkyboxResources.mWorkDescriptorLayout);
 
-    vk::PushConstantRange skyboxPushConstantRange = SwPipelineFactory::createPushConstantRange(vk::ShaderStageFlagBits::eVertex, 0, sizeof(SwSkybox::WorkPC));
-    mSkyboxResources.mWorkPipelineLayout =
-        SwPipelineFactory::createPipelineLayout({mSkyboxResources.mWorkDescriptorLayout.getRawLayout()}, skyboxPushConstantRange);
+    mSkyboxResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mSkyboxResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
 
     SwShader skyboxVertexShader = SwShaderFactory::createShader(SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader skyboxFragmentShader = SwShaderFactory::createShader(SKYBOX_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -634,7 +627,7 @@ void SwScene::initializeSkyboxPasses() {
         SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
         mSkyboxResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
         cmd.pushConstants<SwSkybox::WorkPC>(
-            mSkyboxResources.mWorkPipelineBundle.getRawLayout(), vk::ShaderStageFlagBits::eVertex, 0, mSkyboxResources.mWorkPushConstants
+            mSkyboxResources.mWorkPipelineBundle.getRawLayout(), SwSkybox::WorkPC::sStages, 0, mSkyboxResources.mWorkPushConstants
         );
         cmd.draw(SwSkybox::NUM_SKYBOX_VERTICES, 1, 0, 0);
         sRendererContext.mStats->mDrawCallCount++;
@@ -650,7 +643,7 @@ void SwScene::initializeWBOITResources() {
     );
     mWBOITResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mWBOITResources.mWorkDescriptorLayout);
 
-    mWBOITResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout({mWBOITResources.mWorkDescriptorLayout.getRawLayout()}, nullptr);
+    mWBOITResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mWBOITResources.mWorkDescriptorLayout.getRawLayout(), nullptr);
 
     SwShader wboitVertexShader = SwShaderFactory::createShader(WBOIT_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader wboitFragmentShader = SwShaderFactory::createShader(WBOIT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -762,19 +755,31 @@ void SwScene::initializeGeometryResources() {
 }
 
 void SwScene::initializeGeometryPasses() {
-    SwDependency deps;
-
-    deps.clear();
 }
 
 void SwScene::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwScene::initialize() {
     mCamera.initialize();
+
+    initializeMiscPasses();
+
     initializeSceneResources();
+
     initializeCullResources();
-    initializeGeometryResources();
+    initializeCullPasses();
+
+    initializePickResources();
+    initializePickPasses();
+
     initializeSkyboxResources();
+    initializeSkyboxPasses();
+
+    initializeWBOITResources();
+    initializeWBOITPasses();
+
+    initializeGeometryResources();
+    initializeGeometryPasses();
 }
 
 void SwScene::resize() {
