@@ -248,9 +248,7 @@ void SwScene::onResizeInitializeCullResources() {
     mCullResources.mWorkPushConstants.mDepthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }
 
-void SwScene::initializeCullPasses() {
-
-}
+void SwScene::initializeCullPasses() {}
 
 void SwScene::initializePickResources() {
     mPickResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -346,6 +344,7 @@ void SwScene::initializePickPasses() {
     // Pick Draw
     deps.mWriteImages.emplace_back(&mPickResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentWrite);
     deps.mWriteImages.emplace_back(&mPickResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&mPickResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     deps.mReadBuffers.emplace_back(&mSceneVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
     deps.mReadBuffers.emplace_back(&mSceneNodeTransformsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
     deps.mReadBuffers.emplace_back(&mSceneInstancesBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
@@ -487,7 +486,8 @@ void SwScene::initializeSkyboxResources() {
         sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment);
     mSkyboxResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mSkyboxResources.mWorkDescriptorLayout);
 
-    mSkyboxResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mSkyboxResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
+    mSkyboxResources.mWorkPipelineLayout =
+        SwPipelineFactory::createPipelineLayout(mSkyboxResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
 
     SwShader skyboxVertexShader = SwShaderFactory::createShader(SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader skyboxFragmentShader = SwShaderFactory::createShader(SKYBOX_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -607,10 +607,11 @@ void SwScene::initializeSkyboxPasses() {
     SwDependency deps;
 
     // Skybox
-    deps.mReadImages.emplace_back(&mSkyboxResources.mWorkImage, SwDependency::ImageDepType::ShaderSampledRead);
-    deps.mReadBuffers.emplace_back(&mSkyboxResources.mWorkVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
     deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
     deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&mSkyboxResources.mWorkImage, SwDependency::ImageDepType::ShaderSampledRead);
+    deps.mReadBuffers.emplace_back(&mSkyboxResources.mWorkVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
     mPasses[SwPass::Type::Skybox] = SwPass(SwPass::Type::Skybox, deps, [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
@@ -757,7 +758,139 @@ void SwScene::initializeGeometryResources() {
 }
 
 void SwScene::initializeGeometryPasses() {
+    SwDependency deps;
 
+    // Opaque and Masked
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadBuffers.emplace_back(&mSceneVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneMaterialConstantsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneNodeTransformsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneInstancesBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneVisibleRenderInstancesInstanceIndexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneIndexBuffer, SwDependency::BufferDepType::IndexRead);
+    for (auto& batchType : mBatchTypes) {
+        if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) {
+            continue;
+        }
+        for (auto& batch : batchType.second | std::views::values) {
+            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        }
+    }
+    mPasses[SwPass::Type::GeometryOpaque] = SwPass(SwPass::Type::GeometryOpaque, deps, [&](vk::CommandBuffer cmd) {
+        vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
+            sRendererContext.mSwapchain->getWindowExtent(),
+            sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(),
+            sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment()
+        );
+
+        cmd.beginRendering(renderInfo);
+
+        for (auto batchType : mBatchTypes) {
+            if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) {
+                continue;
+            }
+            for (auto& batch : batchType.second | std::views::values) {
+                if (batch.getRenderItems().empty()) {
+                    continue;
+                }
+                cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
+                SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+                cmd.bindIndexBuffer(mSceneIndexBuffer.getRawBuffer(), 0, vk::IndexType::eUint32);
+                cmd.bindDescriptorSets(
+                    batch.getGraphicsPipelineBundle().getBindPoint(),
+                    batch.getGraphicsPipelineBundle().getRawLayout(),
+                    0,
+                    mSceneMaterialResourcesDescriptorSet.getRawSet(),
+                    nullptr
+                );
+                mGeometryResources.mWorkPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                cmd.pushConstants<SwGeometry::WorkPC>(
+                    batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mGeometryResources.mWorkPushConstants
+                );
+                cmd.drawIndexedIndirectCount(
+                    batch.getPostCullRenderItemsBuffer().getRawBuffer(),
+                    0,
+                    batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
+                    0,
+                    DRAW_MAX_RENDER_ITEMS,
+                    sizeof(SwRenderItem)
+                );
+                sRendererContext.mStats->mDrawCallCount++;
+                sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
+            }
+        }
+
+        cmd.endRendering();
+    });
+    deps.clear();
+
+    // Transparent
+    deps.mWriteImages.emplace_back(&mWBOITResources.mAccumImage, SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&mWBOITResources.mRvlImage, SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadBuffers.emplace_back(&mSceneVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneMaterialConstantsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneNodeTransformsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneInstancesBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneVisibleRenderInstancesInstanceIndexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mSceneIndexBuffer, SwDependency::BufferDepType::IndexRead);
+    for (auto& batchType : mBatchTypes) {
+        if (batchType.first != SwMaterial::Type::Transparent) {
+            continue;
+        }
+        for (auto& batch : batchType.second | std::views::values) {
+            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        }
+    }
+    mPasses[SwPass::Type::GeometryTransparent] = SwPass(SwPass::Type::GeometryTransparent, deps, [&](vk::CommandBuffer cmd) {
+        vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
+            sRendererContext.mSwapchain->getWindowExtent(),
+            {mWBOITResources.mAccumImage.generateRenderingAttachment(), mWBOITResources.mRvlImage.generateRenderingAttachment()},
+            sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment()
+        );
+
+        cmd.beginRendering(renderInfo);
+
+        for (auto batchType : mBatchTypes) {
+            if (batchType.first != SwMaterial::Type::Transparent) {
+                continue;
+            }
+            for (auto& batch : batchType.second | std::views::values) {
+                if (batch.getRenderItems().empty()) {
+                    continue;
+                }
+                cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
+                SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+                cmd.bindIndexBuffer(mSceneIndexBuffer.getRawBuffer(), 0, vk::IndexType::eUint32);
+                cmd.bindDescriptorSets(
+                    batch.getGraphicsPipelineBundle().getBindPoint(),
+                    batch.getGraphicsPipelineBundle().getRawLayout(),
+                    0,
+                    mSceneMaterialResourcesDescriptorSet.getRawSet(),
+                    nullptr
+                );
+                mGeometryResources.mWorkPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                cmd.pushConstants<SwGeometry::WorkPC>(
+                    batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mGeometryResources.mWorkPushConstants
+                );
+                cmd.drawIndexedIndirectCount(
+                    batch.getPostCullRenderItemsBuffer().getRawBuffer(),
+                    0,
+                    batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
+                    0,
+                    DRAW_MAX_RENDER_ITEMS,
+                    sizeof(SwRenderItem)
+                );
+                sRendererContext.mStats->mDrawCallCount++;
+                sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
+            }
+        }
+        cmd.endRendering();
+    });
+    deps.clear();
 }
 
 void SwScene::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }

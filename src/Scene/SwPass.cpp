@@ -21,16 +21,17 @@ constexpr SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependenc
 
         case SwDependency::ImageDepType::DepthAttachmentWrite:
             return {
-                vk::PipelineStageFlagBits2::eEarlyFragmentTests, vk::AccessFlagBits2::eDepthStencilAttachmentWrite, vk::ImageLayout::eDepthAttachmentOptimal
+                vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
+                vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
+                vk::ImageLayout::eDepthAttachmentOptimal
             };
 
         case SwDependency::ImageDepType::DepthAttachmentReadWrite:
             return {
-                vk::PipelineStageFlagBits2::eEarlyFragmentTests,
+                vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,
                 vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
                 vk::ImageLayout::eDepthAttachmentOptimal
             };
-
         case SwDependency::ImageDepType::ShaderSampledRead:
             return {vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eShaderReadOnlyOptimal};
 

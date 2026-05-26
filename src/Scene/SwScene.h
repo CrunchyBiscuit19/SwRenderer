@@ -69,8 +69,8 @@ private:
     SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;
     SwAllocatedBuffer mSceneVertexBuffer;
     SwAllocatedBuffer mSceneIndexBuffer;
-    SwAllocatedBuffer mSceneNodeTransformsBuffer;
     SwAllocatedBuffer mSceneMaterialConstantsBuffer;
+    SwAllocatedBuffer mSceneNodeTransformsBuffer;
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
     SwAllocatedBuffer mSceneVisibleRenderInstancesInstanceIndexBuffer;
