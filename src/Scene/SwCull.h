@@ -95,6 +95,8 @@ class System : public SwSystem, public SwSystem::Resizable {
 private:
     Resources mResources;
 
+    bool mFreeze{false};
+
     void initializeResources() override;
     void initializePasses() override;
     void reInitializeOnResize() override;
@@ -102,6 +104,8 @@ private:
 public:
     System(SwScene& scene);
     
+    inline bool& getFreezeRef() { return mFreeze; }
+
     void resize() override;
 };
 };  // namespace SwCull

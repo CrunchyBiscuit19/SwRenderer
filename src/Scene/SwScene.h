@@ -98,7 +98,9 @@ public:
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
     inline SwAllocatedBuffer& getSceneVisibleRenderInstancesInstanceIndexBuffer() { return mSceneVisibleRenderInstancesInstanceIndexBuffer; }
+    inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
+    inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }
 
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssets();
@@ -128,5 +130,3 @@ public:
     void perFrameUpdate();
     void draw();
 };
-
-//  // TODO put this inside cull reset pass

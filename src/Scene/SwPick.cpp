@@ -229,7 +229,6 @@ void SwPick::System::generatePickFrame() {
         static_cast<float>(sRendererContext.mSwapchain->getWindowExtent().height)
     );
 
-    mResources.mClickedInstance->getDataAddress()->mTransformMatrix;
     ImGuizmo::Manipulate(
         glm::value_ptr(mScene.getCamera().getPerspective().mView),
         glm::value_ptr(mScene.getCamera().getPerspective().mProj),

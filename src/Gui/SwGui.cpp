@@ -78,13 +78,13 @@ void SwGui::initialize() {
         ImGui::Text("Pitch & Yaw: [%.1f, %.1f]", sRendererContext.mScene->getCamera().getPitch(), sRendererContext.mScene->getCamera().getYaw());
         ImGui::Text("Speed: %.2f / %.2f", sRendererContext.mScene->getCamera().getSpeed(), SwCamera::MAX_CAMERA_SPEED);
     };
-    mGuiComponents[SwGuiComponent::Scene] = [this]() { // TODO
-        /*for (auto& asset : sRendererContext.mScene->getAssets() | std::views::values) {
+    mGuiComponents[SwGuiComponent::Scene] = [this]() {
+        for (auto& asset : sRendererContext.mScene->getAssets() | std::views::values) {
             const auto name = asset.getName();
             ImGui::PushStyleColor(ImGuiCol_Header, static_cast<ImVec4>(IMGUI_HEADER_GREEN));
             if (ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
                 if (ImGui::Button(fmt::format("Add Instance##{}", name).c_str())) {
-                    asset.createInstanceAtCamera(sRendererContext.mScene);
+                    asset.createInstance(sRendererContext.mScene->getCamera().getSpawnTransform());
                 }
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(IMGUI_BUTTON_RED));
@@ -114,32 +114,30 @@ void SwGui::initialize() {
             }
             ImGui::PopStyleColor();
         }
-
-        if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
+        /*if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) { // TODO introduce lighting later
             ImGui::ColorEdit3("Ambient Color", glm::value_ptr(sRendererContext.mScene.mPerspective.mData.ambientColor));
             ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(sRendererContext.mScene.mPerspective.mData.sunlightColor));
             ImGui::SliderFloat3("Sunlight Direction", glm::value_ptr(sRendererContext.mScene.mPerspective.mData.sunlightDirection), 0.f, 10.f);
             ImGui::InputFloat("Sunlight Power", &sRendererContext.mScene.mPerspective.mData.sunlightDirection[3]);
-        }
+        }*/
         if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::Button("Change Skybox")) {
                 mSelectSkyboxFileBrowser.Open();
             }
             ImGui::SameLine();
             if (ImGui::Button("Toggle Skybox")) {
-                sRendererContext.mScene.mSkybox.mActive = !sRendererContext.mScene.mSkybox.mActive;
+                sRendererContext.mScene->getSkyboxSystem().toggleActive();
             }
         }
         if (ImGui::CollapsingHeader("Culler", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Freeze Culling", &sRendererContext.mScene.mCuller.mFreezeCulling);
+            ImGui::Checkbox("Freeze Culling", &sRendererContext.mScene->getCullSystem().getFreezeRef());
         }
-
         mSelectSkyboxFileBrowser.Display();
         if (mSelectSkyboxFileBrowser.HasSelected()) {
-            std::filesystem::path selectedSkyboxDir = mGui->mSelectSkyboxFileBrowser.GetSelected();
-            sRendererContext.mScene.mSkybox.updateImage(selectedSkyboxDir);
-            mGui->mSelectSkyboxFileBrowser.ClearSelected();
-        }*/
+            std::filesystem::path selectedSkyboxDir = mSelectSkyboxFileBrowser.GetSelected();
+            sRendererContext.mScene->getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxDir);
+            mSelectSkyboxFileBrowser.ClearSelected();
+        }
     };
     mGuiComponents[SwGuiComponent::Stats] = [this]() {
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());
@@ -230,13 +228,14 @@ void SwGui::createOptionsWindow() const {
         ImGui::End();
         return;
     }
-    if (ImGui::IsWindowCollapsed()) return;
-
+    if (ImGui::IsWindowCollapsed()) {
+        ImGui::End();
+        return;
+    }
     for (auto& component : mGuiComponents) {
         if (!ImGui::CollapsingHeader(magic_enum::enum_name(component.first).data())) continue;
         component.second();
     }
-
     ImGui::End();
 }
 

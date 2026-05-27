@@ -102,6 +102,14 @@ glm::vec3 SwCamera::getDirectionVector() const {
     return forward;
 }
 
+glm::mat4 SwCamera::getSpawnTransform(float distance, float scale) const {
+    glm::vec3 position = mPosition + getDirectionVector() * distance;
+    glm::mat4 transform = glm::translate(glm::mat4(1.f), position);
+    transform *= getRotationMatrix();
+    transform = glm::scale(transform, glm::vec3(scale));
+    return transform;
+}
+
 void SwCamera::update(float deltaTime, float expectedDeltaTime) {
     SDL_SetRelativeMouseMode(mRelativeMode);
 

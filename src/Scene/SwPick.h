@@ -59,7 +59,7 @@ struct Resources {
     SwPipelineLayout mReadbackPipelineLayout;
 
     ImGuizmo::OPERATION mImguizmoOperation;
-    SwInstance* mClickedInstance;
+    SwInstance* mClickedInstance{nullptr};
 };
 class System : public SwSystem, public SwSystem::Resizable {
 private:

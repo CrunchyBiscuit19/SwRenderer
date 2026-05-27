@@ -73,7 +73,7 @@ void SwSkybox::System::initializeResources() {
 
     mResources.mWorkPushConstants.mWorkVertexBuffer = mResources.mWorkVertexBuffer.getDeviceAddress().value();
 
-    onUpdateInitializeSkyboxResources();
+    reinitializeOnUpdate(SKYBOX_DEFAULT_DIRECTORY_PATH);
 }
 
 void SwSkybox::System::initializePasses() {
@@ -108,7 +108,8 @@ void SwSkybox::System::initializePasses() {
     deps.clear();
 }
 
-void SwSkybox::System::onUpdateInitializeSkyboxResources() {
+void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path> newLoadDir) {
+    mLoadFromDir = newLoadDir;
     if (!mLoadFromDir.has_value()) {
         return;
     }
