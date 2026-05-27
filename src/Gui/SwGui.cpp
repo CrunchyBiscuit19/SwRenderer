@@ -173,7 +173,7 @@ void SwGui::initialize() {
         }
 
         if (keyState[SDL_SCANCODE_T] && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            sRendererContext.mScene->changePickOperation();
+            sRendererContext.mScene->getPickSystem().changePickOperation();
         }
 
         if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
@@ -190,7 +190,7 @@ void SwGui::perFrameUpdate() {
 
     createDockSpace();
     createOptionsWindow();
-    sRendererContext.mScene->generatePickFrame();
+    sRendererContext.mScene->getPickSystem().generatePickFrame();
 
     mSelectAssetsFileBrowser.Display();
     if (mSelectAssetsFileBrowser.HasSelected()) {
@@ -226,11 +226,14 @@ void SwGui::createDockSpace() {
 
 void SwGui::createOptionsWindow() const {
     if (mCollapsed) return;
-    if (!ImGui::Begin("Options", nullptr, ImGuiWindowFlags_NoDecoration)) return;
+    if (!ImGui::Begin("Options", nullptr, ImGuiWindowFlags_NoDecoration)) {
+        ImGui::End();
+        return;
+    }
     if (ImGui::IsWindowCollapsed()) return;
 
     for (auto& component : mGuiComponents) {
-        if (!ImGui::CollapsingHeader(magic_enum::enum_name(component.first).data())) return;
+        if (!ImGui::CollapsingHeader(magic_enum::enum_name(component.first).data())) continue;
         component.second();
     }
 

@@ -5,40 +5,31 @@
 #include <Data/SwCamera.h>
 #include <Resource/SwDescriptor.h>
 #include <Scene/SwCull.h>
-#include <Scene/SwGeometry.h>
+#include <Scene/SwSkybox.h>
 #include <Scene/SwPass.h>
 #include <Scene/SwPick.h>
+#include <Scene/SwGeometry.h>
 #include <Scene/SwRenderGraph.h>
-#include <Scene/SwSkybox.h>
 #include <Scene/SwWBOIT.h>
 
 #include <unordered_set>
 
-struct SwSceneFlags {
-    bool mAssetLoaded;
-    bool mAssetUnloaded;
-    bool mInstanceLoaded;
-    bool mInstanceUnloaded;
-    bool mReloadMainInstancesBuffer;
-};
-
 class SwScene {
+public:
+    struct Flags {
+        bool mAssetLoaded;
+        bool mAssetUnloaded;
+        bool mInstanceLoaded;
+        bool mInstanceUnloaded;
+        bool mReloadMainInstancesBuffer;
+    };
+
 private:
-    static std::filesystem::path CULL_RESET_COMPUTE_SHADER_PATH;
-    static std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH;
-    static std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH;
-    static std::filesystem::path CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH;
-    static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
-
-    static std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH;
-    static std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH;
-    static std::filesystem::path PICK_WORK_COMPUTE_SHADER_PATH;
-
-    static std::filesystem::path SKYBOX_VERTEX_SHADER_PATH;
-    static std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH;
-
-    static std::filesystem::path WBOIT_VERTEX_SHADER_PATH;
-    static std::filesystem::path WBOIT_FRAGMENT_SHADER_PATH;
+    friend class SwCull::System;
+    friend class SwPick::System;
+    friend class SwSkybox::System;
+    friend class SwWBOIT::System;
+    friend class SwGeometry::System;
 
     static constexpr std::uint32_t SCENE_VERTEX_BUFFER_SIZE{1 << 30};
     static constexpr std::uint32_t SCENE_INDEX_BUFFER_SIZE{1 << 30};
@@ -48,22 +39,22 @@ private:
     static constexpr std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
     static constexpr std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 20};
 
-    static constexpr std::uint32_t DRAW_MAX_RENDER_ITEMS{1 << 13};
-
     static SwRendererContext sRendererContext;
 
     SwCamera mCamera;
+
     std::unordered_map<std::uint32_t, SwAsset> mAssets;
     std::unordered_set<std::string> mAlreadyLoadedAssets;
 
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
-    SwCull::Resources mCullResources;
-    SwPick::Resources mPickResources;
-    SwSkybox::Resources mSkyboxResources;
-    SwWBOIT::Resources mWBOITResources;
-    SwGeometry::Resources mGeometryResources;
+
+    SwCull::System mCull;
+    SwPick::System mPick;
+    SwSkybox::System mSkybox;
+    SwWBOIT::System mWBOIT;
+    SwGeometry::System mGeometry;
 
     SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
     SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;
@@ -78,43 +69,37 @@ private:
     SwRenderGraph mRenderGraph;
 
     void initializeMiscPasses();
-
-    void initializeSceneResources();
-
-    void initializeCullResources();
-    void onResizeInitializeCullResources();
-    void initializeCullPasses();
-
-    void initializePickResources();
-    void onResizeInitializePickResources();
-    void initializePickPasses();
-
-    void initializeSkyboxResources();
-    void onUpdateInitializeSkyboxResources();
-    void initializeSkyboxPasses();
-
-    void initializeWBOITResources();
-    void onResizeInitializeWBOITResources();
-    void initializeWBOITPasses();
-
-    void initializeGeometryResources();
-    void initializeGeometryPasses();   
+    void initializeResources();
 
 public:
-    SwSceneFlags mFlags;
+    static constexpr std::uint32_t DRAW_MAX_RENDER_ITEMS{1 << 13};
+
+    Flags mFlags;
+
+    SwScene();
 
     static void init(SwRendererContext rendererContext);
 
     void initialize();
     void resize();
 
-    void changePickOperation();
-    void generatePickFrame();
+    void insertPass(SwPass::Type type, SwDependency deps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
 
+    inline std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>>& getBatchTypes() { return mBatchTypes; }
     inline std::unordered_map<std::uint32_t, SwBatch>& getBatchesByType(SwMaterial::Type type) { return mBatchTypes[type]; }
     inline SwCamera& getCamera() { return mCamera; }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
     inline std::unordered_map<std::uint32_t, SwAsset>& getAssets() { return mAssets; }
+    inline SwDescriptorSet& getSceneMaterialResourcesDescriptorSet() { return mSceneMaterialResourcesDescriptorSet; }
+    inline SwAllocatedBuffer& getSceneVertexBuffer() { return mSceneVertexBuffer; }
+    inline SwAllocatedBuffer& getSceneIndexBuffer() { return mSceneIndexBuffer; }
+    inline SwAllocatedBuffer& getSceneMaterialConstantsBuffer() { return mSceneMaterialConstantsBuffer; }
+    inline SwAllocatedBuffer& getSceneNodeTransformsBuffer() { return mSceneNodeTransformsBuffer; }
+    inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
+    inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
+    inline SwAllocatedBuffer& getSceneVisibleRenderInstancesInstanceIndexBuffer() { return mSceneVisibleRenderInstancesInstanceIndexBuffer; }
+    inline SwPick::System& getPickSystem() { return mPick; }
+
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssets();
     void unloadInstances();
@@ -144,5 +129,4 @@ public:
     void draw();
 };
 
-// std::memcpy(mFrustumBuffer.info.pMappedData, planes.data(), FRUSTUM_NUM_PLANES * sizeof(Plane)); // TODO put this inside cull work pass
-// TODO define all pass executions and RW dependencies
+// std::memcpy(mFrustumBuffer.info.pMappedData, planes.data(), FRUSTUM_NUM_PLANES * sizeof(Plane)); // TODO put this inside cull reset pass

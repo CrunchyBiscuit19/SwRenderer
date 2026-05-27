@@ -8,12 +8,17 @@
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwPushConstant.h>
+#include <Scene/SwSystem.h>
 
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 
 namespace SwPick {
 constexpr float PICK_IMGUIZMO_SIZE = 0.15f;
+static const std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "PickerDraw.vert.spv"};
+static const std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "PickerDraw.frag.spv"};
+static const std::filesystem::path PICK_WORK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "PickerPick.comp.spv"};
 
 struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;
@@ -56,5 +61,22 @@ struct Resources {
     ImGuizmo::OPERATION mImguizmoOperation;
     SwInstance* mClickedInstance;
 };
+class System : public SwSystem, public SwSystem::Resizable {
+private:
+    Resources mResources;
 
+    void initializeResources() override;
+    void initializePasses() override;
+    void reInitializeOnResize() override;
+
+public:
+    System(SwScene& scene);
+
+    void changePickOperation();
+    void generatePickFrame();
+
+    inline Resources& getResources() { return mResources; }
+
+    void resize() override;
+};
 }  // namespace SwPick

@@ -4,10 +4,17 @@
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwPushConstant.h>
-
+#include <Scene/SwSystem.h>
 #include <glm/glm.hpp>
+#include <filesystem>
 
 namespace SwCull {
+static const std::filesystem::path CULL_RESET_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "CullerReset.comp.spv"};
+static const std::filesystem::path CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "CullerDepthPyramid.comp.spv"};
+static const std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "CullerCull.comp.spv"};
+static const std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "CullerCompact.comp.spv"};
+static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
+
 struct Plane {
     glm::vec3 normal;
     float d;
@@ -84,4 +91,17 @@ struct Resources {
     SwCull::WorkPC mWorkPushConstants;
 };
 
+class System : public SwSystem, public SwSystem::Resizable {
+private:
+    Resources mResources;
+
+    void initializeResources() override;
+    void initializePasses() override;
+    void reInitializeOnResize() override;
+
+public:
+    System(SwScene& scene);
+    
+    void resize() override;
+};
 };  // namespace SwCull

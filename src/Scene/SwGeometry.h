@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Resource/SwPushConstant.h>
+#include <Scene/SwSystem.h>
 
 #include <vulkan/vulkan.hpp>
 
@@ -18,5 +19,17 @@ struct WorkPC : SwPC<WorkPC> {
 
 struct Resources {
     WorkPC mWorkPushConstants;
+};
+
+class System : public SwSystem {
+private:
+
+    Resources mResources;
+
+    void initializeResources() override;
+    void initializePasses() override;
+
+public:
+    System(SwScene& scene);
 };
 }  // namespace SwGeometry

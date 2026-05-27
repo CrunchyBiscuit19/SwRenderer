@@ -5,11 +5,16 @@
 #include <Resource/SwPipeline.h>
 #include <Resource/SwSampler.h>
 #include <Resource/SwPushConstant.h>
-
+#include <Scene/SwSystem.h>
+#include <filesystem>
 #include <glm/glm.hpp>
+
+class SwScene;
 
 namespace SwSkybox {
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
+static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Skybox.vert.spv"};
+static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Skybox.frag.spv"};
 
 struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mWorkVertexBuffer;
@@ -51,10 +56,21 @@ struct Resources {
     SwDescriptorLayout mWorkDescriptorLayout;
 
     WorkPC mWorkPushConstants;
+};
 
-    std::optional<std::filesystem::path> mLoadFromDir;
-
+class System : public SwSystem {
+private:
+    Resources mResources;
+    std::optional<std::filesystem::path> mLoadFromDir{std::nullopt};
     bool mActive{false};
+
+    void initializeResources() override;
+    void initializePasses() override;
+
+public:
+    System(SwScene& scene);
+
+    void onUpdateInitializeSkyboxResources();
 };
 
 };  // namespace SwSkybox
