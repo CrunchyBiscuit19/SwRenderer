@@ -71,6 +71,7 @@ void SwCull::System::initializePasses() {
     // Cull Reset
     deps.mWriteBuffers.emplace_back(&sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::TransferWrite);
     deps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::TransferWrite);
+    deps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRenderItems().empty()) {
@@ -86,6 +87,9 @@ void SwCull::System::initializePasses() {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
         cmd.fillBuffer(sRendererContext.mStats->mRenderInstancesCountBuffer.getRawBuffer(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
+        std::memcpy(
+            mScene.getCamera().getFrustumBuffer().getMappedPointer(), mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane)
+        );
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
                 if (batch.getRenderItems().empty()) {
@@ -102,6 +106,8 @@ void SwCull::System::initializePasses() {
         }
     });
     deps.clear();
+
+    
 
     // Cull Depth Pyramid
     deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeStorageRead);

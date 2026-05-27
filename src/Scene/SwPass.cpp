@@ -67,7 +67,9 @@ constexpr SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDepende
         case SwDependency::BufferDepType::ComputeStorageWrite:
             return {vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageWrite};
         case SwDependency::BufferDepType::TransferWrite:
-            return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite};    
+            return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite};   
+        case SwDependency::BufferDepType::HostWrite:
+            return {vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostWrite};   
     }
     std::unreachable();
 }

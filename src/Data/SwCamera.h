@@ -21,11 +21,13 @@ struct SwPerspective {
 struct SwRendererContext;
 
 class SwCamera {
+public:
+    static constexpr std::uint32_t NUM_FRUSTUM_PLANES{6};
+
 private:
     static constexpr float FOVY{70.f};
     static constexpr float NEAR_PLANE{.1f};
     static constexpr float FAR_PLANE{10000.f};
-    static constexpr std::uint32_t NUM_FRUSTUM_PLANES{6};
     static constexpr std::uint32_t FRUSTUM_NEAR_FACE{0};
     static constexpr std::uint32_t FRUSTUM_FAR_FACE{1};
     static constexpr std::uint32_t FRUSTUM_LEFT_FACE{2};
