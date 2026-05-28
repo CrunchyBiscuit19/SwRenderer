@@ -19,7 +19,7 @@ void SwCommandBuffer::begin(vk::CommandBufferUsageFlags commandBufferUsageFlags)
 
 void SwCommandBuffer::end() { mCommandBuffer.end(); }
 
-vk::CommandBufferSubmitInfo SwCommandBuffer::getSubmitInfo() {
+vk::CommandBufferSubmitInfo SwCommandBuffer::generateSubmitInfo() {
     return vk::CommandBufferSubmitInfo{
         *mCommandBuffer, 0
     };

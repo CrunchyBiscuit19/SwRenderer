@@ -23,7 +23,7 @@ public:
 
     void end();
 
-    vk::CommandBufferSubmitInfo getSubmitInfo();
+    vk::CommandBufferSubmitInfo generateSubmitInfo();
 };
 
 class SwCommandBufferFactory {

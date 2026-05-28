@@ -115,16 +115,16 @@ void SwScene::initializeResources() {
     );
 }
 
-SwScene::SwScene(): mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
+SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
 
-void SwScene::init(SwRendererContext rendererContext) { 
-    sRendererContext = rendererContext; 
+void SwScene::init(SwRendererContext rendererContext) {
+    sRendererContext = rendererContext;
     SwSystem::sRendererContext = rendererContext;
 }
 
 void SwScene::initialize() {
     mCamera.initialize();
-    
+
     initializeResources();
     initializeMiscPasses();
 
@@ -522,4 +522,50 @@ void SwScene::perFrameUpdate() {
     sRendererContext.mStats->mSceneUpdateTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
 }
 
-void SwScene::draw() {}
+void SwScene::draw() {
+    auto start = std::chrono::system_clock::now();
+
+    SwFrame& currentFrame = sRendererContext.mSwapchain->getCurrentFrame();
+
+    auto _ = sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getRawFence(), true, 1e9);
+    sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getRawFence());
+    sRendererContext.mSwapchain->acquireNextImage(1e9);
+
+    SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
+    commandBuffer.reset();
+    commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+    /*executePass(PassType::Cull, cmd); // TODO wire it all up
+
+    executePass(PassType::ClearScreen, cmd);
+
+    executePass(PassType::Pick, cmd);
+
+    executePass(PassType::Skybox, cmd);
+    executePass(PassType::Opaque, cmd);
+    executePass(PassType::Transparent, cmd);
+
+    executePass(PassType::Composite, cmd);
+
+    if (MSAA_ENABLE) executePass(PassType::ResolveMSAA, cmd);
+
+    executePass(PassType::TransferSwapchain, cmd);
+
+    executePass(PassType::ImGui, cmd);
+
+    executePass(PassType::PresentSwapchain, cmd);*/
+
+    commandBuffer.end();
+
+    vk::CommandBufferSubmitInfo commandBufferSubmitInfo = commandBuffer.generateSubmitInfo();
+    vk::SemaphoreSubmitInfo waitInfo = currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    vk::SemaphoreSubmitInfo signalInfo =
+        sRendererContext.mSwapchain->getCurrentSwapchainImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, signalInfo, waitInfo, currentFrame.getRenderFence().getRawFence());
+
+    sRendererContext.mSwapchain->present();
+
+    auto end = std::chrono::system_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
+    sRendererContext.mStats->mDrawTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
+}

@@ -25,7 +25,7 @@ void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& 
     function(mCommandBuffer.getRawCommandBuffer());
     mCommandBuffer.end();
 
-    vk::CommandBufferSubmitInfo commandBufferSubmitInfo = mCommandBuffer.getSubmitInfo();
+    vk::CommandBufferSubmitInfo commandBufferSubmitInfo = mCommandBuffer.generateSubmitInfo();
 
     vk::SubmitInfo2 submitInfo = {};
     submitInfo.pNext = nullptr;
@@ -51,7 +51,7 @@ void SwImmSubmit::queuedSubmit() {
     }
     mCommandBuffer.end();
 
-    vk::CommandBufferSubmitInfo commandBufferSubmitInfo = mCommandBuffer.getSubmitInfo();
+    vk::CommandBufferSubmitInfo commandBufferSubmitInfo = mCommandBuffer.generateSubmitInfo();
 
     vk::SubmitInfo2 submitInfo = {};
     submitInfo.pNext = nullptr;

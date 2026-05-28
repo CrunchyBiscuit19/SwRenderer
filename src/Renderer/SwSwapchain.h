@@ -39,6 +39,8 @@ public:
 
     void update();
 
+    inline SwCommandBuffer& getCommandBuffer() { return mCommandBuffer; };
+    inline SwFence& getRenderFence() { return mRenderFence; };
     inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };
     inline SwAllocatedBuffer& getPerFrameBuffer() { return mPerFrameBuffer; };
 };
@@ -103,7 +105,15 @@ public:
 
     SwSwapchainImage& getCurrentSwapchainImage();
 
-    void acquireNextImage(uint64_t timeout, vk::Semaphore semaphore, vk::Fence fence);
+    void acquireNextImage(uint64_t timeout);
+
+    void submit(
+        vk::ArrayProxy<vk::CommandBufferSubmitInfo> commandBufferSubmitInfo, vk::ArrayProxy<vk::SemaphoreSubmitInfo> waitSemaphoreInfo,
+        vk::ArrayProxy<vk::SemaphoreSubmitInfo> signalSemaphoreInfo, 
+        vk::Fence renderFence
+    );
+
+    void present();
 
     ~SwSwapchain();
 };

@@ -161,8 +161,44 @@ SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() {
     return mSwapchainImages[mSwapchainIndex];
 }
 
-void SwSwapchain::acquireNextImage(uint64_t timeout, vk::Semaphore semaphore, vk::Fence fence) {
-    mSwapchainIndex = mSwapchain.acquireNextImage(1e9, getCurrentFrame().getAvailableSemaphore().getRawSemaphore(), nullptr).value;
+void SwSwapchain::acquireNextImage(uint64_t timeout) {
+    try {
+        mSwapchainIndex = mSwapchain.acquireNextImage(timeout, getCurrentFrame().getAvailableSemaphore().getRawSemaphore(), nullptr).value;
+    } catch (vk::OutOfDateKHRError& e) {
+        mResizeRequested = true;
+    }
+}
+
+void SwSwapchain::submit(
+    vk::ArrayProxy<vk::CommandBufferSubmitInfo> commandBufferSubmitInfo, vk::ArrayProxy<vk::SemaphoreSubmitInfo> waitSemaphoreInfo,
+    vk::ArrayProxy<vk::SemaphoreSubmitInfo> signalSemaphoreInfo, vk::Fence renderFence
+) { 
+    vk::SubmitInfo2 submitInfo = {};
+    submitInfo.pNext = nullptr;
+    submitInfo.waitSemaphoreInfoCount = waitSemaphoreInfo.size();
+    submitInfo.pWaitSemaphoreInfos = waitSemaphoreInfo.data();
+    submitInfo.signalSemaphoreInfoCount = signalSemaphoreInfo.size();
+    submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfo.data();
+    submitInfo.commandBufferInfoCount = commandBufferSubmitInfo.size();
+    submitInfo.pCommandBufferInfos = commandBufferSubmitInfo.data();
+    sRendererContext.mGraphicsQueue->submit2(submitInfo, renderFence);
+}
+
+void SwSwapchain::present() {
+    // Prepare present. Wait on the mRenderSemaphore for queue commands to finish before image is presented.
+    vk::PresentInfoKHR presentInfo = {};
+    presentInfo.pNext = nullptr;
+    presentInfo.pSwapchains = &(*mSwapchain);
+    presentInfo.swapchainCount = 1;
+    presentInfo.pWaitSemaphores = &(getCurrentSwapchainImage().getRenderedSemaphore().getRawSemaphore());
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pImageIndices = &mSwapchainIndex;
+
+    try {
+        auto _ = sRendererContext.mGraphicsQueue->presentKHR(presentInfo);
+    } catch (vk::OutOfDateKHRError e) {
+        mResizeRequested = true;
+    }
 }
 
 SwSwapchain::~SwSwapchain() {

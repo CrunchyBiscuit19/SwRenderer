@@ -14,6 +14,8 @@ public:
     SwSemaphore(vk::raii::Semaphore);
 
     inline vk::Semaphore getRawSemaphore() { return *mSemaphore; }
+
+    vk::SemaphoreSubmitInfo generateSubmitInfo(vk::PipelineStageFlags2 stageMask) const;
 };
 
 class SwSemaphoreFactory {

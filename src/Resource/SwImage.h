@@ -84,6 +84,7 @@ public:
     inline vk::ImageView getRawMainImageView() override { return *mMainImageView; }
     inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return *mOtherImageViews[i]; }
     inline vk::ClearValue getClearValue() override { return vk::ClearColorValue(); };
+    inline SwSemaphore& getRenderedSemaphore() { return mRenderedSemaphore; }
 
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
 
