@@ -76,7 +76,7 @@ public:
         Skybox,
         GeometryOpaque,
         GeometryTransparent,
-        WBOITComposite,
+        WBOIT,
         CopyToSwapchain,
         Gui
     };

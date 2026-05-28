@@ -16,11 +16,11 @@ static const std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH{std::filesys
 static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
 
 struct Plane {
-    glm::vec3 normal;
-    float d;
+    glm::vec3 mNormal;
+    float mDistance;
 
-    Plane() : normal(glm::vec3(0.f)), d(0.f) {}
-    Plane(glm::vec3 n, glm::vec3 p) : normal(glm::normalize(n)), d(glm::dot(glm::normalize(n), p)) {}
+    Plane() : mNormal(glm::vec3(0.f)), mDistance(0.f) {}
+    Plane(glm::vec3 n, glm::vec3 p) : mNormal(glm::normalize(n)), mDistance(glm::dot(glm::normalize(n), p)) {}
 };
 
 struct ResetPC : public SwPC<ResetPC> {

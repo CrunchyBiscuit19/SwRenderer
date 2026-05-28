@@ -1,6 +1,4 @@
-import Culler;
-
-static const uint MAX_2D_WORKGROUP_THREADS = 32;
+import SwCull;
 
 [[vk::binding(0, 0)]]
 public uniform Texture2D<float> depthFullImage;
@@ -10,7 +8,7 @@ public uniform Texture2D<float> depthPyramidRead[];
 public uniform RWTexture2D<float> depthPyramidWrite[];
 
 [[vk::push_constant]]
-CullerDepthPyramidPushConstants cullerDepthPyramidPc;
+SwCull::DepthPyramidPC depthPyramidPc;
 
 float findMinDepth(uint2 readPos, uint2 readExtent, Texture2D<float> readImage) {
     // Calculate texel positions surrounding the current read position
@@ -45,34 +43,34 @@ float findMinDepth(uint2 readPos, uint2 readExtent, Texture2D<float> readImage) 
     return minDepth;
 }
 
-[numthreads(MAX_2D_WORKGROUP_THREADS, MAX_2D_WORKGROUP_THREADS, 1)]
-void main(CSInput in) {
+[numthreads(SwCull::MAX_2D_WORKGROUP_THREADS, SwCull::MAX_2D_WORKGROUP_THREADS, 1)]
+void main(SwCull::CSInput in) {
     // Calculate final writing position
-    uint readLevel = cullerDepthPyramidPc.level;
-    uint writeLevel = cullerDepthPyramidPc.level + 1;
-    uint2 readPos = in.dispatchThreadID.xy;
+    uint readLevel = depthPyramidPc.mLevel;
+    uint writeLevel = depthPyramidPc.mLevel + 1;
+    uint2 readPos = in.mDispatchThreadID.xy;
     uint2 writePos;
     uint2 readExtent;
-    if (cullerDepthPyramidPc.readFromFull) {
-        writePos = uint2(cullerDepthPyramidPc.depthFullRatio * readPos);
-        readExtent = cullerDepthPyramidPc.depthFullExtent;
+    if (depthPyramidPc.mReadFromFull) {
+        writePos = uint2(depthPyramidPc.mDepthFullRatio * readPos);
+        readExtent = depthPyramidPc.mDepthFullExtent;
     } else {
         writePos = uint2(readPos.x >> 1, readPos.y >> 1);
-        readExtent = uint2(cullerDepthPyramidPc.depthPyramidExtent.x >> readLevel, cullerDepthPyramidPc.depthPyramidExtent.y >> readLevel);
+        readExtent = uint2(depthPyramidPc.mDepthPyramidExtent.x >> readLevel, depthPyramidPc.mDepthPyramidExtent.y >> readLevel);
     }
     writePos.x = max(1, writePos.x);
     writePos.y = max(1, writePos.y);
 
     // Get minimum depth to write
     float minDepth;
-    if (cullerDepthPyramidPc.readFromFull) {
+    if (depthPyramidPc.mReadFromFull) {
         minDepth = findMinDepth(readPos, readExtent, depthFullImage);
     } else {
         minDepth = findMinDepth(readPos, readExtent, depthPyramidRead[readLevel]);
     }
 
     // Write into next level
-    if (cullerDepthPyramidPc.readFromFull) {
+    if (depthPyramidPc.mReadFromFull) {
         depthPyramidWrite[0].Store(writePos, minDepth);
     } else {
         depthPyramidWrite[writeLevel].Store(writePos, minDepth);

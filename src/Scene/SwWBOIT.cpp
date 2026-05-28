@@ -56,7 +56,7 @@ void SwWBOIT::System::initializePasses() {
     deps.mReadImages.emplace_back(&mResources.mAccumImage, SwDependency::ImageDepType::ShaderSampledRead);
     deps.mReadImages.emplace_back(&mResources.mRvlImage, SwDependency::ImageDepType::ShaderSampledRead);
     deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
-    mScene.insertPass(SwPass::Type::WBOITComposite, std::move(deps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::WBOIT, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
 

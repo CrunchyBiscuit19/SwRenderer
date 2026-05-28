@@ -61,7 +61,7 @@ void SwPick::System::initializeResources() {
         mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = 0;
 
-    mResources.mReadbackPushConstants.mPickerBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
+    mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
 
     sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
@@ -106,6 +106,7 @@ void SwPick::System::initializePasses() {
                     continue;
                 }
                 mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mDrawPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwPick::DrawPC>(batch.getGraphicsPipelineBundle().getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
                 cmd.drawIndexedIndirectCount(
                     batch.getPostCullRenderItemsBuffer().getRawBuffer(),

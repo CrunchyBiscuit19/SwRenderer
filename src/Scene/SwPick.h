@@ -26,12 +26,13 @@ struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneVisibleRenderInstancesInstanceIndexBuffer;
     vk::DeviceAddress mPostCullRenderItemsBuffer;
+    vk::DeviceAddress mPerFrameBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
 struct ReadbackPC : SwPC<ReadbackPC> {
-    vk::DeviceAddress mPickerBuffer;
+    vk::DeviceAddress mReadbackBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

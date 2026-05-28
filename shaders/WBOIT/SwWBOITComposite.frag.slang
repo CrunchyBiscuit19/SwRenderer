@@ -1,4 +1,4 @@
-import Composite;
+import SwWBOIT;
 
 [[vk::binding(0, 0)]]
 public uniform Texture2D<float4> accumImage;
@@ -15,10 +15,10 @@ float maxOf3(float3 v) {
     return max(max(v.x, v.y), v.z);
 }
 
-FSOutput main(FSInput in) : SV_Target {
-    FSOutput out;
+SwWBOIT::FSOutput main(SwWBOIT::FSInput in) : SV_Target {
+    SwWBOIT::FSOutput out;
 
-    uint3 coords = uint3(uint2(in.position.xy), 0);
+    uint3 coords = uint3(uint2(in.mPosition.xy), 0);
     
     float rvl = rvlImage.Load(coords);
     if (isApproximatelyEqual(rvl, 1.f)) discard;
@@ -27,7 +27,7 @@ FSOutput main(FSInput in) : SV_Target {
     if (isinf(maxOf3(abs(accum.rgb)))) accum.rgb = float3(accum.a);
 
     float3 averageColor = accum.rgb / max(accum.a, EPSILON);
-    out.color = float4(averageColor, 1.f - rvl);
+    out.mColor = float4(averageColor, 1.f - rvl);
 
     return out;
 }
