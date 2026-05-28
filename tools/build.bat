@@ -1,0 +1,1 @@
+g++ ./compileShaders.cpp -o ./compileShaders.exe -O3 --std=c++23

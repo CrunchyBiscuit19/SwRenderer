@@ -8,8 +8,8 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     SwGeometry::FSOutputTransparent output;
 
     float3 normal = normalize(in.mNormal);
-    float3 sunlightDir = normalize(perspectiveBuffer.sunlightDirection.xyz);
-    float sunlightPower = perspectiveBuffer.sunlightDirection.w;
+    float3 sunlightDir = normalize(float3(1.f, 0.f, 0.f));
+    float sunlightPower = 1.f;
 
     float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * 5 + 0)].Sample(in.mUv);
     if (diffuseColor.a < 0.0001f)
@@ -18,8 +18,8 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float4 baseColor = in.mColor * diffuseColor;
 
     float diffuse = max(dot(normal, sunlightDir), 0.f);
-    float3 sunlightContrib = perspectiveBuffer.sunlightColor * sunlightPower * diffuse;
-    float3 ambientContrib = perspectiveBuffer.ambientColor;
+    float3 sunlightContrib = float3(1.f) * sunlightPower * diffuse;
+    float3 ambientContrib = float3(1.f);
 
     float3 litColor = baseColor.rgb * (sunlightContrib + ambientContrib);
     float4 finalColor = float4(litColor, baseColor.a);

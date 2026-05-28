@@ -7,7 +7,7 @@ public uniform Sampler2D mMaterialResources[];
 [[vk::push_constant]]
 SwGeometry::WorkPC workPc;
 
-SwGeometry::VSOutput mScene(SwGeometry::VSInput in) {
+SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     SwGeometry::VSOutput out;
 
     SwVertex v = workPc.mSceneVertexBuffer[in.mVertexIndex];

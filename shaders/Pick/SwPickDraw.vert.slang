@@ -4,7 +4,7 @@ import SwPick;
 [[vk::push_constant]]
 SwPick::DrawPC pickDrawPc;
 
-SwPick::VSOutput mScene(SwPick::VSInput in) {
+SwPick::VSOutput main(SwPick::VSInput in) {
     SwPick::VSOutput out;
 
     SwVertex v = pickDrawPc.mSceneVertexBuffer[in.mVertexIndex];

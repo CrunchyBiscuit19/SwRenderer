@@ -16,9 +16,9 @@
 
 namespace SwPick {
 constexpr float PICK_IMGUIZMO_SIZE = 0.15f;
-static const std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "PickerDraw.vert.spv"};
-static const std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "PickerDraw.frag.spv"};
-static const std::filesystem::path PICK_WORK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "PickerPick.comp.spv"};
+static const std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwPickDraw.vert.spv"};
+static const std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwPickDraw.frag.spv"};
+static const std::filesystem::path PICK_READBACK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwPickReadback.comp.spv"};
 
 struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;

@@ -13,8 +13,8 @@ class SwScene;
 
 namespace SwSkybox {
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
-static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Skybox.vert.spv"};
-static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Skybox.frag.spv"};
+static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.vert.spv"};
+static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.frag.spv"};
 static const std::filesystem::path SKYBOX_DEFAULT_DIRECTORY_PATH{std::filesystem::path(SKYBOXES_PATH) / "ocean/"};
 
 struct WorkPC : SwPC<WorkPC> {

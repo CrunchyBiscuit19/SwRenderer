@@ -53,9 +53,9 @@ public struct SwRenderInstance {
     public uint mSceneInstanceIndex;
 }
 
-/*
-public float3 mAmbientColor;
-public float3 mSunlightDirection;
-public float mSunlightIntensity;
-public float3 mSunlightColor;
-*/
+public struct SwSunlight {
+    public float3 mAmbient;
+    public float3 mDirection;
+    public float mIntensity;
+    public float3 mColor;
+};

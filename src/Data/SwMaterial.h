@@ -101,11 +101,11 @@ private:
     static std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> sMaterialPipelineBundles;
     static SwPipelineLayout sOpaquePipelineLayout;
     static SwPipelineLayout sTransparentPipelineLayout;
-    static std::filesystem::path GEOMETRY_VERTEX_SHADER_PATH;
+    static const std::filesystem::path GEOMETRY_VERTEX_SHADER_PATH;
     static SwShader sVertexShader;
-    static std::filesystem::path GEOMETRY_OPAQUE_FRAGMENT_SHADER_PATH;
+    static const std::filesystem::path GEOMETRY_OPAQUE_FRAGMENT_SHADER_PATH;
     static SwShader sOpaqueFragmentShader;
-    static std::filesystem::path GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH;
+    static const std::filesystem::path GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH;
     static SwShader sTransparentFragmentShader;
 
     void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 

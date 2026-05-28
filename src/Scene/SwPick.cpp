@@ -50,7 +50,7 @@ void SwPick::System::initializeResources() {
     mResources.mReadbackPipelineLayout =
         SwPipelineFactory::createPipelineLayout(mResources.mReadbackDescriptorLayout.getRawLayout(), SwPick::ReadbackPC::getRange());
 
-    SwShader workShader = SwShaderFactory::createShader(PICK_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader workShader = SwShaderFactory::createShader(PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mReadbackPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mResources.mReadbackPipelineLayout.getRawLayout()});
 
