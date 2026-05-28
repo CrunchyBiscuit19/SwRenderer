@@ -563,7 +563,7 @@ void SwScene::draw() {
         sRendererContext.mSwapchain->getCurrentSwapchainImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, signalInfo, waitInfo, currentFrame.getRenderFence().getRawFence());
 
-    sRendererContext.mSwapchain->present();
+    sRendererContext.mSwapchain->present(commandBuffer);
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);

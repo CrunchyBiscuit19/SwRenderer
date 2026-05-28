@@ -184,7 +184,11 @@ void SwSwapchain::submit(
     sRendererContext.mGraphicsQueue->submit2(submitInfo, renderFence);
 }
 
-void SwSwapchain::present() {
+void SwSwapchain::present(SwCommandBuffer& commandBuffer) {
+    getCurrentSwapchainImage().emitTransition(
+        commandBuffer.getRawCommandBuffer(), vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone
+    );
+
     // Prepare present. Wait on the mRenderSemaphore for queue commands to finish before image is presented.
     vk::PresentInfoKHR presentInfo = {};
     presentInfo.pNext = nullptr;
