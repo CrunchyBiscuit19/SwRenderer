@@ -1,6 +1,6 @@
+#include <Data/SwCamera.h>
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
-#include <Data/SwCamera.h>
 #include <VkBootstrap.h>
 
 SwRendererContext SwFrame::sRendererContext{};
@@ -30,7 +30,7 @@ SwRendererContext SwSwapchain::sRendererContext{};
 vk::ClearColorValue SwSwapchain::DRAW_CLEAR_VALUE{.463f, .616f, .859f, 0.f};
 
 SwSwapchain::SwSwapchain() : mSwapchain(nullptr), mSurface(nullptr) {}
- 
+
 void SwSwapchain::init(SwRendererContext swapchainContext) { sRendererContext = swapchainContext; }
 
 void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen) {
@@ -126,7 +126,8 @@ void SwSwapchain::onResizeInitialize() {
         nullptr,
         DEPTH_FORMAT,
         mDrawImage.getExtent(),
-        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
+        vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled |
+            vk::ImageUsageFlagBits::eStorage,
         false
     );
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
@@ -134,9 +135,7 @@ void SwSwapchain::onResizeInitialize() {
             mSwapchainImages[i].emitTransition(cmd, SwDependency::ImageDepType::PresentSrc);
         }
         mDrawImage.emitTransition(cmd, SwDependency::ImageDepType::TransferSrc);
-        mDepthImage.emitTransition(
-            cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite
-        );
+        mDepthImage.emitTransition(cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     });
 }
 
@@ -155,9 +154,7 @@ void SwSwapchain::resize() {
     onResizeInitialize();
 }
 
-SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() {
-    return mSwapchainImages[mSwapchainIndex];
-}
+SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
 
 void SwSwapchain::acquireNextImage(uint64_t timeout) {
     try {
@@ -170,7 +167,7 @@ void SwSwapchain::acquireNextImage(uint64_t timeout) {
 void SwSwapchain::submit(
     vk::ArrayProxy<vk::CommandBufferSubmitInfo> commandBufferSubmitInfo, vk::ArrayProxy<vk::SemaphoreSubmitInfo> waitSemaphoreInfo,
     vk::ArrayProxy<vk::SemaphoreSubmitInfo> signalSemaphoreInfo, vk::Fence renderFence
-) { 
+) {
     vk::SubmitInfo2 submitInfo = {};
     submitInfo.pNext = nullptr;
     submitInfo.waitSemaphoreInfoCount = waitSemaphoreInfo.size();

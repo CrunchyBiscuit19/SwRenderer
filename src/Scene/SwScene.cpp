@@ -519,6 +519,8 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
+        mRenderGraph.addOutput(&mPick.getResources().mReadbackImage);
+        mRenderGraph.addOutput(&mPick.getResources().mDepthImage);
     }
     if (mSkybox.isActive() && mSkybox.isDirSelected()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
@@ -528,6 +530,8 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CopyToSwapchain]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);
+    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDrawImage());
+    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDepthImage());
 
     mRenderGraph.compile();
     mRenderGraph.execute(commandBuffer);

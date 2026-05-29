@@ -26,7 +26,8 @@ public:
 
     SwRenderGraph(std::vector<SwImage*> outputs);
 
-    void addPass(SwPass* pass);
+    void addPass(SwPass* pass) { mPasses.emplace_back(pass); }
+    void addOutput(SwImage* output) { mOutputs.emplace_back(output); }
     
     void compile();
     

@@ -277,8 +277,6 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
     fmt::print(out, "}}\n");
 }
 
-void SwRenderGraph::addPass(SwPass* pass) { mPasses.emplace_back(pass); }
-
 void SwRenderGraph::compile() {
     pruneUnreachablePasses();
     sortTopological();
@@ -301,5 +299,6 @@ void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
         pass->execute(commandBuffer.getRawCommandBuffer());
     }
     mPasses.clear();
+    mOutputs.clear();
     mSortedPasses.clear();
 }
