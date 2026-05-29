@@ -71,6 +71,8 @@ private:
     void initializeMiscPasses();
     void initializeResources();
 
+    void finalPresentTransition(SwCommandBuffer& commandBuffer);
+
 public:
     static constexpr std::uint32_t DRAW_MAX_RENDER_ITEMS{1 << 13};
 

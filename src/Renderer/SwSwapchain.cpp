@@ -106,7 +106,7 @@ void SwSwapchain::onResizeInitialize() {
             formats[0],
             vk::Extent3D(vkbSwapchain.extent, 1),
             sRendererContext.mDevice->createImageView(srgbImageViewCreateInfo),
-            SwSemaphoreFactory::createSignalledSemaphore(),
+            SwSemaphoreFactory::createSemaphore(),
             {formats[1]},
             std::move(otherImageViews)
         );
@@ -185,12 +185,7 @@ void SwSwapchain::submit(
     sRendererContext.mGraphicsQueue->submit2(submitInfo, renderFence);
 }
 
-void SwSwapchain::present(SwCommandBuffer& commandBuffer) {
-    getCurrentSwapchainImage().emitTransition(
-        commandBuffer.getRawCommandBuffer(), vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone
-    );
-
-    // Prepare present. Wait on the mRenderSemaphore for queue commands to finish before image is presented.
+void SwSwapchain::present() {
     vk::Semaphore renderSemaphore = getCurrentSwapchainImage().getRenderedSemaphore().getRawSemaphore();
     vk::PresentInfoKHR presentInfo = {};
     presentInfo.pNext = nullptr;

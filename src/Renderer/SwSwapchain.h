@@ -113,7 +113,7 @@ public:
         vk::Fence renderFence
     );
 
-    void present(SwCommandBuffer& commandBuffer);
+    void present();
 
     ~SwSwapchain();
 };

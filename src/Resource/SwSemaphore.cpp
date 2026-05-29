@@ -24,22 +24,3 @@ SwSemaphore SwSemaphoreFactory::createSemaphore() {
     semaphoreCreateInfo.pNext = nullptr;
     return SwSemaphore(sRendererContext.mDevice->createSemaphore(semaphoreCreateInfo));
 }
-
-SwSemaphore SwSemaphoreFactory::createSignalledSemaphore() {
-    vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
-    semaphoreCreateInfo.pNext = nullptr;
-    vk::raii::Semaphore semaphore = sRendererContext.mDevice->createSemaphore(semaphoreCreateInfo);
-
-    vk::SemaphoreSubmitInfo signalInfo = {};
-    signalInfo.semaphore = *semaphore;
-    signalInfo.stageMask = vk::PipelineStageFlagBits2::eAllCommands;
-    signalInfo.deviceIndex = 0;
-    signalInfo.value = 0;
-
-    vk::SubmitInfo2 submitInfo = {};
-    submitInfo.signalSemaphoreInfoCount = 1;
-    submitInfo.pSignalSemaphoreInfos = &signalInfo;
-    sRendererContext.mGraphicsQueue->submit2(submitInfo, nullptr);
-
-    return SwSemaphore(std::move(semaphore));
-}

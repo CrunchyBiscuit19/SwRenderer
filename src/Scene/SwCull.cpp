@@ -7,7 +7,7 @@
 
 #include <ranges>
 
-SwCull::System::System(SwScene& scene): SwSystem(scene) {}
+SwCull::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwCull::System::initializeResources() {
     // Reset pass
@@ -107,8 +107,6 @@ void SwCull::System::initializePasses() {
     });
     deps.clear();
 
-    
-
     // Cull Depth Pyramid
     deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeStorageRead);
     deps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
@@ -145,9 +143,6 @@ void SwCull::System::initializePasses() {
             mResources.mDepthPyramidPushConstants.mLevel = i;
             cmd.pushConstants<SwCull::DepthPyramidPC>(
                 mResources.mDepthPyramidPipelineBundle.getRawLayout(), SwCull::DepthPyramidPC::sStages, 0, mResources.mDepthPyramidPushConstants
-            );
-            mResources.mDepthPyramidImage.emitBarrier(
-                cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead | vk::AccessFlagBits2::eShaderWrite
             );
             cmd.dispatch(
                 SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().width >> i, SwRenderer::MAX_2D_WORKGROUP_THREADS),
@@ -254,7 +249,10 @@ void SwCull::System::reInitializeOnResize() {
     }
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         mResources.mDepthPyramidImage.emitTransition(
-            cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead
+            cmd,
+            vk::ImageLayout::eGeneral,
+            vk::PipelineStageFlagBits2::eComputeShader,
+            vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite
         );
     });
 
@@ -263,7 +261,7 @@ void SwCull::System::reInitializeOnResize() {
         sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(),
         nullptr,
         vk::ImageLayout::eShaderReadOnlyOptimal,
-        vk::DescriptorType::eSampledImage
+        vk::DescriptorType::eSampledImage // TODO need to change?
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidDescriptorSet.writeImage(

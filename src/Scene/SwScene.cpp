@@ -115,6 +115,12 @@ void SwScene::initializeResources() {
     );
 }
 
+void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
+    sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(
+        commandBuffer.getRawCommandBuffer(), vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone
+    );
+}
+
 SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
 
 void SwScene::init(SwRendererContext rendererContext) {
@@ -556,6 +562,7 @@ void SwScene::draw() {
 
     mRenderGraph.compile();
     mRenderGraph.execute(commandBuffer);
+    finalPresentTransition(commandBuffer);
 
     commandBuffer.end();
 
@@ -563,9 +570,8 @@ void SwScene::draw() {
     vk::SemaphoreSubmitInfo waitInfo = currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     vk::SemaphoreSubmitInfo signalInfo =
         sRendererContext.mSwapchain->getCurrentSwapchainImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-    sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, signalInfo, waitInfo, currentFrame.getRenderFence().getRawFence());
-
-    sRendererContext.mSwapchain->present(commandBuffer);
+    sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getRawFence());
+    sRendererContext.mSwapchain->present();
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
