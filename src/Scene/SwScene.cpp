@@ -117,8 +117,7 @@ void SwScene::initializeResources() {
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(
-        commandBuffer.getRawCommandBuffer(), vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eNone
-    );
+        commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
 }
 
 SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
@@ -228,14 +227,14 @@ void SwScene::regenerateRenderItemsInstances() {
 
             sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
                 cmd.fillBuffer(batch.getPreCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
+                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getPreCullRenderItemsBuffer().copyFrom(cmd, batch.getRenderItemsStagingBuffer(), renderItemsCopy, renderItemsCopy.size);
-                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead);
+                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
                 cmd.fillBuffer(batch.getRenderInstancesBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                batch.getRenderInstancesBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
+                batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy, renderInstancesCopy.size);
-                batch.getRenderInstancesBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead);
+                batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
             });
         }
     }
@@ -313,11 +312,6 @@ void SwScene::reloadMainVertexBuffer() {
             });
         }
     }
-
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        // Wait for main vertex buffer to finish uploading
-        mSceneVertexBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
-    });
 }
 
 void SwScene::reloadMainIndexBuffer() {
@@ -339,11 +333,6 @@ void SwScene::reloadMainIndexBuffer() {
             });
         }
     }
-
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        // Wait for main index buffer to finish uploading
-        mSceneIndexBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
-    });
 }
 
 void SwScene::reloadMainMaterialConstantsBuffer() {
@@ -363,11 +352,6 @@ void SwScene::reloadMainMaterialConstantsBuffer() {
             mSceneMaterialConstantsBuffer.copyFrom(cmd, asset.getMaterialConstantsBuffer(), materialConstantCopy, maxPos);
         });
     }
-
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        // Wait for main material constants buffer to finish uploading
-        mSceneMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
-    });
 }
 
 void SwScene::reloadMainNodeTransformsBuffer() {
@@ -387,11 +371,6 @@ void SwScene::reloadMainNodeTransformsBuffer() {
             mSceneNodeTransformsBuffer.copyFrom(cmd, asset.getNodeTransformsBuffer(), nodeTransformsCopy, maxPos);
         });
     }
-
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        // Wait for main node transforms buffer to finish uploading
-        mSceneNodeTransformsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
-    });
 }
 
 void SwScene::reloadMainBoundsBuffer() {
@@ -411,11 +390,6 @@ void SwScene::reloadMainBoundsBuffer() {
             mSceneBoundsBuffer.copyFrom(cmd, asset.getBoundsBuffer(), boundsCopy, maxPos);
         });
     }
-
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        // Wait for main bounds buffer to finish uploading
-        mSceneBoundsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead);
-    });
 }
 
 void SwScene::reloadMainInstancesBuffer() {
@@ -439,11 +413,6 @@ void SwScene::reloadMainInstancesBuffer() {
             mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy, maxPos);
         });
     }
-
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        // Wait for main instances buffer to finish uploading
-        mSceneInstancesBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
-    });
 }
 
 void SwScene::reloadMainMaterialResourcesArray() {

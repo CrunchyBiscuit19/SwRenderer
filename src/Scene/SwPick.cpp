@@ -184,14 +184,9 @@ void SwPick::System::reInitializeOnResize() {
 
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         mResources.mReadbackImage.emitTransition(
-            cmd, vk::ImageLayout::eColorAttachmentOptimal, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite
-        );
+            cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
         mResources.mDepthImage.emitTransition(
-            cmd,
-            vk::ImageLayout::eDepthAttachmentOptimal,
-            vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-            vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
-        );
+            cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     });
 
     mResources.mReadbackDescriptorSet.writeImage(

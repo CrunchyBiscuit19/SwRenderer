@@ -3,6 +3,7 @@
 #include <Resource/SwBuffer.h>
 #include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
+#include <Scene/SwDependency.h>
 #include <vk_mem_alloc.h>
 
 #include <deque>
@@ -29,7 +30,8 @@ protected:
 public:
     virtual void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
 
-    virtual void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) = 0;
+    virtual void emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) = 0;
+    void emitTransition(vk::CommandBuffer cmd, SwDependency::ImageDepType imageDepType);
 
     virtual void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) = 0;
     void copyFrom(vk::CommandBuffer cmd, SwImage& source);
@@ -87,8 +89,8 @@ public:
     inline SwSemaphore& getRenderedSemaphore() { return mRenderedSemaphore; }
 
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
-
-    void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+    using SwImage::emitTransition;
+    void emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) override;
 
     using SwImage::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
@@ -123,8 +125,8 @@ protected:
 
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
-
-    void emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
+    using SwImage::emitTransition;
+    void emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) override;
 
     using SwImage::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;

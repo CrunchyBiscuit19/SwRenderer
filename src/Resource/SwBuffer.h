@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vk_mem_alloc.h>
-
+#include <Scene/SwDependency.h>
 #include <unordered_map>
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
@@ -30,6 +30,7 @@ protected:
 
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess);
+    void emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bufferDepType);
 
     void copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies, std::uint32_t maxSize);
 

@@ -53,6 +53,10 @@ void SwBuffer::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextSt
     mCurrentAccess = nextAccess;
 }
 
+void SwBuffer::emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bufferDepType) {
+    emitBarrier(cmd, SwDependency::BufferDepDesc::get(bufferDepType).mStage, SwDependency::BufferDepDesc::get(bufferDepType).mAccess);
+}
+
 void SwBuffer::copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies, std::uint32_t maxSize) {
     if (maxSize > mSize) {
         throw std::invalid_argument("Copy size too big");

@@ -249,11 +249,7 @@ void SwCull::System::reInitializeOnResize() {
     }
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         mResources.mDepthPyramidImage.emitTransition(
-            cmd,
-            vk::ImageLayout::eGeneral,
-            vk::PipelineStageFlagBits2::eComputeShader,
-            vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite
-        );
+            cmd, SwDependency::ImageDepType::ComputeStorageReadWrite);
     });
 
     mResources.mDepthPyramidDescriptorSet.writeImage(

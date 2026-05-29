@@ -131,14 +131,11 @@ void SwSwapchain::onResizeInitialize() {
     );
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mSwapchainImages.size(); i++) {
-            mSwapchainImages[i].emitTransition(cmd, vk::ImageLayout::ePresentSrcKHR, vk::PipelineStageFlagBits2::eNone, vk::AccessFlagBits2::eNone);
+            mSwapchainImages[i].emitTransition(cmd, SwDependency::ImageDepType::PresentSrc);
         }
-        mDrawImage.emitTransition(cmd, vk::ImageLayout::eTransferSrcOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        mDrawImage.emitTransition(cmd, SwDependency::ImageDepType::TransferSrc);
         mDepthImage.emitTransition(
-            cmd,
-            vk::ImageLayout::eDepthAttachmentOptimal,
-            vk::PipelineStageFlagBits2::eEarlyFragmentTests,
-            vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite
+            cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite
         );
     });
 }

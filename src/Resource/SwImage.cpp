@@ -13,6 +13,15 @@ SwImage::SwImage(vk::Format mainFormat, vk::Extent3D extent, vk::ImageAspectFlag
       mCurrentAccess(vk::AccessFlags2()),
       mAspect(aspect) {}
 
+void SwImage::emitTransition(vk::CommandBuffer cmd, SwDependency::ImageDepType imageDepType) {
+    emitTransition(
+        cmd,
+        SwDependency::ImageDepDesc::get(imageDepType).mStage,
+        SwDependency::ImageDepDesc::get(imageDepType).mAccess,
+        SwDependency::ImageDepDesc::get(imageDepType).mLayout
+    );
+}
+
 void SwImage::copyFrom(vk::CommandBuffer cmd, SwImage& source) {
     copyFrom(cmd, source.getRawImage(), SwHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
 }
@@ -52,10 +61,10 @@ SwSwapchainImage::SwSwapchainImage(
       mRenderedSemaphore(std::move(renderedSemaphore)) {}
 
 void SwSwapchainImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
-    emitTransition(cmd, mCurrentLayout, nextStage, nextAccess);
+    emitTransition(cmd, nextStage, nextAccess, mCurrentLayout);
 }
 
-void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) {
     if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
@@ -134,10 +143,10 @@ SwAllocatedImage::SwAllocatedImage(
       mMipLevels(mipmapped ? SwHelper::calculateMipMapLevels(extent) : 1) {}
 
 void SwAllocatedImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
-    emitTransition(cmd, mCurrentLayout, nextStage, nextAccess);
+    emitTransition(cmd, nextStage, nextAccess, mCurrentLayout);
 }
 
-void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nextLayout, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
+void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) {
     if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
@@ -487,7 +496,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     std::memcpy(sImageStagingBuffer.getMappedPointer(), data, dataSize);
 
     sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        image.emitTransition(cmd, vk::ImageLayout::eTransferDstOptimal, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
+        image.emitTransition(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eTransferDstOptimal);
 
         std::vector<vk::BufferImageCopy> copyRegions;
         copyRegions.reserve(numFaces);
@@ -508,7 +517,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
 
         if (image.isMipmapped()) image.generateMipmaps(cmd);
 
-        image.emitTransition(cmd, vk::ImageLayout::eShaderReadOnlyOptimal, vk::PipelineStageFlagBits2KHR::eFragmentShader, vk::AccessFlagBits2::eShaderRead);
+        image.emitTransition(cmd, vk::PipelineStageFlagBits2KHR::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
     });
 }
 

@@ -97,12 +97,8 @@ void SwWBOIT::System::reInitializeOnResize() {
     );
 
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        mResources.mAccumImage.emitTransition(
-            cmd, vk::ImageLayout::eColorAttachmentOptimal, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite
-        );
-        mResources.mRvlImage.emitTransition(
-            cmd, vk::ImageLayout::eColorAttachmentOptimal, vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite
-        );
+        mResources.mAccumImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
+        mResources.mRvlImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
     });
 
     mResources.mWorkDescriptorSet.writeImage(

@@ -287,10 +287,10 @@ void SwRenderGraph::compile() {
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
     for (SwPass* pass : mSortedPasses) {
         for (auto& dep : pass->getDeps().mReadImages) {
-            dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
+            dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);
         }
         for (auto& dep : pass->getDeps().mWriteImages) {
-            dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
+            dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);
         }
         for (auto& dep : pass->getDeps().mReadBuffers) {
             dep.mBuffer->emitBarrier(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess);
@@ -298,7 +298,8 @@ void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
         for (auto& dep : pass->getDeps().mWriteBuffers) {
             dep.mBuffer->emitBarrier(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess);
         }
-
         pass->execute(commandBuffer.getRawCommandBuffer());
     }
+    mPasses.clear();
+    mSortedPasses.clear();
 }

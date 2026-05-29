@@ -68,7 +68,6 @@ void SwSkybox::System::initializeResources() {
     sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
         skyboxVertexStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         mResources.mWorkVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy, skyboxVertexCopy.size);
-        mResources.mWorkVertexBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderRead);
     });
 
     mResources.mWorkPushConstants.mWorkVertexBuffer = mResources.mWorkVertexBuffer.getDeviceAddress().value();
