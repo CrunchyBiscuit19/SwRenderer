@@ -7,6 +7,8 @@
 #include <unordered_map>
 #include <vector>
 
+class SwCommandBuffer;
+
 class SwRenderGraph {
 private:
     std::vector<SwPass*> mPasses;
@@ -28,5 +30,5 @@ public:
     
     void compile();
     
-    void execute(vk::CommandBuffer cmd);
+    void execute(SwCommandBuffer& commandBuffer);
 };

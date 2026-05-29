@@ -82,6 +82,7 @@ void SwSwapchain::onResizeInitialize() {
             .value();
     mSwapchain = vk::raii::SwapchainKHR(*sRendererContext.mDevice, vkbSwapchain.swapchain);
 
+    mSwapchainImages.clear();
     mSwapchainImages.reserve(NUM_SWAPCHAIN_IMAGES);
     for (std::uint32_t i = 0; i < vkbSwapchain.get_images().value().size(); i++) {
         vk::ImageViewCreateInfo srgbImageViewCreateInfo = {};
@@ -105,7 +106,7 @@ void SwSwapchain::onResizeInitialize() {
             formats[0],
             vk::Extent3D(vkbSwapchain.extent, 1),
             sRendererContext.mDevice->createImageView(srgbImageViewCreateInfo),
-            SwSemaphoreFactory::createSemaphore(),
+            SwSemaphoreFactory::createSignalledSemaphore(),
             {formats[1]},
             std::move(otherImageViews)
         );
@@ -190,11 +191,12 @@ void SwSwapchain::present(SwCommandBuffer& commandBuffer) {
     );
 
     // Prepare present. Wait on the mRenderSemaphore for queue commands to finish before image is presented.
+    vk::Semaphore renderSemaphore = getCurrentSwapchainImage().getRenderedSemaphore().getRawSemaphore();
     vk::PresentInfoKHR presentInfo = {};
     presentInfo.pNext = nullptr;
     presentInfo.pSwapchains = &(*mSwapchain);
     presentInfo.swapchainCount = 1;
-    presentInfo.pWaitSemaphores = &(getCurrentSwapchainImage().getRenderedSemaphore().getRawSemaphore());
+    presentInfo.pWaitSemaphores = &renderSemaphore;
     presentInfo.waitSemaphoreCount = 1;
     presentInfo.pImageIndices = &mSwapchainIndex;
 

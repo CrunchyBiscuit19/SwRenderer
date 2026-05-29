@@ -72,6 +72,8 @@ public:
     System(SwScene& scene);
 
     inline void toggleActive() { mActive = !mActive; }
+    inline bool isActive() const { return mActive; }
+    inline bool isDirSelected() const { return mLoadFromDir.has_value(); }
 
     void reinitializeOnUpdate(std::optional<std::filesystem::path>);
 };

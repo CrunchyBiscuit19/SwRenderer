@@ -86,7 +86,7 @@ void SwSkybox::System::initializePasses() {
     deps.mReadImages.emplace_back(&mResources.mWorkImage, SwDependency::ImageDepType::ShaderSampledRead);
     deps.mReadBuffers.emplace_back(&mResources.mWorkVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
 
-    mScene.insertPass(SwPass::Type::Skybox, std::move(deps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::SkyboxWork, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);

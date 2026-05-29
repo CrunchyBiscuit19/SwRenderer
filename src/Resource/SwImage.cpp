@@ -73,6 +73,8 @@ void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nex
     barrierInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
     barrierInfo.subresourceRange.baseArrayLayer = 0;
     barrierInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    barrierInfo.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrierInfo.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
     vk::DependencyInfo depInfo{};
     depInfo.pNext = nullptr;
@@ -153,6 +155,8 @@ void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::ImageLayout nex
     barrierInfo.subresourceRange.levelCount = VK_REMAINING_MIP_LEVELS;
     barrierInfo.subresourceRange.baseArrayLayer = 0;
     barrierInfo.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
+    barrierInfo.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrierInfo.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 
     vk::DependencyInfo depInfo{};
     depInfo.pNext = nullptr;

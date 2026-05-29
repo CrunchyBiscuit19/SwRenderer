@@ -26,4 +26,5 @@ public:
     static void init(SwRendererContext rendererContext);
 
     static SwSemaphore createSemaphore();
+    static SwSemaphore createSignalledSemaphore();
 };

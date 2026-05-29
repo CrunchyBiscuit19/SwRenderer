@@ -73,10 +73,10 @@ public:
         PickDraw,
         PickReadback,
         PickWork,
-        Skybox,
+        SkyboxWork,
         GeometryOpaque,
         GeometryTransparent,
-        WBOIT,
+        WBOITComposite,
         CopyToSwapchain,
         Gui
     };

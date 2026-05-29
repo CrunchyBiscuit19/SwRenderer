@@ -75,6 +75,7 @@ public:
 
     void changePickOperation();
     void generatePickFrame();
+    bool isPicked();
 
     inline Resources& getResources() { return mResources; }
 

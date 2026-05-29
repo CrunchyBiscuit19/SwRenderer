@@ -1,6 +1,6 @@
+#include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwSwapchain.h>
-#include <Renderer/SwEvents.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwPick.h>
 #include <Scene/SwScene.h>
@@ -241,6 +241,12 @@ void SwPick::System::generatePickFrame() {
     if (ImGuizmo::IsUsing()) {
         mScene.getAsset(mResources.mClickedInstance->getAssetId()).setReloadInstancesFlag(true);
     }
+}
+
+bool SwPick::System::isPicked() {
+    return (
+        (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK) && !sRendererContext.mScene->getCamera().getRelativeMode() && !ImGui::GetIO().WantCaptureMouse
+    );
 }
 
 void SwPick::System::resize() {

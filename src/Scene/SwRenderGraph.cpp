@@ -1,4 +1,5 @@
 #include <Scene/SwRenderGraph.h>
+#include <Resource/SwCommandBuffer.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>  // for fmt::print to a std::ostream
 
@@ -283,21 +284,21 @@ void SwRenderGraph::compile() {
     sortTopological();
 }
 
-void SwRenderGraph::execute(vk::CommandBuffer cmd) {
+void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
     for (SwPass* pass : mSortedPasses) {
         for (auto& dep : pass->getDeps().mReadImages) {
-            dep.mImage->emitTransition(cmd, dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
+            dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
         }
         for (auto& dep : pass->getDeps().mWriteImages) {
-            dep.mImage->emitTransition(cmd, dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
+            dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mLayout, dep.mDesc.mStage, dep.mDesc.mAccess);
         }
         for (auto& dep : pass->getDeps().mReadBuffers) {
-            dep.mBuffer->emitBarrier(cmd, dep.mDesc.mStage, dep.mDesc.mAccess);
+            dep.mBuffer->emitBarrier(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess);
         }
         for (auto& dep : pass->getDeps().mWriteBuffers) {
-            dep.mBuffer->emitBarrier(cmd, dep.mDesc.mStage, dep.mDesc.mAccess);
+            dep.mBuffer->emitBarrier(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess);
         }
 
-        pass->execute(cmd);
+        pass->execute(commandBuffer.getRawCommandBuffer());
     }
 }

@@ -535,25 +535,27 @@ void SwScene::draw() {
     commandBuffer.reset();
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-    /*executePass(PassType::Cull, cmd); // TODO wire it all up
+    mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullDepthPyramid]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
+    if (mPick.isPicked()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
+    }
+    if (mSkybox.isActive() && mSkybox.isDirSelected()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
+    }
+    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryOpaque]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CopyToSwapchain]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);
 
-    executePass(PassType::ClearScreen, cmd);
-
-    executePass(PassType::Pick, cmd);
-
-    executePass(PassType::Skybox, cmd);
-    executePass(PassType::Opaque, cmd);
-    executePass(PassType::Transparent, cmd);
-
-    executePass(PassType::Composite, cmd);
-
-    if (MSAA_ENABLE) executePass(PassType::ResolveMSAA, cmd);
-
-    executePass(PassType::TransferSwapchain, cmd);
-
-    executePass(PassType::ImGui, cmd);
-
-    executePass(PassType::PresentSwapchain, cmd);*/
+    mRenderGraph.compile();
+    mRenderGraph.execute(commandBuffer);
 
     commandBuffer.end();
 
