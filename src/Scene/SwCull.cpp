@@ -108,7 +108,7 @@ void SwCull::System::initializePasses() {
     deps.clear();
 
     // Cull Depth Pyramid
-    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeStorageRead);
+    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
     deps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
     deps.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
 
@@ -154,7 +154,7 @@ void SwCull::System::initializePasses() {
     deps.clear();
 
     // Cull Work
-    deps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageRead);
+    deps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
     deps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -248,8 +248,7 @@ void SwCull::System::reInitializeOnResize() {
         );
     }
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        mResources.mDepthPyramidImage.emitTransition(
-            cmd, SwDependency::ImageDepType::ComputeStorageReadWrite);
+        mResources.mDepthPyramidImage.emitTransition(cmd, SwDependency::ImageDepType::ComputeStorageReadWrite);
     });
 
     mResources.mDepthPyramidDescriptorSet.writeImage(
@@ -257,7 +256,7 @@ void SwCull::System::reInitializeOnResize() {
         sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(),
         nullptr,
         vk::ImageLayout::eShaderReadOnlyOptimal,
-        vk::DescriptorType::eSampledImage // TODO need to change?
+        vk::DescriptorType::eSampledImage 
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidDescriptorSet.writeImage(

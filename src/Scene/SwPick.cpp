@@ -124,7 +124,7 @@ void SwPick::System::initializePasses() {
     deps.clear();
 
     // Pick Readback
-    deps.mReadImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ShaderSampledRead);
+    deps.mReadImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
     deps.mWriteBuffers.emplace_back(&mResources.mReadbackBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     mScene.insertPass(SwPass::Type::PickReadback, std::move(deps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getRawPipeline());

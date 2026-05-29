@@ -82,7 +82,7 @@ void SwSkybox::System::initializePasses() {
     deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
     deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
     deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&mResources.mWorkImage, SwDependency::ImageDepType::ShaderSampledRead);
+    deps.mReadImages.emplace_back(&mResources.mWorkImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
     deps.mReadBuffers.emplace_back(&mResources.mWorkVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
 
     mScene.insertPass(SwPass::Type::SkyboxWork, std::move(deps), [&](vk::CommandBuffer cmd) {

@@ -44,11 +44,17 @@ void SwScene::initializeMiscPasses() {
     });
     deps.clear();
 
+    refreshSwapchainPasses();
+}
+
+void SwScene::refreshSwapchainPasses() {
+    SwDependency deps;
+
     // Copy to Swapchain
     deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ShaderSampledRead);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
     mPasses[SwPass::Type::CopyToSwapchain] = SwPass(SwPass::Type::CopyToSwapchain, deps, [&](vk::CommandBuffer cmd) {
-        sRendererContext.mSwapchain->getDrawImage().copyFrom(cmd, sRendererContext.mSwapchain->getCurrentSwapchainImage());
+        sRendererContext.mSwapchain->getCurrentSwapchainImage().copyFrom(cmd, sRendererContext.mSwapchain->getDrawImage());
     });
     deps.clear();
 
@@ -505,6 +511,7 @@ void SwScene::draw() {
     auto _ = sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getRawFence(), true, 1e9);
     sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getRawFence());
     sRendererContext.mSwapchain->acquireNextImage(1e9);
+    refreshSwapchainPasses();
 
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();
@@ -532,6 +539,7 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);
     mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDrawImage());
     mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDepthImage());
+    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getCurrentSwapchainImage());
 
     mRenderGraph.compile();
     mRenderGraph.execute(commandBuffer);

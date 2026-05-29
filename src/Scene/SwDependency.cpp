@@ -9,12 +9,6 @@ SwDependency::ImageDep::ImageDep(SwImage* image, ImageDepType depType) : mImage(
 SwDependency::ImageDep::ImageDep(SwImage* image, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access, vk::ImageLayout layout)
     : mImage(image), mDesc(stage, access, layout) {}
 
-SwDependency::BufferDep::BufferDep(SwBuffer* buffer) : mBuffer(buffer), mDesc(buffer->getCurrentStage(), buffer->getCurrentAccess()) {}
-
-SwDependency::BufferDep::BufferDep(SwBuffer* buffer, BufferDepType depType) : mBuffer(buffer), mDesc(SwDependency::BufferDepDesc::get(depType)) {}
-
-SwDependency::BufferDep::BufferDep(SwBuffer* buffer, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) : mBuffer(buffer), mDesc(stage, access) {}
-
 constexpr SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependency::ImageDepType type) {
     switch (type) {
         case SwDependency::ImageDepType::ColorAttachmentWrite:
@@ -31,7 +25,9 @@ constexpr SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependenc
                 vk::AccessFlagBits2::eDepthStencilAttachmentRead | vk::AccessFlagBits2::eDepthStencilAttachmentWrite,
                 vk::ImageLayout::eDepthAttachmentOptimal
             };
-        case SwDependency::ImageDepType::ShaderSampledRead:
+        case SwDependency::ImageDepType::ComputeShaderSampledRead:
+            return {vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eShaderReadOnlyOptimal};
+        case SwDependency::ImageDepType::FragmentShaderSampledRead:
             return {vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eShaderReadOnlyOptimal};
         case SwDependency::ImageDepType::TransferSrc:
             return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead, vk::ImageLayout::eTransferSrcOptimal};
@@ -54,6 +50,12 @@ constexpr SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependenc
     }
     std::unreachable();
 }
+
+SwDependency::BufferDep::BufferDep(SwBuffer* buffer) : mBuffer(buffer), mDesc(buffer->getCurrentStage(), buffer->getCurrentAccess()) {}
+
+SwDependency::BufferDep::BufferDep(SwBuffer* buffer, BufferDepType depType) : mBuffer(buffer), mDesc(SwDependency::BufferDepDesc::get(depType)) {}
+
+SwDependency::BufferDep::BufferDep(SwBuffer* buffer, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) : mBuffer(buffer), mDesc(stage, access) {}
 
 constexpr SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDependency::BufferDepType type) {
     switch (type) {

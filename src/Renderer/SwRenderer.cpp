@@ -85,15 +85,15 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
 
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            // LOG_ERROR(renderer->getLogger(), "{}", message);
+            LOG_ERROR(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            // LOG_WARNING(renderer->getLogger(), "{}", message);
+            LOG_WARNING(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            // LOG_TRACE_L3(renderer->getLogger(), "{}", message);
+            LOG_TRACE_L3(renderer->getLogger(), "{}", message);
             break;
 
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
@@ -141,9 +141,14 @@ SwRenderer::SwRenderer()
         }(),
         quill::FileEventNotifier{}
     );
-    auto consoleSink = quill::Frontend::create_or_get_sink<quill::ConsoleSink>("sink1");
+    quill::ConsoleSinkConfig::Colours consoleColours;
+    consoleColours.assign_colour_to_log_level(quill::LogLevel::Error, "\033[38;5;208m"); // orange (256-color)
+    quill::ConsoleSinkConfig consoleSinkConfig;
+    consoleSinkConfig.set_colours(consoleColours);
+    consoleSinkConfig.set_colour_mode(quill::ConsoleSinkConfig::ColourMode::Automatic);
+    auto consoleSink = quill::Frontend::create_or_get_sink<quill::ConsoleSink>("sink1", consoleSinkConfig);
     quill::PatternFormatterOptions options{};
-    options.format_pattern = "[%(short_source_location) | %(time) | %(log_level)] \n %(message)";
+    options.format_pattern = "\n[%(short_source_location) | %(time) | %(log_level)] %(message)";
     options.timestamp_pattern = "%H:%M:%S.%Qms";
     options.add_metadata_to_multi_line_logs = false;
     if (LOG_LOCATION == LogLocation::File) {
@@ -153,7 +158,7 @@ SwRenderer::SwRenderer()
     } else if (LOG_LOCATION == LogLocation::Both) {
         mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)}, options);
     }
-    mLogger->set_log_level(quill::LogLevel::Info);
+    mLogger->set_log_level(quill::LogLevel::Debug);
 
     vk::Extent2D windowExtent(1700, 900);
     SDL_Init(SDL_INIT_VIDEO);

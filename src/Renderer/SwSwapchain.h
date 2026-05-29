@@ -104,7 +104,7 @@ public:
     inline vk::Extent2D getWindowExtent() const { return mWindowExtent; }
 
     SwSwapchainImage& getCurrentSwapchainImage();
-
+        
     void acquireNextImage(uint64_t timeout);
 
     void submit(
