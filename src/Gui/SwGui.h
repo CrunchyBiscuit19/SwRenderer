@@ -19,7 +19,7 @@ private:
     static SwRendererContext sRendererContext;
 
     SwDescriptorPool mDescriptorPool;
-    bool mCollapsed;
+    bool mCollapsed{false};
     std::unordered_map<SwGuiComponent, std::function<void()>> mGuiComponents;
     ImGui::FileBrowser mSelectAssetsFileBrowser;
     ImGui::FileBrowser mSelectSkyboxFileBrowser;

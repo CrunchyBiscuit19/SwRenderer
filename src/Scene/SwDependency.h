@@ -24,7 +24,7 @@ public:
         vk::AccessFlags2 mAccess;
         vk::ImageLayout mLayout;
 
-        static constexpr ImageDepDesc get(ImageDepType type);
+        static const ImageDepDesc get(ImageDepType type);
     };
     struct ImageDep {
         SwImage* mImage;
@@ -40,7 +40,7 @@ public:
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
 
-        static constexpr BufferDepDesc get(BufferDepType type);
+        static const BufferDepDesc get(BufferDepType type);
     };
     struct BufferDep {
         SwBuffer* mBuffer;

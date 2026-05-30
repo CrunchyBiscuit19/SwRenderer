@@ -1,5 +1,6 @@
 #include <Data/SwAsset.h>
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwLogger.h>
 #include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <quill/LogMacros.h>
@@ -73,14 +74,14 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     data.loadFromFile(assetPath);
     auto type = fastgltf::determineGltfFileType(&data);
     if (type == fastgltf::GltfType::Invalid) {
-        LOG_ERROR(sRendererContext.mLogger, "{} Failed to determine GLTF Container", mName);
+        LOG_ERROR(sRendererContext.mLogger->getLogger(), "{} Failed to determine GLTF Container", mName);
     }
     auto load = (type == fastgltf::GltfType::glTF) ? (parser.loadGLTF(&data, assetPath.parent_path(), gltfOptions))
                                                    : (parser.loadBinaryGLTF(&data, assetPath.parent_path(), gltfOptions));
     if (load) {
         gltf = std::move(load.get());
     } else {
-        LOG_ERROR(sRendererContext.mLogger, "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
+        LOG_ERROR(sRendererContext.mLogger->getLogger(), "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
     }
     mRawAsset = std::move(gltf);
 }
@@ -514,6 +515,7 @@ void SwAsset::constructNodes() {
 SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     loadRawAsset(assetPath);
     constructBuffers();
+    constructImages();
     constructSamplers();
     constructMaterials();
     constructMeshes();

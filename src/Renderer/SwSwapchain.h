@@ -92,6 +92,7 @@ public:
     inline SwColorImage2D& getDrawImage() { return mDrawImage; }
     inline SwDepthImage2D& getDepthImage() { return mDepthImage; }
     inline std::uint64_t getFrameNumber() const { return mFrameNumber; }
+    inline const std::uint64_t* getFrameNumberPtr() const { return &mFrameNumber; }
     inline void incrementFrameNumber() { mFrameNumber++; }
     inline std::optional<std::uint64_t> getProgramEndFrameNumber() const { return mProgramEndFrameNumber; }
     inline void setProgramEndFrameNumber(std::uint64_t programEndFrameNumber) { mProgramEndFrameNumber = std::optional<std::uint64_t>(programEndFrameNumber); }

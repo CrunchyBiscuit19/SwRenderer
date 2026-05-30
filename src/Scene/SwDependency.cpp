@@ -9,7 +9,7 @@ SwDependency::ImageDep::ImageDep(SwImage* image, ImageDepType depType) : mImage(
 SwDependency::ImageDep::ImageDep(SwImage* image, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access, vk::ImageLayout layout)
     : mImage(image), mDesc(stage, access, layout) {}
 
-constexpr SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependency::ImageDepType type) {
+const SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependency::ImageDepType type) {
     switch (type) {
         case SwDependency::ImageDepType::ColorAttachmentWrite:
             return {vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite, vk::ImageLayout::eColorAttachmentOptimal};
@@ -57,7 +57,7 @@ SwDependency::BufferDep::BufferDep(SwBuffer* buffer, BufferDepType depType) : mB
 
 SwDependency::BufferDep::BufferDep(SwBuffer* buffer, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access) : mBuffer(buffer), mDesc(stage, access) {}
 
-constexpr SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDependency::BufferDepType type) {
+const SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDependency::BufferDepType type) {
     switch (type) {
         case SwDependency::BufferDepType::VertexShaderStorageRead:
             return {vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderStorageRead};

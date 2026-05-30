@@ -16,93 +16,8 @@
 #include <fmt/core.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
-#include <quill/Backend.h>
-#include <quill/Frontend.h>
-#include <quill/LogMacros.h>
-#include <quill/sinks/ConsoleSink.h>
-#include <quill/sinks/FileSink.h>
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
-
-VKAPI_ATTR VkBool32 VKAPI_CALL debugMessageFunc(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
-    const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData
-) {
-    auto* renderer = static_cast<SwRenderer*>(pUserData);
-
-    std::string severity;
-    switch (messageSeverity) {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            severity = "ERROR";
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            severity = "WARNING";
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            severity = "INFO";
-            break;
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-            severity = "VERBOSE";
-            break;
-        default:
-            severity = "UNKNOWN";
-            break;
-    }
-
-    std::string queueLabels;
-    for (std::uint32_t i = 0; i < pCallbackData->queueLabelCount; ++i) {
-        queueLabels += fmt::format("LabelName = <{}>\n", pCallbackData->pQueueLabels[i].pLabelName);
-    }
-
-    std::string cmdBufLabels;
-    for (std::uint32_t i = 0; i < pCallbackData->cmdBufLabelCount; ++i) {
-        cmdBufLabels += fmt::format("LabelName = <{}>\n", pCallbackData->pCmdBufLabels[i].pLabelName);
-    }
-
-    std::string resources;
-    for (std::uint32_t i = 0; i < pCallbackData->objectCount; ++i) {
-        const auto& object = pCallbackData->pObjects[i];
-
-        resources += fmt::format(
-            "Resource {} -> [ ResourceType = {}, ResourceHandle = {}]\n", i, vk::to_string(static_cast<vk::ObjectType>(object.objectType)), object.objectHandle
-        );
-
-        if (object.pObjectName) {
-            resources += fmt::format("ResourceName   = <{}>\n", object.pObjectName);
-        }
-    }
-
-    std::string message = fmt::format(
-        "\n{} <{}> Frame {}\n{}\nQueue Labels: {}\nCommandBuffer Labels: {}\n{}",
-        severity,
-        pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "",
-        renderer->getFrameNumber(),
-        pCallbackData->pMessage,
-        queueLabels,
-        cmdBufLabels,
-        resources
-    );
-
-    switch (messageSeverity) {
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            LOG_ERROR(renderer->getLogger(), "{}", message);
-            break;
-
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            LOG_WARNING(renderer->getLogger(), "{}", message);
-            break;
-
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            LOG_TRACE_L3(renderer->getLogger(), "{}", message);
-            break;
-
-        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
-        default:
-            break;
-    }
-
-    return vk::False;
-}
 
 SwRenderer::SwRenderer()
     : mContext(),
@@ -121,45 +36,6 @@ SwRenderer::SwRenderer()
           },
           1 << 10
       ) {
-    quill::Backend::start();
-    auto fileSink = quill::Frontend::create_or_get_sink<quill::FileSink>(
-        fmt::format("{}Run.log", LOGS_PATH).c_str(),
-        []() {
-            quill::FileSinkConfig cfg;
-            cfg.set_open_mode('w');
-            cfg.set_filename_append_option(quill::FilenameAppendOption::StartDateTime);
-            return cfg;
-        }(),
-        quill::FileEventNotifier{}
-    );
-    auto latestFileSink = quill::Frontend::create_or_get_sink<quill::FileSink>(
-        fmt::format("{}Latest.log", LOGS_PATH).c_str(),
-        []() {
-            quill::FileSinkConfig cfg;
-            cfg.set_open_mode('w');
-            return cfg;
-        }(),
-        quill::FileEventNotifier{}
-    );
-    quill::ConsoleSinkConfig::Colours consoleColours;
-    consoleColours.assign_colour_to_log_level(quill::LogLevel::Error, "\033[38;5;208m"); // orange (256-color)
-    quill::ConsoleSinkConfig consoleSinkConfig;
-    consoleSinkConfig.set_colours(consoleColours);
-    consoleSinkConfig.set_colour_mode(quill::ConsoleSinkConfig::ColourMode::Automatic);
-    auto consoleSink = quill::Frontend::create_or_get_sink<quill::ConsoleSink>("sink1", consoleSinkConfig);
-    quill::PatternFormatterOptions options{};
-    options.format_pattern = "\n[%(short_source_location) | %(time) | %(log_level)] %(message)";
-    options.timestamp_pattern = "%H:%M:%S.%Qms";
-    options.add_metadata_to_multi_line_logs = false;
-    if (LOG_LOCATION == LogLocation::File) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink)}, options);
-    } else if (LOG_LOCATION == LogLocation::Console) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", std::move(consoleSink), options);
-    } else if (LOG_LOCATION == LogLocation::Both) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)}, options);
-    }
-    mLogger->set_log_level(quill::LogLevel::Debug);
-
     vk::Extent2D windowExtent(1700, 900);
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* window = SDL_CreateWindow(
@@ -188,8 +64,8 @@ SwRenderer::SwRenderer()
                 vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance
             )
         )
-        .set_debug_callback(debugMessageFunc)
-        .set_debug_callback_user_data_pointer(this)
+        .set_debug_callback(SwLogger::debugMessageFunc)
+        .set_debug_callback_user_data_pointer(&mLogger)
         .require_api_version(VK_MAJOR_VERSION, VK_MINOR_VERSION, VK_PATCH_VERSION);
     if (VALIDATION_MODE >= ValidationMode::Basic) {
         vkbInstBuilder.request_validation_layers(true);
@@ -312,7 +188,7 @@ SwRenderer::SwRenderer()
         &mEvents,
         &mScene,
         &mStats,
-        mLogger
+        &mLogger
     );
 
     SwSemaphoreFactory::init(mRendererContext);
@@ -338,6 +214,7 @@ SwRenderer::SwRenderer()
     SwFrame::init(mRendererContext);
     SwSwapchain::init(mRendererContext);
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
+    mLogger.setFrameNumber(mSwapchain.getFrameNumberPtr());
     mStats.initialize();
 
     SwGui::init(mRendererContext);
@@ -351,6 +228,7 @@ SwRenderer::SwRenderer()
 
     SwScene::init(mRendererContext);
     mScene.initialize();
+    SwRenderGraph::init(mRendererContext);
 }
 
 void SwRenderer::run() {

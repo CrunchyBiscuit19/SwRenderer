@@ -1,7 +1,7 @@
 #pragma once
 
 #include <Scene/SwPass.h>
-
+#include <Renderer/SwRendererContext.h>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
@@ -11,20 +11,24 @@ class SwCommandBuffer;
 
 class SwRenderGraph {
 private:
+    static SwRendererContext sRendererContext;
+
     std::vector<SwPass*> mPasses;
     std::vector<SwImage*> mOutputs;
     std::vector<SwPass*> mSortedPasses; 
 
     void pruneUnreachablePasses();
-    
     void sortTopological();
 
     void exportGraphviz(const std::filesystem::path& path) const;
+    std::string getAllSortedPasses() const;
 
 public:
     SwRenderGraph() = default;
 
     SwRenderGraph(std::vector<SwImage*> outputs);
+
+    static void init(SwRendererContext rendererContext);
 
     void addPass(SwPass* pass) { mPasses.emplace_back(pass); }
     void addOutput(SwImage* output) { mOutputs.emplace_back(output); }

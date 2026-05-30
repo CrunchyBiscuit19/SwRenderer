@@ -79,6 +79,7 @@ void SwGui::initialize() {
         ImGui::Text("Speed: %.2f / %.2f", sRendererContext.mScene->getCamera().getSpeed(), SwCamera::MAX_CAMERA_SPEED);
     };
     mGuiComponents[SwGuiComponent::Scene] = [this]() {
+        ImGui::Indent();
         for (auto& asset : sRendererContext.mScene->getAssets() | std::views::values) {
             const auto name = asset.getName();
             ImGui::PushStyleColor(ImGuiCol_Header, static_cast<ImVec4>(IMGUI_HEADER_GREEN));
@@ -132,6 +133,8 @@ void SwGui::initialize() {
         if (ImGui::CollapsingHeader("Culler", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::Checkbox("Freeze Culling", &sRendererContext.mScene->getCullSystem().getFreezeRef());
         }
+        ImGui::Unindent();
+
         mSelectSkyboxFileBrowser.Display();
         if (mSelectSkyboxFileBrowser.HasSelected()) {
             std::filesystem::path selectedSkyboxDir = mSelectSkyboxFileBrowser.GetSelected();
@@ -150,7 +153,6 @@ void SwGui::initialize() {
         ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(sRendererContext.mStats->mRenderInstancesCountBuffer.getMappedPointer()));
     };
     mGuiComponents[SwGuiComponent::Controls] = [this]() {
-        if (!ImGui::CollapsingHeader("Controls", ImGuiTreeNodeFlags_DefaultOpen)) return;
         ImGui::Text("[G] Toggle GUI");
         ImGui::Text("[Alt + Enter] Toggle Borderless Fullscreen");
         ImGui::Text("[C] Change Camera Mode");

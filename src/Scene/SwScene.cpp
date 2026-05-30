@@ -61,16 +61,13 @@ void SwScene::refreshSwapchainPasses() {
     // Gui
     deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
     mPasses[SwPass::Type::Gui] = SwPass(SwPass::Type::Gui, deps, [&](vk::CommandBuffer cmd) {
-        std::array<vk::RenderingAttachmentInfo, 2> colorAttachments = {
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
+            sRendererContext.mSwapchain->getWindowExtent(),
             sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
-            sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(0, vk::AttachmentLoadOp::eDontCare),
-        };
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, nullptr);
-
+            nullptr
+        );
         cmd.beginRendering(renderInfo);
-
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
-
         cmd.endRendering();
     });
 }

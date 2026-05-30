@@ -1,7 +1,9 @@
-#include <Scene/SwRenderGraph.h>
+#include <Renderer/SwLogger.h>
 #include <Resource/SwCommandBuffer.h>
+#include <Scene/SwRenderGraph.h>
 #include <fmt/format.h>
 #include <fmt/ostream.h>  // for fmt::print to a std::ostream
+#include <quill/LogMacros.h>
 
 #include <fstream>
 #include <magic_enum.hpp>
@@ -11,7 +13,11 @@
 #include <unordered_map>
 #include <unordered_set>
 
+SwRendererContext SwRenderGraph::sRendererContext{};
+
 SwRenderGraph::SwRenderGraph(std::vector<SwImage*> outputs) : mOutputs(std::move(outputs)) {}
+
+void SwRenderGraph::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwRenderGraph::pruneUnreachablePasses() {
     for (auto& p : mPasses) p->setPruned(true);
@@ -277,12 +283,25 @@ void SwRenderGraph::exportGraphviz(const std::filesystem::path& path) const {
     fmt::print(out, "}}\n");
 }
 
+std::string SwRenderGraph::getAllSortedPasses() const {
+    static std::string out;
+    out.clear();
+    out.reserve(1 << 9);
+    for (auto& pass : mSortedPasses) {
+        out += fmt::format("{} -> ", magic_enum::enum_name(pass->getPassType()).data());
+    }
+    out = out.substr(0, out.size() - 4);
+    return out;
+}
+
 void SwRenderGraph::compile() {
     pruneUnreachablePasses();
     sortTopological();
 }
 
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
+    // exportGraphviz(fmt::format("{}/{}", LOGS_PATH, "rendergraph.dot"));
+    LOG_DEBUG(sRendererContext.mLogger->getLogger(), "{}", getAllSortedPasses());
     for (SwPass* pass : mSortedPasses) {
         for (auto& dep : pass->getDeps().mReadImages) {
             dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);

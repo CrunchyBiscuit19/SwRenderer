@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Renderer/SwStats.h>
-#include <quill/Logger.h>
 #include <vk_mem_alloc.h>
 
 #include <vulkan/vulkan.hpp>
@@ -12,6 +11,7 @@ class SwCamera;
 class SwSwapchain;
 class SwDescriptorAllocator;
 class SwScene;
+class SwLogger;
 
 struct SwRendererContext {
     vk::raii::Instance* mInstance;
@@ -26,12 +26,12 @@ struct SwRendererContext {
     SwEvents* mEvents;
     SwScene* mScene;
     SwStats* mStats;
-    quill::Logger* mLogger;
+    SwLogger* mLogger;
 
     SwRendererContext() = default;
     SwRendererContext(
         vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
         vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events, SwScene* scene,
-        SwStats* stats, quill::Logger* logger
+        SwStats* stats, SwLogger* logger
     );
 };
