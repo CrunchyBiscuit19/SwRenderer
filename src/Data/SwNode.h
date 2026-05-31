@@ -13,7 +13,7 @@ class SwAsset;
 
 class SwNode : public std::enable_shared_from_this<SwNode> {
 protected:
-    static constexpr std::uint32_t NODE_TRANSFORMS_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
+    static constexpr std::uint32_t NODE_TRANSFORMS_STAGING_BUFFER_SIZE{1 << 22};  // 4 MB
 
     static SwRendererContext sRendererContext;
 

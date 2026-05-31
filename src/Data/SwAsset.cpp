@@ -167,15 +167,27 @@ void SwAsset::constructImages() {
                                 data = stbi_load_from_memory(
                                     vector.bytes.data() + bufferView.byteOffset,
                                     static_cast<std::uint32_t>(bufferView.byteLength),
-                                    &width,
-                                    &height,
-                                    &nrChannels,
-                                    4
+                                    &width, &height, &nrChannels, 4
+                                );
+                            },
+                            // GLB binary chunks are stored as ByteView (non-owning span into the loaded file).
+                            [&](const fastgltf::sources::ByteView& byteView) {
+                                data = stbi_load_from_memory(
+                                    reinterpret_cast<const stbi_uc*>(byteView.bytes.data()) + bufferView.byteOffset,
+                                    static_cast<std::uint32_t>(bufferView.byteLength),
+                                    &width, &height, &nrChannels, 4
                                 );
                             },
                             [](const auto& arg) {},
                         },
                         buffer.data
+                    );
+                },
+                [&](const fastgltf::sources::ByteView& byteView) {
+                    data = stbi_load_from_memory(
+                        reinterpret_cast<const stbi_uc*>(byteView.bytes.data()),
+                        static_cast<std::uint32_t>(byteView.bytes.size()),
+                        &width, &height, &nrChannels, 4
                     );
                 },
                 [](const auto& arg) {},
@@ -476,8 +488,8 @@ void SwAsset::constructNodes() {
 SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     loadRawAsset(assetPath);
     constructBuffers();
-    constructImages();
     constructSamplerAndSamplerOptions();
+    constructImages();
     constructMaterials();
     constructMeshes();
     constructNodes();

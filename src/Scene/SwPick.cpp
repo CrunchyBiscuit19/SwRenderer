@@ -126,7 +126,7 @@ void SwPick::System::initializePasses() {
                 }
                 mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
                 mResources.mDrawPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
-                cmd.pushConstants<SwPick::DrawPC>(batch.getGraphicsPipelineBundle().getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+                cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
                 cmd.drawIndexedIndirectCount(
                     batch.getPostCullRenderItemsBuffer().getRawBuffer(),
                     0,
@@ -145,46 +145,56 @@ void SwPick::System::initializePasses() {
     // Pick Readback
     deps.mReadImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
     deps.mWriteBuffers.emplace_back(&mResources.mReadbackBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
-    mScene.insertPass(SwPass::Type::PickReadback, std::move(deps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getRawPipeline());
-        cmd.bindDescriptorSets(
-            mResources.mReadbackPipelineBundle.getBindPoint(),
-            mResources.mReadbackPipelineBundle.getRawLayout(),
-            0,
-            mResources.mReadbackDescriptorSet.getRawSet(),
-            nullptr
-        );
-        cmd.pushConstants<SwPick::ReadbackPC>(
-            mResources.mReadbackPipelineBundle.getRawLayout(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
-        );
-        cmd.dispatch(1, 1, 1);
-    });
+    mScene.insertPass(
+        SwPass::Type::PickReadback,
+        std::move(deps),
+        [&](vk::CommandBuffer cmd) {
+            cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getRawPipeline());
+            cmd.bindDescriptorSets(
+                mResources.mReadbackPipelineBundle.getBindPoint(),
+                mResources.mReadbackPipelineBundle.getRawLayout(),
+                0,
+                mResources.mReadbackDescriptorSet.getRawSet(),
+                nullptr
+            );
+            cmd.pushConstants<SwPick::ReadbackPC>(
+                mResources.mReadbackPipelineBundle.getRawLayout(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
+            );
+            cmd.dispatch(1, 1, 1);
+        },
+        true
+    );
     deps.clear();
 
     // Pick Work
     deps.mReadBuffers.emplace_back(&mResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead);
-    mScene.insertPass(SwPass::Type::PickReadback, std::move(deps), [&](vk::CommandBuffer cmd) {
-        glm::uvec2 read(0);
-        std::memcpy(
-            glm::value_ptr(read),
-            static_cast<char*>(mResources.mReadbackBuffer.getMappedPointer()) + sizeof(SwPick::ReadbackData::mCoords),
-            sizeof(SwPick::ReadbackData::mRead)
-        );
+    mScene.insertPass(
+        SwPass::Type::PickReadback,
+        std::move(deps),
+        [&](vk::CommandBuffer cmd) {
+            glm::uvec2 read(0);
+            std::memcpy(
+                glm::value_ptr(read),
+                static_cast<char*>(mResources.mReadbackBuffer.getMappedPointer()) + sizeof(SwPick::ReadbackData::mCoords),
+                sizeof(SwPick::ReadbackData::mRead)
+            );
 
-        if (read.x == 0 || read.y == 0) {
-            mResources.mClickedInstance = nullptr;
-            return;
-        }
-        std::uint32_t modelId = read.x - 1;
-        if (mScene.getAssets().contains(modelId)) {
-            mResources.mClickedInstance = nullptr;
-            return;
-        }
-        SwAsset& selectedAsset = mScene.getAssets()[modelId];
+            if (read.x == 0 || read.y == 0) {
+                mResources.mClickedInstance = nullptr;
+                return;
+            }
+            std::uint32_t modelId = read.x - 1;
+            if (mScene.getAssets().contains(modelId)) {
+                mResources.mClickedInstance = nullptr;
+                return;
+            }
+            SwAsset& selectedAsset = mScene.getAssets()[modelId];
 
-        std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
-        mResources.mClickedInstance = &selectedAsset.getInstances()[localInstanceIndex];
-    });
+            std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
+            mResources.mClickedInstance = &selectedAsset.getInstances()[localInstanceIndex];
+        },
+        true
+    );
     deps.clear();
 }
 
@@ -202,10 +212,8 @@ void SwPick::System::reInitializeOnResize() {
         SwImageFactory::createDepthImage2D(nullptr, SwSwapchain::DEPTH_FORMAT, imageExtent, vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
     sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        mResources.mReadbackImage.emitTransition(
-            cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
-        mResources.mDepthImage.emitTransition(
-            cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        mResources.mReadbackImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
+        mResources.mDepthImage.emitTransition(cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     });
 
     mResources.mReadbackDescriptorSet.writeImage(

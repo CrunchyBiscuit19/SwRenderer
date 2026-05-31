@@ -7,7 +7,7 @@
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
 #include <imgui_impl_vulkan.h>
-
+#include <quill/LogMacros.h>
 #include <glm/glm.hpp>
 #include <ranges>
 
@@ -297,7 +297,7 @@ void SwScene::realignOffsets() {
     realignInstancesOffset();
 }
 
-void SwScene::reloadMainVertexBuffer() {
+void SwScene::reloadSceneVertexBuffer() {
     std::uint32_t dstOffset = 0;
     std::uint32_t maxPos = 0;
 
@@ -318,7 +318,7 @@ void SwScene::reloadMainVertexBuffer() {
     }
 }
 
-void SwScene::reloadMainIndexBuffer() {
+void SwScene::reloadSceneIndexBuffer() {
     std::uint32_t dstOffset = 0;
     std::uint32_t maxPos = 0;
 
@@ -339,7 +339,7 @@ void SwScene::reloadMainIndexBuffer() {
     }
 }
 
-void SwScene::reloadMainMaterialConstantsBuffer() {
+void SwScene::reloadSceneMaterialConstantsBuffer() {
     std::uint32_t dstOffset = 0;
     std::uint32_t maxPos = 0;
 
@@ -358,7 +358,7 @@ void SwScene::reloadMainMaterialConstantsBuffer() {
     }
 }
 
-void SwScene::reloadMainNodeTransformsBuffer() {
+void SwScene::reloadSceneNodeTransformsBuffer() {
     std::uint32_t dstOffset = 0;
     std::uint32_t maxPos = 0;
 
@@ -377,7 +377,7 @@ void SwScene::reloadMainNodeTransformsBuffer() {
     }
 }
 
-void SwScene::reloadMainBoundsBuffer() {
+void SwScene::reloadSceneBoundsBuffer() {
     std::uint32_t dstOffset = 0;
     std::uint32_t maxPos = 0;
 
@@ -396,7 +396,7 @@ void SwScene::reloadMainBoundsBuffer() {
     }
 }
 
-void SwScene::reloadMainInstancesBuffer() {
+void SwScene::reloadSceneInstancesBuffer() {
     std::uint32_t dstOffset = 0;
     std::uint32_t maxPos = 0;
 
@@ -419,7 +419,7 @@ void SwScene::reloadMainInstancesBuffer() {
     }
 }
 
-void SwScene::reloadMainMaterialResourcesArray() {
+void SwScene::reloadSceneMaterialResourcesArray() {
     for (auto& asset : mAssets | std::views::values) {
         for (auto& material : asset.getMaterials()) {
             std::uint32_t materialTextureArrayIndex = (asset.mFirstMaterialInScene + material.mRelativeMaterialIndex) * SwMaterial::NUM_PBR_IMAGES;
@@ -431,30 +431,30 @@ void SwScene::reloadMainMaterialResourcesArray() {
                 &material.getResources().mOcclusion
             };
             for (std::uint32_t i = 0; i < SwMaterial::NUM_PBR_IMAGES; i++) {
-                if (materialTextures[i]->getImage().getRawImage() == VK_NULL_HANDLE) {
-                    mSceneMaterialResourcesDescriptorSet.writeImage(
-                        0,
-                        materialTextures[i]->getImage().getRawMainImageView(),
-                        materialTextures[i]->getSampler().getRawSampler(),
-                        vk::ImageLayout::eShaderReadOnlyOptimal,
-                        vk::DescriptorType::eCombinedImageSampler,
-                        materialTextureArrayIndex + i
-                    );
-                }
+                auto& texture = *materialTextures[i];
+                bool valid = texture.getImage().getRawImage() != VK_NULL_HANDLE;
+                mSceneMaterialResourcesDescriptorSet.writeImage(
+                    0,
+                    valid ? texture.getImage().getRawMainImageView() : SwMaterialTexture::sDefaultTexture->getImage().getRawMainImageView(),
+                    valid ? texture.getSampler().getRawSampler() : SwMaterialTexture::sDefaultTexture->getSampler().getRawSampler(),
+                    vk::ImageLayout::eShaderReadOnlyOptimal,
+                    vk::DescriptorType::eCombinedImageSampler,
+                    materialTextureArrayIndex + i
+                );
             }
             mSceneMaterialResourcesDescriptorSet.pushWrites();
         }
     }
 }
 
-void SwScene::reloadMainBuffers() {
-    reloadMainVertexBuffer();
-    reloadMainIndexBuffer();
-    reloadMainMaterialConstantsBuffer();
-    reloadMainInstancesBuffer();
-    reloadMainNodeTransformsBuffer();
-    reloadMainBoundsBuffer();
-    reloadMainMaterialResourcesArray();
+void SwScene::reloadSceneBuffers() {
+    reloadSceneVertexBuffer();
+    reloadSceneIndexBuffer();
+    reloadSceneMaterialConstantsBuffer();
+    reloadSceneInstancesBuffer();
+    reloadSceneNodeTransformsBuffer();
+    reloadSceneBoundsBuffer();
+    reloadSceneMaterialResourcesArray();
 }
 
 void SwScene::resetFlags() {
@@ -482,14 +482,14 @@ void SwScene::perFrameUpdate() {
 
     if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
         realignOffsets();
-        reloadMainBuffers();
+        reloadSceneBuffers();
         regenerateRenderItemsAndRenderInstances();
     } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
         realignInstancesOffset();
-        reloadMainInstancesBuffer();
+        reloadSceneInstancesBuffer();
         regenerateRenderItemsAndRenderInstances();
     } else if (mFlags.mReloadMainInstancesBuffer) {
-        reloadMainInstancesBuffer();
+        reloadSceneInstancesBuffer();
     }
 
     resetFlags();

@@ -1,11 +1,13 @@
 #include <Data/SwMaterial.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
+#include <Renderer/SwLogger.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwGeometry.h>
 #include <Scene/SwScene.h>
+#include <quill/LogMacros.h>
 
 std::optional<SwMaterialTexture> SwMaterialTexture::sDefaultTexture{};
 
@@ -93,7 +95,7 @@ void SwMaterial::init(SwRendererContext rendererContext) {
 
 void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
     vk::CullModeFlags cullMode = materialPipelineOptions.doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack;
-    bool opaque = materialPipelineOptions.alphaMode != fastgltf::AlphaMode::Blend;
+    bool opaque = (materialPipelineOptions.alphaMode != fastgltf::AlphaMode::Blend);
 
     SwShader& vertexShader = sVertexShader;
     SwShader& fragShader = opaque ? sOpaqueFragmentShader : sTransparentFragmentShader;

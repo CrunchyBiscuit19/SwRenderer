@@ -143,7 +143,8 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
 SwPerspective SwCamera::getPerspective() const {
     SwPerspective perspective;
     perspective.mView = getViewMatrix();
-    perspective.mProj = glm::perspective(glm::radians(FOVY), sRendererContext.mSwapchain->getAspectRatio(), NEAR_PLANE, FAR_PLANE);
+    perspective.mProj =
+        glm::perspective(glm::radians(FOVY), sRendererContext.mSwapchain->getAspectRatio(), FAR_PLANE, NEAR_PLANE);  // Reverse Z, so flip near and far planes
     perspective.mProj[1][1] *= -1;  // Flip Y for Vulkan
     return perspective;
 }

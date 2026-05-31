@@ -38,7 +38,7 @@ public:
 
 struct SwMaterialConstants {
 private:
-    static constexpr std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
+    static constexpr std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{1 << 20};  // 1 MB
 
 public:
     static SwStagingBuffer sMaterialConstantsStagingBuffer;
