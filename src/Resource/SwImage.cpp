@@ -234,7 +234,7 @@ void SwAllocatedImage::generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numF
         depInfo.pImageMemoryBarriers = &mipBarrier;
         cmd.pipelineBarrier2(depInfo);
 
-        vk::Extent2D halfSize = vk::Extent2D(imageSize.width / 2, imageSize.height / 2);
+        vk::Extent2D halfSize = vk::Extent2D(std::max(1u, imageSize.width / 2), std::max(1u, imageSize.height / 2));
 
         // Copy the image from previous level into next level at half resolution
         vk::ImageBlit2 blitRegion{};

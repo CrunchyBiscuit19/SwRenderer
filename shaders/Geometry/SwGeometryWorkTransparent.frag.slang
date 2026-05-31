@@ -1,7 +1,7 @@
 import SwGeometry;
 import SwCommon;
 
-[[vk::binding(0, 1)]]
+[[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
 
 SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {

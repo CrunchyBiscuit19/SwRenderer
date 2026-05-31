@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <fastgltf/types.hpp>
 #include <glm/glm.hpp>
+#include <optional>
 #include <string>
 #include <unordered_map>
 #include <filesystem>
@@ -21,6 +22,8 @@ private:
     SwSampler& mSampler;
 
 public:
+    static std::optional<SwMaterialTexture> sDefaultTexture;
+
     SwMaterialTexture(SwColorImage2D& image, SwSampler& sampler);
 
     inline SwColorImage2D& getImage() { return mImage; }

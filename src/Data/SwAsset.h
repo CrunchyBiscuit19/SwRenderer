@@ -48,7 +48,7 @@ private:
 
     void loadRawAsset(std::filesystem::path& assetPath);
     void constructBuffers();
-    void constructSamplers();
+    void constructSamplerAndSamplerOptions();
     void constructImages();
     void constructMaterials();
     void constructMeshes();
@@ -72,6 +72,7 @@ public:
     void generateRenderItemsAndRenderInstances();
 
     void createInstance(SwInstance::Data instanceData = SwInstance::Data());
+    void createInstance(SwCamera& camera);
 
     void reloadInstances();
 

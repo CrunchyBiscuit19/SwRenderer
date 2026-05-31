@@ -4,6 +4,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwCull.h>
+#include <quill/LogMacros.h>
 
 #include <ranges>
 
@@ -228,6 +229,56 @@ void SwCull::System::initializePasses() {
             }
         }
     });
+    deps.clear();
+}
+
+void SwCull::System::refreshBatchDependencies() {
+    SwDependency deps;
+
+    // CullReset
+    deps.mWriteBuffers.emplace_back(&sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::TransferWrite);
+    deps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::TransferWrite);
+    deps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
+    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
+        for (auto& batch : batchType | std::views::values) {
+            if (batch.getRenderItems().empty()) continue;
+            deps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsCountBuffer(), SwDependency::BufferDepType::TransferWrite);
+            deps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::TransferWrite);
+            deps.mWriteBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        }
+    }
+    mScene.mPasses[SwPass::Type::CullReset].setDeps(std::move(deps));
+    deps.clear();
+
+    // CullWork
+    deps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    deps.mReadBuffers.emplace_back(&sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    deps.mWriteBuffers.emplace_back(&sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
+    deps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
+        for (auto& batch : batchType | std::views::values) {
+            if (batch.getRenderItems().empty()) continue;
+            deps.mReadBuffers.emplace_back(&batch.getRenderInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+            deps.mReadBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        }
+    }
+    mScene.mPasses[SwPass::Type::CullWork].setDeps(std::move(deps));
+    deps.clear();
+
+    // CullCompact
+    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
+        for (auto& batch : batchType | std::views::values) {
+            if (batch.getRenderItems().empty()) continue;
+            deps.mReadBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+            deps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+            deps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsCountBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        }
+    }
+    mScene.mPasses[SwPass::Type::CullCompact].setDeps(std::move(deps));
     deps.clear();
 }
 

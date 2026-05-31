@@ -30,6 +30,11 @@ void SwRenderGraph::pruneUnreachablePasses() {
         for (auto& dep : p->getDeps().mWriteBuffers) bufferWriters[dep.mBuffer].emplace_back(p);
     }
 
+    // Map each pass to its registration index so we can distinguish earlier vs later co-writers.
+    std::unordered_map<SwPass*, std::size_t> passIndex;
+    passIndex.reserve(mPasses.size());
+    for (std::size_t i = 0; i < mPasses.size(); ++i) passIndex[mPasses[i]] = i;
+
     // Setup BFS to run backwards through DAG render graph from outputs (and from must-run passes).
     std::queue<SwPass*> work;
     std::unordered_set<SwPass*> visited;
@@ -50,10 +55,16 @@ void SwRenderGraph::pruneUnreachablePasses() {
         if (p->isMustRun()) visit(p);
     }
 
-    // For each enqueued pass, follow its read dependencies back to whichever passes produce those reads.
+    // For each enqueued pass:
+    //   (a) Follow read dependencies backward to whichever passes produce those reads.
+    //   (b) Follow write dependencies to pull in earlier co-writers of the same resource
+    //       (W→W chain) — ensures initialization / clear passes are not mistakenly pruned
+    //       even when no downstream pass explicitly reads from them.
     while (!work.empty()) {
         SwPass* p = work.front();
         work.pop();
+
+        // (a) Read-dep backward walk
         for (auto& dep : p->getDeps().mReadImages) {
             if (auto it = imageWriters.find(dep.mImage); it != imageWriters.end()) {
                 for (SwPass* writer : it->second) visit(writer);
@@ -64,13 +75,30 @@ void SwRenderGraph::pruneUnreachablePasses() {
                 for (SwPass* writer : it->second) visit(writer);
             }
         }
+
+        // (b) Earlier co-writer inclusion (W→W)
+        const std::size_t pIdx = passIndex.at(p);
+        for (auto& dep : p->getDeps().mWriteImages) {
+            if (auto it = imageWriters.find(dep.mImage); it != imageWriters.end()) {
+                for (SwPass* writer : it->second) {
+                    if (passIndex.at(writer) < pIdx) visit(writer);
+                }
+            }
+        }
+        for (auto& dep : p->getDeps().mWriteBuffers) {
+            if (auto it = bufferWriters.find(dep.mBuffer); it != bufferWriters.end()) {
+                for (SwPass* writer : it->second) {
+                    if (passIndex.at(writer) < pIdx) visit(writer);
+                }
+            }
+        }
     }
 
-    // Setup for topological sort later
+    // Populate mSortedPasses in registration order (topological sort will reorder later).
     mSortedPasses.clear();
     mSortedPasses.reserve(visited.size());
     for (auto& p : mPasses) {
-        if (visited.count(p) >= 1) {
+        if (visited.contains(p)) {
             p->setPruned(false);
             mSortedPasses.emplace_back(p);
         }
@@ -78,13 +106,12 @@ void SwRenderGraph::pruneUnreachablePasses() {
 }
 
 void SwRenderGraph::sortTopological() {
-    // Tie-breaker ordering
-    std::unordered_map<SwPass*, size_t> regIndex;
-    for (size_t i = 0; i < mSortedPasses.size(); ++i) {
-        regIndex[mSortedPasses[i]] = i;
-    }
+    // Tie-breaker ordering: passes registered earlier get lower index.
+    std::unordered_map<SwPass*, std::size_t> regIndex;
+    regIndex.reserve(mSortedPasses.size());
+    for (std::size_t i = 0; i < mSortedPasses.size(); ++i) regIndex[mSortedPasses[i]] = i;
 
-    // Identify passes that read / write each image / buffer.    }
+    // Identify passes that read / write each image / buffer.
     std::unordered_map<SwImage*, std::vector<SwPass*>> imageWriters, imageReaders;
     std::unordered_map<SwBuffer*, std::vector<SwPass*>> bufferWriters, bufferReaders;
     for (SwPass* p : mSortedPasses) {
@@ -94,19 +121,24 @@ void SwRenderGraph::sortTopological() {
         for (auto& d : p->getDeps().mReadBuffers) bufferReaders[d.mBuffer].emplace_back(p);
     }
 
-    // Adjacency list / in-degree count of dependencies.
-    std::unordered_map<SwPass*, std::vector<SwPass*>> adj;
+    // Set-based adjacency prevents duplicate edges from being counted multiple times.
+    // W→R, R→W, and W→W edges can all connect the same pair of passes via the same
+    // resource; storing them in a set ensures inDegree is only incremented once per
+    // unique directed edge, keeping Kahn's algorithm and cycle detection accurate.
+    std::unordered_map<SwPass*, std::unordered_set<SwPass*>> adj;
     std::unordered_map<SwPass*, int> inDegree;
     for (SwPass* p : mSortedPasses) inDegree[p] = 0;
 
+    // Only add an edge when it goes in registration order (lower index → higher index).
+    // For W→W and R→W this acts as a tiebreaker that matches the intended execution order.
+    // For W→R, registration order is relied upon to be correct (writer registered before reader).
     auto addEdge = [&](SwPass* from, SwPass* to) {
         if (from == to) return;
         if (regIndex[from] >= regIndex[to]) return;
-        adj[from].emplace_back(to);
-        inDegree[to]++;
+        if (adj[from].insert(to).second) inDegree[to]++;
     };
 
-    // W->R: writer → reader
+    // W→R: each writer must execute before each reader of the same resource.
     for (auto& [img, writers] : imageWriters) {
         for (SwPass* w : writers) {
             for (SwPass* r : imageReaders[img]) addEdge(w, r);
@@ -118,7 +150,7 @@ void SwRenderGraph::sortTopological() {
         }
     }
 
-    // R->W: earlier reader → later writer
+    // R→W: a reader must finish before a later writer overwrites the same resource (WAR hazard).
     for (auto& [img, readers] : imageReaders) {
         for (SwPass* r : readers) {
             for (SwPass* w : imageWriters[img]) addEdge(r, w);
@@ -130,23 +162,27 @@ void SwRenderGraph::sortTopological() {
         }
     }
 
-    // W->W: earlier writer → later writer
+    // W→W: order concurrent writers by registration index (earlier write before later write).
+    // Iterate each unordered pair once (j > i) and try both directions; addEdge keeps only
+    // the one going from lower to higher regIndex.
     for (auto& [img, writers] : imageWriters) {
-        for (size_t i = 0; i < writers.size(); ++i) {
-            for (size_t j = 0; j < writers.size(); ++j) {
-                if (i != j) addEdge(writers[i], writers[j]);
+        for (std::size_t i = 0; i < writers.size(); ++i) {
+            for (std::size_t j = i + 1; j < writers.size(); ++j) {
+                addEdge(writers[i], writers[j]);
+                addEdge(writers[j], writers[i]);
             }
         }
     }
     for (auto& [buf, writers] : bufferWriters) {
-        for (size_t i = 0; i < writers.size(); ++i) {
-            for (size_t j = 0; j < writers.size(); ++j) {
-                if (i != j) addEdge(writers[i], writers[j]);
+        for (std::size_t i = 0; i < writers.size(); ++i) {
+            for (std::size_t j = i + 1; j < writers.size(); ++j) {
+                addEdge(writers[i], writers[j]);
+                addEdge(writers[j], writers[i]);
             }
         }
     }
 
-    // Do the sorting part with priority queue (min heap based on regIndex) to get a deterministic order.
+    // Kahn's algorithm with a min-heap priority queue for deterministic tie-breaking.
     auto cmp = [&](SwPass* a, SwPass* b) { return regIndex[a] > regIndex[b]; };
     std::priority_queue<SwPass*, std::vector<SwPass*>, decltype(cmp)> ready(cmp);
     for (auto& [p, deg] : inDegree) {
@@ -165,10 +201,10 @@ void SwRenderGraph::sortTopological() {
     }
 
     if (sorted.size() != mSortedPasses.size()) {
-        std::string msg = "Cycle detected in render graph among passes:";
+        std::string msg = "Cycle detected in render graph — passes stuck:";
         for (auto& [p, deg] : inDegree) {
             if (deg > 0) {
-                msg += fmt::format("\n  - {} ({} dependencies)", magic_enum::enum_name(p->getPassType()).data(), deg);
+                msg += fmt::format("\n  - {} (unsatisfied incoming edges: {})", magic_enum::enum_name(p->getPassType()).data(), deg);
             }
         }
         throw std::runtime_error(msg);
@@ -301,7 +337,7 @@ void SwRenderGraph::compile() {
 
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
     // exportGraphviz(fmt::format("{}/{}", LOGS_PATH, "rendergraph.dot"));
-    LOG_DEBUG(sRendererContext.mLogger->getLogger(), "{}", getAllSortedPasses());
+    // LOG_DEBUG(sRendererContext.mLogger->getLogger(), "{}", getAllSortedPasses());
     for (SwPass* pass : mSortedPasses) {
         for (auto& dep : pass->getDeps().mReadImages) {
             dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);

@@ -103,9 +103,10 @@ private:
 
 public:
     System(SwScene& scene);
-    
+
     inline bool& getFreezeRef() { return mFreeze; }
 
+    void refreshBatchDependencies();
     void resize() override;
 };
 };  // namespace SwCull

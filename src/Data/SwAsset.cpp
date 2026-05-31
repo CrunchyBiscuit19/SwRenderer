@@ -109,7 +109,7 @@ void SwAsset::constructBuffers() {
     );
 };
 
-void SwAsset::constructSamplers() {
+void SwAsset::constructSamplerAndSamplerOptions() {
     vk::SamplerCreateInfo defaultSamplerCreateInfo;
     SwSamplerOptions defaultSamplerOptions(defaultSamplerCreateInfo);
     sSamplers.emplace(defaultSamplerOptions, SwSamplerFactory::createSampler(defaultSamplerCreateInfo));
@@ -228,61 +228,22 @@ void SwAsset::constructMaterials() {
         }
         materialConstants.emplace_back(constants);
 
-        size_t imageIndex = 0;
-        size_t samplerIndex = 0;
-        if (material.pbrData.baseColorTexture.has_value()) {
-            imageIndex = mRawAsset.textures[material.pbrData.baseColorTexture.value().textureIndex].imageIndex.value_or(0);
-            samplerIndex = mRawAsset.textures[material.pbrData.baseColorTexture.value().textureIndex].samplerIndex.value_or(0);
-        }
-        SwMaterialTexture baseImage(
-            mImages[imageIndex],
-            sSamplers[mSamplerOptions[samplerIndex]]
-        );
+        auto resolveTexture = [&](auto& texInfo) -> SwMaterialTexture {
+            if (texInfo.has_value()) {
+                auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
+                return SwMaterialTexture(
+                    mImages[tex.imageIndex.value_or(0)],
+                    sSamplers[mSamplerOptions[tex.samplerIndex.value_or(0)]]
+                );
+            }
+            return SwMaterialTexture(SwMaterialTexture::sDefaultTexture->getImage(), SwMaterialTexture::sDefaultTexture->getSampler());
+        };
 
-        imageIndex = 0;
-        samplerIndex = 0;
-        if (material.pbrData.metallicRoughnessTexture.has_value()) {
-            imageIndex = mRawAsset.textures[material.pbrData.metallicRoughnessTexture.value().textureIndex].imageIndex.value_or(0);
-            samplerIndex = mRawAsset.textures[material.pbrData.metallicRoughnessTexture.value().textureIndex].samplerIndex.value_or(0);
-        }
-        SwMaterialTexture metallicRoughnessImage(
-            mImages[imageIndex],
-            sSamplers[mSamplerOptions[samplerIndex]]
-        );
-
-        imageIndex = 0;
-        samplerIndex = 0;
-        if (material.emissiveTexture.has_value()) {
-            imageIndex = mRawAsset.textures[material.emissiveTexture.value().textureIndex].imageIndex.value_or(0);
-            samplerIndex = mRawAsset.textures[material.emissiveTexture.value().textureIndex].samplerIndex.value_or(0);
-        }
-        SwMaterialTexture emissiveImage(
-            mImages[imageIndex],
-            sSamplers[mSamplerOptions[samplerIndex]]
-        );
-
-        imageIndex = 0;
-        samplerIndex = 0;
-        if (material.normalTexture.has_value()) {
-            imageIndex = mRawAsset.textures[material.normalTexture.value().textureIndex].imageIndex.value_or(0);
-            samplerIndex = mRawAsset.textures[material.normalTexture.value().textureIndex].samplerIndex.value_or(0);
-        }
-        SwMaterialTexture normalImage(
-            mImages[imageIndex],
-            sSamplers[mSamplerOptions[samplerIndex]]
-        );
-
-        imageIndex = 0;
-        samplerIndex = 0;
-        if (material.occlusionTexture.has_value()) {
-            imageIndex = mRawAsset.textures[material.occlusionTexture.value().textureIndex].imageIndex.value_or(0);
-            samplerIndex = mRawAsset.textures[material.occlusionTexture.value().textureIndex].samplerIndex.value_or(0);
-        }
-        std::vector<vk::Format> occlusionFormats{mImages[imageIndex].getMainFormat()};
-        SwMaterialTexture occlusionImage(
-            mImages[imageIndex],
-            sSamplers[mSamplerOptions[samplerIndex]]
-        );
+        SwMaterialTexture baseImage = resolveTexture(material.pbrData.baseColorTexture);
+        SwMaterialTexture metallicRoughnessImage = resolveTexture(material.pbrData.metallicRoughnessTexture);
+        SwMaterialTexture emissiveImage = resolveTexture(material.emissiveTexture);
+        SwMaterialTexture normalImage = resolveTexture(material.normalTexture);
+        SwMaterialTexture occlusionImage = resolveTexture(material.occlusionTexture);
 
         SwMaterialResources resources(
             std::move(baseImage), std::move(metallicRoughnessImage), std::move(emissiveImage), std::move(normalImage), std::move(occlusionImage)
@@ -516,7 +477,7 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     loadRawAsset(assetPath);
     constructBuffers();
     constructImages();
-    constructSamplers();
+    constructSamplerAndSamplerOptions();
     constructMaterials();
     constructMeshes();
     constructNodes();
@@ -533,6 +494,10 @@ void SwAsset::createInstance(SwInstance::Data instanceData) {
     mInstances.emplace_back(mId, instanceData);
     mReloadInstancesFlag = true;
     sRendererContext.mScene->mFlags.mInstanceLoaded = true;
+}
+
+void SwAsset::createInstance(SwCamera& camera) {
+    createInstance(SwInstance::Data(camera.getSpawnTransform()));
 }
 
 void SwAsset::reloadInstances() {

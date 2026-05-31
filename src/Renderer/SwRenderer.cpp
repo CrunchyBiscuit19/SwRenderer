@@ -283,9 +283,10 @@ SwRenderer::~SwRenderer() {
     SwBounds::cleanup();
     SwNode::cleanup();
     SwMaterialConstants::cleanup();
-    SwImageFactory::cleanup();
     SwMaterialResources::cleanup();
+    SwImageFactory::cleanup();
     SwMaterial::cleanup();
     SwAsset::cleanup();
+    SwSamplerFactory::cleanup();
     SDL_Quit();
 }

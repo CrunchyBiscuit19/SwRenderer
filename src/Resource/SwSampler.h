@@ -67,6 +67,8 @@ private:
     vk::raii::Sampler mSampler;
 
 public:
+    static SwSampler sDefaultSampler;
+
     SwSampler();
 
     SwSampler(vk::raii::Sampler);
@@ -80,6 +82,8 @@ private:
 
 public:
     static void init(SwRendererContext rendererContext);
+
+    static void cleanup();
 
     static SwSampler createSampler(vk::SamplerCreateInfo);
 };

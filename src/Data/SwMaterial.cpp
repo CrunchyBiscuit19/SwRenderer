@@ -7,6 +7,8 @@
 #include <Scene/SwGeometry.h>
 #include <Scene/SwScene.h>
 
+std::optional<SwMaterialTexture> SwMaterialTexture::sDefaultTexture{};
+
 SwMaterialTexture::SwMaterialTexture(SwColorImage2D& image, SwSampler& sampler) : mImage(image), mSampler(sampler) {}
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStagingBuffer{};
@@ -32,9 +34,16 @@ void SwMaterialResources::init(SwRendererContext rendererContext) {
     sMaterialResourcesDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true
     );
+    SwMaterialTexture::sDefaultTexture.emplace(
+        SwImageFactory::sDefaultImages.at(SwImageFactory::SwDefaultImageOption::Checkerboard),
+        SwSampler::sDefaultSampler
+    );
 };
 
-void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
+void SwMaterialResources::cleanup() {
+    SwMaterialTexture::sDefaultTexture.reset();
+    sMaterialResourcesDescriptorLayout.destroy();
+}
 
 SwRendererContext SwMaterial::sRendererContext{};
 std::uint32_t SwMaterial::sLatestMaterialId{0};

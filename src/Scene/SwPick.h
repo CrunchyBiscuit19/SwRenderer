@@ -76,6 +76,7 @@ public:
     void changePickOperation();
     void generatePickFrame();
     bool isPicked();
+    void refreshBatchDependencies();
 
     inline Resources& getResources() { return mResources; }
 

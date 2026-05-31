@@ -44,6 +44,7 @@ public:
     bool isPruned() const { return mPruned; }
     bool isMustRun() const { return mMustRun; }
     void setPruned(bool pruned) { mPruned = pruned; }
+    void setDeps(SwDependency deps) { mDeps = std::move(deps); }
     const SwDependency& getDeps() const { return mDeps; }
 
     void execute(vk::CommandBuffer cmd);

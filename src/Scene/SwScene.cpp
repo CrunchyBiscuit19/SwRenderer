@@ -164,6 +164,7 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
         SwAsset loadedAsset(fullPath);
         auto [_, inserted] = mAssets.try_emplace(loadedAsset.getId(), std::move(loadedAsset));
         if (inserted) {
+            mAssets[loadedAsset.getId()].createInstance(mCamera);
             mAlreadyLoadedAssets.insert(shortPath);
             mFlags.mAssetLoaded = true;
         }
@@ -192,7 +193,7 @@ void SwScene::markAllAssetsDelete() {
     }
 }
 
-void SwScene::regenerateRenderItemsInstances() {
+void SwScene::regenerateRenderItemsAndRenderInstances() {
     SwBatch::sFirstRenderInstanceOffset = 0;
 
     for (auto& batchType : mBatchTypes | std::views::values) {
@@ -482,11 +483,11 @@ void SwScene::perFrameUpdate() {
     if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
         realignOffsets();
         reloadMainBuffers();
-        regenerateRenderItemsInstances();
+        regenerateRenderItemsAndRenderInstances();
     } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
         realignInstancesOffset();
         reloadMainInstancesBuffer();
-        regenerateRenderItemsInstances();
+        regenerateRenderItemsAndRenderInstances();
     } else if (mFlags.mReloadMainInstancesBuffer) {
         reloadMainInstancesBuffer();
     }
@@ -508,7 +509,11 @@ void SwScene::draw() {
     auto _ = sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getRawFence(), true, 1e9);
     sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getRawFence());
     sRendererContext.mSwapchain->acquireNextImage(1e9);
+
     refreshSwapchainPasses();
+    mCull.refreshBatchDependencies();
+    mGeometry.refreshBatchDependencies();
+    mPick.refreshBatchDependencies();
 
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();

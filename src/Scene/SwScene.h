@@ -110,7 +110,7 @@ public:
     void unloadInstances();
     void markAllAssetsDelete();
 
-    void regenerateRenderItemsInstances();
+    void regenerateRenderItemsAndRenderInstances();
 
     void realignVertexIndexOffset();
     void realignMaterialOffset();

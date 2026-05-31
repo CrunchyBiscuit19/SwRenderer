@@ -32,5 +32,7 @@ private:
 
 public:
     System(SwScene& scene);
+
+    void refreshBatchDependencies();
 };
 }  // namespace SwGeometry

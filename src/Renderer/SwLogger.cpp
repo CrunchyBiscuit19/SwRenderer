@@ -278,15 +278,24 @@ SwLogger::SwLogger() {
     options.timestamp_pattern = "%H:%M:%S.%Qms";
     options.add_metadata_to_multi_line_logs = false;
 
-    if (LOG_LOCATION == LogLocation::File) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink)}, options);
-    } else if (LOG_LOCATION == LogLocation::Console) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", std::move(consoleSink), options);
-    } else if (LOG_LOCATION == LogLocation::Both) {
-        mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)}, options);
+    switch (LOG_LOCATION) {
+        case LogLocation::File:
+            mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink)}, options);
+            break;
+        case LogLocation::Console:
+            mLogger = quill::Frontend::create_or_get_logger("LOGGER", std::move(consoleSink), options);
+            break;
+        case LogLocation::Both:
+            mLogger = quill::Frontend::create_or_get_logger("LOGGER", {std::move(fileSink), std::move(latestFileSink), std::move(consoleSink)}, options);
+            break;
     }
 
     mLogger->set_log_level(LOG_LEVEL);
+
+    mBlockedMessages.insert("BestPractices-vkBindBufferMemory-small-dedicated-allocation");
+    mBlockedMessages.insert("BestPractices-vkBindImageMemory-small-dedicated-allocation");
+
+    mBreakMessages.insert("VUID-VkBufferCopy-size-01988");
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
@@ -294,6 +303,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData
 ) {
     auto* swLogger = static_cast<SwLogger*>(pUserData);
+
+    const std::string messageName{pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : ""};
+    if (swLogger->mBlockedMessages.contains(messageName)) return vk::False;
+    if (swLogger->mBreakMessages.contains(messageName)) SW_DEBUG_BREAK();
 
     std::string severity;
     switch (messageSeverity) {
