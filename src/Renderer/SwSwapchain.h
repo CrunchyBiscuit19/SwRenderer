@@ -96,7 +96,7 @@ public:
     inline void incrementFrameNumber() { mFrameNumber++; }
     inline std::optional<std::uint64_t> getProgramEndFrameNumber() const { return mProgramEndFrameNumber; }
     inline void setProgramEndFrameNumber(std::uint64_t programEndFrameNumber) { mProgramEndFrameNumber = std::optional<std::uint64_t>(programEndFrameNumber); }
-    inline SDL_Window* getWindow() const { return mWindow; }
+    inline SDL_Window* getWindowPtr() const { return mWindow; }
     inline float getAspectRatio() const { return mAspectRatio; }
     inline SwFrame& getCurrentFrame() { return mFrames[mFrameNumber % NUM_FRAME_OVERLAP]; }
     inline SwFrame& getPreviousFrame() { return mFrames[(mFrameNumber - 1) % NUM_FRAME_OVERLAP]; }

@@ -31,7 +31,7 @@ public:
 
     inline std::weak_ptr<SwNode> getParent() { return mParent; }
 
-    inline float* getWorldTransformAddress() { return glm::value_ptr(mWorldTransform); }
+    inline glm::mat4& getWorldTransform() { return mWorldTransform; }
 
     void setParent(std::weak_ptr<SwNode> parent);
 

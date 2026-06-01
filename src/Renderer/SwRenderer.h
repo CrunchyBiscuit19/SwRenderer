@@ -73,8 +73,6 @@ public:
 
     SwRenderer();
 
-    inline SwLogger* getLogger() { return &mLogger; };
-
     inline SwRendererContext& getRendererInfo() { return mRendererContext; };
 
     inline std::uint64_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };

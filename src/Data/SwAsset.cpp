@@ -60,9 +60,7 @@ void SwAsset::init(SwRendererContext assetContext) { sRendererContext = assetCon
 
 void SwAsset::cleanup() { sSamplers.clear(); }
 
-std::string SwAsset::getNameFromFilePath(const std::filesystem::path& assetPath) { 
-    return assetPath.stem().string(); 
-}
+std::string SwAsset::getNameFromFilePath(const std::filesystem::path& assetPath) { return assetPath.stem().string(); }
 
 void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     mName = getNameFromFilePath(assetPath);
@@ -74,14 +72,14 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     data.loadFromFile(assetPath);
     auto type = fastgltf::determineGltfFileType(&data);
     if (type == fastgltf::GltfType::Invalid) {
-        LOG_ERROR(sRendererContext.mLogger->getLogger(), "{} Failed to determine GLTF Container", mName);
+        LOG_ERROR(sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to determine GLTF Container", mName);
     }
     auto load = (type == fastgltf::GltfType::glTF) ? (parser.loadGLTF(&data, assetPath.parent_path(), gltfOptions))
                                                    : (parser.loadBinaryGLTF(&data, assetPath.parent_path(), gltfOptions));
     if (load) {
         gltf = std::move(load.get());
     } else {
-        LOG_ERROR(sRendererContext.mLogger->getLogger(), "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
+        LOG_ERROR(sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
     }
     mRawAsset = std::move(gltf);
 }
@@ -134,6 +132,19 @@ void SwAsset::constructSamplerAndSamplerOptions() {
 
 void SwAsset::constructImages() {
     mImages.reserve(mRawAsset.images.size());
+
+    std::vector<bool> imageIsSrgb(mRawAsset.images.size(), false);
+    auto markSrgb = [&](auto& texInfo) {
+        if (texInfo.has_value()) {
+            auto& tex = mRawAsset.textures[texInfo->textureIndex];
+            if (tex.imageIndex.has_value()) imageIsSrgb[tex.imageIndex.value()] = true;
+        }
+    };
+    for (fastgltf::Material& material : mRawAsset.materials) {
+        markSrgb(material.pbrData.baseColorTexture);
+        markSrgb(material.emissiveTexture);
+    }
+
     std::uint32_t id = 0;
     for (int i = 0; i < mRawAsset.images.size(); i++) {
         fastgltf::Image& image = mRawAsset.images[i];
@@ -167,15 +178,10 @@ void SwAsset::constructImages() {
                                 data = stbi_load_from_memory(
                                     vector.bytes.data() + bufferView.byteOffset,
                                     static_cast<std::uint32_t>(bufferView.byteLength),
-                                    &width, &height, &nrChannels, 4
-                                );
-                            },
-                            // GLB binary chunks are stored as ByteView (non-owning span into the loaded file).
-                            [&](const fastgltf::sources::ByteView& byteView) {
-                                data = stbi_load_from_memory(
-                                    reinterpret_cast<const stbi_uc*>(byteView.bytes.data()) + bufferView.byteOffset,
-                                    static_cast<std::uint32_t>(bufferView.byteLength),
-                                    &width, &height, &nrChannels, 4
+                                    &width,
+                                    &height,
+                                    &nrChannels,
+                                    4
                                 );
                             },
                             [](const auto& arg) {},
@@ -183,28 +189,24 @@ void SwAsset::constructImages() {
                         buffer.data
                     );
                 },
-                [&](const fastgltf::sources::ByteView& byteView) {
-                    data = stbi_load_from_memory(
-                        reinterpret_cast<const stbi_uc*>(byteView.bytes.data()),
-                        static_cast<std::uint32_t>(byteView.bytes.size()),
-                        &width, &height, &nrChannels, 4
-                    );
-                },
                 [](const auto& arg) {},
             },
             image.data
         );
 
+        const vk::Format imageFormat = imageIsSrgb[i] ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8G8B8A8Unorm;
+
         if (data) {
             imageSize.width = static_cast<std::uint32_t>(width);
             imageSize.height = static_cast<std::uint32_t>(height);
             imageSize.depth = 1;
-            newImage = SwImageFactory::createColorImage2D(data, vk::Format::eR8G8B8A8Srgb, imageSize, vk::ImageUsageFlagBits::eSampled, true);
+            newImage = SwImageFactory::createColorImage2D(data, imageFormat, imageSize, vk::ImageUsageFlagBits::eSampled, true);
             stbi_image_free(data);
+        } else {
+            LOG_DEBUG(
+                sRendererContext.mLogger->getQuillLoggerPtr(), "{} failed to read image {}: {}", mName, i, stbi_failure_reason() ? stbi_failure_reason() : "Unknown"
+            );
         }
-        // Move the lambda taking const auto to the bottom. Otherwise it always get runs and the other lambdas don't.
-        // Needs to be exactly const auto&?
-        // No idea why it's even needed in the first place.
 
         mImages.emplace_back(std::move(newImage));
     }
@@ -240,25 +242,29 @@ void SwAsset::constructMaterials() {
         }
         materialConstants.emplace_back(constants);
 
-        auto resolveTexture = [&](auto& texInfo) -> SwMaterialTexture {
+        std::uint32_t resolvedTextureCount = 0;
+        auto resolveTexture = [&](auto& texInfo, std::string slot) -> SwMaterialTexture {
             if (texInfo.has_value()) {
                 auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
-                SwColorImage2D& image = tex.imageIndex.has_value()
-                    ? mImages[tex.imageIndex.value()]
-                    : SwMaterialTexture::sDefaultTexture->getImage();
-                SwSampler& sampler = tex.samplerIndex.has_value()
-                    ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]]
-                    : SwMaterialTexture::sDefaultTexture->getSampler();
-                return SwMaterialTexture(image, sampler);
+                SwColorImage2D& image = tex.imageIndex.has_value() ? mImages[tex.imageIndex.value()] : SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getImage();
+                SwSampler& sampler =
+                    tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getSampler();
+                resolvedTextureCount++;
+                return SwMaterialTexture(&image, &sampler);
             }
-            return SwMaterialTexture(SwMaterialTexture::sDefaultTexture->getImage(), SwMaterialTexture::sDefaultTexture->getSampler());
+            LOG_DEBUG(sRendererContext.mLogger->getQuillLoggerPtr(), "{} material '{}' slot '{}' unset; using default.", mName, name, slot);
+            return SwMaterialTexture(&SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getImage(), &SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getSampler());
         };
 
-        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture);
-        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture);
-        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture);
-        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture);
-        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture);
+        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture, "base");
+        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture, "metallicRoughness");
+        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture, "emissive");
+        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture, "normal");
+        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture, "occlusion");
+
+        if (resolvedTextureCount == 0) {
+            LOG_DEBUG(sRendererContext.mLogger->getQuillLoggerPtr(), "{} material '{}' references no textures — fully factor-driven.", mName, name);
+        }
 
         SwMaterialResources resources(
             std::move(baseTexture), std::move(metallicRoughnessTexture), std::move(normalTexture), std::move(occlusionTexture), std::move(emissiveTexture)
@@ -268,7 +274,7 @@ void SwAsset::constructMaterials() {
     }
 
     std::memcpy(
-        SwMaterialConstants::sMaterialConstantsStagingBuffer.getMappedPointer(),
+        SwMaterialConstants::sMaterialConstantsStagingBuffer.getMappedPtr(),
         materialConstants.data(),
         materialConstants.size() * sizeof(SwMaterialConstants)
     );
@@ -372,8 +378,8 @@ void SwAsset::constructMeshes() {
             srcIndexVectorSize
         );
 
-        std::memcpy(static_cast<char*>(SwMesh::sMeshStagingBuffer.getMappedPointer()) + 0, vertices.data(), srcVertexVectorSize);
-        std::memcpy(static_cast<char*>(SwMesh::sMeshStagingBuffer.getMappedPointer()) + srcVertexVectorSize, indices.data(), srcIndexVectorSize);
+        std::memcpy(static_cast<char*>(SwMesh::sMeshStagingBuffer.getMappedPtr()) + 0, vertices.data(), srcVertexVectorSize);
+        std::memcpy(static_cast<char*>(SwMesh::sMeshStagingBuffer.getMappedPtr()) + srcVertexVectorSize, indices.data(), srcIndexVectorSize);
 
         vk::BufferCopy vertexCopy{};
         vertexCopy.dstOffset = 0;
@@ -403,7 +409,7 @@ void SwAsset::constructMeshes() {
     for (const auto& mesh : mMeshes) {
         boundsVector.emplace_back(mesh.getBounds());
     }
-    std::memcpy(SwBounds::sBoundsStagingBuffer.getMappedPointer(), boundsVector.data(), boundsSize);
+    std::memcpy(SwBounds::sBoundsStagingBuffer.getMappedPtr(), boundsVector.data(), boundsSize);
 
     vk::BufferCopy boundsCopy{};
     boundsCopy.dstOffset = 0;
@@ -470,8 +476,8 @@ void SwAsset::constructNodes() {
 
     for (std::uint32_t i = 0; i < mNodes.size(); i++) {
         std::memcpy(
-            static_cast<char*>(SwNode::sNodeTransformsStagingBuffer.getMappedPointer()) + i * sizeof(glm::mat4),
-            mNodes[i]->getWorldTransformAddress(),
+            static_cast<char*>(SwNode::sNodeTransformsStagingBuffer.getMappedPtr()) + i * sizeof(glm::mat4),
+            glm::value_ptr(mNodes[i]->getWorldTransform()),
             sizeof(glm::mat4)
         );
     }
@@ -511,9 +517,7 @@ void SwAsset::createInstance(SwInstance::Data instanceData) {
     sRendererContext.mScene->mFlags.mInstanceLoaded = true;
 }
 
-void SwAsset::createInstance(SwCamera& camera) {
-    createInstance(SwInstance::Data(camera.getSpawnTransform()));
-}
+void SwAsset::createInstance(SwCamera& camera) { createInstance(SwInstance::Data(camera.getSpawnTransform())); }
 
 void SwAsset::reloadInstances() {
     if (mInstances.empty()) {
@@ -523,7 +527,7 @@ void SwAsset::reloadInstances() {
 
     std::uint32_t dstOffset = 0;
     for (auto& instance : mInstances) {
-        std::memcpy(static_cast<char*>(mInstancesBuffer.getMappedPointer()) + dstOffset, instance.getDataAddress(), sizeof(SwInstance::Data));
+        std::memcpy(static_cast<char*>(mInstancesBuffer.getMappedPtr()) + dstOffset, &instance.getData(), sizeof(SwInstance::Data));
         dstOffset += sizeof(SwInstance::Data);
     }
 

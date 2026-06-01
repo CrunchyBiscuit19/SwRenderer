@@ -493,7 +493,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     std::uint32_t bytesPerTexel = getFormatTexelSize(image.getMainFormat());
     const size_t faceSize = image.getExtent().depth * image.getExtent().width * image.getExtent().height * bytesPerTexel;
     const size_t dataSize = faceSize * numFaces;
-    std::memcpy(sImageStagingBuffer.getMappedPointer(), data, dataSize);
+    std::memcpy(sImageStagingBuffer.getMappedPtr(), data, dataSize);
 
     sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
         image.emitTransition(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eTransferDstOptimal);

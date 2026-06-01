@@ -175,7 +175,7 @@ void SwPick::System::initializePasses() {
             glm::uvec2 read(0);
             std::memcpy(
                 glm::value_ptr(read),
-                static_cast<char*>(mResources.mReadbackBuffer.getMappedPointer()) + sizeof(SwPick::ReadbackData::mCoords),
+                static_cast<char*>(mResources.mReadbackBuffer.getMappedPtr()) + sizeof(SwPick::ReadbackData::mCoords),
                 sizeof(SwPick::ReadbackData::mRead)
             );
 
@@ -257,7 +257,7 @@ void SwPick::System::generatePickFrame() {
         glm::value_ptr(mScene.getCamera().getPerspective().mProj),
         mResources.mImguizmoOperation,
         ImGuizmo::WORLD,
-        glm::value_ptr(mResources.mClickedInstance->getDataAddress()->mTransformMatrix)
+        glm::value_ptr(mResources.mClickedInstance->getData().mTransformMatrix)
     );
 
     if (ImGuizmo::IsUsing()) {

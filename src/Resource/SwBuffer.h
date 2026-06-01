@@ -34,7 +34,7 @@ public:
 
     void copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies, std::uint32_t maxSize);
 
-    void* getMappedPointer();
+    void* getMappedPtr();
 
     inline vk::Buffer getRawBuffer() { return *mBuffer; }
 

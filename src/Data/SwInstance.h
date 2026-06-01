@@ -30,7 +30,7 @@ public:
     SwInstance& operator=(const SwInstance&) = delete;
 
     inline std::uint32_t getId() const { return mId; }
-    inline Data* getDataAddress() { return &mData; }
+    inline Data& getData() { return mData; }
     inline std::uint32_t getAssetId() const { return mAssetId; }
     inline bool isMarkedDelete() const { return mDelete; }
 

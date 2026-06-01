@@ -1,7 +1,7 @@
 #include <Data/SwMaterial.h>
+#include <Renderer/SwLogger.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
-#include <Renderer/SwLogger.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
@@ -9,9 +9,10 @@
 #include <Scene/SwScene.h>
 #include <quill/LogMacros.h>
 
-std::optional<SwMaterialTexture> SwMaterialTexture::sDefaultTexture{};
+SwMaterialTexture SwMaterialTexture::DEFAULT_WHITE_TEXTURE{nullptr, nullptr};
+SwMaterialTexture SwMaterialTexture::DEFAULT_ERROR_TEXTURE{nullptr, nullptr};
 
-SwMaterialTexture::SwMaterialTexture(SwColorImage2D& image, SwSampler& sampler) : mImage(image), mSampler(sampler) {}
+SwMaterialTexture::SwMaterialTexture(SwColorImage2D* image, SwSampler* sampler) : mImage(image), mSampler(sampler) {}
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStagingBuffer{};
 
@@ -34,16 +35,13 @@ SwMaterialResources::SwMaterialResources(
 void SwMaterialResources::init(SwRendererContext rendererContext) {
     sRendererContext = rendererContext;
     sMaterialResourcesDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true
+        {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex |    vk::ShaderStageFlagBits::eFragment, true
     );
-    SwMaterialTexture::sDefaultTexture.emplace(
-        SwImageFactory::sDefaultImages.at(SwImageFactory::SwDefaultImageOption::Checkerboard),
-        SwSampler::sDefaultSampler
-    );
+    SwMaterialTexture::DEFAULT_WHITE_TEXTURE = SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
+    SwMaterialTexture::DEFAULT_ERROR_TEXTURE = SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
 };
 
 void SwMaterialResources::cleanup() {
-    SwMaterialTexture::sDefaultTexture.reset();
     sMaterialResourcesDescriptorLayout.destroy();
 }
 
@@ -150,7 +148,8 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
     graphicsPipelineOptions.mDepthWriteEnabled = opaque;
     graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
 
-    auto [it, _] = sMaterialPipelineBundles.try_emplace(materialPipelineOptions, std::move(SwGraphicsPipelineFactory::createGraphicsPipeline(graphicsPipelineOptions)));
+    auto [it, _] =
+        sMaterialPipelineBundles.try_emplace(materialPipelineOptions, std::move(SwGraphicsPipelineFactory::createGraphicsPipeline(graphicsPipelineOptions)));
 }
 
 void SwMaterial::cleanup() {
@@ -162,7 +161,7 @@ void SwMaterial::cleanup() {
     sMaterialPipelineBundles.clear();
 }
 
-SwMaterial::Type SwMaterial::getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode) { 
+SwMaterial::Type SwMaterial::getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode) {
     switch (alphaMode) {
         case fastgltf::AlphaMode::Opaque:
             return Type::Opaque;

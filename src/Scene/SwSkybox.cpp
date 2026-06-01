@@ -58,7 +58,7 @@ void SwSkybox::System::initializeResources() {
     );
 
     SwStagingBuffer skyboxVertexStagingBuffer = SwBufferFactory::createStagingBuffer(skyboxVertexSize);
-    std::memcpy(skyboxVertexStagingBuffer.getMappedPointer(), mResources.mWorkVertices.data(), skyboxVertexSize);
+    std::memcpy(skyboxVertexStagingBuffer.getMappedPtr(), mResources.mWorkVertices.data(), skyboxVertexSize);
 
     vk::BufferCopy skyboxVertexCopy{};
     skyboxVertexCopy.dstOffset = 0;

@@ -65,7 +65,7 @@ void SwBuffer::copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk:
     return;
 }
 
-void* SwBuffer::getMappedPointer() {
+void* SwBuffer::getMappedPtr() {
     if (mInfo.pMappedData == nullptr) {
         throw std::runtime_error("Buffer is not mapped");
     }

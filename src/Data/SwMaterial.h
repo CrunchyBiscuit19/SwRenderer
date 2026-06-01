@@ -18,16 +18,20 @@ class SwShader;
 
 class SwMaterialTexture {
 private:
-    SwColorImage2D& mImage;
-    SwSampler& mSampler;
+    SwColorImage2D* mImage;
+    SwSampler* mSampler;
 
 public:
-    static std::optional<SwMaterialTexture> sDefaultTexture;
+    static SwMaterialTexture DEFAULT_WHITE_TEXTURE;
+    static SwMaterialTexture DEFAULT_ERROR_TEXTURE;
 
-    SwMaterialTexture(SwColorImage2D& image, SwSampler& sampler);
+    static constexpr vk::Format SRGB_IMAGE_FORMAT{vk::Format::eR8G8B8A8Srgb};
+    static constexpr vk::Format UNORM_IMAGE_FORMAT{vk::Format::eR8G8B8A8Unorm};
 
-    inline SwColorImage2D& getImage() { return mImage; }
-    inline SwSampler& getSampler() { return mSampler; }
+    SwMaterialTexture(SwColorImage2D* image, SwSampler* sampler);
+
+    inline SwColorImage2D& getImage() { return *mImage; }
+    inline SwSampler& getSampler() { return *mSampler; }
 
     SwMaterialTexture(SwMaterialTexture&&) noexcept = default;
     SwMaterialTexture& operator=(SwMaterialTexture&&) noexcept = default;

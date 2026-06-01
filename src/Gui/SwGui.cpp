@@ -21,7 +21,7 @@ void SwGui::init(SwRendererContext rendererContext) { sRendererContext = rendere
 
 void SwGui::initialize() {
     ImGui::CreateContext();
-    ImGui_ImplSDL2_InitForVulkan(sRendererContext.mSwapchain->getWindow());
+    ImGui_ImplSDL2_InitForVulkan(sRendererContext.mSwapchain->getWindowPtr());
 
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
     pipelineRenderingCreateInfo.colorAttachmentCount = 1;
@@ -99,7 +99,7 @@ void SwGui::initialize() {
                         ImGui::PushID(fmt::format("{}-{}", name, instance.getId()).c_str());
                         glm::vec3 translation, rotation, scale;
                         ImGuizmo::DecomposeMatrixToComponents(
-                            glm::value_ptr(instance.getDataAddress()->mTransformMatrix), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale)
+                            glm::value_ptr(instance.getData().mTransformMatrix), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale)
                         );
                         for (std::uint32_t i = 0; i < 3; i++) {
                             rotation[i] = glm::radians(rotation[i]);
@@ -131,7 +131,7 @@ void SwGui::initialize() {
             }
         }
         if (ImGui::CollapsingHeader("Culler", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Freeze Culling", &sRendererContext.mScene->getCullSystem().getFreezeRef());
+            ImGui::Checkbox("Freeze Culling", sRendererContext.mScene->getCullSystem().getFreezePtr());
         }
         ImGui::Unindent();
 
@@ -150,7 +150,7 @@ void SwGui::initialize() {
         ImGui::Text("Update Time: %.2fms", sRendererContext.mStats->mSceneUpdateTime);
         ImGui::Text("Draws: %i", sRendererContext.mStats->mDrawCallCount);
         ImGui::Text("Pre-Cull Render Instances: %i", sRendererContext.mStats->mPreCullRenderInstancesCount);
-        ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(sRendererContext.mStats->mRenderInstancesCountBuffer.getMappedPointer()));
+        ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(sRendererContext.mStats->mRenderInstancesCountBuffer.getMappedPtr()));
     };
     mGuiComponents[SwGuiComponent::Controls] = [this]() {
         ImGui::Text("[G] Toggle GUI");

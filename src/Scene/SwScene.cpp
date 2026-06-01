@@ -214,14 +214,14 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
             }
 
             std::memcpy(
-                batch.getRenderItemsStagingBuffer().getMappedPointer(), batch.getRenderItems().data(), batch.getRenderItems().size() * sizeof(SwRenderItem)
+                batch.getRenderItemsStagingBuffer().getMappedPtr(), batch.getRenderItems().data(), batch.getRenderItems().size() * sizeof(SwRenderItem)
             );
             vk::BufferCopy renderItemsCopy{};
             renderItemsCopy.dstOffset = 0;
             renderItemsCopy.srcOffset = 0;
             renderItemsCopy.size = batch.getRenderItems().size() * sizeof(SwRenderItem);
             std::memcpy(
-                batch.getRenderInstancesStagingBuffer().getMappedPointer(),
+                batch.getRenderInstancesStagingBuffer().getMappedPtr(),
                 batch.getRenderInstances().data(),
                 batch.getRenderInstances().size() * sizeof(SwRenderInstance)
             );
