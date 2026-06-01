@@ -67,6 +67,7 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
+    void initializePushConstants() override;
 
 public:
     System(SwScene& scene);

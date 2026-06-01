@@ -1,8 +1,8 @@
-#include <Scene/SwWBOIT.h>
-#include <Scene/SwScene.h>
-#include <Renderer/SwSwapchain.h>
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
+#include <Scene/SwScene.h>
+#include <Scene/SwWBOIT.h>
 
 SwWBOIT::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -64,11 +64,7 @@ void SwWBOIT::System::initializePasses() {
 
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
         cmd.bindDescriptorSets(
-            mResources.mWorkPipelineBundle.getBindPoint(),
-            mResources.mWorkPipelineBundle.getRawLayout(),
-            0,
-            mResources.mWorkDescriptorSet.getRawSet(),
-            nullptr
+            mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawLayout(), 0, mResources.mWorkDescriptorSet.getRawSet(), nullptr
         );
         SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
@@ -110,8 +106,8 @@ void SwWBOIT::System::reInitializeOnResize() {
     mResources.mWorkDescriptorSet.pushWrites();
 }
 
-void SwWBOIT::System::resize() { 
-	mResources.mRvlImage.destroy();
+void SwWBOIT::System::resize() {
+    mResources.mRvlImage.destroy();
     mResources.mAccumImage.destroy();
     reInitializeOnResize();
 }

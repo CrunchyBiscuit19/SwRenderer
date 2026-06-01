@@ -8,6 +8,7 @@ SwSystem::SwSystem(SwScene& scene) : mScene(scene) {}
 
 void SwSystem::initialize() {
     initializeResources();
+    initializePushConstants();
     refreshPushConstants();
     initializePasses();
     refreshBatchDependencies();
@@ -17,6 +18,8 @@ void SwSystem::refresh() {
     refreshPushConstants();
     refreshBatchDependencies();
 }
+
+void SwSystem::initializePushConstants() {}
 
 void SwSystem::refreshBatchDependencies() {}
 

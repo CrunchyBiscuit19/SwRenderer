@@ -1,9 +1,8 @@
-#include <Scene/SwSkybox.h>
-#include <Scene/SwScene.h>
-#include <Renderer/SwSwapchain.h>
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
-
+#include <Scene/SwScene.h>
+#include <Scene/SwSkybox.h>
 #include <stb_image.h>
 
 SwSkybox::System::System(SwScene& scene) : SwSystem(scene) {}
@@ -15,8 +14,7 @@ void SwSkybox::System::initializeResources() {
         sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment);
     mResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
 
-    mResources.mWorkPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
+    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
 
     SwShader skyboxVertexShader = SwShaderFactory::createShader(SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader skyboxFragmentShader = SwShaderFactory::createShader(SKYBOX_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -104,6 +102,8 @@ void SwSkybox::System::initializePasses() {
     deps.clear();
 }
 
+void SwSkybox::System::initializePushConstants() { mResources.mWorkPushConstants.mWorkVertexBuffer = mResources.mWorkVertexBuffer.getDeviceAddress().value(); }
+
 void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path> newLoadDir) {
     mLoadFromDir = newLoadDir;
     if (!mLoadFromDir.has_value()) {
@@ -161,7 +161,6 @@ void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path>
     mResources.mWorkDescriptorSet.pushWrites();
 }
 
-void SwSkybox::System::refreshPushConstants() { 
-    mResources.mWorkPushConstants.mWorkVertexBuffer = mResources.mWorkVertexBuffer.getDeviceAddress().value();
+void SwSkybox::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

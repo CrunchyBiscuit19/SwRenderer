@@ -29,6 +29,7 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
+
     void reInitializeOnResize() override;
 
 public:

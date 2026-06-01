@@ -6,62 +6,7 @@
 
 SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 
-void SwGeometry::System::initializeResources() {
-
-}
-
-void SwGeometry::System::refreshBatchDependencies() {
-    SwDependency deps;
-
-    // GeometryOpaque
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    for (auto& batchType : mScene.getBatchTypes()) {
-        if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) continue;
-        for (auto& batch : batchType.second | std::views::values) {
-            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
-    }
-    mScene.mPasses[SwPass::Type::GeometryOpaque].setDeps(std::move(deps));
-    deps.clear();
-
-    // GeometryTransparent
-    deps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentWrite);
-    deps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentWrite);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    for (auto& batchType : mScene.getBatchTypes()) {
-        if (batchType.first != SwMaterial::Type::Transparent) continue;
-        for (auto& batch : batchType.second | std::views::values) {
-            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
-    }
-    mScene.mPasses[SwPass::Type::GeometryTransparent].setDeps(std::move(deps));
-    deps.clear();
-}
-
-void SwGeometry::System::refreshPushConstants() {
-    mResources.mWorkPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
-        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
-}
+void SwGeometry::System::initializeResources() {}
 
 void SwGeometry::System::initializePasses() {
     SwDependency deps;
@@ -197,4 +142,57 @@ void SwGeometry::System::initializePasses() {
         cmd.endRendering();
     });
     deps.clear();
+}
+
+void SwGeometry::System::refreshBatchDependencies() {
+    SwDependency deps;
+
+    // GeometryOpaque
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
+    for (auto& batchType : mScene.getBatchTypes()) {
+        if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) continue;
+        for (auto& batch : batchType.second | std::views::values) {
+            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        }
+    }
+    mScene.mPasses[SwPass::Type::GeometryOpaque].setDeps(std::move(deps));
+    deps.clear();
+
+    // GeometryTransparent
+    deps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
+    for (auto& batchType : mScene.getBatchTypes()) {
+        if (batchType.first != SwMaterial::Type::Transparent) continue;
+        for (auto& batch : batchType.second | std::views::values) {
+            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        }
+    }
+    mScene.mPasses[SwPass::Type::GeometryTransparent].setDeps(std::move(deps));
+    deps.clear();
+}
+
+void SwGeometry::System::refreshPushConstants() {
+    mResources.mWorkPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
+        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

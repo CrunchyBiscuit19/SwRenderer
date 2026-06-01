@@ -64,25 +64,6 @@ void SwPick::System::initializeResources() {
     reInitializeOnResize();
 }
 
-void SwPick::System::refreshBatchDependencies() {
-    SwDependency deps;
-
-    deps.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentWrite);
-    deps.mWriteImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-        for (auto& batch : batchType | std::views::values) {
-            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
-    }
-    mScene.mPasses[SwPass::Type::PickDraw].setDeps(std::move(deps));
-}
-
 void SwPick::System::initializePasses() {
     SwDependency deps;
 
@@ -188,6 +169,8 @@ void SwPick::System::initializePasses() {
     deps.clear();
 }
 
+void SwPick::System::initializePushConstants() { mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value(); }
+
 void SwPick::System::reInitializeOnResize() {
     vk::Extent3D imageExtent = vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1};
     mResources.mReadbackImage = SwImageFactory::createColorImage2D(
@@ -212,15 +195,33 @@ void SwPick::System::reInitializeOnResize() {
     mResources.mReadbackDescriptorSet.pushWrites();
 }
 
+void SwPick::System::refreshBatchDependencies() {
+    SwDependency deps;
+
+    deps.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
+    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
+        for (auto& batch : batchType | std::views::values) {
+            deps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        }
+    }
+    mScene.mPasses[SwPass::Type::PickDraw].setDeps(std::move(deps));
+    deps.clear();
+}
+
 void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
         mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = 0;
     mResources.mDrawPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
-    mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
 }
 
 void SwPick::System::changePickOperation() {

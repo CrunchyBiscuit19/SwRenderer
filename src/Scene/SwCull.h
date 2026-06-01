@@ -99,6 +99,8 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
+    void initializePushConstants() override;
+
     void reInitializeOnResize() override;
 
 public:

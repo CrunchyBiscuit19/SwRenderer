@@ -19,6 +19,7 @@ protected:
 
     virtual void initializeResources() = 0;
     virtual void initializePasses() = 0;
+    virtual void initializePushConstants();
 
 public:
     static SwRendererContext sRendererContext;
@@ -29,5 +30,6 @@ public:
 
     virtual void refreshBatchDependencies();
     virtual void refreshPushConstants();
+
     virtual void refresh();
 };

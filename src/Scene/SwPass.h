@@ -44,6 +44,7 @@ public:
     bool isPruned() const { return mPruned; }
     bool isMustRun() const { return mMustRun; }
     void setPruned(bool pruned) { mPruned = pruned; }
+    SwDependency& getDeps() { return mDeps; }
     void setDeps(SwDependency deps) { mDeps = std::move(deps); }
     const SwDependency& getDeps() const { return mDeps; }
 

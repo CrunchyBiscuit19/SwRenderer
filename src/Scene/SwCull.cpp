@@ -222,6 +222,10 @@ void SwCull::System::initializePasses() {
     deps.clear();
 }
 
+void SwCull::System::initializePushConstants() {
+    mResources.mWorkPushConstants.mRenderInstancesCountBuffer = sRendererContext.mStats->mRenderInstancesCountBuffer.getDeviceAddress().value();
+}
+
 void SwCull::System::refreshBatchDependencies() {
     SwDependency deps;
 
@@ -273,7 +277,6 @@ void SwCull::System::refreshBatchDependencies() {
 }
 
 void SwCull::System::refreshPushConstants() {
-    mResources.mWorkPushConstants.mRenderInstancesCountBuffer = sRendererContext.mStats->mRenderInstancesCountBuffer.getDeviceAddress().value();
     mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mFrustumBuffer = mScene.getCamera().getFrustumBuffer().getDeviceAddress().value();

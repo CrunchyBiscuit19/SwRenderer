@@ -45,12 +45,6 @@ void SwScene::initializeMiscPasses() {
     });
     deps.clear();
 
-    refreshMiscPasses();
-}
-
-void SwScene::refreshMiscPasses() {
-    SwDependency deps;
-
     // Copy to Swapchain
     deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
     deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
@@ -71,6 +65,21 @@ void SwScene::refreshMiscPasses() {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         cmd.endRendering();
     });
+}
+
+void SwScene::refreshSwapchainDependencies() {
+    SwDependency deps;
+
+    // Copy to Swapchain
+    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
+    mPasses[SwPass::Type::CopyToSwapchain].setDeps(std::move(deps));
+    deps.clear();
+
+    // Gui
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    mPasses[SwPass::Type::Gui].setDeps(std::move(deps));
+    deps.clear();
 }
 
 void SwScene::initializeResources() {
@@ -516,7 +525,7 @@ void SwScene::draw() {
     SwBufferFactory::tick(sRendererContext.mSwapchain->getFrameNumber());
     sRendererContext.mSwapchain->acquireNextImage(1e9);
 
-    refreshMiscPasses();
+    refreshSwapchainDependencies();
 
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();
