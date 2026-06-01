@@ -69,7 +69,7 @@ private:
     SwRenderGraph mRenderGraph;
 
     void initializeMiscPasses();
-    void refreshSwapchainPasses();
+    void refreshMiscPasses();
     void initializeResources();
 
     void finalPresentTransition(SwCommandBuffer& commandBuffer);

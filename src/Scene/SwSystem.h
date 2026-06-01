@@ -26,4 +26,8 @@ public:
     SwSystem(SwScene& scene);
 
     void initialize();
+
+    virtual void refreshBatchDependencies();
+    virtual void refreshPushConstants();
+    virtual void refresh();
 };

@@ -1,6 +1,8 @@
-#include <Resource/SwBuffer.h>
 #include <Renderer/SwRenderer.h>
+#include <Resource/SwBuffer.h>
 
+#include <algorithm>
+#include <cstring>
 #include <stdexcept>
 
 SwBuffer::SwBuffer()
@@ -57,10 +59,12 @@ void SwBuffer::emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bu
     emitBarrier(cmd, SwDependency::BufferDepDesc::get(bufferDepType).mStage, SwDependency::BufferDepDesc::get(bufferDepType).mAccess);
 }
 
-void SwBuffer::copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies, std::uint32_t maxSize) {
-    if (maxSize > mSize) {
-        throw std::invalid_argument("Copy size too big");
+void SwBuffer::copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies) {
+    std::uint64_t biggestSize = 0;
+    for (const auto& copy : bufferCopies) {
+        biggestSize = std::max(biggestSize, copy.dstOffset + copy.size);
     }
+    ensureCapacity(cmd, biggestSize);
     cmd.copyBuffer(*src.mBuffer, *mBuffer, bufferCopies);
     return;
 }
@@ -84,15 +88,16 @@ void SwBuffer::destroy() {
 
 SwBuffer::SwBuffer(SwBuffer&& other) noexcept
     : mBuffer(std::move(other.mBuffer)),
-        mAddress(other.mAddress),
-        mAllocator(other.mAllocator),
-        mAllocation(other.mAllocation),
-        mInfo(other.mInfo),
-        mFlags(other.mFlags),
-        mUsage(other.mUsage),
-        mSize(other.mSize),
-        mCurrentStage(other.mCurrentStage),
-        mCurrentAccess(other.mCurrentAccess) {
+      mAddress(other.mAddress),
+      mAllocator(other.mAllocator),
+      mAllocation(other.mAllocation),
+      mInfo(other.mInfo),
+      mFlags(other.mFlags),
+      mUsage(other.mUsage),
+      mSize(other.mSize),
+      mGeneration(other.mGeneration),
+      mCurrentStage(other.mCurrentStage),
+      mCurrentAccess(other.mCurrentAccess) {
     other.mAllocator = nullptr;
     other.mAllocation = nullptr;
 }
@@ -109,6 +114,7 @@ SwBuffer& SwBuffer::operator=(SwBuffer&& other) noexcept {
         mFlags = other.mFlags;
         mUsage = other.mUsage;
         mSize = other.mSize;
+        mGeneration = other.mGeneration;
         mCurrentStage = other.mCurrentStage;
         mCurrentAccess = other.mCurrentAccess;
 
@@ -128,6 +134,39 @@ SwAllocatedBuffer::SwAllocatedBuffer(
 )
     : SwBuffer(std::move(buffer), address, allocator, allocation, info, usage, flags, size) {}
 
+void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint32_t newSize) {
+    vk::PipelineStageFlags2 prevStage = mCurrentStage;
+    vk::AccessFlags2 prevAccess = mCurrentAccess;
+    std::uint32_t prevGeneration = mGeneration;
+
+    SwAllocatedBuffer newBuffer = SwBufferFactory::createAllocatedBuffer(mUsage, mFlags, newSize);
+
+    if (mSize > 0) {
+        emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+    }
+    newBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
+
+    if (mSize > 0) {
+        vk::BufferCopy copyRegion{};
+        copyRegion.size = std::min(mSize, newSize);
+        newBuffer.copyFrom(cmd, *this, copyRegion);
+    }
+
+    // Restore the new buffer to the state the old buffer was in so downstream barriers are correct.
+    newBuffer.emitBarrier(cmd, prevStage, prevAccess);
+    newBuffer.mGeneration = prevGeneration + 1;
+
+    // Defer GPU-side destruction of the old handle; move new buffer into *this.
+    SwBufferFactory::deferDestroy(std::make_unique<SwAllocatedBuffer>(std::move(*this)));
+    static_cast<SwBuffer&>(*this) = std::move(newBuffer);
+}
+
+void SwAllocatedBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requiredSize) {
+    if (requiredSize > mSize) {
+        resize(cmd, std::max(requiredSize, mSize * 2));
+    }
+}
+
 SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
 
 SwStagingBuffer::SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint32_t size)
@@ -136,9 +175,45 @@ SwStagingBuffer::SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size
       ) {}
 
+void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint32_t newSize) {
+    void* oldMapped = mInfo.pMappedData;
+    std::uint32_t copySize = std::min(mSize, newSize);
+    std::uint32_t prevGeneration = mGeneration;
+
+    SwStagingBuffer newBuffer = SwBufferFactory::createStagingBuffer(newSize);
+
+    if (oldMapped != nullptr && newBuffer.mInfo.pMappedData != nullptr && copySize > 0) {
+        std::memcpy(newBuffer.mInfo.pMappedData, oldMapped, copySize);
+    }
+
+    newBuffer.mGeneration = prevGeneration + 1;
+
+    SwBufferFactory::deferDestroy(std::make_unique<SwStagingBuffer>(std::move(*this)));
+    static_cast<SwBuffer&>(*this) = std::move(newBuffer);
+}
+
+void SwStagingBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requiredSize) {
+    if (requiredSize > mSize) {
+        resize(cmd, std::max(requiredSize, mSize * 2));
+    }
+}
+
 SwRendererContext SwBufferFactory::sRendererContext{};
+std::vector<SwBufferFactory::DeferredBuffer> SwBufferFactory::sDeletionQueue{};
 
 void SwBufferFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
+
+void SwBufferFactory::deferDestroy(std::unique_ptr<SwBuffer> buffer) {
+    std::uint64_t currentFrame = sRendererContext.mSwapchain->getFrameNumber();
+    sDeletionQueue.push_back({std::move(buffer), currentFrame});
+}
+
+void SwBufferFactory::tick(std::uint64_t currentFrame) {
+    auto it = std::remove_if(sDeletionQueue.begin(), sDeletionQueue.end(), [currentFrame](const DeferredBuffer& entry) {
+        return currentFrame >= entry.mFrameQueued + SwSwapchain::NUM_FRAME_OVERLAP;
+    });
+    sDeletionQueue.erase(it, sDeletionQueue.end());
+}
 
 SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size) {
     vk::BufferCreateInfo bufferInfo = {};

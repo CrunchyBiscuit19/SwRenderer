@@ -33,6 +33,7 @@ private:
 public:
     System(SwScene& scene);
 
-    void refreshBatchDependencies();
+    void refreshBatchDependencies() override;
+    void refreshPushConstants() override;
 };
 }  // namespace SwGeometry

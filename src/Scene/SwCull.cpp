@@ -47,14 +47,6 @@ void SwCull::System::initializeResources() {
     mResources.mWorkPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mResources.mWorkPipelineLayout.getRawLayout()});
 
-    mResources.mWorkPushConstants.mRenderInstancesCountBuffer = sRendererContext.mStats->mRenderInstancesCountBuffer.getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mFrustumBuffer = mScene.getCamera().getFrustumBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
-        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
-
     // Compact pass
     mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::CompactPC::getRange());
 
@@ -62,7 +54,6 @@ void SwCull::System::initializeResources() {
     mResources.mCompactPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({compactShader.getRawModule(), mResources.mCompactPipelineLayout.getRawLayout()});
 
-    // Everything that needs to be re-built on resize
     reInitializeOnResize();
 }
 
@@ -191,7 +182,6 @@ void SwCull::System::initializePasses() {
                 mResources.mWorkPushConstants.mPreCullRenderItemsBuffer = batch.getPreCullRenderItemsBuffer().getDeviceAddress().value();
                 mResources.mWorkPushConstants.mRenderInstancesBuffer = batch.getRenderInstancesBuffer().getDeviceAddress().value();
                 mResources.mWorkPushConstants.mRenderInstancesLimit = batch.getRenderInstances().size();
-                mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
                 cmd.dispatch(SwHelper::fastDivCeil(batch.getRenderInstances().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
             }
@@ -280,6 +270,17 @@ void SwCull::System::refreshBatchDependencies() {
     }
     mScene.mPasses[SwPass::Type::CullCompact].setDeps(std::move(deps));
     deps.clear();
+}
+
+void SwCull::System::refreshPushConstants() {
+    mResources.mWorkPushConstants.mRenderInstancesCountBuffer = sRendererContext.mStats->mRenderInstancesCountBuffer.getDeviceAddress().value();
+    mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mFrustumBuffer = mScene.getCamera().getFrustumBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
+        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
 }
 
 void SwCull::System::reInitializeOnResize() {

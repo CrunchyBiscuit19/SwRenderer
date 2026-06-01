@@ -278,7 +278,7 @@ void SwAsset::constructMaterials() {
 
     sRendererContext.mImmSubmit->individualSubmit([this, materialConstantsCopy](vk::CommandBuffer cmd) {
         SwMaterialConstants::sMaterialConstantsStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-        mMaterialConstantsBuffer.copyFrom(cmd, SwMaterialConstants::sMaterialConstantsStagingBuffer, materialConstantsCopy, materialConstantsCopy.size);
+        mMaterialConstantsBuffer.copyFrom(cmd, SwMaterialConstants::sMaterialConstantsStagingBuffer, materialConstantsCopy);
         mMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });
 }
@@ -389,8 +389,8 @@ void SwAsset::constructMeshes() {
         SwMesh& createdMesh = mMeshes.back();
         sRendererContext.mImmSubmit->individualSubmit([&createdMesh, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
             SwMesh::sMeshStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-            createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, vertexCopy, vertexCopy.size);
-            createdMesh.getIndexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, indexCopy, indexCopy.size);
+            createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, vertexCopy);
+            createdMesh.getIndexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, indexCopy);
             createdMesh.getVertexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
             createdMesh.getIndexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         });
@@ -410,7 +410,7 @@ void SwAsset::constructMeshes() {
 
     sRendererContext.mImmSubmit->individualSubmit([this, boundsCopy](vk::CommandBuffer cmd) {
         SwBounds::sBoundsStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-        mBoundsBuffer.copyFrom(cmd, SwBounds::sBoundsStagingBuffer, boundsCopy, boundsCopy.size);
+        mBoundsBuffer.copyFrom(cmd, SwBounds::sBoundsStagingBuffer, boundsCopy);
         mBoundsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });
 }
@@ -481,7 +481,7 @@ void SwAsset::constructNodes() {
 
     sRendererContext.mImmSubmit->individualSubmit([this, nodeTransformsCopy](vk::CommandBuffer cmd) {
         SwNode::sNodeTransformsStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-        mNodeTransformsBuffer.copyFrom(cmd, SwNode::sNodeTransformsStagingBuffer, nodeTransformsCopy, nodeTransformsCopy.size);
+        mNodeTransformsBuffer.copyFrom(cmd, SwNode::sNodeTransformsStagingBuffer, nodeTransformsCopy);
         mNodeTransformsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });
 }

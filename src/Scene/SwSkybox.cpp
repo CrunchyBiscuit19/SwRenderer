@@ -67,10 +67,8 @@ void SwSkybox::System::initializeResources() {
 
     sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
         skyboxVertexStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-        mResources.mWorkVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy, skyboxVertexCopy.size);
+        mResources.mWorkVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy);
     });
-
-    mResources.mWorkPushConstants.mWorkVertexBuffer = mResources.mWorkVertexBuffer.getDeviceAddress().value();
 
     reinitializeOnUpdate(SKYBOX_DEFAULT_DIRECTORY_PATH);
 }
@@ -97,7 +95,6 @@ void SwSkybox::System::initializePasses() {
             mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawLayout(), 0, mResources.mWorkDescriptorSet.getRawSet(), nullptr
         );
         SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
-        mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
         cmd.pushConstants<SwSkybox::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwSkybox::WorkPC::sStages, 0, mResources.mWorkPushConstants);
         cmd.draw(SwSkybox::NUM_SKYBOX_VERTICES, 1, 0, 0);
         sRendererContext.mStats->mDrawCallCount++;
@@ -162,4 +159,9 @@ void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path>
         vk::DescriptorType::eCombinedImageSampler
     );
     mResources.mWorkDescriptorSet.pushWrites();
+}
+
+void SwSkybox::System::refreshPushConstants() { 
+    mResources.mWorkPushConstants.mWorkVertexBuffer = mResources.mWorkVertexBuffer.getDeviceAddress().value();
+    mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

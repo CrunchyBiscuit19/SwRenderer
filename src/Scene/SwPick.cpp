@@ -54,15 +54,6 @@ void SwPick::System::initializeResources() {
     mResources.mReadbackPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mResources.mReadbackPipelineLayout.getRawLayout()});
 
-    mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
-        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = 0;
-
-    mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
-
     sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
         if (keyState[SDL_SCANCODE_DELETE] && mResources.mClickedInstance != nullptr && e.type == SDL_KEYDOWN && !e.key.repeat) {
@@ -125,7 +116,6 @@ void SwPick::System::initializePasses() {
                     continue;
                 }
                 mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
-                mResources.mDrawPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
                 cmd.drawIndexedIndirectCount(
                     batch.getPostCullRenderItemsBuffer().getRawBuffer(),
@@ -220,6 +210,17 @@ void SwPick::System::reInitializeOnResize() {
         0, mResources.mReadbackImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
     );
     mResources.mReadbackDescriptorSet.pushWrites();
+}
+
+void SwPick::System::refreshPushConstants() {
+    mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
+        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = 0;
+    mResources.mDrawPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
 }
 
 void SwPick::System::changePickOperation() {

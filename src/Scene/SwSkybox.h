@@ -76,6 +76,8 @@ public:
     inline bool isDirSelected() const { return mLoadFromDir.has_value(); }
 
     void reinitializeOnUpdate(std::optional<std::filesystem::path>);
+
+    void refreshPushConstants() override;
 };
 
 };  // namespace SwSkybox

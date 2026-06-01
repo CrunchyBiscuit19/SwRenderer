@@ -45,10 +45,10 @@ void SwScene::initializeMiscPasses() {
     });
     deps.clear();
 
-    refreshSwapchainPasses();
+    refreshMiscPasses();
 }
 
-void SwScene::refreshSwapchainPasses() {
+void SwScene::refreshMiscPasses() {
     SwDependency deps;
 
     // Copy to Swapchain
@@ -233,12 +233,12 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
             sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
                 cmd.fillBuffer(batch.getPreCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getPreCullRenderItemsBuffer().copyFrom(cmd, batch.getRenderItemsStagingBuffer(), renderItemsCopy, renderItemsCopy.size);
+                batch.getPreCullRenderItemsBuffer().copyFrom(cmd, batch.getRenderItemsStagingBuffer(), renderItemsCopy);
                 batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
                 cmd.fillBuffer(batch.getRenderInstancesBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy, renderInstancesCopy.size);
+                batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy);
                 batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
             });
         }
@@ -313,7 +313,7 @@ void SwScene::reloadSceneVertexBuffer() {
             maxPos = dstOffset;
 
             sRendererContext.mImmSubmit->addCallback([&mesh, this, meshVertexCopy, maxPos](vk::CommandBuffer cmd) {
-                mSceneVertexBuffer.copyFrom(cmd, mesh.getVertexBuffer(), meshVertexCopy, maxPos);
+                mSceneVertexBuffer.copyFrom(cmd, mesh.getVertexBuffer(), meshVertexCopy);
             });
         }
     }
@@ -334,7 +334,7 @@ void SwScene::reloadSceneIndexBuffer() {
             maxPos = dstOffset;
 
             sRendererContext.mImmSubmit->addCallback([&mesh, this, meshIndexCopy, maxPos](vk::CommandBuffer cmd) {
-                mSceneIndexBuffer.copyFrom(cmd, mesh.getIndexBuffer(), meshIndexCopy, maxPos);
+                mSceneIndexBuffer.copyFrom(cmd, mesh.getIndexBuffer(), meshIndexCopy);
             });
         }
     }
@@ -354,7 +354,7 @@ void SwScene::reloadSceneMaterialConstantsBuffer() {
         maxPos = dstOffset;
 
         sRendererContext.mImmSubmit->addCallback([&asset, this, materialConstantCopy, maxPos](vk::CommandBuffer cmd) {
-            mSceneMaterialConstantsBuffer.copyFrom(cmd, asset.getMaterialConstantsBuffer(), materialConstantCopy, maxPos);
+            mSceneMaterialConstantsBuffer.copyFrom(cmd, asset.getMaterialConstantsBuffer(), materialConstantCopy);
         });
     }
 }
@@ -373,7 +373,7 @@ void SwScene::reloadSceneNodeTransformsBuffer() {
         maxPos = dstOffset;
 
         sRendererContext.mImmSubmit->addCallback([&asset, this, nodeTransformsCopy, maxPos](vk::CommandBuffer cmd) {
-            mSceneNodeTransformsBuffer.copyFrom(cmd, asset.getNodeTransformsBuffer(), nodeTransformsCopy, maxPos);
+            mSceneNodeTransformsBuffer.copyFrom(cmd, asset.getNodeTransformsBuffer(), nodeTransformsCopy);
         });
     }
 }
@@ -392,7 +392,7 @@ void SwScene::reloadSceneBoundsBuffer() {
         maxPos = dstOffset;
 
         sRendererContext.mImmSubmit->addCallback([&asset, this, boundsCopy, maxPos](vk::CommandBuffer cmd) {
-            mSceneBoundsBuffer.copyFrom(cmd, asset.getBoundsBuffer(), boundsCopy, maxPos);
+            mSceneBoundsBuffer.copyFrom(cmd, asset.getBoundsBuffer(), boundsCopy);
         });
     }
 }
@@ -415,7 +415,7 @@ void SwScene::reloadSceneInstancesBuffer() {
         maxPos = dstOffset;
 
         sRendererContext.mImmSubmit->addCallback([&asset, this, instancesCopy, maxPos](vk::CommandBuffer cmd) {
-            mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy, maxPos);
+            mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy);
         });
     }
 }
@@ -493,6 +493,12 @@ void SwScene::perFrameUpdate() {
 
     resetFlags();
 
+    mCull.refresh();
+    mPick.refresh();
+    mSkybox.refresh();
+    mWBOIT.refresh();
+    mGeometry.refresh();
+
     sRendererContext.mImmSubmit->queuedSubmit();
 
     const auto end = std::chrono::system_clock::now();
@@ -507,12 +513,10 @@ void SwScene::draw() {
 
     auto _ = sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getRawFence(), true, 1e9);
     sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getRawFence());
+    SwBufferFactory::tick(sRendererContext.mSwapchain->getFrameNumber());
     sRendererContext.mSwapchain->acquireNextImage(1e9);
 
-    refreshSwapchainPasses();
-    mCull.refreshBatchDependencies();
-    mGeometry.refreshBatchDependencies();
-    mPick.refreshBatchDependencies();
+    refreshMiscPasses();
 
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();
@@ -549,7 +553,8 @@ void SwScene::draw() {
     commandBuffer.end();
 
     vk::CommandBufferSubmitInfo commandBufferSubmitInfo = commandBuffer.generateSubmitInfo();
-    vk::SemaphoreSubmitInfo waitInfo = currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    vk::SemaphoreSubmitInfo waitInfo =
+        currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     vk::SemaphoreSubmitInfo signalInfo =
         sRendererContext.mSwapchain->getCurrentSwapchainImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getRawFence());

@@ -7,12 +7,7 @@
 SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwGeometry::System::initializeResources() {
-    mResources.mWorkPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
-        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
+
 }
 
 void SwGeometry::System::refreshBatchDependencies() {
@@ -56,6 +51,16 @@ void SwGeometry::System::refreshBatchDependencies() {
     }
     mScene.mPasses[SwPass::Type::GeometryTransparent].setDeps(std::move(deps));
     deps.clear();
+}
+
+void SwGeometry::System::refreshPushConstants() {
+    mResources.mWorkPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
+        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }
 
 void SwGeometry::System::initializePasses() {
@@ -107,7 +112,6 @@ void SwGeometry::System::initializePasses() {
                     nullptr
                 );
                 mResources.mWorkPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
-                mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
@@ -175,7 +179,6 @@ void SwGeometry::System::initializePasses() {
                     nullptr
                 );
                 mResources.mWorkPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
-                mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
