@@ -9,10 +9,14 @@
 #include <Scene/SwScene.h>
 #include <quill/LogMacros.h>
 
-SwMaterialTexture SwMaterialTexture::DEFAULT_WHITE_TEXTURE{nullptr, nullptr};
-SwMaterialTexture SwMaterialTexture::DEFAULT_ERROR_TEXTURE{nullptr, nullptr};
+SwMaterialTexture SwMaterialTexture::sDefaultWhiteTexture{nullptr, nullptr};
+SwMaterialTexture SwMaterialTexture::sDefaultErrorTexture{nullptr, nullptr};
 
 SwMaterialTexture::SwMaterialTexture(SwColorImage2D* image, SwSampler* sampler) : mImage(image), mSampler(sampler) {}
+
+SwMaterialTexture SwMaterialTexture::retrieveDefaultWhiteTexture() { return SwMaterialTexture(sDefaultWhiteTexture.mImage, sDefaultWhiteTexture.mSampler); }
+
+SwMaterialTexture SwMaterialTexture::retrieveDefaultErrorTexture() { return SwMaterialTexture(sDefaultErrorTexture.mImage, sDefaultErrorTexture.mSampler); }
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStagingBuffer{};
 
@@ -35,15 +39,15 @@ SwMaterialResources::SwMaterialResources(
 void SwMaterialResources::init(SwRendererContext rendererContext) {
     sRendererContext = rendererContext;
     sMaterialResourcesDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex |    vk::ShaderStageFlagBits::eFragment, true
+        {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true
     );
-    SwMaterialTexture::DEFAULT_WHITE_TEXTURE = SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
-    SwMaterialTexture::DEFAULT_ERROR_TEXTURE = SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
+    SwMaterialTexture::sDefaultWhiteTexture =
+        SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
+    SwMaterialTexture::sDefaultErrorTexture =
+        SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
 };
 
-void SwMaterialResources::cleanup() {
-    sMaterialResourcesDescriptorLayout.destroy();
-}
+void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
 
 SwRendererContext SwMaterial::sRendererContext{};
 std::uint32_t SwMaterial::sLatestMaterialId{0};

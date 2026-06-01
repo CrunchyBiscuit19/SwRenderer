@@ -22,8 +22,10 @@ private:
     SwSampler* mSampler;
 
 public:
-    static SwMaterialTexture DEFAULT_WHITE_TEXTURE;
-    static SwMaterialTexture DEFAULT_ERROR_TEXTURE;
+    enum class Type { Base, MetallicRoughness, Normal, Occlusion, Emissive };
+
+    static SwMaterialTexture sDefaultWhiteTexture;
+    static SwMaterialTexture sDefaultErrorTexture;
 
     static constexpr vk::Format SRGB_IMAGE_FORMAT{vk::Format::eR8G8B8A8Srgb};
     static constexpr vk::Format UNORM_IMAGE_FORMAT{vk::Format::eR8G8B8A8Unorm};
@@ -38,6 +40,9 @@ public:
 
     SwMaterialTexture(const SwMaterialTexture&) = delete;
     SwMaterialTexture& operator=(const SwMaterialTexture&) = delete;
+
+    static SwMaterialTexture retrieveDefaultWhiteTexture();
+    static SwMaterialTexture retrieveDefaultErrorTexture();
 };
 
 struct SwMaterialConstants {

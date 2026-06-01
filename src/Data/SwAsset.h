@@ -28,7 +28,8 @@ private:
     std::vector<SwMesh> mMeshes;
     static std::unordered_map<SwSamplerOptions, SwSampler> sSamplers;
     std::vector<SwSamplerOptions> mSamplerOptions;
-    std::vector<SwColorImage2D> mImages;
+    std::vector<std::optional<SwColorImage2D>> mImages;
+    std::vector<bool> mImageCreated;
     std::vector<SwMaterial> mMaterials;
     SwAllocatedBuffer mMaterialConstantsBuffer;
 
@@ -49,7 +50,7 @@ private:
     void loadRawAsset(std::filesystem::path& assetPath);
     void constructBuffers();
     void constructSamplerAndSamplerOptions();
-    void constructImages();
+    void constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type texType);
     void constructMaterials();
     void constructMeshes();
     void constructNodes();

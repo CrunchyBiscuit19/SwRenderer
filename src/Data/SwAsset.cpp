@@ -10,6 +10,7 @@
 #include <fastgltf/glm_element_traits.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <magic_enum.hpp>
 
 SwRendererContext SwAsset::sRendererContext{};
 std::uint32_t SwAsset::sLatestAssetId{0};
@@ -130,89 +131,78 @@ void SwAsset::constructSamplerAndSamplerOptions() {
     }
 }
 
-void SwAsset::constructImages() {
-    mImages.reserve(mRawAsset.images.size());
+void SwAsset::constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type texType) {
+    fastgltf::Image& rawImage = mRawAsset.images[imageIndex];
 
-    std::vector<bool> imageIsSrgb(mRawAsset.images.size(), false);
-    auto markSrgb = [&](auto& texInfo) {
-        if (texInfo.has_value()) {
-            auto& tex = mRawAsset.textures[texInfo->textureIndex];
-            if (tex.imageIndex.has_value()) imageIsSrgb[tex.imageIndex.value()] = true;
-        }
-    };
-    for (fastgltf::Material& material : mRawAsset.materials) {
-        markSrgb(material.pbrData.baseColorTexture);
-        markSrgb(material.emissiveTexture);
-    }
+    SwColorImage2D newImage;
+    std::int32_t width, height, nrChannels;
+    unsigned char* data = nullptr;
+    vk::Extent3D imageSize{};
 
-    std::uint32_t id = 0;
-    for (int i = 0; i < mRawAsset.images.size(); i++) {
-        fastgltf::Image& image = mRawAsset.images[i];
-
-        SwColorImage2D newImage;
-        std::int32_t width, height, nrChannels;
-        unsigned char* data = nullptr;
-        vk::Extent3D imageSize{};
-
-        std::visit(
-            fastgltf::visitor{
-                // Image stored outside of GLTF / GLB file.
-                [&](const fastgltf::sources::URI& filePath) {
-                    assert(filePath.fileByteOffset == 0);
-                    assert(filePath.uri.isLocalPath());
-                    const std::string path(filePath.uri.path().begin(), filePath.uri.path().end());
-                    data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
-                },
-                // Image is loaded directly into a std::vector. If the texture is on base64, or if we instruct it to load external image files
-                // (fastgltf::Options::LoadExternalImages).
-                [&](const fastgltf::sources::Vector& vector) {
-                    data = stbi_load_from_memory(vector.bytes.data(), static_cast<std::uint32_t>(vector.bytes.size()), &width, &height, &nrChannels, 4);
-                },
-                // Image embedded into the binary GLB file.
-                [&](const fastgltf::sources::BufferView& view) {
-                    const auto& bufferView = mRawAsset.bufferViews[view.bufferViewIndex];
-                    auto& buffer = mRawAsset.buffers[bufferView.bufferIndex];
-                    std::visit(
-                        fastgltf::visitor{
-                            [&](const fastgltf::sources::Vector& vector) {
-                                data = stbi_load_from_memory(
-                                    vector.bytes.data() + bufferView.byteOffset,
-                                    static_cast<std::uint32_t>(bufferView.byteLength),
-                                    &width,
-                                    &height,
-                                    &nrChannels,
-                                    4
-                                );
-                            },
-                            [](const auto& arg) {},
-                        },
-                        buffer.data
-                    );
-                },
-                [](const auto& arg) {},
+    std::visit(
+        fastgltf::visitor{
+            // Image stored outside of GLTF / GLB file.
+            [&](const fastgltf::sources::URI& filePath) {
+                assert(filePath.fileByteOffset == 0);
+                assert(filePath.uri.isLocalPath());
+                const std::string path(filePath.uri.path().begin(), filePath.uri.path().end());
+                data = stbi_load(path.c_str(), &width, &height, &nrChannels, 4);
             },
-            image.data
-        );
+            // Image is loaded directly into a std::vector. If the texture is on base64, or if we instruct it to load external image files
+            // (fastgltf::Options::LoadExternalImages).
+            [&](const fastgltf::sources::Vector& vector) {
+                data = stbi_load_from_memory(vector.bytes.data(), static_cast<std::uint32_t>(vector.bytes.size()), &width, &height, &nrChannels, 4);
+            },
+            // Image embedded into the binary GLB file.
+            [&](const fastgltf::sources::BufferView& view) {
+                const auto& bufferView = mRawAsset.bufferViews[view.bufferViewIndex];
+                auto& buffer = mRawAsset.buffers[bufferView.bufferIndex];
+                std::visit(
+                    fastgltf::visitor{
+                        [&](const fastgltf::sources::Vector& vector) {
+                            data = stbi_load_from_memory(
+                                vector.bytes.data() + bufferView.byteOffset, static_cast<std::uint32_t>(bufferView.byteLength), &width, &height, &nrChannels, 4
+                            );
+                        },
+                        [](const auto& arg) {},
+                    },
+                    buffer.data
+                );
+            },
+            [](const auto& arg) {},
+        },
+        rawImage.data
+    );
 
-        const vk::Format imageFormat = imageIsSrgb[i] ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8G8B8A8Unorm;
-
-        if (data) {
-            imageSize.width = static_cast<std::uint32_t>(width);
-            imageSize.height = static_cast<std::uint32_t>(height);
-            imageSize.depth = 1;
-            newImage = SwImageFactory::createColorImage2D(data, imageFormat, imageSize, vk::ImageUsageFlagBits::eSampled, true);
-            stbi_image_free(data);
-        } else {
-            LOG_DEBUG(
-                sRendererContext.mLogger->getQuillLoggerPtr(), "{} failed to read image {}: {}", mName, i, stbi_failure_reason() ? stbi_failure_reason() : "Unknown"
-            );
-        }
-
-        mImages.emplace_back(std::move(newImage));
+    vk::Format imageFormat;
+    switch (texType) {
+        case SwMaterialTexture::Type::Base:
+        case SwMaterialTexture::Type::Emissive:
+            imageFormat = SwMaterialTexture::SRGB_IMAGE_FORMAT;
+            break;
+        case SwMaterialTexture::Type::MetallicRoughness:
+        case SwMaterialTexture::Type::Normal:
+        case SwMaterialTexture::Type::Occlusion:
+        default:
+            imageFormat = SwMaterialTexture::UNORM_IMAGE_FORMAT;
+            break;
     }
+
+    if (data) {
+        imageSize.width = static_cast<std::uint32_t>(width);
+        imageSize.height = static_cast<std::uint32_t>(height);
+        imageSize.depth = 1;
+        newImage = SwImageFactory::createColorImage2D(data, imageFormat, imageSize, vk::ImageUsageFlagBits::eSampled, true);
+        stbi_image_free(data);
+    } else {
+        std::runtime_error error(fmt::format("{} failed to read image {}: {}", mName, imageIndex, stbi_failure_reason() ? stbi_failure_reason() : "Unknown"));
+    }
+
+    mImages[imageIndex] = std::move(newImage);
 }
 
 void SwAsset::constructMaterials() {
+    mImages.resize(mRawAsset.images.size());  // resize is not a typo
     mMaterials.reserve(mRawAsset.materials.size());
     std::vector<SwMaterialConstants> materialConstants;
     materialConstants.reserve(mRawAsset.materials.size());
@@ -242,29 +232,33 @@ void SwAsset::constructMaterials() {
         }
         materialConstants.emplace_back(constants);
 
-        std::uint32_t resolvedTextureCount = 0;
-        auto resolveTexture = [&](auto& texInfo, std::string slot) -> SwMaterialTexture {
-            if (texInfo.has_value()) {
-                auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
-                SwColorImage2D& image = tex.imageIndex.has_value() ? mImages[tex.imageIndex.value()] : SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getImage();
-                SwSampler& sampler =
-                    tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getSampler();
-                resolvedTextureCount++;
-                return SwMaterialTexture(&image, &sampler);
+        auto retrieveImage = [&](std::uint32_t imageIndex, SwMaterialTexture::Type texType) -> SwColorImage2D& {
+            if (!mImages[imageIndex].has_value()) {
+                constructImage(imageIndex, texType);
             }
-            LOG_DEBUG(sRendererContext.mLogger->getQuillLoggerPtr(), "{} material '{}' slot '{}' unset; using default.", mName, name, slot);
-            return SwMaterialTexture(&SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getImage(), &SwMaterialTexture::DEFAULT_WHITE_TEXTURE.getSampler());
+            return mImages[imageIndex].value();
         };
 
-        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture, "base");
-        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture, "metallicRoughness");
-        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture, "emissive");
-        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture, "normal");
-        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture, "occlusion");
+        auto resolveTexture = [&](auto& texInfo, SwMaterialTexture::Type texType) -> SwMaterialTexture {
+            if (texInfo.has_value()) {
+                auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
+                SwColorImage2D& image = tex.imageIndex.has_value() ? retrieveImage(static_cast<std::uint32_t>(tex.imageIndex.value()), texType)
+                                                                   : SwMaterialTexture::sDefaultWhiteTexture.getImage();
+                SwSampler& sampler =
+                    tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : SwMaterialTexture::sDefaultWhiteTexture.getSampler();
+                return SwMaterialTexture(&image, &sampler);
+            }
+            LOG_DEBUG(
+                sRendererContext.mLogger->getQuillLoggerPtr(), "{} material {} {} using default.", mName, name, magic_enum::enum_name(texType).data()
+            );
+            return SwMaterialTexture::retrieveDefaultWhiteTexture();
+        };
 
-        if (resolvedTextureCount == 0) {
-            LOG_DEBUG(sRendererContext.mLogger->getQuillLoggerPtr(), "{} material '{}' references no textures — fully factor-driven.", mName, name);
-        }
+        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture, SwMaterialTexture::Type::Base);
+        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture, SwMaterialTexture::Type::MetallicRoughness);
+        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture, SwMaterialTexture::Type::Emissive);
+        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture, SwMaterialTexture::Type::Normal);
+        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture, SwMaterialTexture::Type::Occlusion);
 
         SwMaterialResources resources(
             std::move(baseTexture), std::move(metallicRoughnessTexture), std::move(normalTexture), std::move(occlusionTexture), std::move(emissiveTexture)
@@ -274,9 +268,7 @@ void SwAsset::constructMaterials() {
     }
 
     std::memcpy(
-        SwMaterialConstants::sMaterialConstantsStagingBuffer.getMappedPtr(),
-        materialConstants.data(),
-        materialConstants.size() * sizeof(SwMaterialConstants)
+        SwMaterialConstants::sMaterialConstantsStagingBuffer.getMappedPtr(), materialConstants.data(), materialConstants.size() * sizeof(SwMaterialConstants)
     );
 
     vk::BufferCopy materialConstantsCopy{};
@@ -498,7 +490,6 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     loadRawAsset(assetPath);
     constructBuffers();
     constructSamplerAndSamplerOptions();
-    constructImages();
     constructMaterials();
     constructMeshes();
     constructNodes();
