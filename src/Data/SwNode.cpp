@@ -64,6 +64,7 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
         for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
             workingBatch.getRenderInstances().emplace_back(renderItemIndex, instanceIndex + i);
         }
+
         SwBatch::sFirstRenderInstanceOffset += workingAsset.getInstances().size();
     }
 

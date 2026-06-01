@@ -56,7 +56,7 @@ struct std::hash<SwSamplerOptions> {
         return seed;
     }
 
-    static void hashCombine(std::size_t seed, std::size_t value) {
+    static void hashCombine(std::size_t& seed, std::size_t value) {
         std::hash<std::size_t> hasher;
         seed ^= hasher(value) + 0x9e3779b9 + (seed << 6) + (seed >> 2);
     }

@@ -1,4 +1,5 @@
 ﻿import SwGeometry;
+import SwCommon;
 
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
@@ -10,7 +11,7 @@ SwGeometry::FSOutputOpaque main(SwGeometry::FSInput in) : SV_Target {
     float3 sunlightDir = normalize(float3(1.f, 0.f, 0.f));
     float sunlightPower = 1.f;
 
-    float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * 5 + 0)].Sample(in.mUv);
+    float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * SwGeometry::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
     if (diffuseColor.a < 0.0001f)
         discard;
 

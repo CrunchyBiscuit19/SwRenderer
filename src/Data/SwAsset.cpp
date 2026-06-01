@@ -243,22 +243,25 @@ void SwAsset::constructMaterials() {
         auto resolveTexture = [&](auto& texInfo) -> SwMaterialTexture {
             if (texInfo.has_value()) {
                 auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
-                return SwMaterialTexture(
-                    mImages[tex.imageIndex.value_or(0)],
-                    sSamplers[mSamplerOptions[tex.samplerIndex.value_or(0)]]
-                );
+                SwColorImage2D& image = tex.imageIndex.has_value()
+                    ? mImages[tex.imageIndex.value()]
+                    : SwMaterialTexture::sDefaultTexture->getImage();
+                SwSampler& sampler = tex.samplerIndex.has_value()
+                    ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]]
+                    : SwMaterialTexture::sDefaultTexture->getSampler();
+                return SwMaterialTexture(image, sampler);
             }
             return SwMaterialTexture(SwMaterialTexture::sDefaultTexture->getImage(), SwMaterialTexture::sDefaultTexture->getSampler());
         };
 
-        SwMaterialTexture baseImage = resolveTexture(material.pbrData.baseColorTexture);
-        SwMaterialTexture metallicRoughnessImage = resolveTexture(material.pbrData.metallicRoughnessTexture);
-        SwMaterialTexture emissiveImage = resolveTexture(material.emissiveTexture);
-        SwMaterialTexture normalImage = resolveTexture(material.normalTexture);
-        SwMaterialTexture occlusionImage = resolveTexture(material.occlusionTexture);
+        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture);
+        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture);
+        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture);
+        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture);
+        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture);
 
         SwMaterialResources resources(
-            std::move(baseImage), std::move(metallicRoughnessImage), std::move(emissiveImage), std::move(normalImage), std::move(occlusionImage)
+            std::move(baseTexture), std::move(metallicRoughnessTexture), std::move(normalTexture), std::move(occlusionTexture), std::move(emissiveTexture)
         );
 
         mMaterials.emplace_back(name, i, pipelineOptions, constants, std::move(resources));

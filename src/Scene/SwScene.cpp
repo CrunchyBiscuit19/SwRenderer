@@ -8,6 +8,7 @@
 #include <Scene/SwScene.h>
 #include <imgui_impl_vulkan.h>
 #include <quill/LogMacros.h>
+
 #include <glm/glm.hpp>
 #include <ranges>
 
@@ -119,8 +120,7 @@ void SwScene::initializeResources() {
 }
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
-    sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(
-        commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
+    sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
 }
 
 SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
@@ -203,6 +203,7 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
         }
     }
     for (auto& asset : mAssets | std::views::values) {
+        if (asset.getInstances().size() == 0) continue;
         asset.generateRenderItemsAndRenderInstances();
     }
 
@@ -426,17 +427,15 @@ void SwScene::reloadSceneMaterialResourcesArray() {
             std::array<SwMaterialTexture*, SwMaterial::NUM_PBR_IMAGES> materialTextures = {
                 &material.getResources().mBase,
                 &material.getResources().mMetallicRoughness,
-                &material.getResources().mEmissive,
                 &material.getResources().mNormal,
-                &material.getResources().mOcclusion
+                &material.getResources().mOcclusion,
+                &material.getResources().mEmissive
             };
             for (std::uint32_t i = 0; i < SwMaterial::NUM_PBR_IMAGES; i++) {
-                auto& texture = *materialTextures[i];
-                bool valid = texture.getImage().getRawImage() != VK_NULL_HANDLE;
                 mSceneMaterialResourcesDescriptorSet.writeImage(
                     0,
-                    valid ? texture.getImage().getRawMainImageView() : SwMaterialTexture::sDefaultTexture->getImage().getRawMainImageView(),
-                    valid ? texture.getSampler().getRawSampler() : SwMaterialTexture::sDefaultTexture->getSampler().getRawSampler(),
+                    materialTextures[i]->getImage().getRawMainImageView(),
+                    materialTextures[i]->getSampler().getRawSampler(),
                     vk::ImageLayout::eShaderReadOnlyOptimal,
                     vk::DescriptorType::eCombinedImageSampler,
                     materialTextureArrayIndex + i

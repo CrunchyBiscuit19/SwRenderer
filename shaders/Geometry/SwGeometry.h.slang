@@ -3,6 +3,8 @@ module SwGeometry;
 import SwCommon;
 
 namespace SwGeometry {
+    public static const uint NUM_PBR_IMAGES = 5;
+
     public struct WorkPC {
         public SwVertex* mSceneVertexBuffer;
         public SwMaterialConstant* mSceneMaterialConstantsBuffer;
