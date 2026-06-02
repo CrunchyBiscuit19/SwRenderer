@@ -128,7 +128,7 @@ void SwSwapchainImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Ext
 SwAllocatedImage::SwAllocatedImage() : mImage(nullptr), mMainImageView(nullptr), mAllocation(nullptr), mAllocator(nullptr), mMipLevels(1), mMipmapped(false) {}
 
 SwAllocatedImage::SwAllocatedImage(
-    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
     vk::ImageAspectFlags aspect, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
@@ -137,6 +137,7 @@ SwAllocatedImage::SwAllocatedImage(
       mMainImageView(std::move(mainImageView)),
       mOtherImageViews(std::move(otherImageViews)),
       mClearValue(clearValue),
+      mUsage(usage),
       mAllocator(allocator),
       mAllocation(allocation),
       mMipmapped(mipmapped),
@@ -303,7 +304,7 @@ void SwAllocatedImage::addImageView(
 }
 
 void SwAllocatedImage::destroy() {
-    if (mAllocation == nullptr) {
+    if (!isReady()) {
         return;
     }
     mMainImageView.clear();
@@ -353,26 +354,30 @@ SwAllocatedImage::~SwAllocatedImage() { destroy(); }
 SwColorImage2D::SwColorImage2D() {}
 
 SwColorImage2D::SwColorImage2D(
-    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
     const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwAllocatedImage(
-          std::move(image), mainFormat, extent, std::move(mainImageView), clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
+          std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
       ) {}
 
 void SwColorImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
 
+void SwColorImage2D::resize(vk::Extent3D newExtent) {
+    *this = SwImageFactory::createColorImage2D(nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
+}
+
 SwDepthImage2D::SwDepthImage2D() {}
 
 SwDepthImage2D::SwDepthImage2D(
-    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
     const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwAllocatedImage(
-          std::move(image), mainFormat, extent, std::move(mainImageView), clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
+          std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
       ) {
     mClearValue.depthStencil.depth = 0.f;
@@ -380,19 +385,27 @@ SwDepthImage2D::SwDepthImage2D(
 
 void SwDepthImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
 
+void SwDepthImage2D::resize(vk::Extent3D newExtent) {
+    *this = SwImageFactory::createDepthImage2D(nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
+}
+
 SwColorImageCubemap::SwColorImageCubemap() {}
 
 SwColorImageCubemap::SwColorImageCubemap(
-    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ClearValue clearValue,
+    vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
     const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwAllocatedImage(
-          std::move(image), mainFormat, extent, std::move(mainImageView), clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
+          std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
       ) {}
 
 void SwColorImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
+
+void SwColorImageCubemap::resize(vk::Extent3D newExtent) {
+    *this = SwImageFactory::createColorImageCubemap(nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
+}
 
 SwRendererContext SwImageFactory::sRendererContext{};
 SwStagingBuffer SwImageFactory::sImageStagingBuffer;
@@ -473,6 +486,7 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
         mainFormat,
         extent,
         mipmapped,
+        usage,
         clearValue,
         sRendererContext.mAllocator,
         std::move(tempAllocation)
@@ -585,6 +599,7 @@ SwColorImage2D SwImageFactory::createColorImage2D(
         imageConstructionInfo.mMainFormat,
         imageConstructionInfo.mExtent,
         std::move(imageConstructionInfo.mMainImageView),
+        imageConstructionInfo.mUsage,
         imageConstructionInfo.mClearValue,
         imageConstructionInfo.mAllocator,
         std::move(imageConstructionInfo.mAllocation),
@@ -605,6 +620,7 @@ SwDepthImage2D SwImageFactory::createDepthImage2D(
         imageConstructionInfo.mMainFormat,
         imageConstructionInfo.mExtent,
         std::move(imageConstructionInfo.mMainImageView),
+        imageConstructionInfo.mUsage,
         imageConstructionInfo.mClearValue,
         imageConstructionInfo.mAllocator,
         std::move(imageConstructionInfo.mAllocation),
@@ -625,6 +641,7 @@ SwColorImageCubemap SwImageFactory::createColorImageCubemap(
         imageConstructionInfo.mMainFormat,
         imageConstructionInfo.mExtent,
         std::move(imageConstructionInfo.mMainImageView),
+        imageConstructionInfo.mUsage,
         imageConstructionInfo.mClearValue,
         imageConstructionInfo.mAllocator,
         std::move(imageConstructionInfo.mAllocation),

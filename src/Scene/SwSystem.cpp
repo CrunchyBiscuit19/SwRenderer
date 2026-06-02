@@ -2,6 +2,8 @@
 
 class SwScene;
 
+void SwSystem::Resizable::resize() { reInitializeOnResize(); }
+
 SwRendererContext SwSystem::sRendererContext{};
 
 SwSystem::SwSystem(SwScene& scene) : mScene(scene) {}

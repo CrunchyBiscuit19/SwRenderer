@@ -11,7 +11,7 @@ public:
         virtual void reInitializeOnResize() = 0;
 
     public:
-        virtual void resize() = 0;
+        virtual void resize();  
     };
 
 protected:

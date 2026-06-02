@@ -105,9 +105,3 @@ void SwWBOIT::System::reInitializeOnResize() {
     );
     mResources.mWorkDescriptorSet.pushWrites();
 }
-
-void SwWBOIT::System::resize() {
-    mResources.mRvlImage.destroy();
-    mResources.mAccumImage.destroy();
-    reInitializeOnResize();
-}

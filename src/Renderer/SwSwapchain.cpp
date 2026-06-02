@@ -15,10 +15,7 @@ void SwFrame::initialize() {
     mRenderFence = SwFenceFactory::createFence(vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore();
     mPerFrameBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eUniformBuffer,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        PER_FRAME_BUFFER_SIZE,
-        true
+        vk::BufferUsageFlagBits::eUniformBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, PER_FRAME_BUFFER_SIZE, true
     );
 }
 
@@ -62,11 +59,18 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
 }
 
 void SwSwapchain::onResizeInitialize() {
+    std::int32_t w, h;
+    SDL_GetWindowSize(mWindow, &w, &h);
+    mWindowExtent.width = w;
+    mWindowExtent.height = h;
+    mAspectRatio = static_cast<float>(w) / static_cast<float>(h);
+
     vk::ImageFormatListCreateInfo formatListCreateInfo{};
     std::vector<vk::Format> formats = {SRGB_FORMAT, UNORM_FORMAT};
     formatListCreateInfo.pViewFormats = formats.data();
     formatListCreateInfo.viewFormatCount = formats.size();
 
+    mSwapchain.clear();
     vkb::SwapchainBuilder swapchainBuilder(**sRendererContext.mChosenGPU, **sRendererContext.mDevice, *mSurface);
     vkb::Swapchain vkbSwapchain =
         swapchainBuilder
@@ -141,17 +145,6 @@ void SwSwapchain::onResizeInitialize() {
 }
 
 void SwSwapchain::resize() {
-    mDepthImage.destroy();
-    mDrawImage.destroy();
-    mSwapchain.clear();
-    mSwapchainImages.clear();
-
-    std::int32_t w, h;
-    SDL_GetWindowSize(mWindow, &w, &h);
-    mWindowExtent.width = w;
-    mWindowExtent.height = h;
-    mAspectRatio = static_cast<float>(w) / static_cast<float>(h);
-
     onResizeInitialize();
 }
 

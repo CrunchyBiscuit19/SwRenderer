@@ -271,9 +271,3 @@ bool SwPick::System::isPicked() {
         (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK) && !sRendererContext.mScene->getCamera().getRelativeMode() && !ImGui::GetIO().WantCaptureMouse
     );
 }
-
-void SwPick::System::resize() {
-    mResources.mReadbackImage.destroy();
-    mResources.mDepthImage.destroy();
-    reInitializeOnResize();
-}

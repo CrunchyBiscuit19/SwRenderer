@@ -36,7 +36,5 @@ public:
     System(SwScene& scene);
 
     inline Resources& getResources() { return mResources; }
-
-    void resize() override;
 };
 }  // namespace SwWBOIT

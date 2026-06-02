@@ -110,6 +110,5 @@ public:
 
     void refreshBatchDependencies() override;
     void refreshPushConstants() override;
-    void resize() override;
 };
 };  // namespace SwCull
