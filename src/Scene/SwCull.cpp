@@ -79,9 +79,7 @@ void SwCull::System::initializePasses() {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
         cmd.fillBuffer(sRendererContext.mStats->mRenderInstancesCountBuffer.getRawBuffer(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
-        std::memcpy(
-            mScene.getCamera().getFrustumBuffer().getMappedPtr(), mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane)
-        );
+        mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
                 if (batch.getRenderItems().empty()) {

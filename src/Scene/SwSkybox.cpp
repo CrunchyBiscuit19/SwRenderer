@@ -57,7 +57,6 @@ void SwSkybox::System::initializeResources() {
     );
 
     SwStagingBuffer skyboxVertexStagingBuffer = SwBufferFactory::createStagingBuffer(skyboxVertexSize);
-    std::memcpy(skyboxVertexStagingBuffer.getMappedPtr(), mResources.mWorkVertices.data(), skyboxVertexSize);
 
     vk::BufferCopy skyboxVertexCopy{};
     skyboxVertexCopy.dstOffset = 0;
@@ -65,7 +64,7 @@ void SwSkybox::System::initializeResources() {
     skyboxVertexCopy.size = skyboxVertexSize;
 
     sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        skyboxVertexStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        skyboxVertexStagingBuffer.copyFromUnchecked(mResources.mWorkVertices.data(), skyboxVertexCopy.size);
         mResources.mWorkVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy);
     });
 

@@ -228,29 +228,23 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
                 continue;
             }
 
-            std::memcpy(
-                batch.getRenderItemsStagingBuffer().getMappedPtr(), batch.getRenderItems().data(), batch.getRenderItems().size() * sizeof(SwRenderItem)
-            );
             vk::BufferCopy renderItemsCopy{};
             renderItemsCopy.dstOffset = 0;
             renderItemsCopy.srcOffset = 0;
             renderItemsCopy.size = batch.getRenderItems().size() * sizeof(SwRenderItem);
-            std::memcpy(
-                batch.getRenderInstancesStagingBuffer().getMappedPtr(),
-                batch.getRenderInstances().data(),
-                batch.getRenderInstances().size() * sizeof(SwRenderInstance)
-            );
             vk::BufferCopy renderInstancesCopy{};
             renderInstancesCopy.dstOffset = 0;
             renderInstancesCopy.srcOffset = 0;
             renderInstancesCopy.size = batch.getRenderInstances().size() * sizeof(SwRenderInstance);
 
             sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
+                batch.getRenderItemsStagingBuffer().copyFrom(cmd, batch.getRenderItems().data(), renderItemsCopy.size);
                 cmd.fillBuffer(batch.getPreCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getPreCullRenderItemsBuffer().copyFrom(cmd, batch.getRenderItemsStagingBuffer(), renderItemsCopy);
                 batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
+                batch.getRenderInstancesStagingBuffer().copyFrom(cmd, batch.getRenderInstances().data(), renderInstancesCopy.size);
                 cmd.fillBuffer(batch.getRenderInstancesBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy);

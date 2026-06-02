@@ -60,14 +60,21 @@ void SwBuffer::emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bu
     emitBarrier(cmd, SwDependency::BufferDepDesc::get(bufferDepType).mStage, SwDependency::BufferDepDesc::get(bufferDepType).mAccess);
 }
 
+void SwBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) {
+    if (requiredSize > mSize) {
+        resize(cmd, std::max(requiredSize, mSize * 2));
+    }
+}
+
 void SwBuffer::copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies) {
     std::uint64_t biggestSize = 0;
     for (const auto& copy : bufferCopies) {
         biggestSize = std::max(biggestSize, copy.dstOffset + copy.size);
     }
     ensureCapacity(cmd, biggestSize);
+    src.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+    emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
     cmd.copyBuffer(*src.mBuffer, *mBuffer, bufferCopies);
-    return;
 }
 
 void* SwBuffer::getMappedPtr() {
@@ -127,6 +134,10 @@ SwBuffer& SwBuffer::operator=(SwBuffer&& other) noexcept {
 
 SwBuffer::~SwBuffer() { destroy(); }
 
+
+
+
+
 SwAllocatedBuffer::SwAllocatedBuffer() : SwBuffer() {}
 
 SwAllocatedBuffer::SwAllocatedBuffer(
@@ -143,11 +154,6 @@ void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     SwAllocatedBuffer newBuffer = SwBufferFactory::createAllocatedBuffer(mUsage, mFlags, newSize, mAddress.has_value());
 
     if (mSize > 0) {
-        emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-    }
-    newBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite);
-
-    if (mSize > 0) {
         vk::BufferCopy copyRegion{};
         copyRegion.size = std::min(mSize, newSize);
         newBuffer.copyFrom(cmd, *this, copyRegion);
@@ -162,10 +168,20 @@ void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     static_cast<SwBuffer&>(*this) = std::move(newBuffer);
 }   
 
-void SwAllocatedBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) {
-    if (requiredSize > mSize) {
-        resize(cmd, std::max(requiredSize, mSize * 2));
+void SwAllocatedBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+    if (!(mFlags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)) {
+        throw std::runtime_error("copyFrom(ptr) requires VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT");
     }
+    ensureCapacity(cmd, internalOffset + size);
+    std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
+    emitBarrier(cmd, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostWrite);
+}
+
+void SwAllocatedBuffer::copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+    if (!(mFlags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)) {
+        throw std::runtime_error("copyFrom(ptr) requires VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT");
+    }
+    std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
 }
 
 SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
@@ -179,6 +195,8 @@ SwStagingBuffer::SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator
 void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     void* oldMapped = mInfo.pMappedData;
     std::uint64_t copySize = std::min(mSize, newSize);
+    vk::PipelineStageFlags2 prevStage = mCurrentStage;
+    vk::AccessFlags2 prevAccess = mCurrentAccess;
     std::uint32_t prevGeneration = mGeneration;
 
     SwStagingBuffer newBuffer = SwBufferFactory::createStagingBuffer(newSize);
@@ -187,17 +205,27 @@ void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
         std::memcpy(newBuffer.mInfo.pMappedData, oldMapped, copySize);
     }
 
+    // Record the host write so the transition to prevStage emits srcStage=eHost/srcAccess=eHostWrite,
+    // making the memcpy visible to subsequent GPU reads.
+    newBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostWrite);
+    newBuffer.emitBarrier(cmd, prevStage, prevAccess);
     newBuffer.mGeneration = prevGeneration + 1;
 
     SwBufferFactory::deferDestroy(std::make_unique<SwStagingBuffer>(std::move(*this)));
     static_cast<SwBuffer&>(*this) = std::move(newBuffer);
 }
 
-void SwStagingBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) {
-    if (requiredSize > mSize) {
-        resize(cmd, std::max(requiredSize, mSize * 2));
-    }
+void SwStagingBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+    ensureCapacity(cmd, internalOffset + size);
+    std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
 }
+
+void SwStagingBuffer::copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+    std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
+}
+
+
+
 
 SwRendererContext SwBufferFactory::sRendererContext{};
 std::vector<SwBufferFactory::DeferredBuffer> SwBufferFactory::sDeletionQueue{};
@@ -255,6 +283,7 @@ SwStagingBuffer SwBufferFactory::createStagingBuffer(std::uint64_t size, bool re
     bufferInfo.pNext = nullptr;
     bufferInfo.size = size;
     bufferInfo.usage = vk::BufferUsageFlagBits::eTransferSrc;
+    if (resizable) bufferInfo.usage |= vk::BufferUsageFlagBits::eTransferDst;
     auto bufferInfo1 = static_cast<VkBufferCreateInfo>(bufferInfo);
 
     VmaAllocationCreateInfo vmaCreateInfo = {};

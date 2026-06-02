@@ -24,7 +24,7 @@ void SwFrame::initialize() {
 
 void SwFrame::update() {
     SwPerspective perspective = sRendererContext.mScene->getCamera().getPerspective();
-    std::memcpy(mPerFrameBuffer.getMappedPtr(), &perspective, 1 * sizeof(SwPerspective));
+    mPerFrameBuffer.copyFromUnchecked(&perspective, sizeof(SwPerspective));
 }
 
 SwRendererContext SwSwapchain::sRendererContext{};

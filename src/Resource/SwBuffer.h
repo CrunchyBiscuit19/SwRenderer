@@ -35,14 +35,16 @@ protected:
     // Defers destruction of the old VkBuffer until no longer in-flight. 
     // Descriptor sets referencing this buffer must be rewritten wheb getGeneration() changes.
     virtual void resize(vk::CommandBuffer cmd, std::uint64_t newSize) = 0;
-
-    virtual void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) = 0;
+    virtual void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize);
 
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess);
     void emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bufferDepType);
 
     void copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies);
+    virtual void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) = 0;
+
+    virtual void copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) = 0;
 
     void* getMappedPtr();
     inline vk::Buffer getRawBuffer() { return *mBuffer; }
@@ -67,8 +69,6 @@ class SwAllocatedBuffer : public SwBuffer {
 private:
     void resize(vk::CommandBuffer cmd, std::uint64_t newSize) override;
 
-    void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) override;
-
 public:
     SwAllocatedBuffer();
 
@@ -76,6 +76,11 @@ public:
         vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
         vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
+
+    using SwBuffer::copyFrom;
+    void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
+
+    virtual void copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
 
     SwAllocatedBuffer(SwAllocatedBuffer&&) noexcept = default;
     SwAllocatedBuffer& operator=(SwAllocatedBuffer&&) noexcept = default;
@@ -88,12 +93,15 @@ class SwStagingBuffer : public SwBuffer {
 private:
     void resize(vk::CommandBuffer cmd, std::uint64_t newSize) override;
 
-    void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) override;
-
 public:
     SwStagingBuffer();
 
     SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size);
+
+    using SwBuffer::copyFrom;
+    void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
+
+    virtual void copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
 
     SwStagingBuffer(SwStagingBuffer&&) noexcept = default;
     SwStagingBuffer& operator=(SwStagingBuffer&&) noexcept = default;
