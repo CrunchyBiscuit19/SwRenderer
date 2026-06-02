@@ -210,6 +210,8 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
                 batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy);
                 batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
+
+                batch.getPostCullRenderItemsBuffer().ensureCapacity(cmd, renderItemsCopy.size);  // At least as big as preCullRenderItemsBuffer
             });
         }
     }

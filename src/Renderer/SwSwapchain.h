@@ -67,6 +67,8 @@ private:
     SwColorImage2D mDrawImage;
     SwDepthImage2D mDepthImage;
 
+    inline SwSwapchainImage& getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
+
 public:
     static vk::ClearColorValue DRAW_CLEAR_VALUE;
     static constexpr vk::Format SRGB_FORMAT{vk::Format::eB8G8R8A8Srgb};
@@ -103,7 +105,6 @@ public:
     inline void setResizeRequested(bool resizeRequested) { mResizeRequested = resizeRequested; }
     inline vk::Extent2D getWindowExtent() const { return mWindowExtent; }
     inline SwSwapchainImage& getSwapchainRepImage() { return mSwapchainRepImage; }
-    inline SwSwapchainImage& getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
 
     void acquireNextImage(uint64_t timeout);
 

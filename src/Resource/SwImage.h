@@ -37,10 +37,10 @@ public:
     virtual void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) = 0;
     void copyFrom(vk::CommandBuffer cmd, SwImage& source);
 
-    vk::RenderingAttachmentInfo generateRenderingAttachment(
+    virtual vk::RenderingAttachmentInfo generateRenderingAttachment(
         vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
     );
-    vk::RenderingAttachmentInfo generateRenderingAttachment(
+    virtual vk::RenderingAttachmentInfo generateRenderingAttachment(
         std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad,
         vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
     );
@@ -99,6 +99,14 @@ public:
 
     using SwImage::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
+
+    vk::RenderingAttachmentInfo generateRenderingAttachment(
+        vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
+    ) override;
+    vk::RenderingAttachmentInfo generateRenderingAttachment(
+        std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad,
+        vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
+    ) override;
 
     SwSwapchainImage(SwSwapchainImage&&) noexcept = default;
     SwSwapchainImage& operator=(SwSwapchainImage&&) noexcept = default;
