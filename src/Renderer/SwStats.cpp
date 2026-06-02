@@ -4,10 +4,7 @@ SwStats::SwStats() {}
 
 void SwStats::initialize() {
     mRenderInstancesCountBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-        sizeof(std::uint32_t)
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(std::uint32_t), true
     );
 }
 

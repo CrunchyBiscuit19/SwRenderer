@@ -87,22 +87,22 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
 
 void SwAsset::constructBuffers() {
     mMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         NUM_MODEL_MATERIALS * sizeof(SwMaterialConstants)
     );
     mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         NUM_MODEL_BOUNDS * sizeof(SwBounds)
     );
     mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         NUM_MODEL_NODES * sizeof(glm::mat4)
     );
     mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         NUM_MODEL_INSTANCES * sizeof(SwInstance::Data)
     );
@@ -195,7 +195,7 @@ void SwAsset::constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type t
         newImage = SwImageFactory::createColorImage2D(data, imageFormat, imageSize, vk::ImageUsageFlagBits::eSampled, true);
         stbi_image_free(data);
     } else {
-        std::runtime_error error(fmt::format("{} failed to read image {}: {}", mName, imageIndex, stbi_failure_reason() ? stbi_failure_reason() : "Unknown"));
+        throw std::runtime_error(fmt::format("{} failed to read image {}: {}", mName, imageIndex, stbi_failure_reason() ? stbi_failure_reason() : "Unknown"));
     }
 
     mImages[imageIndex] = std::move(newImage);
@@ -248,9 +248,9 @@ void SwAsset::constructMaterials() {
                     tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : SwMaterialTexture::sDefaultWhiteTexture.getSampler();
                 return SwMaterialTexture(&image, &sampler);
             }
-            LOG_DEBUG(
+            /*LOG_DEBUG(
                 sRendererContext.mLogger->getQuillLoggerPtr(), "{} material {} {} using default.", mName, name, magic_enum::enum_name(texType).data()
-            );
+            );*/
             return SwMaterialTexture::retrieveDefaultWhiteTexture();
         };
 
@@ -360,12 +360,12 @@ void SwAsset::constructMeshes() {
         const vk::DeviceSize srcVertexVectorSize = vertices.size() * sizeof(SwVertex);
         const vk::DeviceSize srcIndexVectorSize = indices.size() * sizeof(std::uint32_t);
         SwAllocatedBuffer vertexBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst,
+            vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             srcVertexVectorSize
         );
         SwAllocatedBuffer indexBuffer = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst,
+            vk::BufferUsageFlagBits::eIndexBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             srcIndexVectorSize
         );

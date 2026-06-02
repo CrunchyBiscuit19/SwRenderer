@@ -50,9 +50,10 @@ void SwSkybox::System::initializeResources() {
 
     const std::uint32_t skyboxVertexSize = static_cast<std::uint32_t>(mResources.mWorkVertices.size() * sizeof(float));
     mResources.mWorkVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        skyboxVertexSize
+        skyboxVertexSize,
+        true
     );
 
     SwStagingBuffer skyboxVertexStagingBuffer = SwBufferFactory::createStagingBuffer(skyboxVertexSize);
@@ -155,8 +156,7 @@ void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path>
         0,
         mResources.mWorkImage.getRawMainImageView(),
         mResources.mWorkSampler.getRawSampler(),
-        vk::ImageLayout::eShaderReadOnlyOptimal,
-        vk::DescriptorType::eCombinedImageSampler
+        vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mWorkDescriptorSet.pushWrites();
 }

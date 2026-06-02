@@ -16,7 +16,7 @@ protected:
     VmaAllocationInfo mInfo;
     VmaAllocationCreateFlags mFlags;
     vk::BufferUsageFlags mUsage;
-    std::uint32_t mSize;
+    std::uint64_t mSize;
     std::uint32_t mGeneration{0};  // Incremented on every resize; callers use this to detect stale descriptor set bindings.
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
@@ -28,15 +28,15 @@ protected:
 
     SwBuffer(
         vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-        vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
+        vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
     // Allocates new bigger buffer, copies old content, restores pipeline stage/access on the new buffer 
     // Defers destruction of the old VkBuffer until no longer in-flight. 
     // Descriptor sets referencing this buffer must be rewritten wheb getGeneration() changes.
-    virtual void resize(vk::CommandBuffer cmd, std::uint32_t newSize) = 0;
+    virtual void resize(vk::CommandBuffer cmd, std::uint64_t newSize) = 0;
 
-    virtual void ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requiredSize) = 0;
+    virtual void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) = 0;
 
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess);
@@ -49,7 +49,7 @@ public:
     std::optional<vk::DeviceAddress> getDeviceAddress() { return mAddress; }
     inline vk::PipelineStageFlags2 getCurrentStage() { return mCurrentStage; }
     inline vk::AccessFlags2 getCurrentAccess() { return mCurrentAccess; }
-    inline std::uint32_t getSize() const { return mSize; }
+    inline std::uint64_t getSize() const { return mSize; }
     inline std::uint32_t getGeneration() const { return mGeneration; }
 
     void destroy();
@@ -65,16 +65,16 @@ public:
 
 class SwAllocatedBuffer : public SwBuffer {
 private:
-    void resize(vk::CommandBuffer cmd, std::uint32_t newSize) override;
+    void resize(vk::CommandBuffer cmd, std::uint64_t newSize) override;
 
-    void ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requiredSize) override;
+    void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) override;
 
 public:
     SwAllocatedBuffer();
 
     SwAllocatedBuffer(
         vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-        vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
+        vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
     SwAllocatedBuffer(SwAllocatedBuffer&&) noexcept = default;
@@ -86,14 +86,14 @@ public:
 
 class SwStagingBuffer : public SwBuffer {
 private:
-    void resize(vk::CommandBuffer cmd, std::uint32_t newSize) override;
+    void resize(vk::CommandBuffer cmd, std::uint64_t newSize) override;
 
-    void ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requiredSize) override;
+    void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) override;
 
 public:
     SwStagingBuffer();
 
-    SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint32_t size);
+    SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size);
 
     SwStagingBuffer(SwStagingBuffer&&) noexcept = default;
     SwStagingBuffer& operator=(SwStagingBuffer&&) noexcept = default;
@@ -117,9 +117,9 @@ private:
 public:
     static void init(SwRendererContext rendererContext);
 
-    static SwAllocatedBuffer createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size);
+    static SwAllocatedBuffer createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable = false, bool resizable = true);
 
-    static SwStagingBuffer createStagingBuffer(std::uint32_t size);
+    static SwStagingBuffer createStagingBuffer(std::uint64_t size, bool resizable = true);
 
     // Queues a buffer for destruction after NUM_FRAME_OVERLAP frames have passed.
     // Call this instead of letting resize destroy the old handle immediately.

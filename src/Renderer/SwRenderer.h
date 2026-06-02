@@ -70,6 +70,7 @@ public:
     static constexpr std::uint32_t EXPECTED_FRAME_RATE{60};
     static constexpr std::uint32_t MAX_1D_WORKGROUP_THREADS{1 << 10};
     static constexpr std::uint32_t MAX_2D_WORKGROUP_THREADS{1 << 5};
+    static constexpr std::uint32_t MAX_DESCRIPTOR_SETS{1 << 12};
 
     SwRenderer();
 

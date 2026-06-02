@@ -9,28 +9,29 @@ SwBatch::SwBatch(SwPrimitive& primitive) {
 
     mRenderItemsStagingBuffer = SwBufferFactory::createStagingBuffer(RENDER_ITEMS_BUFFER_SIZE);
     mPreCullRenderItemsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        RENDER_ITEMS_BUFFER_SIZE
+        RENDER_ITEMS_BUFFER_SIZE,
+        true
     );
     mPostCullRenderItemsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        RENDER_ITEMS_BUFFER_SIZE
+        RENDER_ITEMS_BUFFER_SIZE,
+        true
     );
     mPostCullRenderItemsCountBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer |
-            vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        sizeof(uint32_t)
+        sizeof(uint32_t),
+        true
     );
 
     mRenderInstancesStagingBuffer = SwBufferFactory::createStagingBuffer(RENDER_INSTANCES_BUFFER_SIZE);
     mRenderInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        RENDER_INSTANCES_BUFFER_SIZE
+        RENDER_INSTANCES_BUFFER_SIZE,
+        true
     );
 }

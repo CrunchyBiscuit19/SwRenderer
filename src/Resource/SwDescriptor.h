@@ -46,12 +46,12 @@ public:
     SwDescriptorSet(vk::raii::DescriptorSet mSet, std::span<const vk::DescriptorSetLayoutBinding> bindings, bool useBindless);
 
     void writeImage(
-        std::uint32_t binding, vk::ImageView imageView, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayIndex = 0
+        std::uint32_t binding, vk::ImageView imageView, vk::Sampler sampler, vk::ImageLayout layout, std::uint32_t arrayIndex = 0
     );
 
-    void writeSampler(std::uint32_t binding, vk::Sampler sampler, vk::DescriptorType type);
+    void writeSampler(std::uint32_t binding, vk::Sampler sampler);
 
-    void writeBuffer(std::uint32_t binding, vk::Buffer buffer, size_t size, size_t offset, vk::DescriptorType type);
+    void writeBuffer(std::uint32_t binding, vk::Buffer buffer, size_t size, size_t offset);
 
     void pushWrites();
 

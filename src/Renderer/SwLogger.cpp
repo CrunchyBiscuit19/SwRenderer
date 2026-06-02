@@ -296,6 +296,7 @@ SwLogger::SwLogger() {
     mBlockedMessages.insert("BestPractices-vkBindImageMemory-small-dedicated-allocation");
 
     mBreakMessages.insert("VUID-VkBufferCopy-size-01988");
+    mBreakMessages.insert("VUID-vkCmdCopyBuffer-size-00115");
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(

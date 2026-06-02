@@ -31,14 +31,6 @@ private:
     friend class SwWBOIT::System;
     friend class SwGeometry::System;
 
-    static constexpr std::uint32_t SCENE_VERTEX_BUFFER_SIZE{1 << 28};
-    static constexpr std::uint32_t SCENE_INDEX_BUFFER_SIZE{1 << 28};
-    static constexpr std::uint32_t SCENE_NUM_MATERIALS{1 << 8};
-    static constexpr std::uint32_t SCENE_NUM_NODES{1 << 12};
-    static constexpr std::uint32_t SCENE_NUM_INSTANCES{1 << 8};
-    static constexpr std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
-    static constexpr std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 18};
-
     static SwRendererContext sRendererContext;
 
     SwCamera mCamera;
@@ -76,6 +68,13 @@ private:
 
 public:
     static constexpr std::uint32_t DRAW_MAX_RENDER_ITEMS{1 << 10};
+    static constexpr std::uint32_t SCENE_VERTEX_BUFFER_SIZE{1 << 28};
+    static constexpr std::uint32_t SCENE_INDEX_BUFFER_SIZE{1 << 28};
+    static constexpr std::uint32_t SCENE_NUM_MATERIALS{1 << 8};
+    static constexpr std::uint32_t SCENE_NUM_NODES{1 << 12};
+    static constexpr std::uint32_t SCENE_NUM_INSTANCES{1 << 8};
+    static constexpr std::uint32_t SCENE_NUM_BOUNDS{1 << 12};
+    static constexpr std::uint32_t SCENE_NUM_RENDER_INSTANCES{1 << 18};
 
     Flags mFlags;
 

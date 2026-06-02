@@ -39,7 +39,9 @@ SwMaterialResources::SwMaterialResources(
 void SwMaterialResources::init(SwRendererContext rendererContext) {
     sRendererContext = rendererContext;
     sMaterialResourcesDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eCombinedImageSampler, MAX_TEXTURE_ARRAY_SLOTS}}, vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment, true
+        {{0, vk::DescriptorType::eCombinedImageSampler, SwScene::SCENE_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
+        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+        true
     );
     SwMaterialTexture::sDefaultWhiteTexture =
         SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);

@@ -13,30 +13,19 @@ SwDescriptorSet::SwDescriptorSet() : mSet(nullptr) {};
 SwDescriptorSet::SwDescriptorSet(vk::raii::DescriptorSet set, std::span<const vk::DescriptorSetLayoutBinding> bindings, bool useBindless)
     : mSet(std::move(set)), mBindings(bindings), mUseBindless(useBindless) {}
 
-void SwDescriptorSet::writeImage(
-    std::uint32_t bindingIndex, vk::ImageView imageView, vk::Sampler sampler, vk::ImageLayout layout, vk::DescriptorType type, std::uint32_t arrayIndex
-) {
-    if (mBindings[bindingIndex].descriptorType != type) {
-        throw std::runtime_error("Descriptor type mismatch when writing image to descriptor set");
-    };
+void SwDescriptorSet::writeImage(std::uint32_t bindingIndex, vk::ImageView imageView, vk::Sampler sampler, vk::ImageLayout layout, std::uint32_t arrayIndex) {
     mWriteImageInfos.emplace_back(sampler, imageView, layout);
-    mWrites.emplace_back(*mSet, bindingIndex, arrayIndex, 1, type, &mWriteImageInfos.back());
+    mWrites.emplace_back(*mSet, bindingIndex, arrayIndex, 1, mBindings[bindingIndex].descriptorType, &mWriteImageInfos.back());
 }
 
-void SwDescriptorSet::writeSampler(std::uint32_t bindingIndex, vk::Sampler sampler, vk::DescriptorType type) {
-    if (mBindings[bindingIndex].descriptorType != type) {
-        throw std::runtime_error("Descriptor type mismatch when writing sampler to descriptor set");
-    };
+void SwDescriptorSet::writeSampler(std::uint32_t bindingIndex, vk::Sampler sampler) {
     mWriteImageInfos.emplace_back(sampler);
-    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, type, &mWriteImageInfos.back());
+    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, mBindings[bindingIndex].descriptorType, &mWriteImageInfos.back());
 }
 
-void SwDescriptorSet::writeBuffer(std::uint32_t bindingIndex, vk::Buffer buffer, size_t size, size_t offset, vk::DescriptorType type) {
-    if (mBindings[bindingIndex].descriptorType != type) {
-        throw std::runtime_error("Descriptor type mismatch when writing buffer to descriptor set");
-    };
+void SwDescriptorSet::writeBuffer(std::uint32_t bindingIndex, vk::Buffer buffer, size_t size, size_t offset) {
     mWriteBufferInfos.emplace_back(buffer, offset, size);
-    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, type, nullptr, &mWriteBufferInfos.back());
+    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, mBindings[bindingIndex].descriptorType, nullptr, &mWriteBufferInfos.back());
 }
 
 void SwDescriptorSet::pushWrites() {

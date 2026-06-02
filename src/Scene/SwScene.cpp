@@ -84,47 +84,53 @@ void SwScene::refreshSwapchainDependencies() {
 
 void SwScene::initializeResources() {
     mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_VERTEX_BUFFER_SIZE
+        SCENE_VERTEX_BUFFER_SIZE,
+        true
     );
 
     mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INDEX_BUFFER_SIZE
+        vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INDEX_BUFFER_SIZE
     );
 
     mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants)
+        SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants),
+        true
     );
 
     mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_NODES * sizeof(glm::mat4)
+        SCENE_NUM_NODES * sizeof(glm::mat4),
+        true
     );
 
     mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_INSTANCES * sizeof(SwInstance::Data)
+        SCENE_NUM_INSTANCES * sizeof(SwInstance::Data),
+        true
     );
 
     mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_BOUNDS * sizeof(SwBounds)
+        SCENE_NUM_BOUNDS * sizeof(SwBounds),
+        true
     );
 
     mSceneVisibleRenderInstancesInstanceIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t)
+        SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t),
+        true
     );
 
     mSceneMaterialResourcesDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(
-        SwMaterialResources::sMaterialResourcesDescriptorLayout, SwMaterialResources::MAX_TEXTURE_ARRAY_SLOTS
+        SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
 }
 
@@ -171,9 +177,9 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
 
         auto fullPath = MODELS_PATH / path;
         SwAsset loadedAsset(fullPath);
-        auto [_, inserted] = mAssets.try_emplace(loadedAsset.getId(), std::move(loadedAsset));
+        auto [it, inserted] = mAssets.try_emplace(loadedAsset.getId(), std::move(loadedAsset));
         if (inserted) {
-            mAssets[loadedAsset.getId()].createInstance(mCamera);
+            it->second.createInstance(mCamera);
             mAlreadyLoadedAssets.insert(shortPath);
             mFlags.mAssetLoaded = true;
         }
@@ -446,7 +452,6 @@ void SwScene::reloadSceneMaterialResourcesArray() {
                     materialTextures[i]->getImage().getRawMainImageView(),
                     materialTextures[i]->getSampler().getRawSampler(),
                     vk::ImageLayout::eShaderReadOnlyOptimal,
-                    vk::DescriptorType::eCombinedImageSampler,
                     materialTextureArrayIndex + i
                 );
             }
@@ -562,8 +567,7 @@ void SwScene::draw() {
     commandBuffer.end();
 
     vk::CommandBufferSubmitInfo commandBufferSubmitInfo = commandBuffer.generateSubmitInfo();
-    vk::SemaphoreSubmitInfo waitInfo =
-        currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+    vk::SemaphoreSubmitInfo waitInfo = currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     vk::SemaphoreSubmitInfo signalInfo =
         sRendererContext.mSwapchain->getCurrentSwapchainImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getRawFence());

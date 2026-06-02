@@ -15,9 +15,10 @@ void SwFrame::initialize() {
     mRenderFence = SwFenceFactory::createFence(vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore();
     mPerFrameBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eUniformBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        PER_FRAME_BUFFER_SIZE
+        PER_FRAME_BUFFER_SIZE,
+        true
     );
 }
 

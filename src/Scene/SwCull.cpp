@@ -307,19 +307,11 @@ void SwCull::System::reInitializeOnResize() {
     });
 
     mResources.mDepthPyramidDescriptorSet.writeImage(
-        0,
-        sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(),
-        nullptr,
-        vk::ImageLayout::eShaderReadOnlyOptimal,
-        vk::DescriptorType::eSampledImage 
+        0, sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
-        mResources.mDepthPyramidDescriptorSet.writeImage(
-            1, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eSampledImage, i
-        );
-        mResources.mDepthPyramidDescriptorSet.writeImage(
-            2, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, vk::DescriptorType::eStorageImage, i
-        );
+        mResources.mDepthPyramidDescriptorSet.writeImage(1, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
+        mResources.mDepthPyramidDescriptorSet.writeImage(2, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
     }
     mResources.mDepthPyramidDescriptorSet.pushWrites();
 
@@ -331,9 +323,7 @@ void SwCull::System::reInitializeOnResize() {
         glm::vec2(depthPyramidExtent.width / static_cast<float>(depthExtent.width), depthPyramidExtent.height / static_cast<float>(depthExtent.height));
 
     // Work pass
-    mResources.mWorkDescriptorSet.writeImage(
-        0, mResources.mDepthPyramidImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
-    );
+    mResources.mWorkDescriptorSet.writeImage(0, mResources.mDepthPyramidImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mWorkDescriptorSet.pushWrites();
 
     vk::Extent2D drawExtent = sRendererContext.mSwapchain->getWindowExtent();

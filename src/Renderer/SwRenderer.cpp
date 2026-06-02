@@ -34,7 +34,7 @@ SwRenderer::SwRenderer()
               {vk::DescriptorType::eStorageImage, 1},
               {vk::DescriptorType::eUniformBuffer, 1},
           },
-          1 << 10
+          MAX_DESCRIPTOR_SETS
       ) {
     vk::Extent2D windowExtent(1700, 900);
     SDL_Init(SDL_INIT_VIDEO);

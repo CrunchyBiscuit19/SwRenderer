@@ -67,8 +67,6 @@ private:
     static SwRendererContext sRendererContext;
 
 public:
-    static constexpr std::uint32_t MAX_TEXTURE_ARRAY_SLOTS{1 << 8};
-
     SwMaterialTexture mBase;
     SwMaterialTexture mMetallicRoughness;
     SwMaterialTexture mNormal;

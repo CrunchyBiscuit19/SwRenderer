@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <cstring>
+#include <iostream>
 #include <stdexcept>
 
 SwBuffer::SwBuffer()
@@ -17,7 +18,7 @@ SwBuffer::SwBuffer()
 
 SwBuffer::SwBuffer(
     vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-    vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
+    vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
 )
     : mBuffer(std::move(buffer)),
       mAddress(address),
@@ -130,16 +131,16 @@ SwAllocatedBuffer::SwAllocatedBuffer() : SwBuffer() {}
 
 SwAllocatedBuffer::SwAllocatedBuffer(
     vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-    vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size
+    vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
 )
     : SwBuffer(std::move(buffer), address, allocator, allocation, info, usage, flags, size) {}
 
-void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint32_t newSize) {
+void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     vk::PipelineStageFlags2 prevStage = mCurrentStage;
     vk::AccessFlags2 prevAccess = mCurrentAccess;
     std::uint32_t prevGeneration = mGeneration;
 
-    SwAllocatedBuffer newBuffer = SwBufferFactory::createAllocatedBuffer(mUsage, mFlags, newSize);
+    SwAllocatedBuffer newBuffer = SwBufferFactory::createAllocatedBuffer(mUsage, mFlags, newSize, mAddress.has_value());
 
     if (mSize > 0) {
         emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
@@ -159,9 +160,9 @@ void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint32_t newSize) {
     // Defer GPU-side destruction of the old handle; move new buffer into *this.
     SwBufferFactory::deferDestroy(std::make_unique<SwAllocatedBuffer>(std::move(*this)));
     static_cast<SwBuffer&>(*this) = std::move(newBuffer);
-}
+}   
 
-void SwAllocatedBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requiredSize) {
+void SwAllocatedBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) {
     if (requiredSize > mSize) {
         resize(cmd, std::max(requiredSize, mSize * 2));
     }
@@ -169,15 +170,15 @@ void SwAllocatedBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requ
 
 SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
 
-SwStagingBuffer::SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint32_t size)
+SwStagingBuffer::SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size)
     : SwBuffer(
           std::move(buffer), std::nullopt, allocator, allocation, info, vk::BufferUsageFlagBits::eTransferSrc,
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size
       ) {}
 
-void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint32_t newSize) {
+void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     void* oldMapped = mInfo.pMappedData;
-    std::uint32_t copySize = std::min(mSize, newSize);
+    std::uint64_t copySize = std::min(mSize, newSize);
     std::uint32_t prevGeneration = mGeneration;
 
     SwStagingBuffer newBuffer = SwBufferFactory::createStagingBuffer(newSize);
@@ -192,7 +193,7 @@ void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint32_t newSize) {
     static_cast<SwBuffer&>(*this) = std::move(newBuffer);
 }
 
-void SwStagingBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint32_t requiredSize) {
+void SwStagingBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) {
     if (requiredSize > mSize) {
         resize(cmd, std::max(requiredSize, mSize * 2));
     }
@@ -205,7 +206,7 @@ void SwBufferFactory::init(SwRendererContext rendererContext) { sRendererContext
 
 void SwBufferFactory::deferDestroy(std::unique_ptr<SwBuffer> buffer) {
     std::uint64_t currentFrame = sRendererContext.mSwapchain->getFrameNumber();
-    sDeletionQueue.push_back({std::move(buffer), currentFrame});
+    sDeletionQueue.emplace_back(std::move(buffer), currentFrame);
 }
 
 void SwBufferFactory::tick(std::uint64_t currentFrame) {
@@ -215,7 +216,13 @@ void SwBufferFactory::tick(std::uint64_t currentFrame) {
     sDeletionQueue.erase(it, sDeletionQueue.end());
 }
 
-SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint32_t size) {
+SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
+    vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable, bool resizable
+) {
+    if (addressable) usage |= vk::BufferUsageFlagBits::eShaderDeviceAddress;
+    if (resizable) usage |= vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
+    flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+
     vk::BufferCreateInfo bufferInfo = {};
     bufferInfo.pNext = nullptr;
     bufferInfo.size = size;
@@ -224,7 +231,7 @@ SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlags us
 
     VmaAllocationCreateInfo vmaCreateInfo = {};
     vmaCreateInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    vmaCreateInfo.flags = flags | VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    vmaCreateInfo.flags = flags;
 
     VkBuffer tempBuffer;
     VmaAllocation tempAllocation;
@@ -232,25 +239,18 @@ SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlags us
     vmaCreateBuffer(sRendererContext.mAllocator, &bufferInfo1, &vmaCreateInfo, &tempBuffer, &tempAllocation, &tempInfo);
 
     std::optional<vk::DeviceAddress> tempAddress = std::nullopt;
-    if (usage & vk::BufferUsageFlagBits::eShaderDeviceAddress) {
+    if (addressable || usage & vk::BufferUsageFlagBits::eShaderDeviceAddress) {
         vk::BufferDeviceAddressInfo bufferDeviceAddressInfo = {};
         bufferDeviceAddressInfo.buffer = tempBuffer;
         tempAddress = sRendererContext.mDevice->getBufferAddress(bufferDeviceAddressInfo);
     }
 
     return SwAllocatedBuffer(
-        vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer),
-        tempAddress,
-        sRendererContext.mAllocator,
-        tempAllocation,
-        tempInfo,
-        usage,
-        flags | VMA_ALLOCATION_CREATE_MAPPED_BIT,
-        size
+        vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer), tempAddress, sRendererContext.mAllocator, tempAllocation, tempInfo, usage, flags, size
     );
 }
 
-SwStagingBuffer SwBufferFactory::createStagingBuffer(std::uint32_t size) {
+SwStagingBuffer SwBufferFactory::createStagingBuffer(std::uint64_t size, bool resizable) {
     vk::BufferCreateInfo bufferInfo = {};
     bufferInfo.pNext = nullptr;
     bufferInfo.size = size;

@@ -336,8 +336,9 @@ void SwRenderGraph::compile() {
 }
 
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
-    // exportGraphviz(fmt::format("{}/{}", LOGS_PATH, "rendergraph.dot"));
-    // LOG_DEBUG(sRendererContext.mLogger->getLogger(), "{}", getAllSortedPasses());
+    /*exportGraphviz(fmt::format("{}/{}", LOGS_PATH, "rendergraph.dot"));
+    LOG_DEBUG(sRendererContext.mLogger->getQuillLoggerPtr(), "{}", getAllSortedPasses());*/
+    
     for (SwPass* pass : mSortedPasses) {
         for (auto& dep : pass->getDeps().mReadImages) {
             dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);

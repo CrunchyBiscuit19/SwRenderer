@@ -1,7 +1,7 @@
 #include <Data/SwCamera.h>
 #include <Renderer/SwEvents.h>
-#include <Renderer/SwSwapchain.h>
 #include <Renderer/SwRendererContext.h>
+#include <Renderer/SwSwapchain.h>
 
 SwRendererContext SwCamera::sRendererContext{};
 
@@ -72,9 +72,7 @@ void SwCamera::initialize() {
 
     const vk::DeviceSize frustumBufferSize = sizeof(SwCull::Plane) * NUM_FRUSTUM_PLANES;
     mFrustumBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        frustumBufferSize
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, frustumBufferSize, true
     );
 }
 
@@ -102,10 +100,10 @@ glm::vec3 SwCamera::getDirectionVector() const {
     return forward;
 }
 
-glm::mat4 SwCamera::getSpawnTransform(float distance, float scale) const {
+glm::mat4 SwCamera::getSpawnTransform(float distance, float scale, bool rotated) const {
     glm::vec3 position = mPosition + getDirectionVector() * distance;
     glm::mat4 transform = glm::translate(glm::mat4(1.f), position);
-    transform *= getRotationMatrix();
+    if (rotated) transform *= getRotationMatrix();
     transform = glm::scale(transform, glm::vec3(scale));
     return transform;
 }
@@ -145,10 +143,8 @@ SwPerspective SwCamera::getPerspective() const {
     perspective.mView = getViewMatrix();
     perspective.mProj =
         glm::perspective(glm::radians(FOVY), sRendererContext.mSwapchain->getAspectRatio(), FAR_PLANE, NEAR_PLANE);  // Reverse Z, so flip near and far planes
-    perspective.mProj[1][1] *= -1;  // Flip Y for Vulkan
+    perspective.mProj[1][1] *= -1;                                                                                   // Flip Y for Vulkan
     return perspective;
 }
 
-void SwCamera::setRelativeMode(SDL_bool relativeMode) {
-    mRelativeMode = relativeMode;
-}
+void SwCamera::setRelativeMode(SDL_bool relativeMode) { mRelativeMode = relativeMode; }

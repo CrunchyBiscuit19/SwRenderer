@@ -61,7 +61,7 @@ public:
     glm::quat getYawMatrix() const;
     glm::mat4 getRotationMatrix() const;
     glm::vec3 getDirectionVector() const;
-    glm::mat4 getSpawnTransform(float distance = 5.f, float scale = 1.f) const;
+    glm::mat4 getSpawnTransform(float distance = 5.f, float scale = 1.f, bool rotated = false) const;
     void update(float deltaTime, float expectedDeltaTime);
 
     inline std::array<SwCull::Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }

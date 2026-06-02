@@ -98,10 +98,10 @@ void SwWBOIT::System::reInitializeOnResize() {
     });
 
     mResources.mWorkDescriptorSet.writeImage(
-        0, mResources.mAccumImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
+        0, mResources.mAccumImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mWorkDescriptorSet.writeImage(
-        1, mResources.mRvlImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
+        1, mResources.mRvlImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mWorkDescriptorSet.pushWrites();
 }

@@ -11,9 +11,10 @@ SwPick::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwPick::System::initializeResources() {
     mResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
+        vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-        sizeof(SwPick::ReadbackData)
+        sizeof(SwPick::ReadbackData),
+        true
     );
 
     mResources.mReadbackDescriptorLayout =
@@ -189,9 +190,7 @@ void SwPick::System::reInitializeOnResize() {
         mResources.mDepthImage.emitTransition(cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     });
 
-    mResources.mReadbackDescriptorSet.writeImage(
-        0, mResources.mReadbackImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, vk::DescriptorType::eSampledImage
-    );
+    mResources.mReadbackDescriptorSet.writeImage(0, mResources.mReadbackImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mReadbackDescriptorSet.pushWrites();
 }
 
