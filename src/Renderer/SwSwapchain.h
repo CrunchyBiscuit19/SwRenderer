@@ -22,7 +22,6 @@ class SwFrame {
 private:
     static constexpr std::uint32_t PER_FRAME_BUFFER_SIZE{sizeof(SwPerspective)};
 
-    static SwRendererContext sRendererContext;
 
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;
@@ -33,7 +32,7 @@ private:
 public:
     SwFrame();
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     void initialize();
 
@@ -47,7 +46,6 @@ public:
 
 class SwSwapchain {
 private:
-    static SwRendererContext sRendererContext;
 
     SDL_Window* mWindow{nullptr};
     vk::raii::SurfaceKHR mSurface;
@@ -83,7 +81,7 @@ public:
 
     SwSwapchain();
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     void initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen);
     void onResizeInitialize();

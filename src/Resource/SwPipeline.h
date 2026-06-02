@@ -73,13 +73,12 @@ public:
 
 class SwPipelineFactory {
 protected:
-    static SwRendererContext sRendererContext;
 
     static constexpr std::string DEFAULT_SHADER_ENTRY_POINT{"main"};
     static constexpr std::uint32_t MIN_NUM_SHADER_STAGES{2};
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static SwPipelineLayout createPipelineLayout(vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges);
 };

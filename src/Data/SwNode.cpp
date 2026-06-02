@@ -1,10 +1,10 @@
 #include <Data/SwBatch.h>
+#include <Renderer/SwRenderer.h>
 #include <Data/SwMesh.h>
 #include <Data/SwNode.h>
 #include <Renderer/SwRendererContext.h>
 #include <Scene/SwScene.h>
 
-SwRendererContext SwNode::sRendererContext{};
 SwStagingBuffer SwNode::sNodeTransformsStagingBuffer{};
 
 void SwNode::refreshTransform(const glm::mat4& parentTransform) {
@@ -26,8 +26,7 @@ void SwNode::addChild(std::shared_ptr<SwNode> child) {
     child->setParent(shared_from_this());
 }
 
-void SwNode::init(SwRendererContext rendererContext) {
-    sRendererContext = rendererContext;
+void SwNode::init() {
     sNodeTransformsStagingBuffer = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
 }
 
@@ -40,9 +39,9 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
     for (auto& primitive : mMesh.getPrimitives()) {
         std::uint32_t pipelineId = primitive.mMaterial.getPipelineBundle().getID();
 
-        SwAsset& workingAsset = sRendererContext.mScene->getAsset(mMesh.getAssetId());
+        SwAsset& workingAsset = SwRenderer::sRendererContext.mScene->getAsset(mMesh.getAssetId());
         std::unordered_map<std::uint32_t, SwBatch>& workingBatchMap =
-            sRendererContext.mScene->getBatchesByType(SwMaterial::getMaterialTypeFromAlphaMode(primitive.mMaterial.getAlphaMode()));
+            SwRenderer::sRendererContext.mScene->getBatchesByType(SwMaterial::getMaterialTypeFromAlphaMode(primitive.mMaterial.getAlphaMode()));
 
         auto [it, inserted] = workingBatchMap.try_emplace(pipelineId, primitive);
         SwBatch& workingBatch = it->second;

@@ -1,4 +1,5 @@
 #include <Data/SwAsset.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwLogger.h>
 #include <Scene/SwScene.h>
@@ -12,7 +13,6 @@
 #include <glm/gtx/quaternion.hpp>
 #include <magic_enum.hpp>
 
-SwRendererContext SwAsset::sRendererContext{};
 std::uint32_t SwAsset::sLatestAssetId{0};
 std::unordered_map<SwSamplerOptions, SwSampler> SwAsset::sSamplers{};
 
@@ -57,7 +57,6 @@ vk::SamplerAddressMode SwAsset::extractAddressMode(fastgltf::Wrap wrap) {
     }
 }
 
-void SwAsset::init(SwRendererContext assetContext) { sRendererContext = assetContext; }
 
 void SwAsset::cleanup() { sSamplers.clear(); }
 
@@ -73,14 +72,14 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     data.loadFromFile(assetPath);
     auto type = fastgltf::determineGltfFileType(&data);
     if (type == fastgltf::GltfType::Invalid) {
-        LOG_ERROR(sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to determine GLTF Container", mName);
+        LOG_ERROR(SwRenderer::sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to determine GLTF Container", mName);
     }
     auto load = (type == fastgltf::GltfType::glTF) ? (parser.loadGLTF(&data, assetPath.parent_path(), gltfOptions))
                                                    : (parser.loadBinaryGLTF(&data, assetPath.parent_path(), gltfOptions));
     if (load) {
         gltf = std::move(load.get());
     } else {
-        LOG_ERROR(sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
+        LOG_ERROR(SwRenderer::sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
     }
     mRawAsset = std::move(gltf);
 }
@@ -249,7 +248,7 @@ void SwAsset::constructMaterials() {
                 return SwMaterialTexture(&image, &sampler);
             }
             /*LOG_DEBUG(
-                sRendererContext.mLogger->getQuillLoggerPtr(), "{} material {} {} using default.", mName, name, magic_enum::enum_name(texType).data()
+                SwRenderer::sRendererContext.mLogger->getQuillLoggerPtr(), "{} material {} {} using default.", mName, name, magic_enum::enum_name(texType).data()
             );*/
             return SwMaterialTexture::retrieveDefaultWhiteTexture();
         };
@@ -272,7 +271,7 @@ void SwAsset::constructMaterials() {
     materialConstantsCopy.srcOffset = 0;
     materialConstantsCopy.size = materialConstants.size() * sizeof(SwMaterialConstants);
 
-    sRendererContext.mImmSubmit->individualSubmit([this, &materialConstants, materialConstantsCopy](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, &materialConstants, materialConstantsCopy](vk::CommandBuffer cmd) {
         SwMaterialConstants::sMaterialConstantsStagingBuffer.copyFrom(cmd, materialConstants.data(), materialConstantsCopy.size);
         mMaterialConstantsBuffer.copyFrom(cmd, SwMaterialConstants::sMaterialConstantsStagingBuffer, materialConstantsCopy);
         mMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
@@ -380,7 +379,7 @@ void SwAsset::constructMeshes() {
         );
 
         SwMesh& createdMesh = mMeshes.back();
-        sRendererContext.mImmSubmit->individualSubmit([&createdMesh, &vertices, &indices, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&createdMesh, &vertices, &indices, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
             SwMesh::sMeshStagingBuffer.copyFrom(cmd, vertices.data(), vertexCopy.size, 0);
             SwMesh::sMeshStagingBuffer.copyFrom(cmd, indices.data(), indexCopy.size, indexCopy.srcOffset);
             createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, vertexCopy);
@@ -400,7 +399,7 @@ void SwAsset::constructMeshes() {
     boundsCopy.srcOffset = 0;
     boundsCopy.size = boundsSize;
 
-    sRendererContext.mImmSubmit->individualSubmit([this, &boundsVector, boundsCopy](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, &boundsVector, boundsCopy](vk::CommandBuffer cmd) {
         SwBounds::sBoundsStagingBuffer.copyFrom(cmd, boundsVector.data(), boundsCopy.size);
         mBoundsBuffer.copyFrom(cmd, SwBounds::sBoundsStagingBuffer, boundsCopy);
         mBoundsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
@@ -463,7 +462,7 @@ void SwAsset::constructNodes() {
     nodeTransformsCopy.srcOffset = 0;
     nodeTransformsCopy.size = mNodes.size() * sizeof(glm::mat4);
 
-    sRendererContext.mImmSubmit->individualSubmit([this, nodeTransformsCopy](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, nodeTransformsCopy](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mNodes.size(); i++) {
             SwNode::sNodeTransformsStagingBuffer.copyFrom(cmd, glm::value_ptr(mNodes[i]->getWorldTransform()), sizeof(glm::mat4), i * sizeof(glm::mat4));
         }
@@ -491,7 +490,7 @@ void SwAsset::generateRenderItemsAndRenderInstances() {
 void SwAsset::createInstance(SwInstance::Data instanceData) {
     mInstances.emplace_back(mId, instanceData);
     mReloadInstancesFlag = true;
-    sRendererContext.mScene->mFlags.mInstanceLoaded = true;
+    SwRenderer::sRendererContext.mScene->mFlags.mInstanceLoaded = true;
 }
 
 void SwAsset::createInstance(SwCamera& camera) { createInstance(SwInstance::Data(camera.getSpawnTransform())); }
@@ -502,7 +501,7 @@ void SwAsset::reloadInstances() {
         return;
     }
 
-    sRendererContext.mImmSubmit->individualSubmit([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this](vk::CommandBuffer cmd) {
         std::uint32_t dstOffset = 0;
         for (auto& instance : mInstances) {
             mInstancesBuffer.copyFrom(cmd, &instance.getData(), sizeof(SwInstance::Data), dstOffset);

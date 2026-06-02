@@ -22,7 +22,6 @@ protected:
     virtual void initializePushConstants();
 
 public:
-    static SwRendererContext sRendererContext;
 
     SwSystem(SwScene& scene);
 

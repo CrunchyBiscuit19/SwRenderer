@@ -1,4 +1,5 @@
 #include <Data/SwMaterial.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwLogger.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
@@ -24,7 +25,6 @@ void SwMaterialConstants::init() { sMaterialConstantsStagingBuffer = SwBufferFac
 
 void SwMaterialConstants::cleanup() { sMaterialConstantsStagingBuffer.destroy(); }
 
-SwRendererContext SwMaterialResources::sRendererContext{};
 SwDescriptorLayout SwMaterialResources::sMaterialResourcesDescriptorLayout{};
 
 SwMaterialResources::SwMaterialResources(
@@ -36,9 +36,8 @@ SwMaterialResources::SwMaterialResources(
       mOcclusion(std::move(occlusion)),
       mEmissive(std::move(emissive)) {}
 
-void SwMaterialResources::init(SwRendererContext rendererContext) {
-    sRendererContext = rendererContext;
-    sMaterialResourcesDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+void SwMaterialResources::init() {
+    sMaterialResourcesDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eCombinedImageSampler, SwScene::SCENE_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         true
@@ -51,7 +50,6 @@ void SwMaterialResources::init(SwRendererContext rendererContext) {
 
 void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
 
-SwRendererContext SwMaterial::sRendererContext{};
 std::uint32_t SwMaterial::sLatestMaterialId{0};
 std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> SwMaterial::sMaterialPipelineBundles{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
@@ -84,8 +82,7 @@ SwMaterial::SwMaterial(
     sLatestMaterialId++;
 }
 
-void SwMaterial::init(SwRendererContext rendererContext) {
-    sRendererContext = rendererContext;
+void SwMaterial::init() {
 
     sOpaquePipelineLayout =
         SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange());

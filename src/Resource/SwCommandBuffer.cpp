@@ -1,7 +1,6 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwCommandBuffer.h>
 
-SwRendererContext SwCommandBufferFactory::sRendererContext{};
 
 SwCommandBuffer::SwCommandBuffer(): mCommandBuffer(nullptr) {}
 
@@ -25,7 +24,6 @@ vk::CommandBufferSubmitInfo SwCommandBuffer::generateSubmitInfo() {
     };
 }
 
-void SwCommandBufferFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(SwCommandPool& pool) {
     vk::CommandBufferAllocateInfo info = {};
@@ -35,7 +33,7 @@ SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(SwCommandPool& pool)
     commandBufferAllocateInfo.commandBufferCount = 1;
     commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
 
-    return SwCommandBuffer(std::move(sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
+    return SwCommandBuffer(std::move(SwRenderer::sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
 }
 
 SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(vk::CommandPool pool) {
@@ -46,5 +44,5 @@ SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(vk::CommandPool pool
     commandBufferAllocateInfo.commandBufferCount = 1;
     commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
 
-    return SwCommandBuffer(std::move(sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
+    return SwCommandBuffer(std::move(SwRenderer::sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
 }

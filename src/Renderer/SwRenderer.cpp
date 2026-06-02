@@ -19,6 +19,8 @@
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
 
+SwRendererContext SwRenderer::sRendererContext{};
+
 SwRenderer::SwRenderer()
     : mContext(),
       mDebugMessenger(nullptr),
@@ -175,7 +177,7 @@ SwRenderer::SwRenderer()
         ImGui_ImplSDL2_ProcessEvent(&e);
     });
 
-    mRendererContext = SwRendererContext(
+    sRendererContext = SwRendererContext(
         &mInstance,
         &mChosenGPU,
         &mDevice,
@@ -191,44 +193,26 @@ SwRenderer::SwRenderer()
         &mLogger
     );
 
-    SwSemaphoreFactory::init(mRendererContext);
-    SwFenceFactory::init(mRendererContext);
-    SwCommandPoolFactory::init(mRendererContext);
-    SwCommandBufferFactory::init(mRendererContext);
-
-    SwImmSubmit::init(mRendererContext);
     mImmSubmit.initialize();
 
-    SwShaderFactory::init(mRendererContext);
-    SwSamplerFactory::init(mRendererContext);
-    SwDescriptorAllocator::init(mRendererContext);
-    SwPipelineFactory::init(mRendererContext);
-    SwBufferFactory::init(mRendererContext);
-    SwImageFactory::init(mRendererContext);
+    SwSamplerFactory::init();
+    SwImageFactory::init();
 
     SwMesh::init();
     SwBounds::init();
-    SwNode::init(mRendererContext);
+    SwNode::init();
     SwMaterialConstants::init();
 
-    SwFrame::init(mRendererContext);
-    SwSwapchain::init(mRendererContext);
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
     mLogger.setFrameNumber(mSwapchain.getFrameNumberPtr());
     mStats.initialize();
 
-    SwGui::init(mRendererContext);
     mGui.initialize();
 
-    SwCamera::init(mRendererContext);
+    SwMaterialResources::init();
+    SwMaterial::init();
 
-    SwMaterialResources::init(mRendererContext);
-    SwMaterial::init(mRendererContext);
-    SwAsset::init(mRendererContext);
-
-    SwScene::init(mRendererContext);
     mScene.initialize();
-    SwRenderGraph::init(mRendererContext);
 }
 
 void SwRenderer::run() {

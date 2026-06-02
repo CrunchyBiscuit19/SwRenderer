@@ -3,11 +3,9 @@
 #include <Renderer/SwSwapchain.h>
 #include <VkBootstrap.h>
 
-SwRendererContext SwFrame::sRendererContext{};
 
 SwFrame::SwFrame() : mCommandPool(nullptr), mCommandBuffer(nullptr), mRenderFence(nullptr), mAvailableSemaphore(nullptr) {}
 
-void SwFrame::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwFrame::initialize() {
     mCommandPool = SwCommandPoolFactory::createCommandPool(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
@@ -20,16 +18,14 @@ void SwFrame::initialize() {
 }
 
 void SwFrame::update() {
-    SwPerspective perspective = sRendererContext.mScene->getCamera().getPerspective();
+    SwPerspective perspective = SwRenderer::sRendererContext.mScene->getCamera().getPerspective();
     mPerFrameBuffer.copyFromUnchecked(&perspective, sizeof(SwPerspective));
 }
 
-SwRendererContext SwSwapchain::sRendererContext{};
 vk::ClearColorValue SwSwapchain::DRAW_CLEAR_VALUE{.463f, .616f, .859f, 0.f};
 
 SwSwapchain::SwSwapchain() : mSwapchain(nullptr), mSurface(nullptr) {}
 
-void SwSwapchain::init(SwRendererContext swapchainContext) { sRendererContext = swapchainContext; }
 
 void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen) {
     mFrames.reserve(NUM_FRAME_OVERLAP);
@@ -38,7 +34,7 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         mFrames.back().initialize();
     }
 
-    sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+    SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
         if ((modState & KMOD_ALT) && keyState[SDL_SCANCODE_RETURN] && e.type == SDL_KEYDOWN && !e.key.repeat) {
@@ -71,7 +67,7 @@ void SwSwapchain::onResizeInitialize() {
     formatListCreateInfo.viewFormatCount = formats.size();
 
     mSwapchain.clear();
-    vkb::SwapchainBuilder swapchainBuilder(**sRendererContext.mChosenGPU, **sRendererContext.mDevice, *mSurface);
+    vkb::SwapchainBuilder swapchainBuilder(**SwRenderer::sRendererContext.mChosenGPU, **SwRenderer::sRendererContext.mDevice, *mSurface);
     vkb::Swapchain vkbSwapchain =
         swapchainBuilder
             .set_desired_format(
@@ -85,7 +81,7 @@ void SwSwapchain::onResizeInitialize() {
             .add_pNext(&formatListCreateInfo)
             .build()
             .value();
-    mSwapchain = vk::raii::SwapchainKHR(*sRendererContext.mDevice, vkbSwapchain.swapchain);
+    mSwapchain = vk::raii::SwapchainKHR(*SwRenderer::sRendererContext.mDevice, vkbSwapchain.swapchain);
 
     mSwapchainImages.clear();
     mSwapchainImages.reserve(NUM_SWAPCHAIN_IMAGES);
@@ -104,13 +100,13 @@ void SwSwapchain::onResizeInitialize() {
         unormImageViewCreateInfo.format = UNORM_FORMAT;
 
         std::deque<vk::raii::ImageView> otherImageViews;
-        otherImageViews.emplace_back(sRendererContext.mDevice->createImageView(unormImageViewCreateInfo));
+        otherImageViews.emplace_back(SwRenderer::sRendererContext.mDevice->createImageView(unormImageViewCreateInfo));
 
         SwSwapchainImage swapchainImage(
             vkbSwapchain.get_images().value()[i],
             formats[0],
             vk::Extent3D(vkbSwapchain.extent, 1),
-            sRendererContext.mDevice->createImageView(srgbImageViewCreateInfo),
+            SwRenderer::sRendererContext.mDevice->createImageView(srgbImageViewCreateInfo),
             SwSemaphoreFactory::createSemaphore(),
             {formats[1]},
             std::move(otherImageViews)
@@ -137,7 +133,7 @@ void SwSwapchain::onResizeInitialize() {
             vk::ImageUsageFlagBits::eStorage,
         false
     );
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mSwapchainImages.size(); i++) {
             mSwapchainImages[i].emitTransition(cmd, SwDependency::ImageDepType::PresentSrc);
         }
@@ -171,7 +167,7 @@ void SwSwapchain::submit(
     submitInfo.pSignalSemaphoreInfos = signalSemaphoreInfo.data();
     submitInfo.commandBufferInfoCount = commandBufferSubmitInfo.size();
     submitInfo.pCommandBufferInfos = commandBufferSubmitInfo.data();
-    sRendererContext.mGraphicsQueue->submit2(submitInfo, renderFence);
+    SwRenderer::sRendererContext.mGraphicsQueue->submit2(submitInfo, renderFence);
 }
 
 void SwSwapchain::present() {
@@ -185,7 +181,7 @@ void SwSwapchain::present() {
     presentInfo.pImageIndices = &mSwapchainIndex;
 
     try {
-        auto _ = sRendererContext.mGraphicsQueue->presentKHR(presentInfo);
+        auto _ = SwRenderer::sRendererContext.mGraphicsQueue->presentKHR(presentInfo);
     } catch (vk::OutOfDateKHRError e) {
         mResizeRequested = true;
     }

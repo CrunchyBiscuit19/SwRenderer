@@ -35,11 +35,12 @@ protected:
     // Defers destruction of the old VkBuffer until no longer in-flight. 
     // Descriptor sets referencing this buffer must be rewritten wheb getGeneration() changes.
     virtual void resize(vk::CommandBuffer cmd, std::uint64_t newSize) = 0;
-    virtual void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize);
 
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess);
     void emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bufferDepType);
+
+    void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize);
 
     void copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies);
     virtual void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) = 0;
@@ -119,11 +120,10 @@ private:
         std::uint64_t mFrameQueued;
     };
 
-    static SwRendererContext sRendererContext;
     static std::vector<DeferredBuffer> sDeletionQueue;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static SwAllocatedBuffer createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable = false, bool resizable = true);
 

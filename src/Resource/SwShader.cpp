@@ -10,9 +10,7 @@ SwShader::SwShader(vk::raii::ShaderModule module, vk::ShaderStageFlagBits shader
 
 void SwShader::destroy() { mModule.clear(); }
 
-SwRendererContext SwShaderFactory::sRendererContext{};
 
-void SwShaderFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 SwShader SwShaderFactory::createShader(const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
@@ -27,5 +25,5 @@ SwShader SwShaderFactory::createShader(const std::filesystem::path& filePath, vk
     shaderCreateInfo.codeSize = buffer.size() * sizeof(std::uint32_t);
     shaderCreateInfo.pCode = buffer.data();
 
-    return SwShader(sRendererContext.mDevice->createShaderModule(shaderCreateInfo), shaderStageFlag);
+    return SwShader(SwRenderer::sRendererContext.mDevice->createShaderModule(shaderCreateInfo), shaderStageFlag);
 }

@@ -12,33 +12,33 @@
 #include <glm/glm.hpp>
 #include <ranges>
 
-SwRendererContext SwScene::sRendererContext{};
-
 void SwScene::initializeMiscPasses() {
     SwDependency deps;
 
     // Clear Images
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentWrite);
     deps.mWriteImages.emplace_back(&mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentWrite);
     deps.mWriteImages.emplace_back(&mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentWrite);
     deps.mWriteImages.emplace_back(&mPick.getResources().mReadbackImage, SwDependency::ImageDepType::ColorAttachmentWrite);
     deps.mWriteImages.emplace_back(&mPick.getResources().mDepthImage, SwDependency::ImageDepType::DepthAttachmentWrite);
     mPasses[SwPass::Type::ClearImages] = SwPass(SwPass::Type::ClearImages, deps, [&](vk::CommandBuffer cmd) {
         std::array<vk::RenderingAttachmentInfo, 4> colorAttachments = {
-            sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
+            SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
             mWBOIT.getResources().mAccumImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
             mWBOIT.getResources().mRvlImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
             mPick.getResources().mReadbackImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
         };
-        vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
-        vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, depthAttachment);
+        vk::RenderingAttachmentInfo depthAttachment =
+            SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
+        vk::RenderingInfo renderInfo =
+            SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
 
         depthAttachment = mPick.getResources().mDepthImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
-        renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), nullptr, depthAttachment);
+        renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), nullptr, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
@@ -46,19 +46,19 @@ void SwScene::initializeMiscPasses() {
     deps.clear();
 
     // Copy to Swapchain
-    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getSwapchainRepImage(), SwDependency::ImageDepType::TransferDst);
+    deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getSwapchainRepImage(), SwDependency::ImageDepType::TransferDst);
     mPasses[SwPass::Type::CopyToSwapchain] = SwPass(SwPass::Type::CopyToSwapchain, deps, [&](vk::CommandBuffer cmd) {
-        sRendererContext.mSwapchain->getSwapchainRepImage().copyFrom(cmd, sRendererContext.mSwapchain->getDrawImage());
+        SwRenderer::sRendererContext.mSwapchain->getSwapchainRepImage().copyFrom(cmd, SwRenderer::sRendererContext.mSwapchain->getDrawImage());
     });
     deps.clear();
 
     // Gui
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getSwapchainRepImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getSwapchainRepImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
     mPasses[SwPass::Type::Gui] = SwPass(SwPass::Type::Gui, deps, [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
-            sRendererContext.mSwapchain->getWindowExtent(),
-            sRendererContext.mSwapchain->getSwapchainRepImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
+            SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
+            SwRenderer::sRendererContext.mSwapchain->getSwapchainRepImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
             nullptr
         );
         cmd.beginRendering(renderInfo);
@@ -69,66 +69,42 @@ void SwScene::initializeMiscPasses() {
 
 void SwScene::initializeResources() {
     mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_VERTEX_BUFFER_SIZE,
-        true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_VERTEX_BUFFER_SIZE, true
     );
 
-    mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INDEX_BUFFER_SIZE
-    );
+    mSceneIndexBuffer =
+        SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INDEX_BUFFER_SIZE);
 
     mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants),
-        true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants), true
     );
 
     mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_NODES * sizeof(glm::mat4),
-        true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_NODES * sizeof(glm::mat4), true
     );
 
     mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_INSTANCES * sizeof(SwInstance::Data),
-        true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_INSTANCES * sizeof(SwInstance::Data), true
     );
 
     mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_BOUNDS * sizeof(SwBounds),
-        true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_BOUNDS * sizeof(SwBounds), true
     );
 
     mSceneVisibleRenderInstancesInstanceIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t),
-        true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
     );
 
-    mSceneMaterialResourcesDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(
+    mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
 }
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
-    sRendererContext.mSwapchain->getSwapchainRepImage().emitTransition(commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
+    SwRenderer::sRendererContext.mSwapchain->getSwapchainRepImage().emitTransition(commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
 }
 
 SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
-
-void SwScene::init(SwRendererContext rendererContext) {
-    sRendererContext = rendererContext;
-    SwSystem::sRendererContext = rendererContext;
-}
 
 void SwScene::initialize() {
     mCamera.initialize();
@@ -222,7 +198,7 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
             renderInstancesCopy.srcOffset = 0;
             renderInstancesCopy.size = batch.getRenderInstances().size() * sizeof(SwRenderInstance);
 
-            sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
+            SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
                 batch.getRenderItemsStagingBuffer().copyFrom(cmd, batch.getRenderItems().data(), renderItemsCopy.size);
                 cmd.fillBuffer(batch.getPreCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
@@ -306,7 +282,7 @@ void SwScene::reloadSceneVertexBuffer() {
             dstOffset += meshVertexCopy.size;
             maxPos = dstOffset;
 
-            sRendererContext.mImmSubmit->addCallback([&mesh, this, meshVertexCopy, maxPos](vk::CommandBuffer cmd) {
+            SwRenderer::sRendererContext.mImmSubmit->addCallback([&mesh, this, meshVertexCopy, maxPos](vk::CommandBuffer cmd) {
                 mSceneVertexBuffer.copyFrom(cmd, mesh.getVertexBuffer(), meshVertexCopy);
             });
         }
@@ -327,7 +303,7 @@ void SwScene::reloadSceneIndexBuffer() {
             dstOffset += meshIndexCopy.size;
             maxPos = dstOffset;
 
-            sRendererContext.mImmSubmit->addCallback([&mesh, this, meshIndexCopy, maxPos](vk::CommandBuffer cmd) {
+            SwRenderer::sRendererContext.mImmSubmit->addCallback([&mesh, this, meshIndexCopy, maxPos](vk::CommandBuffer cmd) {
                 mSceneIndexBuffer.copyFrom(cmd, mesh.getIndexBuffer(), meshIndexCopy);
             });
         }
@@ -347,7 +323,7 @@ void SwScene::reloadSceneMaterialConstantsBuffer() {
         dstOffset += materialConstantCopy.size;
         maxPos = dstOffset;
 
-        sRendererContext.mImmSubmit->addCallback([&asset, this, materialConstantCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, materialConstantCopy, maxPos](vk::CommandBuffer cmd) {
             mSceneMaterialConstantsBuffer.copyFrom(cmd, asset.getMaterialConstantsBuffer(), materialConstantCopy);
         });
     }
@@ -366,7 +342,7 @@ void SwScene::reloadSceneNodeTransformsBuffer() {
         dstOffset += nodeTransformsCopy.size;
         maxPos = dstOffset;
 
-        sRendererContext.mImmSubmit->addCallback([&asset, this, nodeTransformsCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, nodeTransformsCopy, maxPos](vk::CommandBuffer cmd) {
             mSceneNodeTransformsBuffer.copyFrom(cmd, asset.getNodeTransformsBuffer(), nodeTransformsCopy);
         });
     }
@@ -385,7 +361,7 @@ void SwScene::reloadSceneBoundsBuffer() {
         dstOffset += boundsCopy.size;
         maxPos = dstOffset;
 
-        sRendererContext.mImmSubmit->addCallback([&asset, this, boundsCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, boundsCopy, maxPos](vk::CommandBuffer cmd) {
             mSceneBoundsBuffer.copyFrom(cmd, asset.getBoundsBuffer(), boundsCopy);
         });
     }
@@ -408,7 +384,7 @@ void SwScene::reloadSceneInstancesBuffer() {
         dstOffset += instancesCopy.size;
         maxPos = dstOffset;
 
-        sRendererContext.mImmSubmit->addCallback([&asset, this, instancesCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, instancesCopy, maxPos](vk::CommandBuffer cmd) {
             mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy);
         });
     }
@@ -460,7 +436,7 @@ void SwScene::resetFlags() {
 void SwScene::perFrameUpdate() {
     const auto start = std::chrono::system_clock::now();
 
-    mCamera.update(sRendererContext.mStats->mFrameTime, static_cast<float>(SwRenderer::ONE_SECOND_IN_MS / SwRenderer::EXPECTED_FRAME_RATE));
+    mCamera.update(SwRenderer::sRendererContext.mStats->mFrameTime, static_cast<float>(SwRenderer::ONE_SECOND_IN_MS / SwRenderer::EXPECTED_FRAME_RATE));
 
     unloadAssets();
     unloadInstances();
@@ -492,22 +468,22 @@ void SwScene::perFrameUpdate() {
     mWBOIT.refresh();
     mGeometry.refresh();
 
-    sRendererContext.mImmSubmit->queuedSubmit();
+    SwRenderer::sRendererContext.mImmSubmit->queuedSubmit();
 
     const auto end = std::chrono::system_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    sRendererContext.mStats->mSceneUpdateTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
+    SwRenderer::sRendererContext.mStats->mSceneUpdateTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
 }
 
 void SwScene::draw() {
     auto start = std::chrono::system_clock::now();
 
-    SwFrame& currentFrame = sRendererContext.mSwapchain->getCurrentFrame();
+    SwFrame& currentFrame = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame();
 
-    auto _ = sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getRawFence(), true, 1e9);
-    sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getRawFence());
-    SwBufferFactory::tick(sRendererContext.mSwapchain->getFrameNumber());
-    sRendererContext.mSwapchain->acquireNextImage(1e9);
+    auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getRawFence(), true, 1e9);
+    SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getRawFence());
+    SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    SwRenderer::sRendererContext.mSwapchain->acquireNextImage(1e9);
 
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();
@@ -533,9 +509,9 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CopyToSwapchain]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);
-    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDrawImage());
-    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDepthImage());
-    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getSwapchainRepImage());
+    mRenderGraph.addOutput(&SwRenderer::sRendererContext.mSwapchain->getDrawImage());
+    mRenderGraph.addOutput(&SwRenderer::sRendererContext.mSwapchain->getDepthImage());
+    mRenderGraph.addOutput(&SwRenderer::sRendererContext.mSwapchain->getSwapchainRepImage());
 
     mRenderGraph.compile();
     mRenderGraph.execute(commandBuffer);
@@ -545,12 +521,13 @@ void SwScene::draw() {
 
     vk::CommandBufferSubmitInfo commandBufferSubmitInfo = commandBuffer.generateSubmitInfo();
     vk::SemaphoreSubmitInfo waitInfo = currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-    vk::SemaphoreSubmitInfo signalInfo =
-        sRendererContext.mSwapchain->getSwapchainRepImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
-    sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getRawFence());
-    sRendererContext.mSwapchain->present();
+    vk::SemaphoreSubmitInfo signalInfo = SwRenderer::sRendererContext.mSwapchain->getSwapchainRepImage().getRenderedSemaphore().generateSubmitInfo(
+        vk::PipelineStageFlagBits2::eColorAttachmentOutput
+    );
+    SwRenderer::sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getRawFence());
+    SwRenderer::sRendererContext.mSwapchain->present();
 
     auto end = std::chrono::system_clock::now();
     auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    sRendererContext.mStats->mDrawTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
+    SwRenderer::sRendererContext.mStats->mDrawTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
 }

@@ -11,7 +11,6 @@ class SwCommandBuffer;
 
 class SwRenderGraph {
 private:
-    static SwRendererContext sRendererContext;
 
     std::vector<SwPass*> mPasses;
     std::vector<SwImage*> mOutputs;
@@ -28,7 +27,7 @@ public:
 
     SwRenderGraph(std::vector<SwImage*> outputs);
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     void addPass(SwPass* pass) { mPasses.emplace_back(pass); }
     void addOutput(SwImage* output) { mOutputs.emplace_back(output); }

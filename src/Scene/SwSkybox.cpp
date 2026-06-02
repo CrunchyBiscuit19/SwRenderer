@@ -1,4 +1,5 @@
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
@@ -11,8 +12,8 @@ void SwSkybox::System::initializeResources() {
     mResources.mWorkSampler = SwSamplerFactory::createSampler(vk::SamplerCreateInfo());
 
     mResources.mWorkDescriptorLayout =
-        sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment);
-    mResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment);
+    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
 
     mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
 
@@ -63,7 +64,7 @@ void SwSkybox::System::initializeResources() {
     skyboxVertexCopy.srcOffset = 0;
     skyboxVertexCopy.size = skyboxVertexSize;
 
-    sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
         skyboxVertexStagingBuffer.copyFromUnchecked(mResources.mWorkVertices.data(), skyboxVertexCopy.size);
         mResources.mWorkVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy);
     });
@@ -75,16 +76,16 @@ void SwSkybox::System::initializePasses() {
     SwDependency deps;
 
     // Skybox
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
     deps.mReadImages.emplace_back(&mResources.mWorkImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
     deps.mReadBuffers.emplace_back(&mResources.mWorkVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
 
     mScene.insertPass(SwPass::Type::SkyboxWork, std::move(deps), [&](vk::CommandBuffer cmd) {
-        const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
-        const vk::RenderingAttachmentInfo depthAttachment = sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
+        const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
+        const vk::RenderingAttachmentInfo depthAttachment = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
 
         cmd.beginRendering(renderInfo);
 
@@ -92,10 +93,10 @@ void SwSkybox::System::initializePasses() {
         cmd.bindDescriptorSets(
             mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawLayout(), 0, mResources.mWorkDescriptorSet.getRawSet(), nullptr
         );
-        SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.pushConstants<SwSkybox::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwSkybox::WorkPC::sStages, 0, mResources.mWorkPushConstants);
         cmd.draw(SwSkybox::NUM_SKYBOX_VERTICES, 1, 0, 0);
-        sRendererContext.mStats->mDrawCallCount++;
+        SwRenderer::sRendererContext.mStats->mDrawCallCount++;
 
         cmd.endRendering();
     });
@@ -161,5 +162,5 @@ void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path>
 }
 
 void SwSkybox::System::refreshPushConstants() {
-    mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

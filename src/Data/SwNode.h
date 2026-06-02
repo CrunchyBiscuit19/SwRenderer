@@ -15,7 +15,6 @@ class SwNode : public std::enable_shared_from_this<SwNode> {
 protected:
     static constexpr std::uint32_t NODE_TRANSFORMS_STAGING_BUFFER_SIZE{1 << 22};  // 4 MB
 
-    static SwRendererContext sRendererContext;
 
     std::string mName;
     std::uint32_t mRelativeNodeIndex;
@@ -41,7 +40,7 @@ public:
 
     virtual void generateRenderItemsAndRenderInstances();
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
     static void cleanup();
 };
 

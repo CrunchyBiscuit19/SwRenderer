@@ -11,7 +11,6 @@ struct SwRendererContext;
 
 class SwImmSubmit {
 private:
-    static SwRendererContext sRendererContext;
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;
     SwFence mFence;
@@ -20,7 +19,7 @@ private:
 public:
     SwImmSubmit();
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     void initialize();
 

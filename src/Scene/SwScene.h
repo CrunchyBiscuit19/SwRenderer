@@ -31,7 +31,6 @@ private:
     friend class SwWBOIT::System;
     friend class SwGeometry::System;
 
-    static SwRendererContext sRendererContext;
 
     SwCamera mCamera;
 
@@ -79,7 +78,7 @@ public:
 
     SwScene();
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     void initialize();
     void resize();

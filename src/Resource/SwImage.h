@@ -245,7 +245,6 @@ private:
     static constexpr std::uint32_t IMAGE_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
     static SwStagingBuffer sImageStagingBuffer;
 
-    static SwRendererContext sRendererContext;
 
     static std::uint32_t getFormatTexelSize(vk::Format format);
 
@@ -263,7 +262,7 @@ public:
 
     static constexpr uint32_t NUM_CUBEMAP_FACES{6};
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static vk::raii::ImageView createImageView(
         vk::Image image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType = vk::ImageViewType::e2D, std::uint32_t baseMipLevel = 0,

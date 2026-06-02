@@ -64,7 +64,6 @@ public:
 
 struct SwMaterialResources {
 private:
-    static SwRendererContext sRendererContext;
 
 public:
     SwMaterialTexture mBase;
@@ -77,7 +76,7 @@ public:
 
     SwMaterialResources(SwMaterialTexture base, SwMaterialTexture metallicRoughness, SwMaterialTexture normal, SwMaterialTexture occlusion, SwMaterialTexture emissive);
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static void cleanup();
 };
@@ -99,7 +98,6 @@ struct std::hash<SwMaterialPipelineOptions> {
 
 class SwMaterial {
 private:
-    static SwRendererContext sRendererContext;
     static std::uint32_t sLatestMaterialId;
 
     std::string mName;
@@ -132,7 +130,7 @@ public:
         SwMaterialResources materialResources
     );
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
     static void cleanup();
 
     static Type getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode);

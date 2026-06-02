@@ -87,7 +87,6 @@ public:
 
 class SwDescriptorAllocator {
 private:
-    static SwRendererContext sRendererContext;
     static constexpr std::uint32_t MAX_SETS_PER_POOL{1 << 12};
 
     std::vector<SwPoolSizeRatio> mRatios;
@@ -110,7 +109,7 @@ public:
     SwDescriptorAllocator(const SwDescriptorAllocator&) = delete;
     SwDescriptorAllocator& operator=(const SwDescriptorAllocator&) = delete;
 
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     SwDescriptorPool createDescriptorPool(vk::ArrayProxy<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool);
 

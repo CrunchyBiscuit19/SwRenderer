@@ -35,7 +35,6 @@ private:
     static constexpr std::uint32_t FRUSTUM_TOP_FACE{4};
     static constexpr std::uint32_t FRUSTUM_BOTTOM_FACE{5};
 
-    static SwRendererContext sRendererContext;
     glm::vec3 mVelocity;
     glm::vec3 mPosition;
     float mPitch{0.f};
@@ -52,7 +51,7 @@ public:
 
     SwCamera();
 
-    static void init(SwRendererContext cameraContext);
+    static void init();
 
     void initialize();
 

@@ -38,8 +38,11 @@ class SwRenderer {
     static constexpr std::uint32_t VK_PATCH_VERSION{0};
     static constexpr bool FULLSCREEN_ON_STARTUP{false};
 
+public:
+    static SwRendererContext sRendererContext;
+
+private:
     SwLogger mLogger;
-    SwRendererContext mRendererContext;
     vk::raii::Context mContext;
     vk::raii::Instance mInstance;
     vk::raii::PhysicalDevice mChosenGPU;
@@ -74,7 +77,7 @@ public:
 
     SwRenderer();
 
-    inline SwRendererContext& getRendererInfo() { return mRendererContext; };
+    inline SwRendererContext& getRendererInfo() { return sRendererContext; };
 
     inline std::uint64_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };
 

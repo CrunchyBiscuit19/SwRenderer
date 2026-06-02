@@ -18,10 +18,9 @@ public:
 
 class SwCommandPoolFactory {
 private:
-    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static SwCommandPool createCommandPool(vk::CommandPoolCreateFlags commandPoolCreateFlags);
 };

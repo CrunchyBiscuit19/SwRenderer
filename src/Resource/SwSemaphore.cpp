@@ -1,7 +1,6 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwSemaphore.h>
 
-SwRendererContext SwSemaphoreFactory::sRendererContext{};
 
 SwSemaphore::SwSemaphore() : mSemaphore(nullptr) {}
 
@@ -17,10 +16,9 @@ vk::SemaphoreSubmitInfo SwSemaphore::generateSubmitInfo(vk::PipelineStageFlags2 
     return semaphoreSubmitInfo;
 }
 
-void SwSemaphoreFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 SwSemaphore SwSemaphoreFactory::createSemaphore() {
     vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
     semaphoreCreateInfo.pNext = nullptr;
-    return SwSemaphore(sRendererContext.mDevice->createSemaphore(semaphoreCreateInfo));
+    return SwSemaphore(SwRenderer::sRendererContext.mDevice->createSemaphore(semaphoreCreateInfo));
 }

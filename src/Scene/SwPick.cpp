@@ -1,4 +1,5 @@
 #include <Renderer/SwEvents.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
@@ -18,8 +19,8 @@ void SwPick::System::initializeResources() {
     );
 
     mResources.mReadbackDescriptorLayout =
-        sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
-    mResources.mReadbackDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mReadbackDescriptorLayout);
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
+    mResources.mReadbackDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mReadbackDescriptorLayout);
 
     mResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwPick::DrawPC::getRange());
 
@@ -55,7 +56,7 @@ void SwPick::System::initializeResources() {
     mResources.mReadbackPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mResources.mReadbackPipelineLayout.getRawLayout()});
 
-    sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+    SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
         if (keyState[SDL_SCANCODE_DELETE] && mResources.mClickedInstance != nullptr && e.type == SDL_KEYDOWN && !e.key.repeat) {
             mResources.mClickedInstance->markDelete();
@@ -80,12 +81,12 @@ void SwPick::System::initializePasses() {
     mScene.insertPass(SwPass::Type::PickDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
         vk::RenderingAttachmentInfo depthAttachment = mResources.mDepthImage.generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
 
         cmd.beginRendering(renderInfo);
 
         cmd.bindPipeline(mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getRawPipeline());
-        SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
@@ -168,7 +169,7 @@ void SwPick::System::initializePasses() {
 void SwPick::System::initializePushConstants() { mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value(); }
 
 void SwPick::System::reInitializeOnResize() {
-    vk::Extent3D imageExtent = vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1};
+    vk::Extent3D imageExtent = vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1};
     mResources.mReadbackImage = SwImageFactory::createColorImage2D(
         nullptr,
         vk::Format::eR32G32Uint,
@@ -180,7 +181,7 @@ void SwPick::System::reInitializeOnResize() {
     mResources.mDepthImage =
         SwImageFactory::createDepthImage2D(nullptr, SwSwapchain::DEPTH_FORMAT, imageExtent, vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         mResources.mReadbackImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
         mResources.mDepthImage.emitTransition(cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     });
@@ -208,7 +209,7 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
         mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }
 
 void SwPick::System::changePickOperation() {
@@ -237,8 +238,8 @@ void SwPick::System::generatePickFrame() {
     ImGuizmo::SetRect(
         0,
         0,
-        static_cast<float>(sRendererContext.mSwapchain->getWindowExtent().width),
-        static_cast<float>(sRendererContext.mSwapchain->getWindowExtent().height)
+        static_cast<float>(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().width),
+        static_cast<float>(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().height)
     );
 
     ImGuizmo::Manipulate(
@@ -256,6 +257,6 @@ void SwPick::System::generatePickFrame() {
 
 bool SwPick::System::isPicked() {
     return (
-        (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK) && !sRendererContext.mScene->getCamera().getRelativeMode() && !ImGui::GetIO().WantCaptureMouse
+        (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK) && !SwRenderer::sRendererContext.mScene->getCamera().getRelativeMode() && !ImGui::GetIO().WantCaptureMouse
     );
 }

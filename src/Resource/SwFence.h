@@ -20,10 +20,9 @@ public:
 
 class SwFenceFactory {
 private:
-    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static SwFence createFence(vk::FenceCreateFlags flags);
 };

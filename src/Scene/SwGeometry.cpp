@@ -1,4 +1,5 @@
 #include <Renderer/SwSwapchain.h>
+#include <Renderer/SwRenderer.h>
 #include <Scene/SwGeometry.h>
 #include <Scene/SwScene.h>
 
@@ -12,9 +13,9 @@ void SwGeometry::System::initializePasses() {
     SwDependency staticDeps;
 
     // Opaque and Masked
-    staticDeps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
-    staticDeps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    staticDeps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
@@ -23,9 +24,9 @@ void SwGeometry::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::GeometryOpaque, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
-            sRendererContext.mSwapchain->getWindowExtent(),
-            sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(),
-            sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment()
+            SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
+            SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(),
+            SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment()
         );
 
         cmd.beginRendering(renderInfo);
@@ -39,7 +40,7 @@ void SwGeometry::System::initializePasses() {
                     continue;
                 }
                 cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
-                SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+                SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
                 cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
                 cmd.bindDescriptorSets(
                     batch.getGraphicsPipelineBundle().getBindPoint(),
@@ -60,8 +61,8 @@ void SwGeometry::System::initializePasses() {
                     SwScene::DRAW_MAX_RENDER_ITEMS,
                     sizeof(SwRenderItem)
                 );
-                sRendererContext.mStats->mDrawCallCount++;
-                sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
+                SwRenderer::sRendererContext.mStats->mDrawCallCount++;
+                SwRenderer::sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
             }
         }
 
@@ -72,8 +73,8 @@ void SwGeometry::System::initializePasses() {
     // Transparent
     staticDeps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentWrite);
     staticDeps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentWrite);
-    staticDeps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    staticDeps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
@@ -90,9 +91,9 @@ void SwGeometry::System::initializePasses() {
     }
     mScene.insertPass(SwPass::Type::GeometryTransparent, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
-            sRendererContext.mSwapchain->getWindowExtent(),
+            SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
             {mScene.mWBOIT.getResources().mAccumImage.generateRenderingAttachment(), mScene.mWBOIT.getResources().mRvlImage.generateRenderingAttachment()},
-            sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment()
+            SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment()
         );
 
         cmd.beginRendering(renderInfo);
@@ -106,7 +107,7 @@ void SwGeometry::System::initializePasses() {
                     continue;
                 }
                 cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
-                SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+                SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
                 cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
                 cmd.bindDescriptorSets(
                     batch.getGraphicsPipelineBundle().getBindPoint(),
@@ -127,8 +128,8 @@ void SwGeometry::System::initializePasses() {
                     SwScene::DRAW_MAX_RENDER_ITEMS,
                     sizeof(SwRenderItem)
                 );
-                sRendererContext.mStats->mDrawCallCount++;
-                sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
+                SwRenderer::sRendererContext.mStats->mDrawCallCount++;
+                SwRenderer::sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
             }
         }
         cmd.endRendering();
@@ -167,5 +168,5 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
         mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mPerFrameBuffer = sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

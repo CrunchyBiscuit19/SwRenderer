@@ -16,7 +16,6 @@ private:
     static constexpr ImVec4 IMGUI_HEADER_GREEN{0.22f, 0.69f, 0.502f, 1.0f};
     static constexpr ImVec4 IMGUI_BUTTON_RED{0.66f, 0.16f, 0.16f, 1.0f};
 
-    static SwRendererContext sRendererContext;
 
     SwDescriptorPool mDescriptorPool;
     bool mCollapsed{false};
@@ -31,7 +30,7 @@ public:
 
     SwGui();
 
-    static void init(SwRendererContext guiContext);
+    static void init();
 
     void initialize();
 

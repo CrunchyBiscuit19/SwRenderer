@@ -1,4 +1,5 @@
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
@@ -7,10 +8,10 @@
 SwWBOIT::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwWBOIT::System::initializeResources() {
-    mResources.mWorkDescriptorLayout = sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eFragment
     );
-    mResources.mWorkDescriptorSet = sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
+    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
 
     mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), nullptr);
 
@@ -55,10 +56,10 @@ void SwWBOIT::System::initializePasses() {
     // WBOIT Composite
     deps.mReadImages.emplace_back(&mResources.mAccumImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
     deps.mReadImages.emplace_back(&mResources.mRvlImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
     mScene.insertPass(SwPass::Type::WBOITComposite, std::move(deps), [&](vk::CommandBuffer cmd) {
-        const vk::RenderingAttachmentInfo colorAttachment = sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
+        const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
 
         cmd.beginRendering(renderInfo);
 
@@ -66,9 +67,9 @@ void SwWBOIT::System::initializePasses() {
         cmd.bindDescriptorSets(
             mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawLayout(), 0, mResources.mWorkDescriptorSet.getRawSet(), nullptr
         );
-        SwPass::setViewportScissors(cmd, vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1});
+        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
-        sRendererContext.mStats->mDrawCallCount++;
+        SwRenderer::sRendererContext.mStats->mDrawCallCount++;
 
         cmd.endRendering();
     });
@@ -79,20 +80,20 @@ void SwWBOIT::System::reInitializeOnResize() {
     mResources.mAccumImage = SwImageFactory::createColorImage2D(
         nullptr,
         SwSwapchain::DRAW_FORMAT,
-        vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1},
+        vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1},
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
     mResources.mRvlImage = SwImageFactory::createColorImage2D(
         nullptr,
         SwWBOIT::RVL_FORMAT,
-        vk::Extent3D{sRendererContext.mSwapchain->getWindowExtent(), 1},
+        vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1},
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false,
         SwWBOIT::RVL_CLEAR_VALUE
     );
 
-    sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         mResources.mAccumImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
         mResources.mRvlImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
     });

@@ -227,13 +227,12 @@ void SwStagingBuffer::copyFromUnchecked(const void* src, std::uint64_t size, std
 
 
 
-SwRendererContext SwBufferFactory::sRendererContext{};
+
 std::vector<SwBufferFactory::DeferredBuffer> SwBufferFactory::sDeletionQueue{};
 
-void SwBufferFactory::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwBufferFactory::deferDestroy(std::unique_ptr<SwBuffer> buffer) {
-    std::uint64_t currentFrame = sRendererContext.mSwapchain->getFrameNumber();
+    std::uint64_t currentFrame = SwRenderer::sRendererContext.mSwapchain->getFrameNumber();
     sDeletionQueue.emplace_back(std::move(buffer), currentFrame);
 }
 
@@ -264,17 +263,17 @@ SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
     VkBuffer tempBuffer;
     VmaAllocation tempAllocation;
     VmaAllocationInfo tempInfo;
-    vmaCreateBuffer(sRendererContext.mAllocator, &bufferInfo1, &vmaCreateInfo, &tempBuffer, &tempAllocation, &tempInfo);
+    vmaCreateBuffer(SwRenderer::sRendererContext.mAllocator, &bufferInfo1, &vmaCreateInfo, &tempBuffer, &tempAllocation, &tempInfo);
 
     std::optional<vk::DeviceAddress> tempAddress = std::nullopt;
     if (addressable || usage & vk::BufferUsageFlagBits::eShaderDeviceAddress) {
         vk::BufferDeviceAddressInfo bufferDeviceAddressInfo = {};
         bufferDeviceAddressInfo.buffer = tempBuffer;
-        tempAddress = sRendererContext.mDevice->getBufferAddress(bufferDeviceAddressInfo);
+        tempAddress = SwRenderer::sRendererContext.mDevice->getBufferAddress(bufferDeviceAddressInfo);
     }
 
     return SwAllocatedBuffer(
-        vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer), tempAddress, sRendererContext.mAllocator, tempAllocation, tempInfo, usage, flags, size
+        vk::raii::Buffer(*SwRenderer::sRendererContext.mDevice, tempBuffer), tempAddress, SwRenderer::sRendererContext.mAllocator, tempAllocation, tempInfo, usage, flags, size
     );
 }
 
@@ -293,7 +292,7 @@ SwStagingBuffer SwBufferFactory::createStagingBuffer(std::uint64_t size, bool re
     VkBuffer tempBuffer;
     VmaAllocation tempAllocation;
     VmaAllocationInfo tempInfo;
-    vmaCreateBuffer(sRendererContext.mAllocator, &bufferInfo1, &vmaCreateInfo, &tempBuffer, &tempAllocation, &tempInfo);
+    vmaCreateBuffer(SwRenderer::sRendererContext.mAllocator, &bufferInfo1, &vmaCreateInfo, &tempBuffer, &tempAllocation, &tempInfo);
 
-    return SwStagingBuffer(vk::raii::Buffer(*sRendererContext.mDevice, tempBuffer), sRendererContext.mAllocator, tempAllocation, tempInfo, size);
+    return SwStagingBuffer(vk::raii::Buffer(*SwRenderer::sRendererContext.mDevice, tempBuffer), SwRenderer::sRendererContext.mAllocator, tempAllocation, tempInfo, size);
 }

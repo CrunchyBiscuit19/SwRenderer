@@ -28,10 +28,9 @@ public:
 
 class SwCommandBufferFactory {
 private:
-    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static SwCommandBuffer createCommandBuffer(SwCommandPool& pool);
     static SwCommandBuffer createCommandBuffer(vk::CommandPool pool);

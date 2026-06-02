@@ -18,17 +18,13 @@ SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(vk::raii::Pipeline pipeline, 
 
 SwComputePipelineBundle::SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(std::move(pipeline), layout) {}
 
-SwRendererContext SwPipelineFactory::sRendererContext{};
 
-void SwPipelineFactory::init(SwRendererContext context) {
-    sRendererContext = context;
-}
 
 SwPipelineLayout SwPipelineFactory::createPipelineLayout(
     vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges
 ) {
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo({}, layouts.size(), layouts.data(), pushConstantRanges.size(), pushConstantRanges.data());
-    return SwPipelineLayout(vk::raii::PipelineLayout(*sRendererContext.mDevice, pipelineLayoutCreateInfo));
+    return SwPipelineLayout(vk::raii::PipelineLayout(*SwRenderer::sRendererContext.mDevice, pipelineLayoutCreateInfo));
 }
 
 SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {
@@ -86,7 +82,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
     graphicsPipelineInfo.layout = options.mLayout;
     graphicsPipelineInfo.pDynamicState = &dynamicInfo;
 
-    return SwGraphicsPipelineBundle(vk::raii::Pipeline(sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo)), options.mLayout);
+    return SwGraphicsPipelineBundle(vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo)), options.mLayout);
 }
 
 void SwGraphicsPipelineFactory::setShaders(
@@ -194,7 +190,7 @@ SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(SwComput
     computePipelineInfo.stage = pipelineShaderStageCreateInfo;
     computePipelineInfo.pNext = nullptr;
 
-    return SwComputePipelineBundle(vk::raii::Pipeline(sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo)), options.mLayout);
+    return SwComputePipelineBundle(vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo)), options.mLayout);
 }
 
 void SwComputePipelineFactory::setShaders(vk::PipelineShaderStageCreateInfo& pipelineShaderStageCreateInfo, vk::ShaderModule computeShader) {

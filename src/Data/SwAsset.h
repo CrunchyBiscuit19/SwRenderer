@@ -16,7 +16,6 @@ private:
     static constexpr std::uint32_t NUM_MODEL_BOUNDS{1 << 10};
 
     static std::uint32_t sLatestAssetId;
-    static SwRendererContext sRendererContext;
 
     std::string mName;
     std::uint32_t mId{0};
@@ -61,7 +60,7 @@ public:
     std::uint32_t mFirstInstanceInScene{0};
     std::uint32_t mFirstBoundInScene{0};
 
-    static void init(SwRendererContext assetContext);
+    static void init();
 
     static void cleanup();
 

@@ -1,9 +1,9 @@
 #include <Data/SwCamera.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
 
-SwRendererContext SwCamera::sRendererContext{};
 
 SwCamera::SwCamera() {
     mVelocity = glm::vec3(0.f);
@@ -42,10 +42,9 @@ SwCamera::SwCamera() {
     };
 }
 
-void SwCamera::init(SwRendererContext cameraContext) { sRendererContext = cameraContext; }
 
 void SwCamera::initialize() {
-    sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+    SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
         mVelocity = glm::vec3(0.f);
         mMovementFunctions[mMovementMode]();
@@ -126,7 +125,7 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
     glm::vec3 up = glm::normalize(glm::vec3(rot * glm::vec4(0, 1, 0, 0)));
 
     const float halfVSide = std::tanf(glm::radians(FOVY) * .5f);
-    const float halfHSide = halfVSide * sRendererContext.mSwapchain->getAspectRatio();
+    const float halfHSide = halfVSide * SwRenderer::sRendererContext.mSwapchain->getAspectRatio();
 
     mFrustumPlanes[FRUSTUM_NEAR_FACE] = SwCull::Plane(forward, mPosition + forward * NEAR_PLANE);
     mFrustumPlanes[FRUSTUM_FAR_FACE] = SwCull::Plane(-forward, mPosition + forward * FAR_PLANE);
@@ -142,7 +141,7 @@ SwPerspective SwCamera::getPerspective() const {
     SwPerspective perspective;
     perspective.mView = getViewMatrix();
     perspective.mProj =
-        glm::perspective(glm::radians(FOVY), sRendererContext.mSwapchain->getAspectRatio(), FAR_PLANE, NEAR_PLANE);  // Reverse Z, so flip near and far planes
+        glm::perspective(glm::radians(FOVY), SwRenderer::sRendererContext.mSwapchain->getAspectRatio(), FAR_PLANE, NEAR_PLANE);  // Reverse Z, so flip near and far planes
     perspective.mProj[1][1] *= -1;                                                                                   // Flip Y for Vulkan
     return perspective;
 }

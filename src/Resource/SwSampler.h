@@ -78,10 +78,9 @@ public:
 
 class SwSamplerFactory {
 private:
-    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static void cleanup();
 

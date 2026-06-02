@@ -24,10 +24,9 @@ public:
 
 class SwShaderFactory {
 private:
-    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static SwShader createShader(const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag);
 };

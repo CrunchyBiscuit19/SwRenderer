@@ -1,4 +1,5 @@
 #include <Renderer/SwLogger.h>
+#include <Renderer/SwRenderer.h>
 #include <Resource/SwCommandBuffer.h>
 #include <Scene/SwRenderGraph.h>
 #include <fmt/format.h>
@@ -13,11 +14,9 @@
 #include <unordered_map>
 #include <unordered_set>
 
-SwRendererContext SwRenderGraph::sRendererContext{};
 
 SwRenderGraph::SwRenderGraph(std::vector<SwImage*> outputs) : mOutputs(std::move(outputs)) {}
 
-void SwRenderGraph::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwRenderGraph::pruneUnreachablePasses() {
     for (auto& p : mPasses) p->setPruned(true);
@@ -347,7 +346,7 @@ void SwRenderGraph::compile() {
 
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
     /*exportGraphviz(fmt::format("{}/{}", LOGS_PATH, "rendergraph.dot"));
-    LOG_DEBUG(sRendererContext.mLogger->getQuillLoggerPtr(), "{}", getAllSortedPasses());*/
+    LOG_DEBUG(SwRenderer::sRendererContext.mLogger->getQuillLoggerPtr(), "{}", getAllSortedPasses());*/
 
     for (SwPass* pass : mSortedPasses) {
         for (const SwDependency* deps : {&pass->getStaticDeps(), &pass->getBatchDeps()}) {

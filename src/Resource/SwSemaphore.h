@@ -20,10 +20,9 @@ public:
 
 class SwSemaphoreFactory {
 private:
-    static SwRendererContext sRendererContext;
 
 public:
-    static void init(SwRendererContext rendererContext);
+    static void init();
 
     static SwSemaphore createSemaphore();
 };

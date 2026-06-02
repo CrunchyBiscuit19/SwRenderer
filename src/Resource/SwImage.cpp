@@ -413,7 +413,6 @@ void SwColorImageCubemap::resize(vk::Extent3D newExtent) {
     *this = SwImageFactory::createColorImageCubemap(nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
 }
 
-SwRendererContext SwImageFactory::sRendererContext{};
 SwStagingBuffer SwImageFactory::sImageStagingBuffer;
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
@@ -462,7 +461,7 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
 
     VkImage tempImage;
     VmaAllocation tempAllocation;
-    auto result = vmaCreateImage(sRendererContext.mAllocator, &imageCreateInfo1, &vmaAllocInfo, &tempImage, &tempAllocation, nullptr);
+    auto result = vmaCreateImage(SwRenderer::sRendererContext.mAllocator, &imageCreateInfo1, &vmaAllocInfo, &tempImage, &tempAllocation, nullptr);
 
     vk::ImageViewCreateInfo imageViewCreateInfo = {};
     imageViewCreateInfo.pNext = nullptr;
@@ -487,14 +486,14 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
     }
 
     return SwImageConstructionInfo{
-        vk::raii::Image(*sRendererContext.mDevice, tempImage),
-        vk::raii::ImageView(*sRendererContext.mDevice, imageViewCreateInfo),
+        vk::raii::Image(*SwRenderer::sRendererContext.mDevice, tempImage),
+        vk::raii::ImageView(*SwRenderer::sRendererContext.mDevice, imageViewCreateInfo),
         mainFormat,
         extent,
         mipmapped,
         usage,
         clearValue,
-        sRendererContext.mAllocator,
+        SwRenderer::sRendererContext.mAllocator,
         std::move(tempAllocation)
     };
 }
@@ -513,7 +512,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     std::uint32_t bytesPerTexel = getFormatTexelSize(image.getMainFormat());
     const size_t faceSize = image.getExtent().depth * image.getExtent().width * image.getExtent().height * bytesPerTexel;
     const size_t dataSize = faceSize * numFaces;
-    sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
         sImageStagingBuffer.copyFrom(cmd, data, dataSize);
         sImageStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         image.emitTransition(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eTransferDstOptimal);
@@ -541,8 +540,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     });
 }
 
-void SwImageFactory::init(SwRendererContext rendererContext) {
-    sRendererContext = rendererContext;
+void SwImageFactory::init() {
     sImageStagingBuffer = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
     constexpr std::uint32_t white = std::byteswap(0xFFFFFFFF);
     sDefaultImages.try_emplace(
@@ -591,7 +589,7 @@ vk::raii::ImageView SwImageFactory::createImageView(
     imageViewCreateInfo.subresourceRange.baseArrayLayer = baseArrayLayer;
     imageViewCreateInfo.subresourceRange.layerCount = layerCount;
     imageViewCreateInfo.subresourceRange.aspectMask = aspect;
-    return sRendererContext.mDevice->createImageView(imageViewCreateInfo);
+    return SwRenderer::sRendererContext.mDevice->createImageView(imageViewCreateInfo);
 }
 
 SwColorImage2D SwImageFactory::createColorImage2D(

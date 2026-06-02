@@ -13,15 +13,13 @@
 #include <ranges>
 #include <vulkan/vulkan_raii.hpp>
 
-SwRendererContext SwGui::sRendererContext{};
 
 SwGui::SwGui() {}
 
-void SwGui::init(SwRendererContext rendererContext) { sRendererContext = rendererContext; }
 
 void SwGui::initialize() {
     ImGui::CreateContext();
-    ImGui_ImplSDL2_InitForVulkan(sRendererContext.mSwapchain->getWindowPtr());
+    ImGui_ImplSDL2_InitForVulkan(SwRenderer::sRendererContext.mSwapchain->getWindowPtr());
 
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
     pipelineRenderingCreateInfo.colorAttachmentCount = 1;
@@ -31,13 +29,13 @@ void SwGui::initialize() {
     std::array<SwPoolSizeRatio, 1> ratios{
         {vk::DescriptorType::eCombinedImageSampler, 1000},
     };
-    mDescriptorPool = sRendererContext.mDescriptorAllocator->createDescriptorPool(ratios, 100);
+    mDescriptorPool = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorPool(ratios, 100);
 
     ImGui_ImplVulkan_InitInfo initInfo = {};
-    initInfo.Instance = **sRendererContext.mInstance;
-    initInfo.PhysicalDevice = **sRendererContext.mChosenGPU;
-    initInfo.Device = **sRendererContext.mDevice;
-    initInfo.Queue = **sRendererContext.mGraphicsQueue;
+    initInfo.Instance = **SwRenderer::sRendererContext.mInstance;
+    initInfo.PhysicalDevice = **SwRenderer::sRendererContext.mChosenGPU;
+    initInfo.Device = **SwRenderer::sRendererContext.mDevice;
+    initInfo.Queue = **SwRenderer::sRendererContext.mGraphicsQueue;
     initInfo.DescriptorPool = mDescriptorPool.getRawPool();
     initInfo.MinImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
     initInfo.ImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
@@ -71,21 +69,21 @@ void SwGui::initialize() {
     mSelectSkyboxFileBrowser.SetTitle("Select Directory of Skybox Image");
 
     mGuiComponents[SwGuiComponent::Camera] = [this]() {
-        ImGui::Text("Camera Mode: %s", magic_enum::enum_name(sRendererContext.mScene->getCamera().getMovementMode()).data());
-        ImGui::Text("Mouse Mode: %s", (sRendererContext.mScene->getCamera().getRelativeMode() ? "RELATIVE" : "NORMAL"));
-        glm::vec3 camPos = sRendererContext.mScene->getCamera().getPosition();
+        ImGui::Text("Camera Mode: %s", magic_enum::enum_name(SwRenderer::sRendererContext.mScene->getCamera().getMovementMode()).data());
+        ImGui::Text("Mouse Mode: %s", (SwRenderer::sRendererContext.mScene->getCamera().getRelativeMode() ? "RELATIVE" : "NORMAL"));
+        glm::vec3 camPos = SwRenderer::sRendererContext.mScene->getCamera().getPosition();
         ImGui::Text("Position: [%.1f, %.1f, %.1f]", camPos.x, camPos.y, camPos.z);
-        ImGui::Text("Pitch & Yaw: [%.1f, %.1f]", sRendererContext.mScene->getCamera().getPitch(), sRendererContext.mScene->getCamera().getYaw());
-        ImGui::Text("Speed: %.2f / %.2f", sRendererContext.mScene->getCamera().getSpeed(), SwCamera::MAX_CAMERA_SPEED);
+        ImGui::Text("Pitch & Yaw: [%.1f, %.1f]", SwRenderer::sRendererContext.mScene->getCamera().getPitch(), SwRenderer::sRendererContext.mScene->getCamera().getYaw());
+        ImGui::Text("Speed: %.2f / %.2f", SwRenderer::sRendererContext.mScene->getCamera().getSpeed(), SwCamera::MAX_CAMERA_SPEED);
     };
     mGuiComponents[SwGuiComponent::Scene] = [this]() {
         ImGui::Indent();
-        for (auto& asset : sRendererContext.mScene->getAssets() | std::views::values) {
+        for (auto& asset : SwRenderer::sRendererContext.mScene->getAssets() | std::views::values) {
             const auto name = asset.getName();
             ImGui::PushStyleColor(ImGuiCol_Header, static_cast<ImVec4>(IMGUI_HEADER_GREEN));
             if (ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
                 if (ImGui::Button(fmt::format("Add Instance##{}", name).c_str())) {
-                    asset.createInstance(sRendererContext.mScene->getCamera().getSpawnTransform());
+                    asset.createInstance(SwRenderer::sRendererContext.mScene->getCamera().getSpawnTransform());
                 }
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(IMGUI_BUTTON_RED));
@@ -116,10 +114,10 @@ void SwGui::initialize() {
             ImGui::PopStyleColor();
         }
         /*if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) { // TODO introduce lighting later
-            ImGui::ColorEdit3("Ambient Color", glm::value_ptr(sRendererContext.mScene.mPerspective.mData.ambientColor));
-            ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(sRendererContext.mScene.mPerspective.mData.sunlightColor));
-            ImGui::SliderFloat3("Sunlight Direction", glm::value_ptr(sRendererContext.mScene.mPerspective.mData.sunlightDirection), 0.f, 10.f);
-            ImGui::InputFloat("Sunlight Power", &sRendererContext.mScene.mPerspective.mData.sunlightDirection[3]);
+            ImGui::ColorEdit3("Ambient Color", glm::value_ptr(SwRenderer::sRendererContext.mScene.mPerspective.mData.ambientColor));
+            ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(SwRenderer::sRendererContext.mScene.mPerspective.mData.sunlightColor));
+            ImGui::SliderFloat3("Sunlight Direction", glm::value_ptr(SwRenderer::sRendererContext.mScene.mPerspective.mData.sunlightDirection), 0.f, 10.f);
+            ImGui::InputFloat("Sunlight Power", &SwRenderer::sRendererContext.mScene.mPerspective.mData.sunlightDirection[3]);
         }*/
         if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::Button("Change Skybox")) {
@@ -127,30 +125,30 @@ void SwGui::initialize() {
             }
             ImGui::SameLine();
             if (ImGui::Button("Toggle Skybox")) {
-                sRendererContext.mScene->getSkyboxSystem().toggleActive();
+                SwRenderer::sRendererContext.mScene->getSkyboxSystem().toggleActive();
             }
         }
         if (ImGui::CollapsingHeader("Culler", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Freeze Culling", sRendererContext.mScene->getCullSystem().getFreezePtr());
+            ImGui::Checkbox("Freeze Culling", SwRenderer::sRendererContext.mScene->getCullSystem().getFreezePtr());
         }
         ImGui::Unindent();
 
         mSelectSkyboxFileBrowser.Display();
         if (mSelectSkyboxFileBrowser.HasSelected()) {
             std::filesystem::path selectedSkyboxDir = mSelectSkyboxFileBrowser.GetSelected();
-            sRendererContext.mScene->getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxDir);
+            SwRenderer::sRendererContext.mScene->getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxDir);
             mSelectSkyboxFileBrowser.ClearSelected();
         }
     };
     mGuiComponents[SwGuiComponent::Stats] = [this]() {
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());
-        ImGui::Text("FPS:  %.2f", 1000.f / sRendererContext.mStats->mFrameTime);
-        ImGui::Text("Frame Time:  %.2fms", sRendererContext.mStats->mFrameTime);
-        ImGui::Text("Draw Time:  %.2fms", sRendererContext.mStats->mDrawTime);
-        ImGui::Text("Update Time: %.2fms", sRendererContext.mStats->mSceneUpdateTime);
-        ImGui::Text("Draws: %i", sRendererContext.mStats->mDrawCallCount);
-        ImGui::Text("Pre-Cull Render Instances: %i", sRendererContext.mStats->mPreCullRenderInstancesCount);
-        ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(sRendererContext.mStats->mRenderInstancesCountBuffer.getMappedPtr()));
+        ImGui::Text("FPS:  %.2f", 1000.f / SwRenderer::sRendererContext.mStats->mFrameTime);
+        ImGui::Text("Frame Time:  %.2fms", SwRenderer::sRendererContext.mStats->mFrameTime);
+        ImGui::Text("Draw Time:  %.2fms", SwRenderer::sRendererContext.mStats->mDrawTime);
+        ImGui::Text("Update Time: %.2fms", SwRenderer::sRendererContext.mStats->mSceneUpdateTime);
+        ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mDrawCallCount);
+        ImGui::Text("Pre-Cull Render Instances: %i", SwRenderer::sRendererContext.mStats->mPreCullRenderInstancesCount);
+        ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer.getMappedPtr()));
     };
     mGuiComponents[SwGuiComponent::Controls] = [this]() {
         ImGui::Text("[G] Toggle GUI");
@@ -164,7 +162,7 @@ void SwGui::initialize() {
         ImGui::Text("[Del] Delete Clicked Instance");
     };
 
-    sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
+    SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
 
@@ -173,12 +171,12 @@ void SwGui::initialize() {
         }
 
         if (keyState[SDL_SCANCODE_T] && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            sRendererContext.mScene->getPickSystem().changePickOperation();
+            SwRenderer::sRendererContext.mScene->getPickSystem().changePickOperation();
         }
 
         if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
             mSelectAssetsFileBrowser.Open();
-            sRendererContext.mScene->getCamera().setRelativeMode(SDL_FALSE);
+            SwRenderer::sRendererContext.mScene->getCamera().setRelativeMode(SDL_FALSE);
         }
     });
 }
@@ -190,12 +188,12 @@ void SwGui::perFrameUpdate() {
 
     createDockSpace();
     createOptionsWindow();
-    sRendererContext.mScene->getPickSystem().generatePickFrame();
+    SwRenderer::sRendererContext.mScene->getPickSystem().generatePickFrame();
 
     mSelectAssetsFileBrowser.Display();
     if (mSelectAssetsFileBrowser.HasSelected()) {
         auto selectedFiles = mSelectAssetsFileBrowser.GetMultiSelected();
-        sRendererContext.mScene->loadAssets(selectedFiles);
+        SwRenderer::sRendererContext.mScene->loadAssets(selectedFiles);
         mSelectAssetsFileBrowser.ClearSelected();
     }
 
