@@ -116,7 +116,9 @@ void SwSwapchain::onResizeInitialize() {
             std::move(otherImageViews)
         );
         mSwapchainImages.emplace_back(std::move(swapchainImage));
+
     }
+
 
     mDrawImage = SwImageFactory::createColorImage2D(
         nullptr,
@@ -148,14 +150,13 @@ void SwSwapchain::resize() {
     onResizeInitialize();
 }
 
-SwSwapchainImage& SwSwapchain::getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
-
 void SwSwapchain::acquireNextImage(uint64_t timeout) {
     try {
         mSwapchainIndex = mSwapchain.acquireNextImage(timeout, getCurrentFrame().getAvailableSemaphore().getRawSemaphore(), nullptr).value;
     } catch (vk::OutOfDateKHRError& e) {
         mResizeRequested = true;
     }
+    mSwapchainRepImage.setDelegate(&mSwapchainImages[mSwapchainIndex]);
 }
 
 void SwSwapchain::submit(

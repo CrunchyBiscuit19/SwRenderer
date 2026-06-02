@@ -1,14 +1,14 @@
 #pragma once
 
+#include <Data/SwCamera.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwCommandBuffer.h>
 #include <Resource/SwCommandPool.h>
 #include <Resource/SwDescriptor.h>
+#include <Resource/SwFence.h>
 #include <Resource/SwIResizable.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwSemaphore.h>
-#include <Resource/SwFence.h>
-#include <Data/SwCamera.h>
 #define SDL_MAIN_HANDLED
 #include <SDL.h>
 #include <vk_mem_alloc.h>
@@ -53,6 +53,7 @@ private:
     vk::raii::SurfaceKHR mSurface;
 
     vk::raii::SwapchainKHR mSwapchain;
+    SwSwapchainImage mSwapchainRepImage;  // Representative swapchain image as dependency, since the actual swapchain image could change each frame.
     std::vector<SwSwapchainImage> mSwapchainImages;
     std::uint32_t mSwapchainIndex{0};
     bool mResizeRequested{false};
@@ -103,15 +104,14 @@ public:
     inline bool getResizeRequested() const { return mResizeRequested; }
     inline void setResizeRequested(bool resizeRequested) { mResizeRequested = resizeRequested; }
     inline vk::Extent2D getWindowExtent() const { return mWindowExtent; }
+    inline SwSwapchainImage& getSwapchainRepImage() { return mSwapchainRepImage; }
+    inline SwSwapchainImage& getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
 
-    SwSwapchainImage& getCurrentSwapchainImage();
-        
     void acquireNextImage(uint64_t timeout);
 
     void submit(
         vk::ArrayProxy<vk::CommandBufferSubmitInfo> commandBufferSubmitInfo, vk::ArrayProxy<vk::SemaphoreSubmitInfo> waitSemaphoreInfo,
-        vk::ArrayProxy<vk::SemaphoreSubmitInfo> signalSemaphoreInfo, 
-        vk::Fence renderFence
+        vk::ArrayProxy<vk::SemaphoreSubmitInfo> signalSemaphoreInfo, vk::Fence renderFence
     );
 
     void present();

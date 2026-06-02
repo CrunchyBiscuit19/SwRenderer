@@ -76,18 +76,22 @@ private:
     vk::raii::ImageView mMainImageView;
     std::deque<vk::raii::ImageView> mOtherImageViews;
     SwSemaphore mRenderedSemaphore;
+    SwSwapchainImage* mDelegate{nullptr};
 
 public:
+    SwSwapchainImage();
     SwSwapchainImage(
         vk::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, SwSemaphore renderedSemaphore,
         std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
-    inline vk::Image getRawImage() override { return mImage; }
-    inline vk::ImageView getRawMainImageView() override { return *mMainImageView; }
-    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return *mOtherImageViews[i]; }
+    inline void setDelegate(SwSwapchainImage* delegate) { mDelegate = delegate; }
+
+    inline vk::Image getRawImage() override { return mDelegate ? mDelegate->getRawImage() : mImage; }
+    inline vk::ImageView getRawMainImageView() override { return mDelegate ? mDelegate->getRawMainImageView() : *mMainImageView; }
+    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return mDelegate ? mDelegate->getRawOtherImageView(i) : *mOtherImageViews[i]; }
     inline vk::ClearValue getClearValue() override { return vk::ClearColorValue(); };
-    inline SwSemaphore& getRenderedSemaphore() { return mRenderedSemaphore; }
+    inline SwSemaphore& getRenderedSemaphore() { return mDelegate ? mDelegate->getRenderedSemaphore() : mRenderedSemaphore; }
 
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
     using SwImage::emitTransition;

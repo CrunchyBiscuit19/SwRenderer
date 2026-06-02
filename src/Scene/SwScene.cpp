@@ -47,39 +47,24 @@ void SwScene::initializeMiscPasses() {
 
     // Copy to Swapchain
     deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getSwapchainRepImage(), SwDependency::ImageDepType::TransferDst);
     mPasses[SwPass::Type::CopyToSwapchain] = SwPass(SwPass::Type::CopyToSwapchain, deps, [&](vk::CommandBuffer cmd) {
-        sRendererContext.mSwapchain->getCurrentSwapchainImage().copyFrom(cmd, sRendererContext.mSwapchain->getDrawImage());
+        sRendererContext.mSwapchain->getSwapchainRepImage().copyFrom(cmd, sRendererContext.mSwapchain->getDrawImage());
     });
     deps.clear();
 
     // Gui
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getSwapchainRepImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
     mPasses[SwPass::Type::Gui] = SwPass(SwPass::Type::Gui, deps, [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
             sRendererContext.mSwapchain->getWindowExtent(),
-            sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
+            sRendererContext.mSwapchain->getSwapchainRepImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
             nullptr
         );
         cmd.beginRendering(renderInfo);
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         cmd.endRendering();
     });
-}
-
-void SwScene::refreshSwapchainDependencies() {
-    SwDependency deps;
-
-    // Copy to Swapchain
-    deps.mReadImages.emplace_back(&sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
-    mPasses[SwPass::Type::CopyToSwapchain].setDeps(std::move(deps));
-    deps.clear();
-
-    // Gui
-    deps.mWriteImages.emplace_back(&sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
-    mPasses[SwPass::Type::Gui].setDeps(std::move(deps));
-    deps.clear();
 }
 
 void SwScene::initializeResources() {
@@ -135,7 +120,7 @@ void SwScene::initializeResources() {
 }
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
-    sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
+    sRendererContext.mSwapchain->getSwapchainRepImage().emitTransition(commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
 }
 
 SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
@@ -524,8 +509,6 @@ void SwScene::draw() {
     SwBufferFactory::tick(sRendererContext.mSwapchain->getFrameNumber());
     sRendererContext.mSwapchain->acquireNextImage(1e9);
 
-    refreshSwapchainDependencies();
-
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -552,7 +535,7 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);
     mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDrawImage());
     mRenderGraph.addOutput(&sRendererContext.mSwapchain->getDepthImage());
-    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getCurrentSwapchainImage());
+    mRenderGraph.addOutput(&sRendererContext.mSwapchain->getSwapchainRepImage());
 
     mRenderGraph.compile();
     mRenderGraph.execute(commandBuffer);
@@ -563,7 +546,7 @@ void SwScene::draw() {
     vk::CommandBufferSubmitInfo commandBufferSubmitInfo = commandBuffer.generateSubmitInfo();
     vk::SemaphoreSubmitInfo waitInfo = currentFrame.getAvailableSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     vk::SemaphoreSubmitInfo signalInfo =
-        sRendererContext.mSwapchain->getCurrentSwapchainImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
+        sRendererContext.mSwapchain->getSwapchainRepImage().getRenderedSemaphore().generateSubmitInfo(vk::PipelineStageFlagBits2::eColorAttachmentOutput);
     sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getRawFence());
     sRendererContext.mSwapchain->present();
 
