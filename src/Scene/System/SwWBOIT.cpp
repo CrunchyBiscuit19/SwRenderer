@@ -3,7 +3,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
-#include <Scene/SwWBOIT.h>
+#include <Scene/System/SwWBOIT.h>
 
 SwWBOIT::System::System(SwScene& scene) : SwSystem(scene) {}
 

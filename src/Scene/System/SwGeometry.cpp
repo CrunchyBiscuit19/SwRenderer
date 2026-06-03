@@ -1,6 +1,6 @@
 #include <Renderer/SwSwapchain.h>
 #include <Renderer/SwRenderer.h>
-#include <Scene/SwGeometry.h>
+#include <Scene/System/SwGeometry.h>
 #include <Scene/SwScene.h>
 
 #include <ranges>

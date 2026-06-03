@@ -1,6 +1,6 @@
 #pragma once
 
-#include <Scene/SwCull.h>
+#include <Scene/System/SwCull.h>
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwBuffer.h>
 #include <SDL_events.h>

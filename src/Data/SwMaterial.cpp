@@ -6,7 +6,7 @@
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
-#include <Scene/SwGeometry.h>
+#include <Scene/System/SwGeometry.h>
 #include <Scene/SwScene.h>
 #include <quill/LogMacros.h>
 

@@ -3,7 +3,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
-#include <Scene/SwPick.h>
+#include <Scene/System/SwPick.h>
 #include <Scene/SwScene.h>
 #include <quill/LogMacros.h>
 

@@ -4,13 +4,13 @@
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
 #include <Resource/SwDescriptor.h>
-#include <Scene/SwCull.h>
-#include <Scene/SwSkybox.h>
+#include <Scene/System/SwCull.h>
+#include <Scene/System/SwSkybox.h>
 #include <Scene/SwPass.h>
-#include <Scene/SwPick.h>
-#include <Scene/SwGeometry.h>
+#include <Scene/System/SwPick.h>
+#include <Scene/System/SwGeometry.h>
 #include <Scene/SwRenderGraph.h>
-#include <Scene/SwWBOIT.h>
+#include <Scene/System/SwWBOIT.h>
 
 #include <unordered_set>
 
