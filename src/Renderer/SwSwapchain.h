@@ -51,7 +51,6 @@ private:
     vk::raii::SurfaceKHR mSurface;
 
     vk::raii::SwapchainKHR mSwapchain;
-    SwSwapchainImage mSwapchainRepImage;  // Representative swapchain image as dependency, since the actual swapchain image could change each frame.
     std::vector<SwSwapchainImage> mSwapchainImages;
     std::uint32_t mSwapchainIndex{0};
     bool mResizeRequested{false};
@@ -66,8 +65,6 @@ private:
 
     SwColorImage2D mDrawImage;
     SwDepthImage2D mDepthImage;
-
-    inline SwSwapchainImage& getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
 
 public:
     static vk::ClearColorValue DRAW_CLEAR_VALUE;
@@ -104,7 +101,7 @@ public:
     inline bool getResizeRequested() const { return mResizeRequested; }
     inline void setResizeRequested(bool resizeRequested) { mResizeRequested = resizeRequested; }
     inline vk::Extent2D getWindowExtent() const { return mWindowExtent; }
-    inline SwSwapchainImage& getSwapchainRepImage() { return mSwapchainRepImage; }
+    inline SwSwapchainImage& getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
 
     void acquireNextImage(uint64_t timeout);
 

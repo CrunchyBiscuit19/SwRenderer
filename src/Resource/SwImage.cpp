@@ -64,12 +64,10 @@ SwSwapchainImage::SwSwapchainImage(
       mRenderedSemaphore(std::move(renderedSemaphore)) {}
 
 void SwSwapchainImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) {
-    if (mDelegate) { mDelegate->emitBarrier(cmd, nextStage, nextAccess); return; }
     emitTransition(cmd, nextStage, nextAccess, mCurrentLayout);
 }
 
 void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) {
-    if (mDelegate) { mDelegate->emitTransition(cmd, nextStage, nextAccess, nextLayout); return; }
     if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
@@ -102,8 +100,6 @@ void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFl
 }
 
 void SwSwapchainImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) {
-    if (mDelegate) { mDelegate->copyFrom(cmd, source, srcSize, srcAspect); return; }
-
     vk::ImageBlit2 blitRegion{};
     blitRegion.pNext = nullptr;
     blitRegion.srcOffsets[0] = vk::Offset3D{0, 0, 0};
@@ -130,22 +126,6 @@ void SwSwapchainImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Ext
     blitInfo.pRegions = &blitRegion;
 
     cmd.blitImage2(blitInfo);
-}
-
-vk::RenderingAttachmentInfo SwSwapchainImage::generateRenderingAttachment(vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
-    if (mDelegate) {
-        return mDelegate->generateRenderingAttachment(loadOp, storeOp);
-    }
-    return SwImage::generateRenderingAttachment(loadOp, storeOp);
-}
-
-vk::RenderingAttachmentInfo SwSwapchainImage::generateRenderingAttachment(
-    std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp
-) {
-    if (mDelegate) {
-        return mDelegate->generateRenderingAttachment(otherImageViewIndex, loadOp, storeOp);
-    }
-    return SwImage::generateRenderingAttachment(otherImageViewIndex, loadOp, storeOp);
 }
 
 SwAllocatedImage::SwAllocatedImage() : mImage(nullptr), mMainImageView(nullptr), mAllocation(nullptr), mAllocator(nullptr), mMipLevels(1), mMipmapped(false) {}

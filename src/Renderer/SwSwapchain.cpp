@@ -152,7 +152,6 @@ void SwSwapchain::acquireNextImage(uint64_t timeout) {
     } catch (vk::OutOfDateKHRError& e) {
         mResizeRequested = true;
     }
-    mSwapchainRepImage.setDelegate(&mSwapchainImages[mSwapchainIndex]);
 }
 
 void SwSwapchain::submit(

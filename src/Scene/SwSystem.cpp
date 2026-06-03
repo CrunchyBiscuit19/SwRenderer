@@ -13,16 +13,16 @@ void SwSystem::initialize() {
     initializePushConstants();
     refreshPushConstants();
     initializePasses();
-    refreshBatchDependencies();
+    refreshDynamicDependencies();
 }
 
 void SwSystem::refresh() {
     refreshPushConstants();
-    refreshBatchDependencies();
+    refreshDynamicDependencies();
 }
 
 void SwSystem::initializePushConstants() {}
 
-void SwSystem::refreshBatchDependencies() {}
+void SwSystem::refreshDynamicDependencies() {}
 
 void SwSystem::refreshPushConstants() {}

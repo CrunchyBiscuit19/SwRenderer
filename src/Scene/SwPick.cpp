@@ -151,12 +151,12 @@ void SwPick::System::initializePasses() {
                 mResources.mClickedInstance = nullptr;
                 return;
             }
-            std::uint32_t modelId = read.x - 1;
-            if (mScene.getAssets().contains(modelId)) {
+            std::uint32_t assetId = read.x - 1;
+            if (mScene.getAssets().contains(assetId)) {
                 mResources.mClickedInstance = nullptr;
                 return;
             }
-            SwAsset& selectedAsset = mScene.getAssets()[modelId];
+            SwAsset& selectedAsset = mScene.getAssets()[assetId];
 
             std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
             mResources.mClickedInstance = &selectedAsset.getInstances()[localInstanceIndex];
@@ -190,17 +190,20 @@ void SwPick::System::reInitializeOnResize() {
     mResources.mReadbackDescriptorSet.pushWrites();
 }
 
-void SwPick::System::refreshBatchDependencies() {
-    SwDependency batchDeps;
+void SwPick::System::refreshDynamicDependencies() {
+    SwDependency dynamicDeps;
 
     // Pick Draw
+    dynamicDeps.mReadBuffers.emplace_back(
+        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
+    );
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
-            batchDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
-    mScene.mPasses[SwPass::Type::PickDraw].setBatchDeps(std::move(batchDeps));
-    batchDeps.clear();
+    mScene.mPasses[SwPass::Type::PickDraw].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
 }
 
 void SwPick::System::refreshPushConstants() {

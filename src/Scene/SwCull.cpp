@@ -136,7 +136,6 @@ void SwCull::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
@@ -191,43 +190,44 @@ void SwCull::System::initializePushConstants() {
     mResources.mWorkPushConstants.mRenderInstancesCountBuffer = SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer.getDeviceAddress().value();
 }
 
-void SwCull::System::refreshBatchDependencies() {
-    SwDependency batchDeps;
+void SwCull::System::refreshDynamicDependencies() {
+    SwDependency dynamicDeps;
 
     // Cull Reset
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRenderItems().empty()) continue;
-            batchDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsCountBuffer(), SwDependency::BufferDepType::TransferWrite);
-            batchDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::TransferWrite);
-            batchDeps.mWriteBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+            dynamicDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsCountBuffer(), SwDependency::BufferDepType::TransferWrite);
+            dynamicDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::TransferWrite);
+            dynamicDeps.mWriteBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         }
     }
-    mScene.mPasses[SwPass::Type::CullReset].setBatchDeps(std::move(batchDeps));
-    batchDeps.clear();
+    mScene.mPasses[SwPass::Type::CullReset].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
 
     // Cull Work
+    dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRenderItems().empty()) continue;
-            batchDeps.mReadBuffers.emplace_back(&batch.getRenderInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-            batchDeps.mReadBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getRenderInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         }
     }
-    mScene.mPasses[SwPass::Type::CullWork].setBatchDeps(std::move(batchDeps));
-    batchDeps.clear();
+    mScene.mPasses[SwPass::Type::CullWork].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
 
     // CullCompact
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRenderItems().empty()) continue;
-            batchDeps.mReadBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-            batchDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-            batchDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsCountBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getPreCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+            dynamicDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+            dynamicDeps.mWriteBuffers.emplace_back(&batch.getPostCullRenderItemsCountBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         }
     }
-    mScene.mPasses[SwPass::Type::CullCompact].setBatchDeps(std::move(batchDeps));
-    batchDeps.clear();
+    mScene.mPasses[SwPass::Type::CullCompact].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
 }
 
 void SwCull::System::refreshPushConstants() {

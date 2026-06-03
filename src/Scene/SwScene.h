@@ -62,6 +62,9 @@ private:
     void initializeMiscPasses();
     void initializeResources();
 
+    void refreshDynamicDependencies();
+    void refresh();
+
     void finalPresentTransition(SwCommandBuffer& commandBuffer);
 
 public:

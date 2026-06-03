@@ -182,6 +182,8 @@ void SwAllocatedBuffer::copyFromUnchecked(const void* src, std::uint64_t size, s
         throw std::runtime_error("copyFrom(ptr) requires VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT");
     }
     std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
+    mCurrentStage = vk::PipelineStageFlagBits2::eHost;
+    mCurrentAccess = vk::AccessFlagBits2::eHostWrite;
 }
 
 SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
@@ -222,6 +224,8 @@ void SwStagingBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::uint
 
 void SwStagingBuffer::copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset) {
     std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
+    mCurrentStage = vk::PipelineStageFlagBits2::eHost;
+    mCurrentAccess = vk::AccessFlagBits2::eHostWrite;
 }
 
 

@@ -76,7 +76,6 @@ private:
     vk::raii::ImageView mMainImageView;
     std::deque<vk::raii::ImageView> mOtherImageViews;
     SwSemaphore mRenderedSemaphore;
-    SwSwapchainImage* mDelegate{nullptr};
 
 public:
     SwSwapchainImage();
@@ -85,13 +84,11 @@ public:
         std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
-    inline void setDelegate(SwSwapchainImage* delegate) { mDelegate = delegate; }
-
-    inline vk::Image getRawImage() override { return mDelegate ? mDelegate->getRawImage() : mImage; }
-    inline vk::ImageView getRawMainImageView() override { return mDelegate ? mDelegate->getRawMainImageView() : *mMainImageView; }
-    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return mDelegate ? mDelegate->getRawOtherImageView(i) : *mOtherImageViews[i]; }
+    inline vk::Image getRawImage() override { return mImage; }
+    inline vk::ImageView getRawMainImageView() override { return *mMainImageView; }
+    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return *mOtherImageViews[i]; }
     inline vk::ClearValue getClearValue() override { return vk::ClearColorValue(); };
-    inline SwSemaphore& getRenderedSemaphore() { return mDelegate ? mDelegate->getRenderedSemaphore() : mRenderedSemaphore; }
+    inline SwSemaphore& getRenderedSemaphore() { return mRenderedSemaphore; }
 
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
     using SwImage::emitTransition;
@@ -99,14 +96,6 @@ public:
 
     using SwImage::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
-
-    vk::RenderingAttachmentInfo generateRenderingAttachment(
-        vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
-    ) override;
-    vk::RenderingAttachmentInfo generateRenderingAttachment(
-        std::uint32_t otherImageViewIndex, vk::AttachmentLoadOp loadOp = vk::AttachmentLoadOp::eLoad,
-        vk::AttachmentStoreOp storeOp = vk::AttachmentStoreOp::eStore
-    ) override;
 
     SwSwapchainImage(SwSwapchainImage&&) noexcept = default;
     SwSwapchainImage& operator=(SwSwapchainImage&&) noexcept = default;

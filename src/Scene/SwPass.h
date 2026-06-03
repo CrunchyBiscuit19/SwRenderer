@@ -34,7 +34,7 @@ private:
     bool mPruned{false};
 
     SwDependency mStaticDeps;
-    SwDependency mBatchDeps;
+    SwDependency mDynamicDeps;
 
 public:
     SwPass() = default;
@@ -46,9 +46,10 @@ public:
     bool isMustRun() const { return mMustRun; }
     void setPruned(bool pruned) { mPruned = pruned; }
     SwDependency& getStaticDeps() { return mStaticDeps; }
-    SwDependency& getBatchDeps() { return mBatchDeps; }
+    SwDependency& getDynamicDeps() { return mDynamicDeps; }
     void setStaticDeps(SwDependency deps) { mStaticDeps = std::move(deps); }
-    void setBatchDeps(SwDependency deps) { mBatchDeps = std::move(deps); }
+    void setDynamicDeps(SwDependency deps) { mDynamicDeps = std::move(deps); }
+    void clearDynamicDeps() { mDynamicDeps.clear(); }
 
     void execute(vk::CommandBuffer cmd);
 

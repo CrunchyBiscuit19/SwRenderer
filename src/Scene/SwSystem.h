@@ -27,7 +27,7 @@ public:
 
     void initialize();
 
-    virtual void refreshBatchDependencies();
+    virtual void refreshDynamicDependencies();
     virtual void refreshPushConstants();
 
     virtual void refresh();

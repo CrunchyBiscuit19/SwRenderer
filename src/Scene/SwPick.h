@@ -81,7 +81,7 @@ public:
 
     inline Resources& getResources() { return mResources; }
 
-    void refreshBatchDependencies() override;
+    void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
 };
 }  // namespace SwPick

@@ -108,7 +108,7 @@ public:
 
     inline bool* getFreezePtr() { return &mFreeze; }
 
-    void refreshBatchDependencies() override;
+    void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
 };
 };  // namespace SwCull

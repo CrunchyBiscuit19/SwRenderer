@@ -137,28 +137,30 @@ void SwGeometry::System::initializePasses() {
     staticDeps.clear();
 }
 
-void SwGeometry::System::refreshBatchDependencies() {
-    SwDependency batchDeps;
+void SwGeometry::System::refreshDynamicDependencies() {
+    SwDependency dynamicDeps;
 
     // GeometryOpaque
+    dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) continue;
         for (auto& batch : batchType.second | std::views::values) {
-            batchDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
-    mScene.mPasses[SwPass::Type::GeometryOpaque].setBatchDeps(std::move(batchDeps));
-    batchDeps.clear();
+    mScene.mPasses[SwPass::Type::GeometryOpaque].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
 
     // GeometryTransparent
+    dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Transparent) continue;
         for (auto& batch : batchType.second | std::views::values) {
-            batchDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
-    mScene.mPasses[SwPass::Type::GeometryTransparent].setBatchDeps(std::move(batchDeps));
-    batchDeps.clear();
+    mScene.mPasses[SwPass::Type::GeometryTransparent].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
 }
 
 void SwGeometry::System::refreshPushConstants() {
