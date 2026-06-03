@@ -129,10 +129,10 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
 
     mFrustumPlanes[FRUSTUM_NEAR_FACE] = SwCull::Plane(forward, mPosition + forward * NEAR_PLANE);
     mFrustumPlanes[FRUSTUM_FAR_FACE] = SwCull::Plane(-forward, mPosition + forward * FAR_PLANE);
-    mFrustumPlanes[FRUSTUM_LEFT_FACE] = SwCull::Plane(glm::cross(up, forward + right * halfHSide), mPosition);
-    mFrustumPlanes[FRUSTUM_RIGHT_FACE] = SwCull::Plane(glm::cross(forward - right * halfHSide, up), mPosition);
-    mFrustumPlanes[FRUSTUM_TOP_FACE] = SwCull::Plane(glm::cross(right, forward - up * halfVSide), mPosition);
-    mFrustumPlanes[FRUSTUM_BOTTOM_FACE] = SwCull::Plane(glm::cross(forward + up * halfVSide, right), mPosition);
+    mFrustumPlanes[FRUSTUM_LEFT_FACE] = SwCull::Plane(glm::cross(forward - right * halfHSide, up), mPosition);
+    mFrustumPlanes[FRUSTUM_RIGHT_FACE] = SwCull::Plane(glm::cross(up, forward + right * halfHSide), mPosition);
+    mFrustumPlanes[FRUSTUM_TOP_FACE] = SwCull::Plane(glm::cross(forward + up * halfVSide, right), mPosition);
+    mFrustumPlanes[FRUSTUM_BOTTOM_FACE] = SwCull::Plane(glm::cross(right, forward - up * halfVSide), mPosition);
     // Cross product between slanted vectors and up / right vectors gives plane normals pointing inward.
     // Planes stretch indefinitely. Left, right, top, bottom planes all pass through camera position. Near and far calculate with normal * distance.
 }

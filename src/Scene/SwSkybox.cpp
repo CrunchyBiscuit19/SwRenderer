@@ -69,7 +69,7 @@ void SwSkybox::System::initializeResources() {
         mResources.mWorkVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy);
     });
 
-    reinitializeOnUpdate(SKYBOX_DEFAULT_DIRECTORY_PATH);
+    reinitializeOnUpdate(SKYBOX_DEFAULT_HDR_PATH);
 }
 
 void SwSkybox::System::initializePasses() {
@@ -105,52 +105,30 @@ void SwSkybox::System::initializePasses() {
 
 void SwSkybox::System::initializePushConstants() { mResources.mWorkPushConstants.mWorkVertexBuffer = mResources.mWorkVertexBuffer.getDeviceAddress().value(); }
 
-void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path> newLoadDir) {
-    mLoadFromDir = newLoadDir;
-    if (!mLoadFromDir.has_value()) {
+void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path> newLoadFile) {
+    mLoadFromFile = newLoadFile;
+    if (!mLoadFromFile.has_value()) {
         return;
     }
-
-    std::vector<std::filesystem::path> skyboxImagePaths = {
-        mLoadFromDir.value() / "px.png",
-        mLoadFromDir.value() / "nx.png",
-        mLoadFromDir.value() / "py.png",
-        mLoadFromDir.value() / "ny.png",
-        mLoadFromDir.value() / "pz.png",
-        mLoadFromDir.value() / "nz.png"
-    };
-    std::vector<std::byte> skyboxImageData;
 
     int width = 0;
     int height = 0;
-    int nrChannels = 0;
-    for (auto& path : skyboxImagePaths) {
-        int faceWidth = 0;
-        int faceHeight = 0;
-        int faceChannels = 0;
-        if (unsigned char* data = stbi_load(path.string().c_str(), &faceWidth, &faceHeight, &faceChannels, 4)) {
-            if (width == 0 && height == 0) {
-                width = faceWidth;
-                height = faceHeight;
-            }
-            const std::size_t imageSize = static_cast<std::size_t>(faceWidth) * static_cast<std::size_t>(faceHeight) * 4;
-            const std::size_t offset = skyboxImageData.size();
-            skyboxImageData.resize(offset + imageSize);
-            std::memcpy(skyboxImageData.data() + offset, data, imageSize);
-            stbi_image_free(data);
-        }
-    }
-    if (width == 0 || height == 0 || skyboxImageData.empty()) {
+    int numChannels = 0;
+    stbi_set_flip_vertically_on_load(true);
+    float* data = stbi_loadf(mLoadFromFile.value().string().c_str(), &width, &height, &numChannels, 4);
+    if (!data || width == 0 || height == 0) {
         return;
     }
 
-    mResources.mWorkImage = SwImageFactory::createColorImageCubemap(
-        skyboxImageData.data(),
-        vk::Format::eR8G8B8A8Srgb,
+    mResources.mWorkImage = SwImageFactory::createColorImage2D(
+        data,
+        vk::Format::eR32G32B32A32Sfloat,
         vk::Extent3D{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height), 1},
         vk::ImageUsageFlagBits::eSampled,
         true
     );
+
+    stbi_image_free(data);
 
     mResources.mWorkDescriptorSet.writeImage(
         0,

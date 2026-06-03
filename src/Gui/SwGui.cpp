@@ -61,12 +61,13 @@ void SwGui::initialize() {
         col.z = pow(col.z, gamma);
     }
 
-    mSelectAssetsFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection | ImGuiFileBrowserFlags_ConfirmOnEnter, MODELS_PATH);
+    mSelectAssetsFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection | ImGuiFileBrowserFlags_ConfirmOnEnter, ASSETS_PATH);
     mSelectAssetsFileBrowser.SetTitle("Select GLTF / GLB File");
     mSelectAssetsFileBrowser.SetTypeFilters({".glb", ".gltf"});
 
-    mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_SelectDirectory, SKYBOXES_PATH);
-    mSelectSkyboxFileBrowser.SetTitle("Select Directory of Skybox Image");
+    mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(0, SKYBOXES_PATH);
+    mSelectSkyboxFileBrowser.SetTitle("Select HDR Skybox Image");
+    mSelectSkyboxFileBrowser.SetTypeFilters({".hdr"});
 
     mGuiComponents[SwGuiComponent::Camera] = [this]() {
         ImGui::Text("Camera Mode: %s", magic_enum::enum_name(SwRenderer::sRendererContext.mScene->getCamera().getMovementMode()).data());
@@ -87,7 +88,7 @@ void SwGui::initialize() {
                 }
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(IMGUI_BUTTON_RED));
-                if (ImGui::Button(fmt::format("Delete Model##{}", name).c_str())) {
+                if (ImGui::Button(fmt::format("Delete Asset##{}", name).c_str())) {
                     asset.markDelete();
                 }
                 ImGui::PopStyleColor();
@@ -135,8 +136,8 @@ void SwGui::initialize() {
 
         mSelectSkyboxFileBrowser.Display();
         if (mSelectSkyboxFileBrowser.HasSelected()) {
-            std::filesystem::path selectedSkyboxDir = mSelectSkyboxFileBrowser.GetSelected();
-            SwRenderer::sRendererContext.mScene->getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxDir);
+            std::filesystem::path selectedSkyboxFile = mSelectSkyboxFileBrowser.GetSelected();
+            SwRenderer::sRendererContext.mScene->getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxFile);
             mSelectSkyboxFileBrowser.ClearSelected();
         }
     };
@@ -157,7 +158,7 @@ void SwGui::initialize() {
         ImGui::Text("[Mouse Scroll] Control Camera Speed");
         ImGui::Text("[Left Click] Select / Deselect Object");
         ImGui::Text("[Right Click] Enter / Leave Window");
-        ImGui::Text("[Ctrl + I] Import Model");
+        ImGui::Text("[Ctrl + I] Import Asset");
         ImGui::Text("[T] Switch Transform Mode");
         ImGui::Text("[Del] Delete Clicked Instance");
     };

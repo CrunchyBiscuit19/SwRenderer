@@ -10,10 +10,10 @@
 
 class SwAsset {
 private:
-    static constexpr std::uint32_t NUM_MODEL_INSTANCES{1 << 6};
-    static constexpr std::uint32_t NUM_MODEL_MATERIALS{1 << 6};
-    static constexpr std::uint32_t NUM_MODEL_NODES{1 << 10};
-    static constexpr std::uint32_t NUM_MODEL_BOUNDS{1 << 10};
+    static constexpr std::uint32_t NUM_ASSET_INSTANCES{1 << 6};
+    static constexpr std::uint32_t NUM_ASSET_MATERIALS{1 << 6};
+    static constexpr std::uint32_t NUM_ASSET_NODES{1 << 10};
+    static constexpr std::uint32_t NUM_ASSET_BOUNDS{1 << 10};
 
     static std::uint32_t sLatestAssetId;
 

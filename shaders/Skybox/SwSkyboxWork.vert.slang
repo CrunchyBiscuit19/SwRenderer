@@ -1,9 +1,6 @@
 import SwSkybox;
 import SwCommon;
 
-[[vk::binding(0, 0)]]
-public uniform SamplerCube cubemap;
-
 [[vk::push_constant]]
 SwSkybox::WorkPC workPc;
 

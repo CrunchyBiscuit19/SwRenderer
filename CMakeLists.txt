@@ -174,7 +174,7 @@ target_precompile_headers(SwRenderer PUBLIC
 
 target_compile_definitions(SwRenderer PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)
 target_compile_definitions(SwRenderer PUBLIC LOGS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/logs/")
-target_compile_definitions(SwRenderer PUBLIC MODELS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/models/")
+target_compile_definitions(SwRenderer PUBLIC ASSETS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/assets/")
 target_compile_definitions(SwRenderer PUBLIC SKYBOXES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/skyboxes/")
 
 set(CMAKE_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")

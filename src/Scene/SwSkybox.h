@@ -15,7 +15,7 @@ namespace SwSkybox {
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
 static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.vert.spv"};
 static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.frag.spv"};
-static const std::filesystem::path SKYBOX_DEFAULT_DIRECTORY_PATH{std::filesystem::path(SKYBOXES_PATH) / "ocean/"};
+static const std::filesystem::path SKYBOX_DEFAULT_HDR_PATH{std::filesystem::path(SKYBOXES_PATH) / "autumn_hill_view_2k.hdr"};
 
 struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mWorkVertexBuffer;
@@ -25,7 +25,7 @@ struct WorkPC : SwPC<WorkPC> {
 };
 
 struct Resources {
-    SwColorImageCubemap mWorkImage;
+    SwColorImage2D mWorkImage;
 
     SwSampler mWorkSampler;
 
@@ -62,7 +62,7 @@ struct Resources {
 class System : public SwSystem {
 private:
     Resources mResources;
-    std::optional<std::filesystem::path> mLoadFromDir{std::nullopt};
+    std::optional<std::filesystem::path> mLoadFromFile{std::nullopt};
     bool mActive{false};
 
     void initializeResources() override;
@@ -74,7 +74,7 @@ public:
 
     inline void toggleActive() { mActive = !mActive; }
     inline bool isActive() const { return mActive; }
-    inline bool isDirSelected() const { return mLoadFromDir.has_value(); }
+    inline bool isFileSelected() const { return mLoadFromFile.has_value(); }
 
     void reinitializeOnUpdate(std::optional<std::filesystem::path>);
 

@@ -430,14 +430,24 @@ SwStagingBuffer SwImageFactory::sImageStagingBuffer;
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
 std::uint32_t SwImageFactory::getFormatTexelSize(vk::Format format) {
-    std::uint32_t bytesPerTexel = 0;
+    std::uint32_t bytesPerTexel = -1;
     switch (format) {
         case vk::Format::eR8G8B8A8Srgb:
         case vk::Format::eR8G8B8A8Unorm:
             bytesPerTexel = 4;
             break;
-        default:
+        case vk::Format::eR16G16B16A16Sfloat:
+            bytesPerTexel = 8;
             break;
+        case vk::Format::eR32G32B32Sfloat:
+            bytesPerTexel = 12;
+            break;
+        case vk::Format::eR32G32B32A32Sfloat:
+            bytesPerTexel = 16;
+            break;
+    }
+    if (bytesPerTexel == -1) {
+        throw std::runtime_error("Unsupported format for getFormatTexelSize");
     }
     return bytesPerTexel;
 }

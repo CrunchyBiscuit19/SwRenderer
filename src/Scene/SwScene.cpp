@@ -155,7 +155,7 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
             continue;
         }
 
-        auto fullPath = MODELS_PATH / path;
+        auto fullPath = ASSETS_PATH / path;
         SwAsset loadedAsset(fullPath);
         auto [it, inserted] = mAssets.try_emplace(loadedAsset.getId(), std::move(loadedAsset));
         if (inserted) {
@@ -524,7 +524,7 @@ void SwScene::draw() {
         mRenderGraph.addOutput(&mPick.getResources().mReadbackImage);
         mRenderGraph.addOutput(&mPick.getResources().mDepthImage);
     }
-    if (mSkybox.isActive() && mSkybox.isDirSelected()) {
+    if (mSkybox.isActive() && mSkybox.isFileSelected()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryOpaque]);

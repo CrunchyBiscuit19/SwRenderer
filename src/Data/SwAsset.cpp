@@ -88,22 +88,22 @@ void SwAsset::constructBuffers() {
     mMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        NUM_MODEL_MATERIALS * sizeof(SwMaterialConstants)
+        NUM_ASSET_MATERIALS * sizeof(SwMaterialConstants)
     );
     mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        NUM_MODEL_BOUNDS * sizeof(SwBounds)
+        NUM_ASSET_BOUNDS * sizeof(SwBounds)
     );
     mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        NUM_MODEL_NODES * sizeof(glm::mat4)
+        NUM_ASSET_NODES * sizeof(glm::mat4)
     );
     mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        NUM_MODEL_INSTANCES * sizeof(SwInstance::Data)
+        NUM_ASSET_INSTANCES * sizeof(SwInstance::Data)
     );
 };
 
