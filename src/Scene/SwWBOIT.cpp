@@ -56,7 +56,7 @@ void SwWBOIT::System::initializePasses() {
     // WBOIT Composite
     deps.mReadImages.emplace_back(&mResources.mAccumImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
     deps.mReadImages.emplace_back(&mResources.mRvlImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
     mScene.insertPass(SwPass::Type::WBOITComposite, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
@@ -94,8 +94,8 @@ void SwWBOIT::System::reInitializeOnResize() {
     );
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        mResources.mAccumImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
-        mResources.mRvlImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
+        mResources.mAccumImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        mResources.mRvlImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     });
 
     mResources.mWorkDescriptorSet.writeImage(

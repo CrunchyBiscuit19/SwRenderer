@@ -11,8 +11,16 @@ SwDependency::ImageDep::ImageDep(SwImage* image, vk::PipelineStageFlags2 stage, 
 
 const SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependency::ImageDepType type) {
     switch (type) {
-        case SwDependency::ImageDepType::ColorAttachmentWrite:
-            return {vk::PipelineStageFlagBits2::eColorAttachmentOutput, vk::AccessFlagBits2::eColorAttachmentWrite, vk::ImageLayout::eColorAttachmentOptimal};
+        case SwDependency::ImageDepType::ColorAttachmentReadWrite:
+            // Read is required as well as write: every color attachment in this engine is loaded (loadOp=eLoad)
+            // and many are blended (dstColorBlendFactor != eZero), both of which read the destination. Without
+            // eColorAttachmentRead in the barrier's dstAccessMask, a preceding clear/write is not guaranteed
+            // visible to the subsequent load/blend, producing stale-destination ghosting.
+            return {
+                vk::PipelineStageFlagBits2::eColorAttachmentOutput,
+                vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
+                vk::ImageLayout::eColorAttachmentOptimal
+            };
         case SwDependency::ImageDepType::DepthAttachmentWrite:
             return {
                 vk::PipelineStageFlagBits2::eEarlyFragmentTests | vk::PipelineStageFlagBits2::eLateFragmentTests,

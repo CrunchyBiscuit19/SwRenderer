@@ -68,7 +68,15 @@ void SwSwapchainImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags
 }
 
 void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) {
-    if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
+    static constexpr vk::AccessFlags2 kAnyWrite =
+        vk::AccessFlagBits2::eShaderWrite |
+        vk::AccessFlagBits2::eColorAttachmentWrite |
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
+        vk::AccessFlagBits2::eTransferWrite |
+        vk::AccessFlagBits2::eHostWrite |
+        vk::AccessFlagBits2::eMemoryWrite |
+        vk::AccessFlagBits2::eShaderStorageWrite;
+    if (!(mCurrentAccess & kAnyWrite) && nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
 
@@ -151,7 +159,15 @@ void SwAllocatedImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags
 }
 
 void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) {
-    if (nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
+    static constexpr vk::AccessFlags2 kAnyWrite =
+        vk::AccessFlagBits2::eShaderWrite |
+        vk::AccessFlagBits2::eColorAttachmentWrite |
+        vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
+        vk::AccessFlagBits2::eTransferWrite |
+        vk::AccessFlagBits2::eHostWrite |
+        vk::AccessFlagBits2::eMemoryWrite |
+        vk::AccessFlagBits2::eShaderStorageWrite;
+    if (!(mCurrentAccess & kAnyWrite) && nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
 

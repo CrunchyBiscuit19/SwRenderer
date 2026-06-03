@@ -70,7 +70,7 @@ void SwPick::System::initializePasses() {
     SwDependency staticDeps;
 
     // Pick Draw
-    staticDeps.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentWrite);
+    staticDeps.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     staticDeps.mWriteImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     staticDeps.mReadImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
@@ -182,7 +182,7 @@ void SwPick::System::reInitializeOnResize() {
         SwImageFactory::createDepthImage2D(nullptr, SwSwapchain::DEPTH_FORMAT, imageExtent, vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        mResources.mReadbackImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentWrite);
+        mResources.mReadbackImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
         mResources.mDepthImage.emitTransition(cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     });
 

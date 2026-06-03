@@ -123,7 +123,7 @@ void SwSwapchain::onResizeInitialize() {
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment |
             vk::ImageUsageFlagBits::eStorage,
         false,
-        vk::ClearColorValue(.463f, .616f, .859f, 0.f)
+        DRAW_CLEAR_VALUE
     );
     mDepthImage = SwImageFactory::createDepthImage2D(
         nullptr,

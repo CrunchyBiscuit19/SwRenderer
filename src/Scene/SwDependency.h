@@ -6,7 +6,7 @@ struct SwBuffer;
 struct SwDependency {
 public:
     enum class ImageDepType {
-        ColorAttachmentWrite,
+        ColorAttachmentReadWrite,
         DepthAttachmentWrite,
         DepthAttachmentReadWrite,
         ComputeShaderSampledRead,
