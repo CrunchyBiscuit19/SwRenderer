@@ -59,8 +59,8 @@ struct Resources {
     SwComputePipelineBundle mReadbackPipelineBundle;
     SwPipelineLayout mReadbackPipelineLayout;
 
-    ImGuizmo::OPERATION mImguizmoOperation;
-    SwInstance* mClickedInstance{nullptr};
+    ImGuizmo::OPERATION mImguizmoOperation{ImGuizmo::TRANSLATE};
+    SwInstance* mSelectedInstance{nullptr};
 };
 class System : public SwSystem, public SwSystem::Resizable {
 private:

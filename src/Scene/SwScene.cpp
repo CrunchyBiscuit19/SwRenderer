@@ -521,8 +521,6 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
-        mRenderGraph.addOutput(&mPick.getResources().mReadbackImage);
-        mRenderGraph.addOutput(&mPick.getResources().mDepthImage);
     }
     if (mSkybox.isActive() && mSkybox.isFileSelected()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);

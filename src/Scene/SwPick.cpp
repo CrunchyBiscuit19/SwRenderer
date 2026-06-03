@@ -1,10 +1,11 @@
 #include <Renderer/SwEvents.h>
-#include <Renderer/SwRenderer.h>
 #include <Renderer/SwImmSubmit.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwPick.h>
 #include <Scene/SwScene.h>
+#include <quill/LogMacros.h>
 
 #include <ranges>
 
@@ -12,14 +13,12 @@ SwPick::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwPick::System::initializeResources() {
     mResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
-        sizeof(SwPick::ReadbackData),
-        true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(SwPick::ReadbackData), true
     );
 
-    mResources.mReadbackDescriptorLayout =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
+    mResources.mReadbackDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        {{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute
+    );
     mResources.mReadbackDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mReadbackDescriptorLayout);
 
     mResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwPick::DrawPC::getRange());
@@ -58,8 +57,8 @@ void SwPick::System::initializeResources() {
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
-        if (keyState[SDL_SCANCODE_DELETE] && mResources.mClickedInstance != nullptr && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            mResources.mClickedInstance->markDelete();
+        if (keyState[SDL_SCANCODE_DELETE] && mResources.mSelectedInstance != nullptr && e.type == SDL_KEYDOWN && !e.key.repeat) {
+            mResources.mSelectedInstance->markDelete();
         }
     });
 
@@ -81,7 +80,8 @@ void SwPick::System::initializePasses() {
     mScene.insertPass(SwPass::Type::PickDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
         vk::RenderingAttachmentInfo depthAttachment = mResources.mDepthImage.generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
+        const vk::RenderingInfo renderInfo =
+            SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
 
         cmd.beginRendering(renderInfo);
 
@@ -117,6 +117,10 @@ void SwPick::System::initializePasses() {
         SwPass::Type::PickReadback,
         std::move(staticDeps),
         [&](vk::CommandBuffer cmd) {
+            glm::ivec2 mousePos;
+            SDL_GetMouseState(&mousePos.x, &mousePos.y);
+            mResources.mReadbackBuffer.copyFromUnchecked(glm::value_ptr(mousePos), sizeof(SwPick::ReadbackData::mCoords));
+
             cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getRawPipeline());
             cmd.bindDescriptorSets(
                 mResources.mReadbackPipelineBundle.getBindPoint(),
@@ -137,7 +141,7 @@ void SwPick::System::initializePasses() {
     // Pick Work
     staticDeps.mReadBuffers.emplace_back(&mResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead);
     mScene.insertPass(
-        SwPass::Type::PickReadback,
+        SwPass::Type::PickWork,
         std::move(staticDeps),
         [&](vk::CommandBuffer cmd) {
             glm::uvec2 read(0);
@@ -148,18 +152,18 @@ void SwPick::System::initializePasses() {
             );
 
             if (read.x == 0 || read.y == 0) {
-                mResources.mClickedInstance = nullptr;
+                mResources.mSelectedInstance = nullptr;
                 return;
             }
             std::uint32_t assetId = read.x - 1;
-            if (mScene.getAssets().contains(assetId)) {
-                mResources.mClickedInstance = nullptr;
+            if (!mScene.getAssets().contains(assetId)) {
+                mResources.mSelectedInstance = nullptr;
                 return;
             }
             SwAsset& selectedAsset = mScene.getAssets()[assetId];
 
             std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
-            mResources.mClickedInstance = &selectedAsset.getInstances()[localInstanceIndex];
+            mResources.mSelectedInstance = &selectedAsset.getInstances()[localInstanceIndex];
         },
         true
     );
@@ -232,7 +236,7 @@ void SwPick::System::changePickOperation() {
 }
 
 void SwPick::System::generatePickFrame() {
-    if (mResources.mClickedInstance == nullptr) return;
+    if (mResources.mSelectedInstance == nullptr) return;
 
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
@@ -246,20 +250,21 @@ void SwPick::System::generatePickFrame() {
     );
 
     ImGuizmo::Manipulate(
-        glm::value_ptr(mScene.getCamera().getPerspective().mView),
-        glm::value_ptr(mScene.getCamera().getPerspective().mProj),
+        glm::value_ptr(mScene.getCamera().getPerspective().getView()),
+        glm::value_ptr(mScene.getCamera().getPerspective().getProjGL()),
         mResources.mImguizmoOperation,
         ImGuizmo::WORLD,
-        glm::value_ptr(mResources.mClickedInstance->getData().mTransformMatrix)
+        glm::value_ptr(mResources.mSelectedInstance->getData().mTransformMatrix)
     );
 
     if (ImGuizmo::IsUsing()) {
-        mScene.getAsset(mResources.mClickedInstance->getAssetId()).setReloadInstancesFlag(true);
+        mScene.getAsset(mResources.mSelectedInstance->getAssetId()).setReloadInstancesFlag(true);
     }
 }
 
 bool SwPick::System::isPicked() {
     return (
-        (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK) && !SwRenderer::sRendererContext.mScene->getCamera().getRelativeMode() && !ImGui::GetIO().WantCaptureMouse
+        (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK) && !SwRenderer::sRendererContext.mScene->getCamera().getRelativeMode() &&
+        !ImGui::GetIO().WantCaptureMouse
     );
 }

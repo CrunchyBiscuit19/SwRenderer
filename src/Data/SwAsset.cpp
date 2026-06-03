@@ -138,6 +138,7 @@ void SwAsset::constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type t
     unsigned char* data = nullptr;
     vk::Extent3D imageSize{};
 
+    stbi_set_flip_vertically_on_load(false);
     std::visit(
         fastgltf::visitor{
             // Image stored outside of GLTF / GLB file.
@@ -247,9 +248,6 @@ void SwAsset::constructMaterials() {
                     tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : SwMaterialTexture::sDefaultWhiteTexture.getSampler();
                 return SwMaterialTexture(&image, &sampler);
             }
-            /*LOG_DEBUG(
-                SwRenderer::sRendererContext.mLogger->getQuillLoggerPtr(), "{} material {} {} using default.", mName, name, magic_enum::enum_name(texType).data()
-            );*/
             return SwMaterialTexture::retrieveDefaultWhiteTexture();
         };
 

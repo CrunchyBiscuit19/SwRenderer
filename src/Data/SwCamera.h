@@ -14,8 +14,17 @@ enum SwMovementMode {
 };
 
 struct SwPerspective {
+private:
     glm::mat4 mView;
-    glm::mat4 mProj;
+    glm::mat4 mProj;  // Vulkan-style: Y-flipped, reversed-Z
+
+public:
+    SwPerspective() = default;
+    SwPerspective(glm::mat4 view, glm::mat4 proj);
+
+    const glm::mat4& getView() const { return mView; }
+    const glm::mat4& getProjVk() const { return mProj; }
+    glm::mat4 getProjGL() const;
 };
 
 struct SwRendererContext;

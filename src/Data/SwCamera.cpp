@@ -4,6 +4,13 @@
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
 
+SwPerspective::SwPerspective(glm::mat4 view, glm::mat4 proj) : mView(std::move(view)), mProj(std::move(proj)) {}
+
+glm::mat4 SwPerspective::getProjGL() const {
+    glm::mat4 p = mProj;
+    p[1][1] *= -1;
+    return p;
+}
 
 SwCamera::SwCamera() {
     mVelocity = glm::vec3(0.f);
@@ -41,7 +48,6 @@ SwCamera::SwCamera() {
         mVelocity *= 0.1f;
     };
 }
-
 
 void SwCamera::initialize() {
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
@@ -138,12 +144,10 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
 }
 
 SwPerspective SwCamera::getPerspective() const {
-    SwPerspective perspective;
-    perspective.mView = getViewMatrix();
-    perspective.mProj =
-        glm::perspective(glm::radians(FOVY), SwRenderer::sRendererContext.mSwapchain->getAspectRatio(), FAR_PLANE, NEAR_PLANE);  // Reverse Z, so flip near and far planes
-    perspective.mProj[1][1] *= -1;                                                                                   // Flip Y for Vulkan
-    return perspective;
+    glm::mat4 view = getViewMatrix();
+    glm::mat4 proj = glm::perspective(glm::radians(FOVY), SwRenderer::sRendererContext.mSwapchain->getAspectRatio(), FAR_PLANE, NEAR_PLANE);
+    proj[1][1] *= -1;
+    return {view, proj};
 }
 
 void SwCamera::setRelativeMode(SDL_bool relativeMode) { mRelativeMode = relativeMode; }

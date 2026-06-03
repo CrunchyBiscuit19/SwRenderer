@@ -169,8 +169,8 @@ void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
 }   
 
 void SwAllocatedBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset) {
-    if (!(mFlags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)) {
-        throw std::runtime_error("copyFrom(ptr) requires VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT");
+    if (!(mFlags & (VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT))) {
+        throw std::runtime_error("copyFrom(ptr) requires host-accessible allocation");
     }
     ensureCapacity(cmd, internalOffset + size);
     std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
@@ -178,8 +178,8 @@ void SwAllocatedBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::ui
 }
 
 void SwAllocatedBuffer::copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset) {
-    if (!(mFlags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT)) {
-        throw std::runtime_error("copyFrom(ptr) requires VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT");
+    if (!(mFlags & (VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT))) {
+        throw std::runtime_error("copyFromUnchecked requires host-accessible allocation");
     }
     std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
     mCurrentStage = vk::PipelineStageFlagBits2::eHost;

@@ -111,9 +111,9 @@ void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path>
         return;
     }
 
-    int width = 0;
-    int height = 0;
-    int numChannels = 0;
+    std::int32_t width = 0;
+    std::int32_t height = 0;
+    std::int32_t numChannels = 0;
     stbi_set_flip_vertically_on_load(true);
     float* data = stbi_loadf(mLoadFromFile.value().string().c_str(), &width, &height, &numChannels, 4);
     if (!data || width == 0 || height == 0) {
