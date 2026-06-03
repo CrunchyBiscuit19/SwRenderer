@@ -38,7 +38,7 @@ SwMaterialResources::SwMaterialResources(
 
 void SwMaterialResources::init() {
     sMaterialResourcesDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eCombinedImageSampler, SwScene::SCENE_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
+        {{0, vk::DescriptorType::eCombinedImageSampler, SwScene::SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         true
     );

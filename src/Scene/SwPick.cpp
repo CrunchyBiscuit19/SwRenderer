@@ -100,7 +100,7 @@ void SwPick::System::initializePasses() {
                     0,
                     batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
                     0,
-                    SwScene::DRAW_MAX_RENDER_ITEMS,
+                    static_cast<std::uint32_t>(batch.getRenderItems().size()),
                     sizeof(SwRenderItem)
                 );
             }

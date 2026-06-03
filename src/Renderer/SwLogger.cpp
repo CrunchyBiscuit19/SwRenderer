@@ -365,13 +365,13 @@ VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
 
     switch (messageSeverity) {
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
-            LOG_ERROR(swLogger->getQuillLoggerPtr(), "{}", message);
+            LOG_ERROR(swLogger->getQuillPtr(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
-            LOG_WARNING(swLogger->getQuillLoggerPtr(), "{}", message);
+            LOG_WARNING(swLogger->getQuillPtr(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            LOG_TRACE_L3(swLogger->getQuillLoggerPtr(), "{}", message);
+            LOG_TRACE_L3(swLogger->getQuillPtr(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
         default:

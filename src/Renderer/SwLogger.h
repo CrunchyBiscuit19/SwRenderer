@@ -68,7 +68,7 @@ public:
 
     SwLogger();
 
-    inline quill::Logger* getQuillLoggerPtr() { return mLogger; }
+    inline quill::Logger* getQuillPtr() { return mLogger; }
     inline std::uint64_t getFrameNumber() const { return mFrameNumber ? *mFrameNumber : 0; }
     inline void setFrameNumber(const std::uint64_t* ptr) { mFrameNumber = ptr; }
 

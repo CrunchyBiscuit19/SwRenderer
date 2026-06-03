@@ -69,34 +69,34 @@ void SwScene::initializeMiscPasses() {
 
 void SwScene::initializeResources() {
     mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_VERTEX_BUFFER_SIZE, true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_VERTEX_BUFFER_SIZE, true
     );
 
     mSceneIndexBuffer =
-        SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INDEX_BUFFER_SIZE);
+        SwBufferFactory::createAllocatedBuffer(vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_INDEX_BUFFER_SIZE);
 
     mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_MATERIALS * sizeof(SwMaterialConstants), true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants), true
     );
 
     mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_NODES * sizeof(glm::mat4), true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_NODES * sizeof(glm::mat4), true
     );
 
     mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_INSTANCES * sizeof(SwInstance::Data), true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_INSTANCES * sizeof(SwInstance::Data), true
     );
 
     mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_BOUNDS * sizeof(SwBounds), true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
     );
 
     mSceneVisibleRenderInstancesInstanceIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
     );
 
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
-        SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
+        SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
 }
 
@@ -211,6 +211,12 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
                 batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy);
                 batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
+                LOG_DEBUG(
+                    SwRenderer::sRendererContext.mLogger->getQuillPtr(),
+                    "Current {} | Need {}",
+                    batch.getPostCullRenderItemsBuffer().getSize(),
+                    renderItemsCopy.size
+                );
                 batch.getPostCullRenderItemsBuffer().ensureCapacity(cmd, renderItemsCopy.size);  // At least as big as preCullRenderItemsBuffer
             });
         }

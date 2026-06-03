@@ -72,14 +72,14 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     data.loadFromFile(assetPath);
     auto type = fastgltf::determineGltfFileType(&data);
     if (type == fastgltf::GltfType::Invalid) {
-        LOG_ERROR(SwRenderer::sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to determine GLTF Container", mName);
+        LOG_ERROR(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{} Failed to determine GLTF Container", mName);
     }
     auto load = (type == fastgltf::GltfType::glTF) ? (parser.loadGLTF(&data, assetPath.parent_path(), gltfOptions))
                                                    : (parser.loadBinaryGLTF(&data, assetPath.parent_path(), gltfOptions));
     if (load) {
         gltf = std::move(load.get());
     } else {
-        LOG_ERROR(SwRenderer::sRendererContext.mLogger->getQuillLoggerPtr(), "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
+        LOG_ERROR(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{} Failed to load GLTF Asset: {}", mName, fastgltf::to_underlying(load.error()));
     }
     mRawAsset = std::move(gltf);
 }
