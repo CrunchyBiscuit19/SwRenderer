@@ -116,12 +116,12 @@ void SwScene::refreshDynamicDependencies() {
     dynamicDeps.clear();
 }
 
-void SwScene::refresh() {
-    refreshDynamicDependencies();
-}
+void SwScene::refresh() { refreshDynamicDependencies(); }
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
-    SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc);
+    SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(
+        commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc
+    );
 }
 
 SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
@@ -514,12 +514,10 @@ void SwScene::draw() {
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
-    if (!mCull.getFreeze()) {
-        mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
-        mRenderGraph.addPass(&mPasses[SwPass::Type::CullDepthPyramid]);
-        mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
-        mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
-    }
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullDepthPyramid]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
     if (mPick.isPicked()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);

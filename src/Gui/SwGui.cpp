@@ -129,9 +129,6 @@ void SwGui::initialize() {
                 SwRenderer::sRendererContext.mScene->getSkyboxSystem().toggleActive();
             }
         }
-        if (ImGui::CollapsingHeader("Culler", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Freeze Culling", SwRenderer::sRendererContext.mScene->getCullSystem().getFreezePtr());
-        }
         ImGui::Unindent();
 
         mSelectSkyboxFileBrowser.Display();
