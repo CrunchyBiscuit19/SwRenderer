@@ -198,6 +198,29 @@ void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFl
     mCurrentLayout = nextLayout;
 }
 
+void SwAllocatedImage::emitTransition(
+    vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout, std::uint32_t mipLevel
+) {
+    vk::ImageMemoryBarrier2 barrierInfo{};
+    barrierInfo.srcStageMask = mCurrentStage;
+    barrierInfo.srcAccessMask = mCurrentAccess;
+    barrierInfo.dstStageMask = nextStage;
+    barrierInfo.dstAccessMask = nextAccess;
+    barrierInfo.oldLayout = mCurrentLayout;
+    barrierInfo.newLayout = nextLayout;
+    barrierInfo.image = *mImage;
+    barrierInfo.subresourceRange = {mAspect, mipLevel, 1, 0, VK_REMAINING_ARRAY_LAYERS};
+    barrierInfo.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrierInfo.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+    vk::DependencyInfo depInfo{};
+    depInfo.pImageMemoryBarriers = &barrierInfo;
+    depInfo.imageMemoryBarrierCount = 1;
+    cmd.pipelineBarrier2(depInfo);
+    // mCurrentStage/Access/Layout track whole-image state set by the render graph and are
+    // not updated here — a per-mip transition does not change the overall image state.
+}
+
 void SwAllocatedImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) {
     vk::ImageBlit2 blitRegion{};
     blitRegion.pNext = nullptr;

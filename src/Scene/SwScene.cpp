@@ -53,6 +53,7 @@ void SwScene::initializeMiscPasses() {
     staticDeps.clear();
 
     // Gui
+    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::HostRead);
     mPasses[SwPass::Type::Gui] = SwPass(SwPass::Type::Gui, staticDeps, [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
             SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
@@ -513,10 +514,12 @@ void SwScene::draw() {
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullDepthPyramid]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
+    if (!mCull.getFreeze()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullDepthPyramid]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
+    }
     if (mPick.isPicked()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);

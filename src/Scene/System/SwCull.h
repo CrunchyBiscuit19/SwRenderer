@@ -4,6 +4,7 @@
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwPushConstant.h>
+#include <Resource/SwSampler.h>
 #include <Scene/SwSystem.h>
 #include <glm/glm.hpp>
 #include <filesystem>
@@ -52,7 +53,7 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneVisibleRenderInstancesInstanceIndexBuffer;
     std::uint32_t mRenderInstancesLimit;
     glm::vec2 mDrawExtents;
-    glm::vec2 mDepthPyramidExtents;
+    glm::uvec2 mDepthPyramidExtents;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -79,6 +80,7 @@ struct Resources {
     SwPipelineLayout mDepthPyramidPipelineLayout;
     SwDescriptorSet mDepthPyramidDescriptorSet;
     SwDescriptorLayout mDepthPyramidDescriptorLayout;
+    SwSampler mDepthPyramidMinSampler;
     SwColorImage2D mDepthPyramidImage;
     std::uint32_t mDepthPyramidLevels{0};
     vk::Extent3D mDepthPyramidExtent;
@@ -106,6 +108,7 @@ private:
 public:
     System(SwScene& scene);
 
+    inline bool getFreeze() { return mFreeze; }
     inline bool* getFreezePtr() { return &mFreeze; }
 
     void refreshDynamicDependencies() override;

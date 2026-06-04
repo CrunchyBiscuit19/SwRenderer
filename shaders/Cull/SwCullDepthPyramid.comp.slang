@@ -6,73 +6,49 @@ public uniform Texture2D<float> depthFullImage;
 public uniform Texture2D<float> depthPyramidRead[];
 [[vk::binding(2, 0)]]
 public uniform RWTexture2D<float> depthPyramidWrite[];
+[[vk::binding(3, 0)]]
+public uniform SamplerState minSampler;
 
 [[vk::push_constant]]
 SwCull::DepthPyramidPC depthPyramidPc;
 
-float findMinDepth(uint2 readPos, uint2 readExtent, Texture2D<float> readImage) {
-    // Calculate texel positions surrounding the current read position
-    uint3 topLeft = uint3(readPos, 0) + uint3(-1, 1, 0);
-    uint3 topCenter = uint3(readPos, 0) + uint3(0, 1, 0);
-    uint3 topRight = uint3(readPos, 0) + uint3(1, 1, 0);
-    uint3 midLeft = uint3(readPos, 0) + uint3(1, 0, 0);
-    uint3 midCentre = uint3(readPos, 0) + uint3(0, 0, 0);
-    uint3 midRight = uint3(readPos, 0) + uint3(-1, 0, 0);
-    uint3 bottomLeft = uint3(readPos, 0) + uint3(1, -1, 0);
-    uint3 bottomCenter = uint3(readPos, 0) + uint3(0, -1, 0);
-    uint3 bottomRight = uint3(readPos, 0) + uint3(-1, -1, 0);
-
-    // Read Level Extent is POT
-    float minDepth =
-        min(min(readImage.Load(topLeft), readImage.Load(topCenter)),
-                         min(readImage.Load(midLeft), readImage.Load(midCentre)));
-
-    // Read Level Extent has odd width (read extra column)
-    if (readExtent.x % 2 != 0) {
-        minDepth = min(minDepth, min(readImage.Load(topRight), readImage.Load(midRight)));
-    }
-    // Read Level Extent has odd height (read extra row)
-    if (readExtent.y % 2 != 0) {
-        minDepth = min(minDepth, min(readImage.Load(bottomLeft), readImage.Load(bottomCenter)));
-    }
-    // Read Level Extent has odd width and odd height (read extra corner)
-    if (readExtent.x % 2 != 0 && readExtent.y % 2 != 0) {
-        minDepth = min(minDepth, readImage.Load(bottomRight));
-    }
-
-    return minDepth;
-}
-
 [numthreads(SwCull::MAX_2D_WORKGROUP_THREADS, SwCull::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(SwCull::CSInput in) {
-    // Calculate final writing position
-    uint readLevel = depthPyramidPc.mLevel;
-    uint writeLevel = depthPyramidPc.mLevel + 1;
-    uint2 readPos = in.mDispatchThreadID.xy;
-    uint2 writePos;
-    uint2 readExtent;
-    if (depthPyramidPc.mReadFromFull) {
-        writePos = uint2(depthPyramidPc.mDepthFullRatio * readPos);
-        readExtent = depthPyramidPc.mDepthFullExtent;
-    } else {
-        writePos = uint2(readPos.x >> 1, readPos.y >> 1);
-        readExtent = uint2(depthPyramidPc.mDepthPyramidExtent.x >> readLevel, depthPyramidPc.mDepthPyramidExtent.y >> readLevel);
-    }
-    writePos.x = max(1, writePos.x);
-    writePos.y = max(1, writePos.y);
+    uint2 writePos = in.mDispatchThreadID.xy;
 
-    // Get minimum depth to write
-    float minDepth;
     if (depthPyramidPc.mReadFromFull) {
-        minDepth = findMinDepth(readPos, readExtent, depthFullImage);
-    } else {
-        minDepth = findMinDepth(readPos, readExtent, depthPyramidRead[readLevel]);
-    }
+        // Dispatched at pyramid level 0 size. Each destination texel covers 1-2 full-depth
+        // texels per axis (pyramidExtent = previousPow2(depthExtent) so invRatio < 2).
+        // A min-reduction sampler would not cover all source texels reliably at non-2:1
+        // ratios, so the source region is sampled explicitly.
+        if (any(writePos >= depthPyramidPc.mDepthPyramidExtent)) return;
 
-    // Write into next level
-    if (depthPyramidPc.mReadFromFull) {
+        float2 invRatio = float2(depthPyramidPc.mDepthFullExtent) / float2(depthPyramidPc.mDepthPyramidExtent);
+        uint2 srcMin = uint2(float2(writePos) * invRatio);
+        uint2 srcMax = min(uint2(float2(writePos + 1u) * invRatio), depthPyramidPc.mDepthFullExtent - 1u);
+
+        float minDepth = 1.0f;
+        for (uint sy = srcMin.y; sy <= srcMax.y; sy++) {
+            for (uint sx = srcMin.x; sx <= srcMax.x; sx++) {
+                minDepth = min(minDepth, depthFullImage.Load(uint3(sx, sy, 0)));
+            }
+        }
         depthPyramidWrite[0].Store(writePos, minDepth);
     } else {
+        // Dispatched at level (readLevel+1) size. The min-reduction sampler with bilinear
+        // filtering at the exact midpoint between each 2x2 source block produces the min
+        // of those four texels in a single tap, including correct clamp-to-edge at odd
+        // source dimensions.
+        uint readLevel = depthPyramidPc.mLevel;
+        uint writeLevel = readLevel + 1u;
+
+        uint2 writeLevelExtent = max(depthPyramidPc.mDepthPyramidExtent >> writeLevel, uint2(1u, 1u));
+        if (any(writePos >= writeLevelExtent)) return;
+
+        uint2 readExtent = max(depthPyramidPc.mDepthPyramidExtent >> readLevel, uint2(1u, 1u));
+        float2 uv = (float2(writePos) * 2.0f + 1.0f) / float2(readExtent);
+        float minDepth = depthPyramidRead[readLevel].SampleLevel(minSampler, uv, 0.0f);
+
         depthPyramidWrite[writeLevel].Store(writePos, minDepth);
     }
 }

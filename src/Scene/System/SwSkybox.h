@@ -15,7 +15,7 @@ namespace SwSkybox {
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
 static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.vert.spv"};
 static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.frag.spv"};
-static const std::filesystem::path SKYBOX_DEFAULT_HDR_PATH{std::filesystem::path(SKYBOXES_PATH) / "autumn_hill_view_2k.hdr"};
+static const std::filesystem::path SKYBOX_DEFAULT_HDR_PATH{std::filesystem::path(SKYBOXES_PATH) / "AutumnHillView2k.hdr"};
 
 struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mWorkVertexBuffer;
@@ -63,7 +63,7 @@ class System : public SwSystem {
 private:
     Resources mResources;
     std::optional<std::filesystem::path> mLoadFromFile{std::nullopt};
-    bool mActive{false};
+    bool mActive{true};
 
     void initializeResources() override;
     void initializePasses() override;

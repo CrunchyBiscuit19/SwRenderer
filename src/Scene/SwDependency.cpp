@@ -81,6 +81,8 @@ const SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDependency:
             return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite};
         case SwDependency::BufferDepType::HostWrite:
             return {vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostWrite};
+        case SwDependency::BufferDepType::HostRead:
+            return {vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead};
     }
     std::unreachable();
 }

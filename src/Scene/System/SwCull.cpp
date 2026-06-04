@@ -22,9 +22,21 @@ void SwCull::System::initializeResources() {
     mResources.mDepthPyramidDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eSampledImage, 1},
          {1, vk::DescriptorType::eSampledImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
-         {2, vk::DescriptorType::eStorageImage, CULL_MAX_DEPTH_PYRAMID_LEVELS}},
+         {2, vk::DescriptorType::eStorageImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
+         {3, vk::DescriptorType::eSampler, 1}},
         vk::ShaderStageFlagBits::eCompute
     );
+
+    vk::SamplerReductionModeCreateInfo reductionInfo{vk::SamplerReductionMode::eMin};
+    vk::SamplerCreateInfo minSamplerInfo{};
+    minSamplerInfo.setPNext(&reductionInfo);
+    minSamplerInfo.setMagFilter(vk::Filter::eLinear);
+    minSamplerInfo.setMinFilter(vk::Filter::eLinear);
+    minSamplerInfo.setMipmapMode(vk::SamplerMipmapMode::eNearest);
+    minSamplerInfo.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
+    minSamplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+    minSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
+    mResources.mDepthPyramidMinSampler = SwSamplerFactory::createSampler(minSamplerInfo);
 
     mResources.mDepthPyramidDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mDepthPyramidDescriptorLayout);
 
@@ -105,10 +117,11 @@ void SwCull::System::initializePasses() {
             mResources.mDepthPyramidPipelineBundle.getRawLayout(), SwCull::DepthPyramidPC::sStages, 0, mResources.mDepthPyramidPushConstants
         );
         cmd.dispatch(
-            SwHelper::fastDivCeil(SwRenderer::sRendererContext.mSwapchain->getDepthImage().getExtent().width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(SwRenderer::sRendererContext.mSwapchain->getDepthImage().getExtent().height, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(mResources.mDepthPyramidExtent.width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(mResources.mDepthPyramidExtent.height, SwRenderer::MAX_2D_WORKGROUP_THREADS),
             1
         );
+        mResources.mDepthPyramidImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, 0);
         mResources.mDepthPyramidPushConstants.mReadFromFull = false;
         for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
             cmd.bindDescriptorSets(
@@ -122,11 +135,12 @@ void SwCull::System::initializePasses() {
             cmd.pushConstants<SwCull::DepthPyramidPC>(
                 mResources.mDepthPyramidPipelineBundle.getRawLayout(), SwCull::DepthPyramidPC::sStages, 0, mResources.mDepthPyramidPushConstants
             );
-            cmd.dispatch(
-                SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().width >> i, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-                SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().height >> i, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-                1
-            );
+            const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidExtent.width >> (i + 1));
+            const std::uint32_t dstH = std::max(1u, mResources.mDepthPyramidExtent.height >> (i + 1));
+            cmd.dispatch(SwHelper::fastDivCeil(dstW, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(dstH, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1);
+            if (i < mResources.mDepthPyramidLevels - 2) {
+                mResources.mDepthPyramidImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, i + 1);
+            }
         }
     });
     staticDeps.clear();
@@ -268,6 +282,7 @@ void SwCull::System::reInitializeOnResize() {
         mResources.mDepthPyramidDescriptorSet.writeImage(1, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
         mResources.mDepthPyramidDescriptorSet.writeImage(2, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
     }
+    mResources.mDepthPyramidDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getRawSampler());
     mResources.mDepthPyramidDescriptorSet.pushWrites();
 
     vk::Extent3D depthPyramidExtent = mResources.mDepthPyramidImage.getExtent();
@@ -283,5 +298,5 @@ void SwCull::System::reInitializeOnResize() {
 
     vk::Extent2D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent();
     mResources.mWorkPushConstants.mDrawExtents = glm::vec2(drawExtent.width, drawExtent.height);
-    mResources.mWorkPushConstants.mDepthPyramidExtents = glm::vec2(depthPyramidExtent.width, depthPyramidExtent.height);
+    mResources.mWorkPushConstants.mDepthPyramidExtents = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }

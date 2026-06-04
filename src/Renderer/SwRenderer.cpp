@@ -35,6 +35,7 @@ SwRenderer::SwRenderer()
               {vk::DescriptorType::eSampledImage, 1},
               {vk::DescriptorType::eStorageImage, 1},
               {vk::DescriptorType::eUniformBuffer, 1},
+              {vk::DescriptorType::eSampler, 1},
           },
           MAX_DESCRIPTOR_SETS
       ) {
