@@ -38,4 +38,10 @@ SwBatch::SwBatch(SwPrimitive& primitive) {
     mRInstsBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, RENDER_INSTANCES_INITIAL_BUFFER_SIZE, true
     );
+    mFrustumVisibleRInstsBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, RENDER_INSTANCES_INITIAL_BUFFER_SIZE, true
+    );
+    mFrustumVisibleRInstsCount = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, sizeof(uint32_t), true
+    );
 }

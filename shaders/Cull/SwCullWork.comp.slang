@@ -7,18 +7,21 @@ public uniform Texture2D<float> depthPyramidImage;
 [[vk::push_constant]]
 SwCull::WorkPC workPc;
 
-bool frustumCull(
-    SwCull::Plane* frustum, inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwBounds* bounds, SwInstance* currInstance, SwNodeTransform* nodeTransform
-) {
+// Transform all corners of the AABB to world space, in place. Both the frustum and
+// occlusion tests operate on world-space corners, so this is shared by both phases.
+void transformCornersToWorld(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwInstance* currInstance, SwNodeTransform* nodeTransform) {
+    for (uint j = 0; j < SwCull::NUM_AABB_CORNERS; j++) {
+        aabbCorners[j] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[j]));
+    }
+}
+
+bool frustumTest(SwCull::Plane* frustum, float4[SwCull::NUM_AABB_CORNERS] aabbCorners) {
     bool visible = true;
 
-    // Transform all corners of the AABB to world space
-    // Get the min and max corners of the AABB
-    aabbCorners[0] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[0]));
+    // Get the min and max corners of the (already world-space) AABB
     float4 aabbMin = aabbCorners[0];
     float4 aabbMax = aabbCorners[0];
     for (uint j = 1; j < SwCull::NUM_AABB_CORNERS; j++) {
-        aabbCorners[j] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[j]));
         aabbMin = min(aabbMin, aabbCorners[j]);
         aabbMax = max(aabbMax, aabbCorners[j]);
     }
@@ -113,9 +116,13 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
 
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
-    // Get thread ID as index into which render instance for culling check
+    // Get thread ID as index into which render instance for culling check.
+    // Frustum phase walks the full instance list (mRInstsBuffer / mRInstsLimit).
+    // Occlusion phase walks only the frustum survivors the frustum phase compacted into
+    // mRInstsBuffer; their count lives in mFrustumVisibleRInstsCount (GPU-side).
     uint rInstsIndex = in.mDispatchThreadID.x;
-    if (rInstsIndex >= workPc.mRInstsLimit)
+    uint rInstsLimit = (workPc.mPhase == SwCull::Phase::Occlusion) ? *workPc.mFrustumVisibleRInstsCount : workPc.mRInstsLimit;
+    if (rInstsIndex >= rInstsLimit)
         return;
 
     SwRenderInstance rInst = workPc.mRInstsBuffer[rInstsIndex];
@@ -137,12 +144,15 @@ void main(SwCull::CSInput in) {
         float4(bounds->mMax.x, bounds->mMax.y, bounds->mMax.z, 1.f),
     };
 
+    transformCornersToWorld(aabbCorners, instance, nodeTransform);
+
     bool visible = true;
     switch (workPc.mPhase) {
         case SwCull::Phase::Frustum:
-            visible = frustumCull(frustum, aabbCorners, bounds, instance, nodeTransform);
+            visible = frustumTest(frustum, aabbCorners);
             break;
         case SwCull::Phase::Occlusion:
+            // Survivors already passed the frustum test; only occlusion remains.
             visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
             break;
     }
@@ -156,7 +166,14 @@ void main(SwCull::CSInput in) {
     // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
     uint offsetVisibleRInstIndex;
-    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);  // Reset rItem->mRInstCount to 0 before occlusion?
+    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
     uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
-    workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;  // Reset this as well?
+    workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;
+
+    // Frustum phase compacts the surviving instances so the occlusion phase only walks those.
+    if (workPc.mPhase == SwCull::Phase::Frustum) {
+        uint survivorSlot;
+        InterlockedAdd(*workPc.mFrustumVisibleRInstsCount, 1, survivorSlot);
+        workPc.mFrustumVisibleRInstsBuffer[survivorSlot] = rInst;
+    }
 }

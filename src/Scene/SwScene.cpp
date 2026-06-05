@@ -233,6 +233,7 @@ void SwScene::regenerateRItemsAndRInsts() {
 
                 batch.getFrustumRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
                 batch.getOcclusionRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
+                batch.getFrustumVisibleRInstsBuffer().ensureCapacity(cmd, RInstsCopy.size);  // At least as big as mRInstsBuffer
             });
         }
     }

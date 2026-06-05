@@ -30,6 +30,8 @@ namespace SwCull {
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
         public uint* mSceneVisibleRInstsIndicesBuffer;
+        public SwRenderInstance* mFrustumVisibleRInstsBuffer;
+        public uint* mFrustumVisibleRInstsCount;
         public uint mRInstsLimit;
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;

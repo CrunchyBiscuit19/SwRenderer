@@ -43,6 +43,8 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneVisibleRInstsIndicesBuffer;
+    vk::DeviceAddress mFrustumVisibleRInstsBuffer;
+    vk::DeviceAddress mFrustumVisibleRInstsCount;
     std::uint32_t mRInstsLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;

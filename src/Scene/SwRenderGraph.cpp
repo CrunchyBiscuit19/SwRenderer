@@ -345,8 +345,8 @@ void SwRenderGraph::compile() {
 }
 
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
-    /*exportGraphviz(fmt::format("{}/{}", LOGS_PATH, "rendergraph.dot"));
-    LOG_DEBUG(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{}", getAllSortedPasses());*/
+    //exportGraphviz(fmt::format("{}/{}", LOGS_PATH, "rendergraph.dot"));
+    //LOG_DEBUG(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{}", getAllSortedPasses());
 
     for (SwPass* pass : mSortedPasses) {
         for (const SwDependency* deps : {&pass->getStaticDeps(), &pass->getDynamicDeps()}) {

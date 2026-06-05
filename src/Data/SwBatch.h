@@ -44,6 +44,8 @@ private:
     std::vector<SwRenderInstance> mRInsts;
     SwStagingBuffer mRInstsStaging;
     SwAllocatedBuffer mRInstsBuffer;
+    SwAllocatedBuffer mFrustumVisibleRInstsBuffer;  // Frustum-surviving render instances, compacted for the occlusion phase
+    SwAllocatedBuffer mFrustumVisibleRInstsCount;
 
 public:
     static std::uint32_t sFirstRInstOffset;
@@ -71,4 +73,6 @@ public:
     inline SwAllocatedBuffer& getFinalRItemsBuffer() { return mOcclusionRItemsBuffer; }  // Return whatever is the last one for future-proofing
     inline SwAllocatedBuffer& getFinalRItemsCount() { return mOcclusionRItemsCount; }  // Return whatever is the last one for future-proofing
     inline SwAllocatedBuffer& getRInstsBuffer() { return mRInstsBuffer; }
+    inline SwAllocatedBuffer& getFrustumVisibleRInstsBuffer() { return mFrustumVisibleRInstsBuffer; }
+    inline SwAllocatedBuffer& getFrustumVisibleRInstsCount() { return mFrustumVisibleRInstsCount; }
 };
