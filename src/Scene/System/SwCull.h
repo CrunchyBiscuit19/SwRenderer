@@ -24,6 +24,8 @@ struct Plane {
     Plane(glm::vec3 n, glm::vec3 p) : mNormal(glm::normalize(n)), mDistance(glm::dot(glm::normalize(n), p)) {}
 };
 
+enum class Phase { Frustum, Occlusion };
+
 struct ResetPC : public SwPC<ResetPC> {
     vk::DeviceAddress mRItemsBuffer;
     std::uint32_t mRItemsLimit;

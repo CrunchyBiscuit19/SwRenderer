@@ -7,6 +7,42 @@ public uniform Texture2D<float> depthPyramidImage;
 [[vk::push_constant]]
 SwCull::WorkPC workPc;
 
+bool frustumCull(
+    SwCull::Plane* frustum, inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwBounds* bounds, SwInstance* currInstance, SwNodeTransform* nodeTransform
+) {
+    bool visible = true;
+
+    // Transform all corners of the AABB to world space
+    // Get the min and max corners of the AABB
+    aabbCorners[0] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[0]));
+    float4 aabbMin = aabbCorners[0];
+    float4 aabbMax = aabbCorners[0];
+    for (uint j = 1; j < SwCull::NUM_AABB_CORNERS; j++) {
+        aabbCorners[j] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[j]));
+        aabbMin = min(aabbMin, aabbCorners[j]);
+        aabbMax = max(aabbMax, aabbCorners[j]);
+    }
+
+    // For each plane build the corner which will produce max result in point-normal plane equation
+    // Point-normal plane equation is positive if it's on the side of the plane the normal is pointing
+    // Frustum plane normals point inward => non-negative result means at least 1 corner is on correct side of the plane
+    // At least 1 corner on correct side of all 6 planes means render instance is within frustum and therefore visible
+    for (uint i = 0; i < SwCull::NUM_FRUSTUM_PLANES; i++) {
+        SwCull::Plane p = frustum[i];
+        float4 chosen;
+        chosen.x = (p.mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
+        chosen.y = (p.mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
+        chosen.z = (p.mNormal.z >= 0) ? aabbMax.z : aabbMin.z;
+        chosen.w = 1.0;
+        float result = dot(p.mNormal, chosen.xyz) - p.mDistance;
+        if (result < 0) {
+            visible = false;
+            break;
+        }
+    }
+    return visible;
+}
+
 bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
@@ -85,6 +121,10 @@ void main(SwCull::CSInput in) {
     SwRenderInstance rInst = workPc.mRInstsBuffer[rInstsIndex];
     SwRenderItem* rItem = &workPc.mRItemsBuffer[rInst.mRItemIndex];
 
+    SwBounds* bounds = &workPc.mSceneBoundsBuffer[rItem->mBoundsIndex];
+    SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rItem->mNodeTransformIndex];
+    SwInstance* instance = &workPc.mSceneInstancesBuffer[rInst.mSceneInstanceIndex];
+    SwCull::Plane* frustum = workPc.mFrustumBuffer;
     SwPerspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
@@ -97,18 +137,26 @@ void main(SwCull::CSInput in) {
         float4(bounds->mMax.x, bounds->mMax.y, bounds->mMax.z, 1.f),
     };
 
-    bool visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
+    bool visible = true;
+    switch (workPc.mPhase) {
+        case SwCull::Phase::Frustum:
+            visible = frustumCull(frustum, aabbCorners, bounds, instance, nodeTransform);
+            break;
+        case SwCull::Phase::Occlusion:
+            visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
+            break;
+    }
 
     if (!visible)
         return;
     uint _;
-    InterlockedAdd(*workPc.mRInstsCount, 1, _);
+    InterlockedAdd(*workPc.mRInstsCount, 1, _);  // CAUTION * or [0]
 
     // Write the indices of visible render instances to the visible instances indices buffer
     // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
     uint offsetVisibleRInstIndex;
-    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
+    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);  // Reset rItem->mRInstCount to 0 before occlusion?
     uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
-    workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;
+    workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;  // Reset this as well?
 }

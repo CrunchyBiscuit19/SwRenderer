@@ -93,12 +93,12 @@ void SwPick::System::initializePasses() {
                 if (batch.getRItems().empty()) {
                     continue;
                 }
-                mResources.mDrawPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
+                mResources.mDrawPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
                 cmd.drawIndexedIndirectCount(
-                    batch.getFrustumRItemsBuffer().getRawBuffer(),
+                    batch.getFinalRItemsBuffer().getRawBuffer(),
                     0,
-                    batch.getFrustumRItemsCount().getRawBuffer(),
+                    batch.getFinalRItemsCount().getRawBuffer(),
                     0,
                     static_cast<std::uint32_t>(batch.getRItems().size()),
                     sizeof(SwRenderItem)
@@ -203,7 +203,7 @@ void SwPick::System::refreshDynamicDependencies() {
     );
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.mPasses[SwPass::Type::PickDraw].setDynamicDeps(std::move(dynamicDeps));

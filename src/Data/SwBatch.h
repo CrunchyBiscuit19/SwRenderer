@@ -7,12 +7,12 @@
 
 struct SwPrimitive;
 
-struct SwRenderItem { 
+struct SwRenderItem {
     std::uint32_t mIndexCount;
-    std::uint32_t mRInstCount; 
+    std::uint32_t mRInstCount;
     std::uint32_t mFirstIndex;
     std::uint32_t mVertexOffset;
-    std::uint32_t mFirstRInst; 
+    std::uint32_t mFirstRInst;
     std::uint32_t mMaterialIndex;
     std::uint32_t mNodeTransformIndex;
     std::uint32_t mAssetIndex;
@@ -20,7 +20,7 @@ struct SwRenderItem {
     std::uint32_t mBoundsIndex;
 };
 
-struct SwRenderInstance { 
+struct SwRenderInstance {
     std::uint32_t mRItemIndex;  // rename to: mRItemIndex
     std::uint32_t mSceneInstanceIndex;
 };
@@ -32,13 +32,13 @@ private:
 
     SwGraphicsPipelineBundle* mGraphicsPipelineBundle{nullptr};
 
-    std::vector<SwRenderItem> mRItems;          
-    SwStagingBuffer mRItemsStaging;       
-    SwAllocatedBuffer mInitialRItemsBuffer;     
-    SwAllocatedBuffer mFrustumRItemsBuffer;     
-    SwAllocatedBuffer mFrustumRItemsCount;      
-    SwAllocatedBuffer mOcclusionRItemsBuffer;   
-    SwAllocatedBuffer mOcclusionRItemsCount;      
+    std::vector<SwRenderItem> mRItems;
+    SwStagingBuffer mRItemsStaging;
+    SwAllocatedBuffer mInitialRItemsBuffer;
+    SwAllocatedBuffer mFrustumRItemsBuffer;
+    SwAllocatedBuffer mFrustumRItemsCount;
+    SwAllocatedBuffer mOcclusionRItemsBuffer;
+    SwAllocatedBuffer mOcclusionRItemsCount;
 
     std::vector<SwRenderInstance> mRInsts;
     SwStagingBuffer mRInstsStaging;
@@ -49,7 +49,7 @@ public:
 
     SwBatch() = default;
     SwBatch(SwPrimitive& primitive);
-    
+
     SwBatch(SwBatch&&) noexcept = default;
     SwBatch& operator=(SwBatch&&) noexcept = default;
 
@@ -57,14 +57,16 @@ public:
     SwBatch& operator=(const SwBatch&) = delete;
 
     inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return *mGraphicsPipelineBundle; }
-    inline std::vector<SwRenderItem>& getRItems() { return mRItems; }                     
-    inline std::vector<SwRenderInstance>& getRInsts() { return mRInsts; }         
-    inline SwStagingBuffer& getRItemsStaging() { return mRItemsStaging; }     
-    inline SwStagingBuffer& getRInstsStaging() { return mRInstsStaging; } 
-    inline SwAllocatedBuffer& getInitialRItemsBuffer() { return mInitialRItemsBuffer; }   
-    inline SwAllocatedBuffer& getFrustumRItemsBuffer() { return mFrustumRItemsBuffer; } 
-    inline SwAllocatedBuffer& getFrustumRItemsCount() { return mFrustumRItemsCount; } 
+    inline std::vector<SwRenderItem>& getRItems() { return mRItems; }
+    inline std::vector<SwRenderInstance>& getRInsts() { return mRInsts; }
+    inline SwStagingBuffer& getRItemsStaging() { return mRItemsStaging; }
+    inline SwStagingBuffer& getRInstsStaging() { return mRInstsStaging; }
+    inline SwAllocatedBuffer& getInitialRItemsBuffer() { return mInitialRItemsBuffer; }
+    inline SwAllocatedBuffer& getFrustumRItemsBuffer() { return mFrustumRItemsBuffer; }
+    inline SwAllocatedBuffer& getFrustumRItemsCount() { return mFrustumRItemsCount; }
     inline SwAllocatedBuffer& getOcclusionRItemsBuffer() { return mOcclusionRItemsBuffer; }
-    inline SwAllocatedBuffer& getOcclusionRItemsCount() { return mOcclusionRItemsCount; } 
-    inline SwAllocatedBuffer& getRInstsBuffer() { return mRInstsBuffer; }         
+    inline SwAllocatedBuffer& getOcclusionRItemsCount() { return mOcclusionRItemsCount; }
+    inline SwAllocatedBuffer& getFinalRItemsBuffer() { return mOcclusionRItemsBuffer; }  // Return whatever is the last one for future-proofing
+    inline SwAllocatedBuffer& getFinalRItemsCount() { return mOcclusionRItemsCount; }  // Return whatever is the last one for future-proofing
+    inline SwAllocatedBuffer& getRInstsBuffer() { return mRInstsBuffer; }
 };

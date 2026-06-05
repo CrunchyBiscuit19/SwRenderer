@@ -13,6 +13,8 @@ namespace SwCull {
         public float mDistance;
     }
 
+    public enum Phase { Frustum, Occlusion };
+
     public struct ResetPC {
         public SwRenderItem* mRItemsBuffer;
         public uint mRItemsLimit;
@@ -31,6 +33,7 @@ namespace SwCull {
         public uint mRInstsLimit;
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;
+        public Phase mPhase;
     };
 
     public struct CompactPC {

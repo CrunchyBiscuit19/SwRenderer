@@ -122,14 +122,14 @@ void SwGeometry::System::initializePasses() {
                     mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
                     nullptr
                 );
-                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
                 cmd.drawIndexedIndirectCount(
-                    batch.getFrustumRItemsBuffer().getRawBuffer(),
+                    batch.getFinalRItemsBuffer().getRawBuffer(),
                     0,
-                    batch.getFrustumRItemsCount().getRawBuffer(),
+                    batch.getFinalRItemsCount().getRawBuffer(),
                     0,
                     static_cast<std::uint32_t>(batch.getRItems().size()),
                     sizeof(SwRenderItem)
@@ -154,14 +154,6 @@ void SwGeometry::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    for (auto& batchType : mScene.getBatchTypes()) {
-        if (batchType.first != SwMaterial::Type::Transparent) {
-            continue;
-        }
-        for (auto& batch : batchType.second | std::views::values) {
-            staticDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
-    }
     mScene.insertPass(SwPass::Type::GeometryTransparent, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
             SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
@@ -189,14 +181,14 @@ void SwGeometry::System::initializePasses() {
                     mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
                     nullptr
                 );
-                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
                 cmd.drawIndexedIndirectCount(
-                    batch.getFrustumRItemsBuffer().getRawBuffer(),
+                    batch.getFinalRItemsBuffer().getRawBuffer(),
                     0,
-                    batch.getFrustumRItemsCount().getRawBuffer(),
+                    batch.getFinalRItemsCount().getRawBuffer(),
                     0,
                     static_cast<std::uint32_t>(batch.getRItems().size()),
                     sizeof(SwRenderItem)
@@ -231,7 +223,7 @@ void SwGeometry::System::refreshDynamicDependencies() {
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) continue;
         for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.mPasses[SwPass::Type::GeometryOpaque].setDynamicDeps(std::move(dynamicDeps));
@@ -242,7 +234,7 @@ void SwGeometry::System::refreshDynamicDependencies() {
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Transparent) continue;
         for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.mPasses[SwPass::Type::GeometryTransparent].setDynamicDeps(std::move(dynamicDeps));
