@@ -7,7 +7,7 @@ namespace SwPick {
         public SwVertex* mSceneVertexBuffer;
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
-        public uint* mSceneVisibleRenderInstancesInstanceIndexBuffer;
+        public uint* mSceneVisibleRenderInstancesIndicesBuffer;
         public SwRenderItem *mPostCullRenderItemsBuffer;
         public SwPerFrameData *mPerFrameBuffer;
     };

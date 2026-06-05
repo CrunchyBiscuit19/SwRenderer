@@ -12,10 +12,14 @@ class SwPass {
 public:
     enum class Type {
         ClearImages,
-        CullReset,
-        CullDepthPyramid,
-        CullWork,
-        CullCompact,
+        CullResetFrustum,
+        CullWorkFrustum,
+        CullCompactFrustum,
+        GeometryDepthPrePass,
+        CullPrepOcclusion,
+        CullResetOcclusion,
+        CullWorkOcclusion,
+        CullCompactOcclusion,
         PickDraw,
         PickReadback,
         PickWork,

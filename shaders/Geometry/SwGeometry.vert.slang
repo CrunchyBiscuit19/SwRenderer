@@ -15,8 +15,7 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
 
     SwRenderItem renderItem = workPc.mPostCullRenderItemsBuffer[in.mDrawIndex];
 
-    uint firstRenderInstance = renderItem.mFirstRenderInstance;
-    uint sceneInstanceIndex = workPc.mSceneVisibleRenderInstancesInstanceIndexBuffer[in.mInstanceIndex];
+    uint sceneInstanceIndex = workPc.mSceneVisibleRenderInstancesIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = workPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
 
     uint sceneNodeTransformIndex = workPc.mPostCullRenderItemsBuffer[in.mDrawIndex].mNodeTransformIndex;

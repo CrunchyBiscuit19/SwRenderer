@@ -54,7 +54,7 @@ std::uint32_t SwMaterial::sLatestMaterialId{0};
 std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> SwMaterial::sMaterialPipelineBundles{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
 SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
-const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWork.vert.spv"};
+const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometry.vert.spv"};
 SwShader SwMaterial::sVertexShader;
 const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkOpaque.frag.spv"};
 SwShader SwMaterial::sOpaqueFragmentShader;
@@ -96,10 +96,6 @@ void SwMaterial::init() {
 
 void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
     vk::CullModeFlags cullMode = materialPipelineOptions.doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack;
-    bool opaque = (materialPipelineOptions.alphaMode != fastgltf::AlphaMode::Blend);
-
-    SwShader& vertexShader = sVertexShader;
-    SwShader& fragShader = opaque ? sOpaqueFragmentShader : sTransparentFragmentShader;
 
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.colorWriteMask =
@@ -128,28 +124,46 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
     rvlBlendState.alphaBlendOp = vk::BlendOp::eAdd;
 
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions graphicsPipelineOptions;
-    graphicsPipelineOptions.mVertexShader = vertexShader.getRawModule();
-    graphicsPipelineOptions.mFragmentShader = fragShader.getRawModule();
-    graphicsPipelineOptions.mLayout = opaque ? sOpaquePipelineLayout.getRawLayout() : sTransparentPipelineLayout.getRawLayout();
+    graphicsPipelineOptions.mVertexShader = sVertexShader.getRawModule();
     graphicsPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     graphicsPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     graphicsPipelineOptions.mCullMode = cullMode;
     graphicsPipelineOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
     graphicsPipelineOptions.mMultisamplingEnabled = false;
     graphicsPipelineOptions.mSampleShadingEnabled = false;
-    if (opaque) {
-        graphicsPipelineOptions.mColorAttachments =
-            std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
-    } else {
-        graphicsPipelineOptions.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{
-            {SwSwapchain::DRAW_FORMAT, accumBlendState},
-            {SwWBOIT::RVL_FORMAT, rvlBlendState},
-        };
-    }
     graphicsPipelineOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;
     graphicsPipelineOptions.mDepthTestEnabled = true;
-    graphicsPipelineOptions.mDepthWriteEnabled = opaque;
-    graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+    switch (materialPipelineOptions.alphaMode) {
+        case fastgltf::AlphaMode::Opaque:
+            // Depth pre-pass already wrote depth; test for exact match, no re-write.
+            graphicsPipelineOptions.mFragmentShader = sOpaqueFragmentShader.getRawModule();
+            graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getRawLayout();
+            graphicsPipelineOptions.mColorAttachments =
+                std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
+            graphicsPipelineOptions.mDepthWriteEnabled = false;
+            graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eEqual;
+            break;
+        case fastgltf::AlphaMode::Mask:
+            // Skipped by depth pre-pass; write depth normally with Reverse-Z test.
+            graphicsPipelineOptions.mFragmentShader = sOpaqueFragmentShader.getRawModule();
+            graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getRawLayout();
+            graphicsPipelineOptions.mColorAttachments =
+                std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
+            graphicsPipelineOptions.mDepthWriteEnabled = true;
+            graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+            break;
+        case fastgltf::AlphaMode::Blend:
+            // Tests against pre-pass depth for occlusion; never writes depth.
+            graphicsPipelineOptions.mFragmentShader = sTransparentFragmentShader.getRawModule();
+            graphicsPipelineOptions.mLayout = sTransparentPipelineLayout.getRawLayout();
+            graphicsPipelineOptions.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{
+                {SwSwapchain::DRAW_FORMAT, accumBlendState},
+                {SwWBOIT::RVL_FORMAT, rvlBlendState},
+            };
+            graphicsPipelineOptions.mDepthWriteEnabled = false;
+            graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+            break;
+    }
 
     auto [it, _] =
         sMaterialPipelineBundles.try_emplace(materialPipelineOptions, std::move(SwGraphicsPipelineFactory::createGraphicsPipeline(graphicsPipelineOptions)));

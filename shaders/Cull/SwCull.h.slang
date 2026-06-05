@@ -14,20 +14,12 @@ namespace SwCull {
     }
 
     public struct ResetPC {
-        public SwRenderItem* mPreCullRenderItemsBuffer;
-        public uint mPreCullRenderItemsLimit;
-    };
-
-    public struct DepthPyramidPC {
-        public uint2 mDepthPyramidExtent;
-        public uint2 mDepthFullExtent;
-        public float2 mDepthFullRatio;
-        public uint mLevel;
-        public bool mReadFromFull;
+        public SwRenderItem* mRenderItemsBuffer;
+        public uint mRenderItemsLimit;
     };
 
     public struct WorkPC {
-        public SwRenderItem* mPreCullRenderItemsBuffer;
+        public SwRenderItem* mRenderItemsBuffer;
         public SwRenderInstance* mRenderInstancesBuffer;
         public uint* mRenderInstancesCountBuffer;
         public Plane* mFrustumBuffer;
@@ -35,17 +27,25 @@ namespace SwCull {
         public SwBounds* mSceneBoundsBuffer;
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
-        public uint* mSceneVisibleRenderInstancesInstanceIndexBuffer;
+        public uint* mSceneVisibleRenderInstancesIndicesBuffer;
         public uint mRenderInstancesLimit;
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;
     };
 
     public struct CompactPC {
-        public SwRenderItem* mPreCullRenderItemsBuffer;
-        public SwRenderItem* mPostCullRenderItemsBuffer;
-        public uint* mPostCullRenderItemsCountBuffer;
-        public uint mPreCullRenderItemsLimit;
+        public SwRenderItem* mPreRenderItemsBuffer;
+        public SwRenderItem* mPostRenderItemsBuffer;
+        public uint* mPostRenderItemsCountBuffer;
+        public uint mPreRenderItemsLimit;
+    };
+
+    public struct PrepOcclusionPC {
+        public uint2 mDepthPyramidExtent;
+        public uint2 mDepthFullExtent;
+        public float2 mDepthFullRatio;
+        public uint mLevel;
+        public bool mReadFromFull;
     };
 
     public struct CSInput {

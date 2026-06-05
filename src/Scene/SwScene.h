@@ -55,7 +55,7 @@ private:
     SwAllocatedBuffer mSceneNodeTransformsBuffer;
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
-    SwAllocatedBuffer mSceneVisibleRenderInstancesInstanceIndexBuffer;
+    SwAllocatedBuffer mSceneVisibleRenderInstancesIndicesBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -99,7 +99,7 @@ public:
     inline SwAllocatedBuffer& getSceneNodeTransformsBuffer() { return mSceneNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
-    inline SwAllocatedBuffer& getSceneVisibleRenderInstancesInstanceIndexBuffer() { return mSceneVisibleRenderInstancesInstanceIndexBuffer; }
+    inline SwAllocatedBuffer& getSceneVisibleRenderInstancesIndicesBuffer() { return mSceneVisibleRenderInstancesIndicesBuffer; }
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
     inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }

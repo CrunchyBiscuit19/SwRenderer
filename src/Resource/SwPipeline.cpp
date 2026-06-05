@@ -39,9 +39,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
     dynamicInfo.dynamicStateCount = state.size();
 
     vk::PipelineVertexInputStateCreateInfo pipelineVertexStateCreateInfo;
-
     std::vector<vk::PipelineShaderStageCreateInfo> pipelineShaderStageCreateInfos;
-    std::uint32_t numStages = MIN_NUM_SHADER_STAGES;
     vk::PipelineInputAssemblyStateCreateInfo pipelineInputAssemblyStateCreateInfo;
     vk::PipelineRasterizationStateCreateInfo pipelineRasterizationStateCreateInfo;
     vk::PipelineMultisampleStateCreateInfo pipelineMultiSampleStateCreateInfo;
@@ -49,7 +47,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
     vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo;
     vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo;
 
-    setShaders(pipelineShaderStageCreateInfos, numStages, options.mVertexShader, options.mFragmentShader);
+    setShaders(pipelineShaderStageCreateInfos, options.mVertexShader, options.mFragmentShader);
     setInputTopology(pipelineInputAssemblyStateCreateInfo, options.mTopology);
     setPolygonMode(pipelineRasterizationStateCreateInfo, options.mPolygonMode);
     setCullMode(pipelineRasterizationStateCreateInfo, options.mCullMode, options.mFrontFace);
@@ -70,7 +68,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
 
     vk::GraphicsPipelineCreateInfo graphicsPipelineInfo = {};
     graphicsPipelineInfo.pNext = &pipelineRenderingCreateInfo;
-    graphicsPipelineInfo.stageCount = numStages;
+    graphicsPipelineInfo.stageCount = pipelineShaderStageCreateInfos.size();
     graphicsPipelineInfo.pStages = pipelineShaderStageCreateInfos.data();
     graphicsPipelineInfo.pVertexInputState = &pipelineVertexStateCreateInfo;
     graphicsPipelineInfo.pInputAssemblyState = &pipelineInputAssemblyStateCreateInfo;
@@ -86,16 +84,20 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
 }
 
 void SwGraphicsPipelineFactory::setShaders(
-    std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStageCreateInfos, std::uint32_t& numStages, vk::ShaderModule vertexShader,
-    vk::ShaderModule fragmentShader
+    std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStageCreateInfos, std::optional<vk::ShaderModule> vertexShader,
+    std::optional<vk::ShaderModule> fragmentShader
 ) {
     pipelineShaderStageCreateInfos.clear();
-    pipelineShaderStageCreateInfos.emplace_back(
-        vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eVertex, vertexShader, DEFAULT_SHADER_ENTRY_POINT.c_str()
-    );
-    pipelineShaderStageCreateInfos.emplace_back(
-        vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eFragment, fragmentShader, DEFAULT_SHADER_ENTRY_POINT.c_str()
-    );
+    if (vertexShader.has_value()) {
+        pipelineShaderStageCreateInfos.emplace_back(
+            vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eVertex, vertexShader.value(), DEFAULT_SHADER_ENTRY_POINT.c_str()
+        );
+    }
+    if (fragmentShader.has_value()) {
+        pipelineShaderStageCreateInfos.emplace_back(
+            vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eFragment, fragmentShader.value(), DEFAULT_SHADER_ENTRY_POINT.c_str()
+        );
+    }
 }
 
 void SwGraphicsPipelineFactory::setInputTopology(

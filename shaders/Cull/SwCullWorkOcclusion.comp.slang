@@ -7,41 +7,7 @@ public uniform Texture2D<float> depthPyramidImage;
 [[vk::push_constant]]
 SwCull::WorkPC workPc;
 
-bool frustumCull(SwCull::Plane *frustum, inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwBounds* bounds, SwInstance* currInstance, SwNodeTransform* nodeTransform) {
-    bool visible = true;
-
-    // Transform all corners of the AABB to world space
-    // Get the min and max corners of the AABB
-    aabbCorners[0] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[0]));
-    float4 aabbMin = aabbCorners[0];
-    float4 aabbMax = aabbCorners[0];
-    for (uint j = 1; j < SwCull::NUM_AABB_CORNERS; j++) {
-        aabbCorners[j] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[j]));
-        aabbMin = min(aabbMin, aabbCorners[j]);
-        aabbMax = max(aabbMax, aabbCorners[j]);
-    }
-
-    // For each plane build the corner which will produce max result in point-normal plane equation
-    // Point-normal plane equation is positive if it's on the side of the plane the normal is pointing
-    // Frustum plane normals point inward => non-negative result means at least 1 corner is on correct side of the plane
-    // At least 1 corner on correct side of all 6 planes means render instance is within frustum and therefore visible
-    for (uint i = 0; i < SwCull::NUM_FRUSTUM_PLANES; i++) {
-        SwCull::Plane p = frustum[i];
-        float4 chosen;
-        chosen.x = (p.mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
-        chosen.y = (p.mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
-        chosen.z = (p.mNormal.z >= 0) ? aabbMax.z : aabbMin.z;
-        chosen.w = 1.0;
-        float result = dot(p.mNormal, chosen.xyz) - p.mDistance;
-        if (result < 0) {
-            visible = false;
-            break;
-        }
-    }
-    return visible;
-}
-
-bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspective *perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
+bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
     float closestDepthInRenderInstance = 0.f;
@@ -54,7 +20,8 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
 
         // Corner is behind the near plane: w <= 0 means perspective division would flip
         // coordinates. Treat the whole object as visible (conservative fallback).
-        if (clipPos.w <= 0.f) return true;
+        if (clipPos.w <= 0.f)
+            return true;
 
         float4 ndc = clipPos / clipPos.w;
         aabbCorners[j] = ndc;
@@ -82,25 +49,25 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
     uint2 pMax = uint2(clamp(floor(aabbMaxPyramid), float2(0.f), pyramidExtentF));
 
     // Compute information needed to look up in the depth pyramid
-    uint width  = max(pMax.x - pMin.x, 1u);
+    uint width = max(pMax.x - pMin.x, 1u);
     uint height = max(pMax.y - pMin.y, 1u);
-    uint2 topLeft     = pMin;
-    uint2 topRight    = uint2(pMax.x, pMin.y);
-    uint2 bottomLeft  = uint2(pMin.x, pMax.y);
+    uint2 topLeft = pMin;
+    uint2 topRight = uint2(pMax.x, pMin.y);
+    uint2 bottomLeft = uint2(pMin.x, pMax.y);
     uint2 bottomRight = pMax;
 
     // Adjusted for levels, then clamp within the mip size
     uint level = uint(floor(log2(float(max(width, height)))));
     uint2 mipSize = (workPc.mDepthPyramidExtents + (1u << level) - 1u) >> level;
-    uint2 clampedTopLeft     = clamp(topLeft     >> level, uint2(0, 0), mipSize - 1u);
-    uint2 clampedTopRight    = clamp(topRight    >> level, uint2(0, 0), mipSize - 1u);
-    uint2 clampedBottomLeft  = clamp(bottomLeft  >> level, uint2(0, 0), mipSize - 1u);
+    uint2 clampedTopLeft = clamp(topLeft >> level, uint2(0, 0), mipSize - 1u);
+    uint2 clampedTopRight = clamp(topRight >> level, uint2(0, 0), mipSize - 1u);
+    uint2 clampedBottomLeft = clamp(bottomLeft >> level, uint2(0, 0), mipSize - 1u);
     uint2 clampedBottomRight = clamp(bottomRight >> level, uint2(0, 0), mipSize - 1u);
 
     // Sample the four corners of the AABB footprint at the selected mip level
-    float d0 = depthPyramidImage.Load(uint3(clampedTopRight.x,    clampedTopRight.y,    level));
-    float d1 = depthPyramidImage.Load(uint3(clampedTopLeft.x,     clampedTopLeft.y,     level));
-    float d2 = depthPyramidImage.Load(uint3(clampedBottomLeft.x,  clampedBottomLeft.y,  level));
+    float d0 = depthPyramidImage.Load(uint3(clampedTopRight.x, clampedTopRight.y, level));
+    float d1 = depthPyramidImage.Load(uint3(clampedTopLeft.x, clampedTopLeft.y, level));
+    float d2 = depthPyramidImage.Load(uint3(clampedBottomLeft.x, clampedBottomLeft.y, level));
     float d3 = depthPyramidImage.Load(uint3(clampedBottomRight.x, clampedBottomRight.y, level));
 
     // Visible if closest is closer (greater than because of reverse-Z) than furthest depth
@@ -112,20 +79,13 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
 void main(SwCull::CSInput in) {
     // Get thread ID as index into which render instance for culling check
     uint renderInstancesIndex = in.mDispatchThreadID.x;
-    if (renderInstancesIndex >= workPc.mRenderInstancesLimit) return;
+    if (renderInstancesIndex >= workPc.mRenderInstancesLimit)
+        return;
 
-    // Grab representative data for this thread
     SwRenderInstance renderInstance = workPc.mRenderInstancesBuffer[renderInstancesIndex];
-    SwRenderItem *renderItem = &workPc.mPreCullRenderItemsBuffer[renderInstance.mRenderItemsIndex];
+    SwRenderItem* renderItem = &workPc.mPreCullRenderItemsBuffer[renderInstance.mRenderItemsIndex];
 
-    // Grab data for culling test
-    SwInstance* instance = &workPc.mSceneInstancesBuffer[renderInstance.mSceneInstanceIndex];
-    SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[renderItem->mNodeTransformIndex];
-    SwBounds* bounds = &workPc.mSceneBoundsBuffer[renderItem->mBoundsIndex];
-    SwCull::Plane* frustum = workPc.mFrustumBuffer;
     SwPerspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
-
-    // Establish AABB corners
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMax.z, 1.f),
@@ -137,14 +97,12 @@ void main(SwCull::CSInput in) {
         float4(bounds->mMax.x, bounds->mMax.y, bounds->mMax.z, 1.f),
     };
 
-    // Culling tests
-    bool visible = frustumCull(frustum, aabbCorners, bounds, instance, nodeTransform);
-    if (visible) visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
-    //if (visible) occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents); // take the penalty hit without actually doing occlusion
+    bool visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
 
-    // Increment counter of unculled render instances
-    if (!visible) return;
-    uint _; InterlockedAdd(workPc.mRenderInstancesCountBuffer[0], 1, _);
+    if (!visible)
+        return;
+    uint _;
+    InterlockedAdd(*workPc.mRenderInstancesCountBuffer, 1, _);
 
     // Write the indices of visible render instances to the visible instances indices buffer
     // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
@@ -152,5 +110,5 @@ void main(SwCull::CSInput in) {
     uint offsetVisibleRenderInstanceIndex;
     InterlockedAdd(renderItem->mRenderInstanceCount, 1, offsetVisibleRenderInstanceIndex);
     uint finalVisibleRenderInstanceIndex = renderItem->mFirstRenderInstance + offsetVisibleRenderInstanceIndex;
-    workPc.mSceneVisibleRenderInstancesInstanceIndexBuffer[finalVisibleRenderInstanceIndex] = renderInstance.mSceneInstanceIndex;
+    workPc.mSceneVisibleRenderInstancesIndicesBuffer[finalVisibleRenderInstanceIndex] = renderInstance.mSceneInstanceIndex;
 }

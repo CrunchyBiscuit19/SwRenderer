@@ -25,24 +25,14 @@ struct Plane {
 };
 
 struct ResetPC : public SwPC<ResetPC> {
-    vk::DeviceAddress mPreCullRenderItemsBuffer;
-    std::uint32_t mPreCullRenderItemsLimit;
-
-    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
-};
-
-struct DepthPyramidPC : SwPC<DepthPyramidPC> {
-    glm::uvec2 mDepthPyramidExtent;
-    glm::uvec2 mDepthFullExtent;
-    glm::vec2 mDepthFullRatio;
-    std::uint32_t mLevel;
-    bool mReadFromFull;
+    vk::DeviceAddress mRenderItemsBuffer;
+    std::uint32_t mRenderItemsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct WorkPC : public SwPC<WorkPC> {
-    vk::DeviceAddress mPreCullRenderItemsBuffer;
+    vk::DeviceAddress mRenderItemsBuffer;
     vk::DeviceAddress mRenderInstancesBuffer;
     vk::DeviceAddress mRenderInstancesCountBuffer;
     vk::DeviceAddress mFrustumBuffer;
@@ -50,7 +40,7 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneVisibleRenderInstancesInstanceIndexBuffer;
+    vk::DeviceAddress mSceneVisibleRenderInstancesIndicesBuffer;
     std::uint32_t mRenderInstancesLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
@@ -59,10 +49,20 @@ struct WorkPC : public SwPC<WorkPC> {
 };
 
 struct CompactPC : SwPC<CompactPC> {
-    vk::DeviceAddress mPreCullRenderItemsBuffer;
-    vk::DeviceAddress mPostCullRenderItemsBuffer;
-    vk::DeviceAddress mPostCullRenderItemsCountBuffer;
-    std::uint32_t mPreCullRenderItemsLimit;
+    vk::DeviceAddress mPreRenderItemsBuffer;
+    vk::DeviceAddress mPostRenderItemsBuffer;
+    vk::DeviceAddress mPostRenderItemsCountBuffer;
+    std::uint32_t mPreRenderItemsLimit;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct PrepOcclusionPC : SwPC<PrepOcclusionPC> {
+    glm::uvec2 mDepthPyramidExtent;
+    glm::uvec2 mDepthFullExtent;
+    glm::vec2 mDepthFullRatio;
+    std::uint32_t mLevel;
+    bool mReadFromFull;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -76,21 +76,20 @@ struct Resources {
     SwPipelineLayout mCompactPipelineLayout;
     SwCull::CompactPC mCompactPushConstants;
 
-    SwComputePipelineBundle mDepthPyramidPipelineBundle;
-    SwPipelineLayout mDepthPyramidPipelineLayout;
-    SwDescriptorSet mDepthPyramidDescriptorSet;
-    SwDescriptorLayout mDepthPyramidDescriptorLayout;
-    SwSampler mDepthPyramidMinSampler;
-    SwColorImage2D mDepthPyramidImage;
-    std::uint32_t mDepthPyramidLevels{0};
-    vk::Extent3D mDepthPyramidExtent;
-    SwCull::DepthPyramidPC mDepthPyramidPushConstants;
-
     SwComputePipelineBundle mWorkPipelineBundle;
     SwPipelineLayout mWorkPipelineLayout;
     SwDescriptorSet mWorkDescriptorSet;
     SwDescriptorLayout mWorkDescriptorLayout;
     SwCull::WorkPC mWorkPushConstants;
+
+    SwComputePipelineBundle mPrepOcclusionPipelineBundle;
+    SwPipelineLayout mPrepOcclusionPipelineLayout;
+    SwDescriptorSet mPrepOcclusionDescriptorSet;
+    SwDescriptorLayout mPrepOcclusionDescriptorLayout;
+    SwSampler mDepthPyramidMinSampler;
+    SwColorImage2D mDepthPyramidImage;
+    std::uint32_t mDepthPyramidLevels{0};
+    SwCull::PrepOcclusionPC mPrepOcclusionPushConstants;
 };
 
 class System : public SwSystem, public SwSystem::Resizable {

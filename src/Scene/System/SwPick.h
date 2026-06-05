@@ -24,7 +24,7 @@ struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneVisibleRenderInstancesInstanceIndexBuffer;
+    vk::DeviceAddress mSceneVisibleRenderInstancesIndicesBuffer;
     vk::DeviceAddress mPostCullRenderItemsBuffer;
     vk::DeviceAddress mPerFrameBuffer;
 

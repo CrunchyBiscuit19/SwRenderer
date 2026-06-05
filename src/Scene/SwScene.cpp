@@ -91,7 +91,7 @@ void SwScene::initializeResources() {
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
     );
 
-    mSceneVisibleRenderInstancesInstanceIndexBuffer = SwBufferFactory::createAllocatedBuffer(
+    mSceneVisibleRenderInstancesIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
     );
 
@@ -515,9 +515,12 @@ void SwScene::draw() {
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullDepthPyramid]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkFrustum]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactFrustum]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryDepthPrePass]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkOcclusion]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactOcclusion]);
     if (mPick.isPicked()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);

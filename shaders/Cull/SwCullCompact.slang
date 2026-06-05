@@ -4,7 +4,7 @@ import SwCommon;
 [[vk::push_constant]]
 SwCull::CompactPC compactPc;
 
-void copyRenderItem(SwRenderItem *src, SwRenderItem *dst) {
+void copyRenderItem(SwRenderItem* src, SwRenderItem* dst) {
     dst.mIndexCount = src.mIndexCount;
     dst.mRenderInstanceCount = src.mRenderInstanceCount;
     dst.mFirstIndex = src.mFirstIndex;
@@ -21,14 +21,16 @@ void copyRenderItem(SwRenderItem *src, SwRenderItem *dst) {
 void main(SwCull::CSInput in) {
     // Get thread ID as index into render item
     uint renderItemsIndex = in.mDispatchThreadID.x;
-    if (renderItemsIndex >= compactPc.mPreCullRenderItemsLimit) return;
+    if (renderItemsIndex >= compactPc.mPreRenderItemsLimit)
+        return;
 
     // Copy over render items with more than zero instances, and increment counter
-    SwRenderItem* renderItem = &compactPc.mPreCullRenderItemsBuffer[renderItemsIndex];
-    
-    if (renderItem->mRenderInstanceCount == 0) return;
-    
+    SwRenderItem* renderItem = &compactPc.mPreRenderItemsBuffer[renderItemsIndex];
+
+    if (renderItem->mRenderInstanceCount == 0)
+        return;
+
     uint writeRenderItemsIndex;
-    InterlockedAdd(*compactPc.mPostCullRenderItemsCountBuffer, 1, writeRenderItemsIndex);
-    copyRenderItem(renderItem, &compactPc.mPostCullRenderItemsBuffer[writeRenderItemsIndex]);
+    InterlockedAdd(*compactPc.mPostRenderItemsCountBuffer, 1, writeRenderItemsIndex);
+    copyRenderItem(renderItem, &compactPc.mPostRenderItemsBuffer[writeRenderItemsIndex]);
 }

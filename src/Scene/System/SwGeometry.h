@@ -5,13 +5,17 @@
 
 #include <vulkan/vulkan.hpp>
 
+#include <filesystem>
+
 namespace SwGeometry {
+
+static const std::filesystem::path DEPTH_PRE_PASS_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometry.vert.spv"};
 struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneVisibleRenderInstancesInstanceIndexBuffer;
+    vk::DeviceAddress mSceneVisibleRenderInstancesIndicesBuffer;
     vk::DeviceAddress mPostCullRenderItemsBuffer;
     vk::DeviceAddress mPerFrameBuffer;
 
@@ -20,6 +24,9 @@ struct WorkPC : SwPC<WorkPC> {
 
 struct Resources {
     WorkPC mWorkPushConstants;
+
+    SwGraphicsPipelineBundle mDepthPrePassPipelineBundle;
+    SwPipelineLayout mDepthPrePassPipelineLayout;
 };
 
 class System : public SwSystem {

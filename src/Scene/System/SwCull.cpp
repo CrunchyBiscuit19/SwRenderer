@@ -11,22 +11,20 @@
 SwCull::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwCull::System::initializeResources() {
-    // Reset pass
+    // Reset 
     mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::ResetPC::getRange());
-
     SwShader resetShader = SwShaderFactory::createShader(CULL_RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mResetPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({resetShader.getRawModule(), mResources.mResetPipelineLayout.getRawLayout()});
 
-    // Depth pyramid pass
-    mResources.mDepthPyramidDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    // PrepOcclusion 
+    mResources.mPrepOcclusionDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         {{0, vk::DescriptorType::eSampledImage, 1},
          {1, vk::DescriptorType::eSampledImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
          {2, vk::DescriptorType::eStorageImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
          {3, vk::DescriptorType::eSampler, 1}},
         vk::ShaderStageFlagBits::eCompute
     );
-
     vk::SamplerReductionModeCreateInfo reductionInfo{vk::SamplerReductionMode::eMin};
     vk::SamplerCreateInfo minSamplerInfo{};
     minSamplerInfo.setPNext(&reductionInfo);
@@ -37,35 +35,27 @@ void SwCull::System::initializeResources() {
     minSamplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
     minSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
     mResources.mDepthPyramidMinSampler = SwSamplerFactory::createSampler(minSamplerInfo);
-
-    mResources.mDepthPyramidDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mDepthPyramidDescriptorLayout);
-
-    mResources.mDepthPyramidPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(mResources.mDepthPyramidDescriptorLayout.getRawLayout(), SwCull::DepthPyramidPC::getRange());
-
+    mResources.mPrepOcclusionDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mPrepOcclusionDescriptorLayout);
+    mResources.mPrepOcclusionPipelineLayout =
+        SwPipelineFactory::createPipelineLayout(mResources.mPrepOcclusionDescriptorLayout.getRawLayout(), SwCull::PrepOcclusionPC::getRange());
     SwShader depthPyramidShader = SwShaderFactory::createShader(CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mResources.mDepthPyramidPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({depthPyramidShader.getRawModule(), mResources.mDepthPyramidPipelineLayout.getRawLayout()});
+    mResources.mPrepOcclusionPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline({depthPyramidShader.getRawModule(), mResources.mPrepOcclusionPipelineLayout.getRawLayout()});
 
-    // Work pass
+    // Work*
     mResources.mWorkDescriptorLayout =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute);
-
     mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
-
     mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), SwCull::WorkPC::getRange());
-
     SwShader workShader = SwShaderFactory::createShader(CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mWorkPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mResources.mWorkPipelineLayout.getRawLayout()});
 
-    // Compact pass
+    // Compact*
     mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::CompactPC::getRange());
-
     SwShader compactShader = SwShaderFactory::createShader(CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mCompactPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({compactShader.getRawModule(), mResources.mCompactPipelineLayout.getRawLayout()});
-
     reInitializeOnResize();
 }
 
@@ -74,12 +64,12 @@ void SwCull::System::initializePasses() {
 
     // Cull Reset
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::TransferWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
     mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
         cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer.getRawBuffer(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(mScene.getSceneVisibleRenderInstancesIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
         mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
@@ -89,8 +79,8 @@ void SwCull::System::initializePasses() {
                 cmd.fillBuffer(batch.getPostCullRenderItemsCountBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 cmd.fillBuffer(batch.getPostCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 const std::uint32_t renderItemsCount = static_cast<std::uint32_t>(batch.getRenderItems().size());
-                mResources.mResetPushConstants.mPreCullRenderItemsBuffer = batch.getPreCullRenderItemsBuffer().getDeviceAddress().value();
-                mResources.mResetPushConstants.mPreCullRenderItemsLimit = renderItemsCount;
+                mResources.mResetPushConstants.mRenderItemsBuffer = batch.getPreCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mResetPushConstants.mRenderItemsLimit = renderItemsCount;
                 cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
                 cmd.dispatch(SwHelper::fastDivCeil(renderItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
             }
@@ -98,45 +88,45 @@ void SwCull::System::initializePasses() {
     });
     staticDeps.clear();
 
-    // Cull Depth Pyramid
+    // Cull Prep Occlusion
     staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
     staticDeps.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
     mScene.insertPass(SwPass::Type::CullDepthPyramid, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mDepthPyramidPipelineBundle.getBindPoint(), mResources.mDepthPyramidPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mPrepOcclusionPipelineBundle.getBindPoint(), mResources.mPrepOcclusionPipelineBundle.getRawPipeline());
         cmd.bindDescriptorSets(
             vk::PipelineBindPoint::eCompute,
-            mResources.mDepthPyramidPipelineBundle.getRawLayout(),
+            mResources.mPrepOcclusionPipelineBundle.getRawLayout(),
             0,
-            mResources.mDepthPyramidDescriptorSet.getRawSet(),
+            mResources.mPrepOcclusionDescriptorSet.getRawSet(),
             nullptr
         );
-        mResources.mDepthPyramidPushConstants.mReadFromFull = true;
-        mResources.mDepthPyramidPushConstants.mLevel = 0;
-        cmd.pushConstants<SwCull::DepthPyramidPC>(
-            mResources.mDepthPyramidPipelineBundle.getRawLayout(), SwCull::DepthPyramidPC::sStages, 0, mResources.mDepthPyramidPushConstants
+        mResources.mPrepOcclusionPushConstants.mReadFromFull = true;
+        mResources.mPrepOcclusionPushConstants.mLevel = 0;
+        cmd.pushConstants<SwCull::PrepOcclusionPC>(
+            mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
         );
         cmd.dispatch(
-            SwHelper::fastDivCeil(mResources.mDepthPyramidExtent.width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(mResources.mDepthPyramidExtent.height, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().height, SwRenderer::MAX_2D_WORKGROUP_THREADS),
             1
         );
         mResources.mDepthPyramidImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, 0);
-        mResources.mDepthPyramidPushConstants.mReadFromFull = false;
+        mResources.mPrepOcclusionPushConstants.mReadFromFull = false;
         for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
             cmd.bindDescriptorSets(
-                mResources.mDepthPyramidPipelineBundle.getBindPoint(),
-                mResources.mDepthPyramidPipelineBundle.getRawLayout(),
+                mResources.mPrepOcclusionPipelineBundle.getBindPoint(),
+                mResources.mPrepOcclusionPipelineBundle.getRawLayout(),
                 0,
-                mResources.mDepthPyramidDescriptorSet.getRawSet(),
+                mResources.mPrepOcclusionDescriptorSet.getRawSet(),
                 nullptr
             );
-            mResources.mDepthPyramidPushConstants.mLevel = i;
-            cmd.pushConstants<SwCull::DepthPyramidPC>(
-                mResources.mDepthPyramidPipelineBundle.getRawLayout(), SwCull::DepthPyramidPC::sStages, 0, mResources.mDepthPyramidPushConstants
+            mResources.mPrepOcclusionPushConstants.mLevel = i;
+            cmd.pushConstants<SwCull::PrepOcclusionPC>(
+                mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
             );
-            const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidExtent.width >> (i + 1));
-            const std::uint32_t dstH = std::max(1u, mResources.mDepthPyramidExtent.height >> (i + 1));
+            const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidImage.getExtent().width >> (i + 1));
+            const std::uint32_t dstH = std::max(1u, mResources.mDepthPyramidImage.getExtent().height >> (i + 1));
             cmd.dispatch(SwHelper::fastDivCeil(dstW, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(dstH, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1);
             if (i < mResources.mDepthPyramidLevels - 2) {
                 mResources.mDepthPyramidImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, i + 1);
@@ -152,7 +142,7 @@ void SwCull::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     mScene.insertPass(SwPass::Type::CullWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
         mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
@@ -168,7 +158,7 @@ void SwCull::System::initializePasses() {
                     mResources.mWorkDescriptorSet.getRawSet(),
                     nullptr
                 );
-                mResources.mWorkPushConstants.mPreCullRenderItemsBuffer = batch.getPreCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mRenderItemsBuffer = batch.getPreCullRenderItemsBuffer().getDeviceAddress().value();
                 mResources.mWorkPushConstants.mRenderInstancesBuffer = batch.getRenderInstancesBuffer().getDeviceAddress().value();
                 mResources.mWorkPushConstants.mRenderInstancesLimit = batch.getRenderInstances().size();
                 cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
@@ -186,10 +176,10 @@ void SwCull::System::initializePasses() {
                 if (batch.getRenderItems().empty()) {
                     continue;
                 }
-                mResources.mCompactPushConstants.mPreCullRenderItemsBuffer = batch.getPreCullRenderItemsBuffer().getDeviceAddress().value();
-                mResources.mCompactPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
-                mResources.mCompactPushConstants.mPostCullRenderItemsCountBuffer = batch.getPostCullRenderItemsCountBuffer().getDeviceAddress().value();
-                mResources.mCompactPushConstants.mPreCullRenderItemsLimit = batch.getRenderItems().size();
+                mResources.mCompactPushConstants.mPreRenderItemsBuffer = batch.getPreCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mCompactPushConstants.mPostRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mCompactPushConstants.mPostRenderItemsCountBuffer = batch.getPostCullRenderItemsCountBuffer().getDeviceAddress().value();
+                mResources.mCompactPushConstants.mPreRenderItemsLimit = batch.getRenderItems().size();
                 cmd.pushConstants<SwCull::CompactPC>(
                     mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
                 );
@@ -207,7 +197,7 @@ void SwCull::System::initializePushConstants() {
 void SwCull::System::refreshDynamicDependencies() {
     SwDependency dynamicDeps;
 
-    // Cull Reset
+    // Reset*
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRenderItems().empty()) continue;
@@ -219,7 +209,7 @@ void SwCull::System::refreshDynamicDependencies() {
     mScene.mPasses[SwPass::Type::CullReset].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
-    // Cull Work
+    // Work*
     dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
@@ -250,21 +240,21 @@ void SwCull::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mFrustumBuffer = mScene.getCamera().getFrustumBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesInstanceIndexBuffer =
-        mScene.getSceneVisibleRenderInstancesInstanceIndexBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesIndicesBuffer =
+        mScene.getSceneVisibleRenderInstancesIndicesBuffer().getDeviceAddress().value();
 }
 
 void SwCull::System::reInitializeOnResize() {
     // Depth pyramid pass
-    mResources.mDepthPyramidExtent = vk::Extent3D{
+    mResources.mDepthPyramidImage.getExtent() = vk::Extent3D{
         SwHelper::previousPow2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().width),
         SwHelper::previousPow2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().height),
         1,
     };
-    mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(mResources.mDepthPyramidExtent);
+    mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(mResources.mDepthPyramidImage.getExtent());
  
     mResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
-        nullptr, vk::Format::eR32Sfloat, mResources.mDepthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
+        nullptr, vk::Format::eR32Sfloat, mResources.mDepthPyramidImage.getExtent(), vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
     );   
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidImage.addImageView(
@@ -275,21 +265,21 @@ void SwCull::System::reInitializeOnResize() {
         mResources.mDepthPyramidImage.emitTransition(cmd, SwDependency::ImageDepType::ComputeStorageReadWrite);
     });
 
-    mResources.mDepthPyramidDescriptorSet.writeImage(
+    mResources.mPrepOcclusionDescriptorSet.writeImage(
         0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
-        mResources.mDepthPyramidDescriptorSet.writeImage(1, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
-        mResources.mDepthPyramidDescriptorSet.writeImage(2, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
+        mResources.mPrepOcclusionDescriptorSet.writeImage(1, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
+        mResources.mPrepOcclusionDescriptorSet.writeImage(2, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
     }
-    mResources.mDepthPyramidDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getRawSampler());
-    mResources.mDepthPyramidDescriptorSet.pushWrites();
+    mResources.mPrepOcclusionDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getRawSampler());
+    mResources.mPrepOcclusionDescriptorSet.pushWrites();
 
     vk::Extent3D depthPyramidExtent = mResources.mDepthPyramidImage.getExtent();
     vk::Extent3D depthExtent = vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1};
-    mResources.mDepthPyramidPushConstants.mDepthPyramidExtent = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
-    mResources.mDepthPyramidPushConstants.mDepthFullExtent = glm::uvec2(depthExtent.width, depthExtent.height);
-    mResources.mDepthPyramidPushConstants.mDepthFullRatio =
+    mResources.mPrepOcclusionPushConstants.mDepthPyramidImage.getExtent() = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
+    mResources.mPrepOcclusionPushConstants.mDepthFullExtent = glm::uvec2(depthExtent.width, depthExtent.height);
+    mResources.mPrepOcclusionPushConstants.mDepthFullRatio =
         glm::vec2(depthPyramidExtent.width / static_cast<float>(depthExtent.width), depthPyramidExtent.height / static_cast<float>(depthExtent.height));
 
     // Work pass

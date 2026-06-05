@@ -73,9 +73,7 @@ public:
 
 class SwPipelineFactory {
 protected:
-
     static constexpr std::string DEFAULT_SHADER_ENTRY_POINT{"main"};
-    static constexpr std::uint32_t MIN_NUM_SHADER_STAGES{2};
 
 public:
     static void init();
@@ -86,8 +84,8 @@ public:
 class SwGraphicsPipelineFactory : public SwPipelineFactory {
 public:
     struct SwGraphicsPipelineOptions {
-        vk::ShaderModule mVertexShader;
-        vk::ShaderModule mFragmentShader;
+        std::optional<vk::ShaderModule> mVertexShader{std::nullopt};
+        std::optional<vk::ShaderModule> mFragmentShader{std::nullopt};
         vk::PipelineLayout mLayout;
         vk::PrimitiveTopology mTopology;
         vk::PolygonMode mPolygonMode;
@@ -106,8 +104,8 @@ public:
 
 private:
     static void setShaders(
-        std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStageCreateInfos, std::uint32_t& numStages, vk::ShaderModule vertexShader,
-        vk::ShaderModule fragmentShader
+        std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStageCreateInfos, std::optional<vk::ShaderModule> vertexShader,
+        std::optional<vk::ShaderModule> fragmentShader
     );
     static void setInputTopology(vk::PipelineInputAssemblyStateCreateInfo& pipelineInputAssemblyStateCreateInfo, vk::PrimitiveTopology topology);
     static void setPolygonMode(vk::PipelineRasterizationStateCreateInfo& pipelineRasterizationStateCreateInfo, vk::PolygonMode mode);
