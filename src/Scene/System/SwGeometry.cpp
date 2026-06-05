@@ -64,7 +64,7 @@ void SwGeometry::System::initializePasses() {
                 if (batch.getRItems().empty()) {
                     continue;
                 }
-                mResources.mWorkPushConstants.mDrawingRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     mResources.mDepthPrePassPipelineBundle.getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
@@ -77,7 +77,7 @@ void SwGeometry::System::initializePasses() {
                     sizeof(SwRenderItem)
                 );
                 SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-                SwRenderer::sRendererContext.mStats->mNumInitialRenderInstances += batch.getRInsts().size();
+                SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
             }
         }
 
@@ -122,7 +122,7 @@ void SwGeometry::System::initializePasses() {
                     mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
                     nullptr
                 );
-                mResources.mWorkPushConstants.mDrawingRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
@@ -135,7 +135,7 @@ void SwGeometry::System::initializePasses() {
                     sizeof(SwRenderItem)
                 );
                 SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-                SwRenderer::sRendererContext.mStats->mNumInitialRenderInstances += batch.getRInsts().size();
+                SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size(); 
             }
         }
 
@@ -189,7 +189,7 @@ void SwGeometry::System::initializePasses() {
                     mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
                     nullptr
                 );
-                mResources.mWorkPushConstants.mDrawingRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
@@ -202,7 +202,7 @@ void SwGeometry::System::initializePasses() {
                     sizeof(SwRenderItem)
                 );
                 SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-                SwRenderer::sRendererContext.mStats->mNumInitialRenderInstances += batch.getRInsts().size();
+                SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
             }
         }
         cmd.endRendering();

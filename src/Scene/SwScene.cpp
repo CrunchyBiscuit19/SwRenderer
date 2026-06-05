@@ -190,48 +190,49 @@ void SwScene::markAllAssetsDelete() {
 }
 
 void SwScene::regenerateRItemsAndRInsts() {
-    SwBatch::sFirstRenderInstanceOffset = 0;
+    SwBatch::sFirstRInstOffset = 0;
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             batch.getRItems().clear();
-            batch.getRenderInstances().clear();
+            batch.getRInsts().clear();
         }
     }
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getInstances().size() == 0) continue;
-        asset.generateRenderItemsAndRenderInstances();
+        asset.generateRItemsAndRInsts();
     }
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
-            if (batch.getRenderItems().empty()) {
+            if (batch.getRItems().empty()) {
                 continue;
             }
 
-            vk::BufferCopy renderItemsCopy{};
-            renderItemsCopy.dstOffset = 0;
-            renderItemsCopy.srcOffset = 0;
-            renderItemsCopy.size = batch.getRItems().size() * sizeof(SwRenderItem);
-            vk::BufferCopy renderInstancesCopy{};
-            renderInstancesCopy.dstOffset = 0;
-            renderInstancesCopy.srcOffset = 0;
-            renderInstancesCopy.size = batch.getRInsts().size() * sizeof(SwRenderInstance);
+            vk::BufferCopy RItemsCopy{};
+            RItemsCopy.dstOffset = 0;
+            RItemsCopy.srcOffset = 0;
+            RItemsCopy.size = batch.getRItems().size() * sizeof(SwRenderItem);
+            vk::BufferCopy RInstsCopy{};
+            RInstsCopy.dstOffset = 0;
+            RInstsCopy.srcOffset = 0;
+            RInstsCopy.size = batch.getRInsts().size() * sizeof(SwRenderInstance);
 
-            SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
-                batch.getRenderItemsStagingBuffer().copyFrom(cmd, batch.getRenderItems().data(), renderItemsCopy.size);
-                cmd.fillBuffer(batch.getPreCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+            SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, RItemsCopy, RInstsCopy](vk::CommandBuffer cmd) {
+                batch.getRItemsStaging().copyFrom(cmd, batch.getRItems().data(), RItemsCopy.size);
+                cmd.fillBuffer(batch.getInitialRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 batch.getInitialRItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getInitialRItemsBuffer().copyFrom(cmd, batch.getRItemsStaging(), renderItemsCopy);
+                batch.getInitialRItemsBuffer().copyFrom(cmd, batch.getRItemsStaging(), RItemsCopy);
                 batch.getInitialRItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getRenderInstancesStagingBuffer().copyFrom(cmd, batch.getRInsts().data(), renderInstancesCopy.size);
-                cmd.fillBuffer(batch.getRenderInstancesBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy);
-                batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
+                batch.getRInstsStaging().copyFrom(cmd, batch.getRInsts().data(), RInstsCopy.size);
+                cmd.fillBuffer(batch.getRInstsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+                batch.getRInstsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+                batch.getRInstsBuffer().copyFrom(cmd, batch.getRInstsStaging(), RInstsCopy);
+                batch.getRInstsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getPostCullRenderItemsBuffer().ensureCapacity(cmd, renderItemsCopy.size);  // At least as big as preCullRenderItemsBuffer
+                batch.getFrustumRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
+                batch.getOcclusionRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
             });
         }
     }
@@ -473,7 +474,7 @@ void SwScene::perFrameUpdate() {
     if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
         realignOffsets();
         reloadSceneBuffers();
-        regenerateRenderItemsAndRenderInstances();
+        regenerateRItemsAndRInsts();
     } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
         realignInstancesOffset();
         reloadSceneInstancesBuffer();
@@ -514,11 +515,12 @@ void SwScene::draw() {
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullResetFrustum]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkFrustum]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactFrustum]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryDepthPrePass]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullResetOcclusion]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkOcclusion]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactOcclusion]);
     if (mPick.isPicked()) {

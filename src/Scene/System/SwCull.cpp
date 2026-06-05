@@ -79,11 +79,11 @@ void SwCull::System::initializePasses() {
                 }
                 cmd.fillBuffer(batch.getFrustumRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
                 cmd.fillBuffer(batch.getFrustumRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                const std::uint32_t renderItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
+                const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
                 mResources.mResetPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-                mResources.mResetPushConstants.mRItemsLimit = renderItemsCount;
+                mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
                 cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
-                cmd.dispatch(SwHelper::fastDivCeil(renderItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+                cmd.dispatch(SwHelper::fastDivCeil(rItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
             }
         }
     });
@@ -101,11 +101,11 @@ void SwCull::System::initializePasses() {
                 if (batch.getRItems().empty()) {
                     continue;
                 }
-                const std::uint32_t renderItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
+                const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
                 mResources.mResetPushConstants.mRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
-                mResources.mResetPushConstants.mRItemsLimit = renderItemsCount;
+                mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
                 cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
-                cmd.dispatch(SwHelper::fastDivCeil(renderItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+                cmd.dispatch(SwHelper::fastDivCeil(rItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
             }
         }
     });

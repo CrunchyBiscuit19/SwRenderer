@@ -10,5 +10,5 @@ void SwStats::initialize() {
 
 void SwStats::perFrameReset() {
     mNumDrawCall = 0;
-    mNumInitialRenderInstances = 0;
+    mNumInitialRInsts = 0;
 }

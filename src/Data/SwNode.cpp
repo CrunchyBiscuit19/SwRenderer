@@ -58,10 +58,10 @@ void SwMeshNode::generateRItemsAndRInsts() {
             workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
         );
 
-        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch.getRItems().size() - 1);
+        std::uint32_t rItemIndex = static_cast<std::uint32_t>(workingBatch.getRItems().size() - 1);
         std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
         for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
-            workingBatch.getRInsts().emplace_back(renderItemIndex, instanceIndex + i);
+            workingBatch.getRInsts().emplace_back(rItemIndex, instanceIndex + i);
         }
 
         SwBatch::sFirstRInstOffset += workingAsset.getInstances().size();
