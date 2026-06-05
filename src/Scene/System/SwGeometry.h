@@ -25,7 +25,8 @@ struct WorkPC : SwPC<WorkPC> {
 struct Resources {
     WorkPC mWorkPushConstants;
 
-    SwGraphicsPipelineBundle mDepthPrePassPipelineBundle;
+    SwGraphicsPipelineBundle mDepthPrePassBackCulledPipelineBundle;
+    SwGraphicsPipelineBundle mDepthPrePassNoFaceCulledPipelineBundle;
     SwPipelineLayout mDepthPrePassPipelineLayout;
 };
 

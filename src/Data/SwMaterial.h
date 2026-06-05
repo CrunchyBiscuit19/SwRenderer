@@ -139,5 +139,7 @@ public:
 
     inline fastgltf::AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
 
+    inline bool isDoubleSided() { return mMaterialPipelineOptions.doubleSided; }
+
     inline SwMaterialResources& getResources() { return mMaterialResources; }
 };

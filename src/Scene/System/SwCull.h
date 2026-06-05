@@ -11,7 +11,7 @@
 
 namespace SwCull {
 static const std::filesystem::path CULL_RESET_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullReset.comp.spv"};
-static const std::filesystem::path CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullDepthPyramid.comp.spv"};
+static const std::filesystem::path CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullPrepOcclusion.comp.spv"};
 static const std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullWork.comp.spv"};
 static const std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullCompact.comp.spv"};
 static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
@@ -46,6 +46,7 @@ struct WorkPC : public SwPC<WorkPC> {
     std::uint32_t mRInstsLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
+    Phase mPhase;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

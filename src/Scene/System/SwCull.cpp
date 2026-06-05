@@ -32,7 +32,6 @@ void SwCull::System::initializeResources() {
     SwShader compactShader = SwShaderFactory::createShader(CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mCompactPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({compactShader.getRawModule(), mResources.mCompactPipelineLayout.getRawLayout()});
-    reInitializeOnResize();
 
     // PrepOcclusion
     mResources.mPrepOcclusionDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -55,9 +54,11 @@ void SwCull::System::initializeResources() {
     mResources.mPrepOcclusionDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mPrepOcclusionDescriptorLayout);
     mResources.mPrepOcclusionPipelineLayout =
         SwPipelineFactory::createPipelineLayout(mResources.mPrepOcclusionDescriptorLayout.getRawLayout(), SwCull::PrepOcclusionPC::getRange());
-    SwShader depthPyramidShader = SwShaderFactory::createShader(CULL_DEPTH_PYRAMID_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader depthPyramidShader = SwShaderFactory::createShader(CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mPrepOcclusionPipelineBundle =
         SwComputePipelineFactory::createComputePipeline({depthPyramidShader.getRawModule(), mResources.mPrepOcclusionPipelineLayout.getRawLayout()});
+
+    reInitializeOnResize();
 }
 
 void SwCull::System::initializePasses() {
@@ -100,6 +101,7 @@ void SwCull::System::initializePasses() {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
         mResources.mWorkPushConstants.mPerFrameBuffer =
             SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+        mResources.mWorkPushConstants.mPhase = SwCull::Phase::Frustum;
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
                 if (batch.getRItems().empty()) {
@@ -225,10 +227,11 @@ void SwCull::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsCount, SwDependency::BufferDepType::ComputeStorageWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-    mScene.insertPass(SwPass::Type::CullWorkFrustum, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::CullWorkOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
         mResources.mWorkPushConstants.mPerFrameBuffer =
             SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+        mResources.mWorkPushConstants.mPhase = SwCull::Phase::Occlusion;
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
                 if (batch.getRItems().empty()) {
@@ -252,7 +255,7 @@ void SwCull::System::initializePasses() {
     staticDeps.clear();
 
     // CompactOcclusion
-    mScene.insertPass(SwPass::Type::CullCompactFrustum, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::CullCompactOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
@@ -329,7 +332,7 @@ void SwCull::System::refreshDynamicDependencies() {
             dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsCount(), SwDependency::BufferDepType::TransferWrite);
         }
     }
-    mScene.mPasses[SwPass::Type::CullResetFrustum].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullResetOcclusion].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
     // WorkOcclusion
@@ -343,7 +346,7 @@ void SwCull::System::refreshDynamicDependencies() {
             dynamicDeps.mReadBuffers.emplace_back(&batch.getRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         }
     }
-    mScene.mPasses[SwPass::Type::CullWorkFrustum].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullWorkOcclusion].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
     // CompactOcclusion
@@ -355,7 +358,7 @@ void SwCull::System::refreshDynamicDependencies() {
             dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
         }
     }
-    mScene.mPasses[SwPass::Type::CullCompactFrustum].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullCompactOcclusion].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 }
 
@@ -370,9 +373,14 @@ void SwCull::System::refreshPushConstants() {
 
 void SwCull::System::reInitializeOnResize() {
     // PrepOcclusion
-    mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(mResources.mDepthPyramidImage.getExtent());
+    vk::Extent3D depthPyramidExtent = vk::Extent3D{
+        SwHelper::previousPow2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().width),
+        SwHelper::previousPow2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().height),
+        1,
+    };
+    mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(depthPyramidExtent);
     mResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
-        nullptr, vk::Format::eR32Sfloat, mResources.mDepthPyramidImage.getExtent(), vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
+        nullptr, vk::Format::eR32Sfloat, depthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidImage.addImageView(
@@ -393,7 +401,6 @@ void SwCull::System::reInitializeOnResize() {
     mResources.mPrepOcclusionDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getRawSampler());
     mResources.mPrepOcclusionDescriptorSet.pushWrites();
 
-    vk::Extent3D depthPyramidExtent = mResources.mDepthPyramidImage.getExtent();
     vk::Extent3D depthExtent = vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1};
     mResources.mPrepOcclusionPushConstants.mDepthPyramidExtent = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
     mResources.mPrepOcclusionPushConstants.mDepthFullExtent = glm::uvec2(depthExtent.width, depthExtent.height);

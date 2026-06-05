@@ -6,6 +6,7 @@ std::uint32_t SwBatch::sFirstRInstOffset = 0;
 
 SwBatch::SwBatch(SwPrimitive& primitive) {
     mGraphicsPipelineBundle = &primitive.mMaterial.getPipelineBundle();
+    mDoubleSided = primitive.mMaterial.isDoubleSided();
 
     mRItemsStaging = SwBufferFactory::createStagingBuffer(RENDER_ITEMS_INITIAL_BUFFER_SIZE);
     mInitialRItemsBuffer = SwBufferFactory::createAllocatedBuffer(

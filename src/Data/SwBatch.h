@@ -31,6 +31,7 @@ private:
     static constexpr std::uint32_t RENDER_INSTANCES_INITIAL_BUFFER_SIZE{sizeof(SwRenderInstance) * (1 << 13)};
 
     SwGraphicsPipelineBundle* mGraphicsPipelineBundle{nullptr};
+    bool mDoubleSided{false};
 
     std::vector<SwRenderItem> mRItems;
     SwStagingBuffer mRItemsStaging;
@@ -57,6 +58,7 @@ public:
     SwBatch& operator=(const SwBatch&) = delete;
 
     inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return *mGraphicsPipelineBundle; }
+    inline bool isDoubleSided() const { return mDoubleSided; }
     inline std::vector<SwRenderItem>& getRItems() { return mRItems; }
     inline std::vector<SwRenderInstance>& getRInsts() { return mRInsts; }
     inline SwStagingBuffer& getRItemsStaging() { return mRItemsStaging; }

@@ -20,7 +20,6 @@ void SwGeometry::System::initializeResources() {
     depthPrePassOptions.mLayout = mResources.mDepthPrePassPipelineLayout.getRawLayout();
     depthPrePassOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     depthPrePassOptions.mPolygonMode = vk::PolygonMode::eFill;
-    depthPrePassOptions.mCullMode = vk::CullModeFlagBits::eBack;
     depthPrePassOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
     depthPrePassOptions.mMultisamplingEnabled = false;
     depthPrePassOptions.mSampleShadingEnabled = false;
@@ -29,7 +28,10 @@ void SwGeometry::System::initializeResources() {
     depthPrePassOptions.mDepthTestEnabled = true;
     depthPrePassOptions.mDepthWriteEnabled = true;
     depthPrePassOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mResources.mDepthPrePassPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(depthPrePassOptions);
+    depthPrePassOptions.mCullMode = vk::CullModeFlagBits::eBack;
+    mResources.mDepthPrePassBackCulledPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(depthPrePassOptions);
+    depthPrePassOptions.mCullMode = vk::CullModeFlagBits::eNone;
+    mResources.mDepthPrePassNoFaceCulledPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(depthPrePassOptions);
 }
 
 void SwGeometry::System::initializePasses() {
@@ -52,7 +54,6 @@ void SwGeometry::System::initializePasses() {
         );
 
         cmd.beginRendering(renderInfo);
-        cmd.bindPipeline(mResources.mDepthPrePassPipelineBundle.getBindPoint(), mResources.mDepthPrePassPipelineBundle.getRawPipeline());
         SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
 
@@ -64,9 +65,12 @@ void SwGeometry::System::initializePasses() {
                 if (batch.getRItems().empty()) {
                     continue;
                 }
+                SwGraphicsPipelineBundle& prePassBundle = batch.isDoubleSided() ? mResources.mDepthPrePassNoFaceCulledPipelineBundle
+                                                                                : mResources.mDepthPrePassBackCulledPipelineBundle;
+                cmd.bindPipeline(prePassBundle.getBindPoint(), prePassBundle.getRawPipeline());
                 mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
-                    mResources.mDepthPrePassPipelineBundle.getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
+                    prePassBundle.getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
                 cmd.drawIndexedIndirectCount(
                     batch.getFrustumRItemsBuffer().getRawBuffer(),
