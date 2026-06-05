@@ -144,9 +144,9 @@ void SwGui::initialize() {
         ImGui::Text("Frame Time:  %.2fms", SwRenderer::sRendererContext.mStats->mFrameTime);
         ImGui::Text("Draw Time:  %.2fms", SwRenderer::sRendererContext.mStats->mDrawTime);
         ImGui::Text("Update Time: %.2fms", SwRenderer::sRendererContext.mStats->mSceneUpdateTime);
-        ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mDrawCallCount);
-        ImGui::Text("Pre-Cull Render Instances: %i", SwRenderer::sRendererContext.mStats->mPreCullRenderInstancesCount);
-        ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer.getMappedPtr()));
+        ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall);
+        ImGui::Text("Pre-Cull Render Instances: %i", SwRenderer::sRendererContext.mStats->mNumInitialRenderInstances);
+        ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRInstsCount.getMappedPtr()));
     };
     mGuiComponents[SwGuiComponent::Controls] = [this]() {
         ImGui::Text("[G] Toggle GUI");

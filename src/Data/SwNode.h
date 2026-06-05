@@ -24,7 +24,7 @@ protected:
     glm::mat4 mWorldTransform;
 
 public:
-    static SwStagingBuffer sNodeTransformsStagingBuffer;
+    static SwStagingBuffer sNodeTransformsStaging;
 
     SwNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform);
 
@@ -38,7 +38,7 @@ public:
 
     void refreshTransform(const glm::mat4& parentTransform);
 
-    virtual void generateRenderItemsAndRenderInstances();
+    virtual void generateRItemsAndRInsts();
 
     static void init();
     static void cleanup();
@@ -50,5 +50,5 @@ class SwMeshNode : public SwNode {
 public:
     SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh);
 
-    void generateRenderItemsAndRenderInstances() override;
+    void generateRItemsAndRInsts() override;
 };

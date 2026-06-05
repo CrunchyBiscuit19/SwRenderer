@@ -75,7 +75,7 @@ void SwPick::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::PickDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
@@ -90,17 +90,17 @@ void SwPick::System::initializePasses() {
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
-                if (batch.getRenderItems().empty()) {
+                if (batch.getRItems().empty()) {
                     continue;
                 }
-                mResources.mDrawPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mDrawPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
                 cmd.drawIndexedIndirectCount(
-                    batch.getPostCullRenderItemsBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsBuffer().getRawBuffer(),
                     0,
-                    batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsCount().getRawBuffer(),
                     0,
-                    static_cast<std::uint32_t>(batch.getRenderItems().size()),
+                    static_cast<std::uint32_t>(batch.getRItems().size()),
                     sizeof(SwRenderItem)
                 );
             }
@@ -203,7 +203,7 @@ void SwPick::System::refreshDynamicDependencies() {
     );
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.mPasses[SwPass::Type::PickDraw].setDynamicDeps(std::move(dynamicDeps));
@@ -214,8 +214,8 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneVisibleRenderInstancesIndicesBuffer =
-        mScene.getSceneVisibleRenderInstancesIndicesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneVisibleRInstsIndicesBuffer =
+        mScene.getSceneVisibleRInstsIndicesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }
 

@@ -449,7 +449,7 @@ void SwColorImageCubemap::resize(vk::Extent3D newExtent) {
     *this = SwImageFactory::createColorImageCubemap(nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
 }
 
-SwStagingBuffer SwImageFactory::sImageStagingBuffer;
+SwStagingBuffer SwImageFactory::sImageStaging;
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
 std::uint32_t SwImageFactory::getFormatTexelSize(vk::Format format) {
@@ -559,8 +559,8 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     const size_t faceSize = image.getExtent().depth * image.getExtent().width * image.getExtent().height * bytesPerTexel;
     const size_t dataSize = faceSize * numFaces;
     SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        sImageStagingBuffer.copyFrom(cmd, data, dataSize);
-        sImageStagingBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        sImageStaging.copyFrom(cmd, data, dataSize);
+        sImageStaging.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         image.emitTransition(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eTransferDstOptimal);
 
         std::vector<vk::BufferImageCopy> copyRegions;
@@ -578,7 +578,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
             copyRegions.emplace_back(copyRegion);
         }
 
-        cmd.copyBufferToImage(sImageStagingBuffer.getRawBuffer(), image.getRawImage(), vk::ImageLayout::eTransferDstOptimal, copyRegions);
+        cmd.copyBufferToImage(sImageStaging.getRawBuffer(), image.getRawImage(), vk::ImageLayout::eTransferDstOptimal, copyRegions);
 
         if (image.isMipmapped()) image.generateMipmaps(cmd);
 
@@ -587,7 +587,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
 }
 
 void SwImageFactory::init() {
-    sImageStagingBuffer = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
+    sImageStaging = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
     constexpr std::uint32_t white = std::byteswap(0xFFFFFFFF);
     sDefaultImages.try_emplace(
         SwDefaultImageOption::White,
@@ -703,5 +703,5 @@ SwColorImageCubemap SwImageFactory::createColorImageCubemap(
 
 void SwImageFactory::cleanup() {
     sDefaultImages.clear();
-    sImageStagingBuffer.destroy();
+    sImageStaging.destroy();
 }

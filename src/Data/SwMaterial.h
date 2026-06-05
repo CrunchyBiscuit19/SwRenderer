@@ -50,7 +50,7 @@ private:
     static constexpr std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{1 << 20};  // 1 MB
 
 public:
-    static SwStagingBuffer sMaterialConstantsStagingBuffer;
+    static SwStagingBuffer sMaterialConstantsStaging;
 
     glm::vec4 mBaseFactor;
     glm::vec4 mEmissiveFactor;

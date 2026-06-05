@@ -55,7 +55,7 @@ private:
     SwAllocatedBuffer mSceneNodeTransformsBuffer;
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
-    SwAllocatedBuffer mSceneVisibleRenderInstancesIndicesBuffer;
+    SwAllocatedBuffer mSceneVisibleRInstsIndicesBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -99,7 +99,7 @@ public:
     inline SwAllocatedBuffer& getSceneNodeTransformsBuffer() { return mSceneNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
-    inline SwAllocatedBuffer& getSceneVisibleRenderInstancesIndicesBuffer() { return mSceneVisibleRenderInstancesIndicesBuffer; }
+    inline SwAllocatedBuffer& getSceneVisibleRInstsIndicesBuffer() { return mSceneVisibleRInstsIndicesBuffer; }
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
     inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }
@@ -109,7 +109,7 @@ public:
     void unloadInstances();
     void markAllAssetsDelete();
 
-    void regenerateRenderItemsAndRenderInstances();
+    void regenerateRItemsAndRInsts();
 
     void realignVertexIndexOffset();
     void realignMaterialOffset();

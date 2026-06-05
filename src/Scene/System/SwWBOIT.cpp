@@ -69,7 +69,7 @@ void SwWBOIT::System::initializePasses() {
         );
         SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
-        SwRenderer::sRendererContext.mStats->mDrawCallCount++;
+        SwRenderer::sRendererContext.mStats->mNumDrawCall++;
 
         cmd.endRendering();
     });

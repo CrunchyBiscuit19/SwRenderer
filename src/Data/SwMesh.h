@@ -21,7 +21,7 @@ private:
     static constexpr std::uint32_t BOUNDS_STAGING_BUFFER_SIZE{1 << 20};  // 1 MB
 
 public:
-    static SwStagingBuffer sBoundsStagingBuffer;
+    static SwStagingBuffer sBoundsStaging;
 
     glm::vec3 mMin;
     glm::vec3 mMax;
@@ -54,7 +54,7 @@ private:
     SwBounds mBounds;
 
 public:
-    static SwStagingBuffer sMeshStagingBuffer;
+    static SwStagingBuffer sMeshStaging;
 
     std::uint32_t mRelativeFirstBounds;
     SwAllocatedBuffer mVertexBuffer;

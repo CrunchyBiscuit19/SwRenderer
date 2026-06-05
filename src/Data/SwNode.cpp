@@ -5,15 +5,15 @@
 #include <Renderer/SwRendererContext.h>
 #include <Scene/SwScene.h>
 
-SwStagingBuffer SwNode::sNodeTransformsStagingBuffer{};
+SwStagingBuffer SwNode::sNodeTransformsStaging{};
 
 void SwNode::refreshTransform(const glm::mat4& parentTransform) {
     mWorldTransform = parentTransform * mLocalTransform;
     for (const auto& child : mChildren) child->refreshTransform(mWorldTransform);
 }
 
-void SwNode::generateRenderItemsAndRenderInstances() {
-    for (const auto& child : mChildren) child->generateRenderItemsAndRenderInstances();
+void SwNode::generateRItemsAndRInsts() {
+    for (const auto& child : mChildren) child->generateRItemsAndRInsts();
 }
 
 SwNode::SwNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform)
@@ -27,15 +27,15 @@ void SwNode::addChild(std::shared_ptr<SwNode> child) {
 }
 
 void SwNode::init() {
-    sNodeTransformsStagingBuffer = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
+    sNodeTransformsStaging = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
 }
 
-void SwNode::cleanup() { sNodeTransformsStagingBuffer.destroy(); }
+void SwNode::cleanup() { sNodeTransformsStaging.destroy(); }
 
 SwMeshNode::SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh)
     : SwNode(name, relativeNodeIndex, localTransform), mMesh(mesh) {}
 
-void SwMeshNode::generateRenderItemsAndRenderInstances() {
+void SwMeshNode::generateRItemsAndRInsts() {
     for (auto& primitive : mMesh.getPrimitives()) {
         std::uint32_t pipelineId = primitive.mMaterial.getPipelineBundle().getID();
 
@@ -45,12 +45,12 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
 
         auto [it, inserted] = workingBatchMap.try_emplace(pipelineId, primitive);
         SwBatch& workingBatch = it->second;
-        workingBatch.getRenderItems().emplace_back(
+        workingBatch.getRItems().emplace_back(
             primitive.mIndexCount,
             0,  // Instance count set to 0, incremented inside culling compute shader
             mMesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
             mMesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
-            SwBatch::sFirstRenderInstanceOffset,
+            SwBatch::sFirstRInstOffset,
             workingAsset.mFirstMaterialInScene + primitive.mMaterial.mRelativeMaterialIndex,
             workingAsset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
             workingAsset.getId(),
@@ -58,14 +58,14 @@ void SwMeshNode::generateRenderItemsAndRenderInstances() {
             workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
         );
 
-        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch.getRenderItems().size() - 1);
+        std::uint32_t renderItemIndex = static_cast<std::uint32_t>(workingBatch.getRItems().size() - 1);
         std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
         for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
-            workingBatch.getRenderInstances().emplace_back(renderItemIndex, instanceIndex + i);
+            workingBatch.getRInsts().emplace_back(renderItemIndex, instanceIndex + i);
         }
 
-        SwBatch::sFirstRenderInstanceOffset += workingAsset.getInstances().size();
+        SwBatch::sFirstRInstOffset += workingAsset.getInstances().size();
     }
 
-    SwNode::generateRenderItemsAndRenderInstances();
+    SwNode::generateRItemsAndRInsts();
 }

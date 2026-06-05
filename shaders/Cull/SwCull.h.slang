@@ -14,30 +14,30 @@ namespace SwCull {
     }
 
     public struct ResetPC {
-        public SwRenderItem* mRenderItemsBuffer;
-        public uint mRenderItemsLimit;
+        public SwRenderItem* mRItemsBuffer;
+        public uint mRItemsLimit;
     };
 
     public struct WorkPC {
-        public SwRenderItem* mRenderItemsBuffer;
-        public SwRenderInstance* mRenderInstancesBuffer;
-        public uint* mRenderInstancesCountBuffer;
+        public SwRenderItem* mRItemsBuffer;
+        public SwRenderInstance* mRInstsBuffer;
+        public uint* mRInstsCount;
         public Plane* mFrustumBuffer;
         public SwPerFrameData* mPerFrameBuffer;
         public SwBounds* mSceneBoundsBuffer;
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
-        public uint* mSceneVisibleRenderInstancesIndicesBuffer;
-        public uint mRenderInstancesLimit;
+        public uint* mSceneVisibleRInstsIndicesBuffer;
+        public uint mRInstsLimit;
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;
     };
 
     public struct CompactPC {
-        public SwRenderItem* mPreRenderItemsBuffer;
-        public SwRenderItem* mPostRenderItemsBuffer;
-        public uint* mPostRenderItemsCountBuffer;
-        public uint mPreRenderItemsLimit;
+        public SwRenderItem* mPreRItemsBuffer;
+        public SwRenderItem* mPostRItemsBuffer;
+        public uint* mPostRItemsCount;
+        public uint mPreRItemsLimit;
     };
 
     public struct PrepOcclusionPC {

@@ -96,7 +96,7 @@ void SwSkybox::System::initializePasses() {
         SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.pushConstants<SwSkybox::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwSkybox::WorkPC::sStages, 0, mResources.mWorkPushConstants);
         cmd.draw(SwSkybox::NUM_SKYBOX_VERTICES, 1, 0, 0);
-        SwRenderer::sRendererContext.mStats->mDrawCallCount++;
+        SwRenderer::sRendererContext.mStats->mNumDrawCall++;
 
         cmd.endRendering();
     });

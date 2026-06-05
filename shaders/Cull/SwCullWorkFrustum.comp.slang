@@ -43,16 +43,16 @@ bool frustumCull(
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     // Get thread ID as index into which render instance for culling check
-    uint renderInstancesIndex = in.mDispatchThreadID.x;
-    if (renderInstancesIndex >= workPc.mRenderInstancesLimit)
+    uint rInstsIndex = in.mDispatchThreadID.x;
+    if (rInstsIndex >= workPc.mRInstsLimit)
         return;
 
-    SwRenderInstance renderInstance = workPc.mRenderInstancesBuffer[renderInstancesIndex];
-    SwRenderItem* renderItem = &workPc.mRenderItemsBuffer[renderInstance.mRenderItemsIndex];
+    SwRenderInstance rInst = workPc.mRInstsBuffer[rInstsIndex];
+    SwRenderItem *rItem = &workPc.mRItemsBuffer[rInst.mRItemIndex];
 
-    SwBounds* bounds = &workPc.mSceneBoundsBuffer[renderItem->mBoundsIndex];
-    SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[renderItem->mNodeTransformIndex];
-    SwInstance* instance = &workPc.mSceneInstancesBuffer[renderInstance.mSceneInstanceIndex];
+    SwBounds* bounds = &workPc.mSceneBoundsBuffer[rItem->mBoundsIndex];
+    SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rItem->mNodeTransformIndex];
+    SwInstance* instance = &workPc.mSceneInstancesBuffer[rInst.mSceneInstanceIndex];
     SwCull::Plane* frustum = workPc.mFrustumBuffer;
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
@@ -70,13 +70,13 @@ void main(SwCull::CSInput in) {
     if (!visible)
         return;
     uint _;
-    InterlockedAdd(*workPc.mRenderInstancesCountBuffer, 1, _);  // CAUTION * or [0]
+    InterlockedAdd(*workPc.mRInstsCount, 1, _);  // CAUTION * or [0]
 
     // Write the indices of visible render instances to the visible instances indices buffer
     // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
-    uint offsetVisibleRenderInstanceIndex;
-    InterlockedAdd(renderItem->mRenderInstanceCount, 1, offsetVisibleRenderInstanceIndex);  // Reset renderItem->mRenderInstanceCount to 0 before occlusion?
-    uint finalVisibleRenderInstanceIndex = renderItem->mFirstRenderInstance + offsetVisibleRenderInstanceIndex;
-    workPc.mSceneVisibleRenderInstancesIndicesBuffer[finalVisibleRenderInstanceIndex] = renderInstance.mSceneInstanceIndex;  // Reset this as well?
+    uint offsetVisibleRInstIndex;
+    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex); // Reset rItem->mRInstCount to 0 before occlusion?
+    uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
+    workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;  // Reset this as well?
 }

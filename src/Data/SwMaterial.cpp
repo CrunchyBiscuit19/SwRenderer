@@ -19,11 +19,11 @@ SwMaterialTexture SwMaterialTexture::retrieveDefaultWhiteTexture() { return SwMa
 
 SwMaterialTexture SwMaterialTexture::retrieveDefaultErrorTexture() { return SwMaterialTexture(sDefaultErrorTexture.mImage, sDefaultErrorTexture.mSampler); }
 
-SwStagingBuffer SwMaterialConstants::sMaterialConstantsStagingBuffer{};
+SwStagingBuffer SwMaterialConstants::sMaterialConstantsStaging{};
 
-void SwMaterialConstants::init() { sMaterialConstantsStagingBuffer = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }
+void SwMaterialConstants::init() { sMaterialConstantsStaging = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }
 
-void SwMaterialConstants::cleanup() { sMaterialConstantsStagingBuffer.destroy(); }
+void SwMaterialConstants::cleanup() { sMaterialConstantsStaging.destroy(); }
 
 SwDescriptorLayout SwMaterialResources::sMaterialResourcesDescriptorLayout{};
 

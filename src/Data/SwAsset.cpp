@@ -270,8 +270,8 @@ void SwAsset::constructMaterials() {
     materialConstantsCopy.size = materialConstants.size() * sizeof(SwMaterialConstants);
 
     SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, &materialConstants, materialConstantsCopy](vk::CommandBuffer cmd) {
-        SwMaterialConstants::sMaterialConstantsStagingBuffer.copyFrom(cmd, materialConstants.data(), materialConstantsCopy.size);
-        mMaterialConstantsBuffer.copyFrom(cmd, SwMaterialConstants::sMaterialConstantsStagingBuffer, materialConstantsCopy);
+        SwMaterialConstants::sMaterialConstantsStaging.copyFrom(cmd, materialConstants.data(), materialConstantsCopy.size);
+        mMaterialConstantsBuffer.copyFrom(cmd, SwMaterialConstants::sMaterialConstantsStaging, materialConstantsCopy);
         mMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });
 }
@@ -378,10 +378,10 @@ void SwAsset::constructMeshes() {
 
         SwMesh& createdMesh = mMeshes.back();
         SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&createdMesh, &vertices, &indices, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
-            SwMesh::sMeshStagingBuffer.copyFrom(cmd, vertices.data(), vertexCopy.size, 0);
-            SwMesh::sMeshStagingBuffer.copyFrom(cmd, indices.data(), indexCopy.size, indexCopy.srcOffset);
-            createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, vertexCopy);
-            createdMesh.getIndexBuffer().copyFrom(cmd, SwMesh::sMeshStagingBuffer, indexCopy);
+            SwMesh::sMeshStaging.copyFrom(cmd, vertices.data(), vertexCopy.size, 0);
+            SwMesh::sMeshStaging.copyFrom(cmd, indices.data(), indexCopy.size, indexCopy.srcOffset);
+            createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStaging, vertexCopy);
+            createdMesh.getIndexBuffer().copyFrom(cmd, SwMesh::sMeshStaging, indexCopy);
             createdMesh.getVertexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
             createdMesh.getIndexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         });
@@ -398,8 +398,8 @@ void SwAsset::constructMeshes() {
     boundsCopy.size = boundsSize;
 
     SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, &boundsVector, boundsCopy](vk::CommandBuffer cmd) {
-        SwBounds::sBoundsStagingBuffer.copyFrom(cmd, boundsVector.data(), boundsCopy.size);
-        mBoundsBuffer.copyFrom(cmd, SwBounds::sBoundsStagingBuffer, boundsCopy);
+        SwBounds::sBoundsStaging.copyFrom(cmd, boundsVector.data(), boundsCopy.size);
+        mBoundsBuffer.copyFrom(cmd, SwBounds::sBoundsStaging, boundsCopy);
         mBoundsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });
 }
@@ -462,9 +462,9 @@ void SwAsset::constructNodes() {
 
     SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, nodeTransformsCopy](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mNodes.size(); i++) {
-            SwNode::sNodeTransformsStagingBuffer.copyFrom(cmd, glm::value_ptr(mNodes[i]->getWorldTransform()), sizeof(glm::mat4), i * sizeof(glm::mat4));
+            SwNode::sNodeTransformsStaging.copyFrom(cmd, glm::value_ptr(mNodes[i]->getWorldTransform()), sizeof(glm::mat4), i * sizeof(glm::mat4));
         }
-        mNodeTransformsBuffer.copyFrom(cmd, SwNode::sNodeTransformsStagingBuffer, nodeTransformsCopy);
+        mNodeTransformsBuffer.copyFrom(cmd, SwNode::sNodeTransformsStaging, nodeTransformsCopy);
         mNodeTransformsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });
 }
@@ -478,10 +478,10 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     constructNodes();
 }
 
-void SwAsset::generateRenderItemsAndRenderInstances() {
+void SwAsset::generateRItemsAndRInsts() {
     if (mDelete) return;
     for (auto& topNode : mTopNodes) {
-        topNode->generateRenderItemsAndRenderInstances();
+        topNode->generateRItemsAndRInsts();
     }
 }
 

@@ -69,7 +69,7 @@ public:
     SwAsset() = default;
     SwAsset(std::filesystem::path& assetPath);
 
-    void generateRenderItemsAndRenderInstances();
+    void generateRItemsAndRInsts();
 
     void createInstance(SwInstance::Data instanceData = SwInstance::Data());
     void createInstance(SwCamera& camera);

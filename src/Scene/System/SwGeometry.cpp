@@ -42,7 +42,7 @@ void SwGeometry::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::GeometryDepthPrePass, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
@@ -61,23 +61,23 @@ void SwGeometry::System::initializePasses() {
                 continue;
             }
             for (auto& batch : batchType.second | std::views::values) {
-                if (batch.getRenderItems().empty()) {
+                if (batch.getRItems().empty()) {
                     continue;
                 }
-                mResources.mWorkPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawingRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     mResources.mDepthPrePassPipelineBundle.getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
                 cmd.drawIndexedIndirectCount(
-                    batch.getPostCullRenderItemsBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsBuffer().getRawBuffer(),
                     0,
-                    batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsCount().getRawBuffer(),
                     0,
-                    static_cast<std::uint32_t>(batch.getRenderItems().size()),
+                    static_cast<std::uint32_t>(batch.getRItems().size()),
                     sizeof(SwRenderItem)
                 );
-                SwRenderer::sRendererContext.mStats->mDrawCallCount++;
-                SwRenderer::sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
+                SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+                SwRenderer::sRendererContext.mStats->mNumInitialRenderInstances += batch.getRInsts().size();
             }
         }
 
@@ -93,7 +93,7 @@ void SwGeometry::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::GeometryOpaque, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
@@ -109,7 +109,7 @@ void SwGeometry::System::initializePasses() {
                 continue;
             }
             for (auto& batch : batchType.second | std::views::values) {
-                if (batch.getRenderItems().empty()) {
+                if (batch.getRItems().empty()) {
                     continue;
                 }
                 cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
@@ -122,20 +122,20 @@ void SwGeometry::System::initializePasses() {
                     mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
                     nullptr
                 );
-                mResources.mWorkPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawingRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
                 cmd.drawIndexedIndirectCount(
-                    batch.getPostCullRenderItemsBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsBuffer().getRawBuffer(),
                     0,
-                    batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsCount().getRawBuffer(),
                     0,
-                    static_cast<std::uint32_t>(batch.getRenderItems().size()),
+                    static_cast<std::uint32_t>(batch.getRItems().size()),
                     sizeof(SwRenderItem)
                 );
-                SwRenderer::sRendererContext.mStats->mDrawCallCount++;
-                SwRenderer::sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
+                SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+                SwRenderer::sRendererContext.mStats->mNumInitialRenderInstances += batch.getRInsts().size();
             }
         }
 
@@ -152,14 +152,14 @@ void SwGeometry::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRenderInstancesIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Transparent) {
             continue;
         }
         for (auto& batch : batchType.second | std::views::values) {
-            staticDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            staticDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.insertPass(SwPass::Type::GeometryTransparent, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
@@ -176,7 +176,7 @@ void SwGeometry::System::initializePasses() {
                 continue;
             }
             for (auto& batch : batchType.second | std::views::values) {
-                if (batch.getRenderItems().empty()) {
+                if (batch.getRItems().empty()) {
                     continue;
                 }
                 cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
@@ -189,20 +189,20 @@ void SwGeometry::System::initializePasses() {
                     mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
                     nullptr
                 );
-                mResources.mWorkPushConstants.mPostCullRenderItemsBuffer = batch.getPostCullRenderItemsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mDrawingRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
                 cmd.pushConstants<SwGeometry::WorkPC>(
                     batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
                 );
                 cmd.drawIndexedIndirectCount(
-                    batch.getPostCullRenderItemsBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsBuffer().getRawBuffer(),
                     0,
-                    batch.getPostCullRenderItemsCountBuffer().getRawBuffer(),
+                    batch.getFrustumRItemsCount().getRawBuffer(),
                     0,
-                    static_cast<std::uint32_t>(batch.getRenderItems().size()),
+                    static_cast<std::uint32_t>(batch.getRItems().size()),
                     sizeof(SwRenderItem)
                 );
-                SwRenderer::sRendererContext.mStats->mDrawCallCount++;
-                SwRenderer::sRendererContext.mStats->mPreCullRenderInstancesCount += batch.getRenderInstances().size();
+                SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+                SwRenderer::sRendererContext.mStats->mNumInitialRenderInstances += batch.getRInsts().size();
             }
         }
         cmd.endRendering();
@@ -220,7 +220,7 @@ void SwGeometry::System::refreshDynamicDependencies() {
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Opaque) continue;
         for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.mPasses[SwPass::Type::GeometryDepthPrePass].setDynamicDeps(std::move(dynamicDeps));
@@ -231,7 +231,7 @@ void SwGeometry::System::refreshDynamicDependencies() {
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) continue;
         for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.mPasses[SwPass::Type::GeometryOpaque].setDynamicDeps(std::move(dynamicDeps));
@@ -242,7 +242,7 @@ void SwGeometry::System::refreshDynamicDependencies() {
     for (auto& batchType : mScene.getBatchTypes()) {
         if (batchType.first != SwMaterial::Type::Transparent) continue;
         for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getPostCullRenderItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
         }
     }
     mScene.mPasses[SwPass::Type::GeometryTransparent].setDynamicDeps(std::move(dynamicDeps));
@@ -254,7 +254,7 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibleRenderInstancesIndicesBuffer =
-        mScene.getSceneVisibleRenderInstancesIndicesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibleRInstsIndicesBuffer =
+        mScene.getSceneVisibleRInstsIndicesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

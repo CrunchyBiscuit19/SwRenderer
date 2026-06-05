@@ -13,15 +13,15 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     SwVertex v = workPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwRenderItem renderItem = workPc.mPostCullRenderItemsBuffer[in.mDrawIndex];
+    SwRenderItem rItem = workPc.mDrawRItemsBuffer[in.mDrawIndex];
 
-    uint sceneInstanceIndex = workPc.mSceneVisibleRenderInstancesIndicesBuffer[in.mInstanceIndex];
+    uint sceneInstanceIndex = workPc.mSceneVisibleRInstsIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = workPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
 
-    uint sceneNodeTransformIndex = workPc.mPostCullRenderItemsBuffer[in.mDrawIndex].mNodeTransformIndex;
+    uint sceneNodeTransformIndex = workPc.mDrawRItemsBuffer[in.mDrawIndex].mNodeTransformIndex;
     float4x4 nodeTransformMatrix = workPc.mSceneNodeTransformsBuffer[sceneNodeTransformIndex];
 
-    uint sceneMaterialIndex = workPc.mPostCullRenderItemsBuffer[in.mDrawIndex].mMaterialIndex;
+    uint sceneMaterialIndex = workPc.mDrawRItemsBuffer[in.mDrawIndex].mMaterialIndex;
     SwMaterialConstant materialConstant = workPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     out.mPosition =

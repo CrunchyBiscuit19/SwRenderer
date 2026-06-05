@@ -10,20 +10,20 @@ SwPick::VSOutput main(SwPick::VSInput in) {
     SwVertex v = pickDrawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwRenderItem renderItem = pickDrawPc.mPostCullRenderItemsBuffer[in.mDrawIndex];
+    SwRenderItem rItem = pickDrawPc.mDrawRItemsBuffer[in.mDrawIndex];
 
-    uint firstRenderInstance = renderItem.mFirstRenderInstance;
-    uint mSceneInstanceIndex = pickDrawPc.mSceneVisibleRenderInstancesIndicesBuffer[in.mInstanceIndex];
+    uint firstRInst = rItem.mFirstRInst;
+    uint mSceneInstanceIndex = pickDrawPc.mSceneVisibleRInstsIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = pickDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
-    uint mSceneNodeTransformIndex = pickDrawPc.mPostCullRenderItemsBuffer[in.mDrawIndex].mNodeTransformIndex;
+    uint mSceneNodeTransformIndex = pickDrawPc.mDrawRItemsBuffer[in.mDrawIndex].mNodeTransformIndex;
     float4x4 nodeTransformMatrix = pickDrawPc.mSceneNodeTransformsBuffer[mSceneNodeTransformIndex];
 
     out.mPosition =
         mul(mul(mul(mul(pickDrawPc.mPerFrameBuffer->mPerspective.mProj, pickDrawPc.mPerFrameBuffer->mPerspective.mView), instanceTransformMatrix),
                 nodeTransformMatrix),
             position);
-    out.mModelIndex = pickDrawPc.mPostCullRenderItemsBuffer[in.mDrawIndex].mModelIndex;
+    out.mModelIndex = pickDrawPc.mDrawRItemsBuffer[in.mDrawIndex].mModelIndex;
     out.mInstanceIndex = mSceneInstanceIndex;
 
     return out;

@@ -6,10 +6,10 @@ SwCull::CompactPC compactPc;
 
 void copyRenderItem(SwRenderItem* src, SwRenderItem* dst) {
     dst.mIndexCount = src.mIndexCount;
-    dst.mRenderInstanceCount = src.mRenderInstanceCount;
+    dst.mRInstCount = src.mRInstCount;
     dst.mFirstIndex = src.mFirstIndex;
     dst.mVertexOffset = src.mVertexOffset;
-    dst.mFirstRenderInstance = src.mFirstRenderInstance;
+    dst.mFirstRInst = src.mFirstRInst;
     dst.mMaterialIndex = src.mMaterialIndex;
     dst.mNodeTransformIndex = src.mNodeTransformIndex;
     dst.mModelIndex = src.mModelIndex;
@@ -21,16 +21,16 @@ void copyRenderItem(SwRenderItem* src, SwRenderItem* dst) {
 void main(SwCull::CSInput in) {
     // Get thread ID as index into render item
     uint renderItemsIndex = in.mDispatchThreadID.x;
-    if (renderItemsIndex >= compactPc.mPreRenderItemsLimit)
+    if (renderItemsIndex >= compactPc.mPreRItemsLimit)
         return;
 
     // Copy over render items with more than zero instances, and increment counter
-    SwRenderItem* renderItem = &compactPc.mPreRenderItemsBuffer[renderItemsIndex];
+    SwRenderItem* rItem = &compactPc.mPreRItemsBuffer[renderItemsIndex];
 
-    if (renderItem->mRenderInstanceCount == 0)
+    if (rItem->mRInstCount == 0)
         return;
 
     uint writeRenderItemsIndex;
-    InterlockedAdd(*compactPc.mPostRenderItemsCountBuffer, 1, writeRenderItemsIndex);
-    copyRenderItem(renderItem, &compactPc.mPostRenderItemsBuffer[writeRenderItemsIndex]);
+    InterlockedAdd(*compactPc.mPostRItemsCount, 1, writeRenderItemsIndex);
+    copyRenderItem(rItem, &compactPc.mPostRItemsBuffer[writeRenderItemsIndex]);
 }

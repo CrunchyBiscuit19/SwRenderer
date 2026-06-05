@@ -10,7 +10,7 @@ SwCull::WorkPC workPc;
 bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
-    float closestDepthInRenderInstance = 0.f;
+    float closestDepthInRInst = 0.f;
 
     // Transform AABB corners to NDC / Screen space and find min/max XY and closest Z
     // Vulkan NDC is [0, 1] for Z and [-1, 1] for XY
@@ -28,7 +28,7 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
         aabbMinNdc = min(aabbMinNdc, ndc);
         aabbMaxNdc = max(aabbMaxNdc, ndc);
 
-        closestDepthInRenderInstance = max(closestDepthInRenderInstance, ndc.z);
+        closestDepthInRInst = max(closestDepthInRInst, ndc.z);
     }
 
     // Convert NDC XY from [-1,1] to [0, drawExtents]
@@ -72,18 +72,18 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
 
     // Visible if closest is closer (greater than because of reverse-Z) than furthest depth
     float furthestDepthInPyramid = min(min(d0, d1), min(d2, d3));
-    return closestDepthInRenderInstance > furthestDepthInPyramid;
+    return closestDepthInRInst > furthestDepthInPyramid;
 }
 
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     // Get thread ID as index into which render instance for culling check
-    uint renderInstancesIndex = in.mDispatchThreadID.x;
-    if (renderInstancesIndex >= workPc.mRenderInstancesLimit)
+    uint rInstsIndex = in.mDispatchThreadID.x;
+    if (rInstsIndex >= workPc.mRInstsLimit)
         return;
 
-    SwRenderInstance renderInstance = workPc.mRenderInstancesBuffer[renderInstancesIndex];
-    SwRenderItem* renderItem = &workPc.mPreCullRenderItemsBuffer[renderInstance.mRenderItemsIndex];
+    SwRenderInstance rInst = workPc.mRInstsBuffer[rInstsIndex];
+    SwRenderItem* rItem = &workPc.mRItemsBuffer[rInst.mRItemIndex];
 
     SwPerspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
@@ -102,13 +102,13 @@ void main(SwCull::CSInput in) {
     if (!visible)
         return;
     uint _;
-    InterlockedAdd(*workPc.mRenderInstancesCountBuffer, 1, _);
+    InterlockedAdd(*workPc.mRInstsCount, 1, _);
 
     // Write the indices of visible render instances to the visible instances indices buffer
     // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
-    uint offsetVisibleRenderInstanceIndex;
-    InterlockedAdd(renderItem->mRenderInstanceCount, 1, offsetVisibleRenderInstanceIndex);
-    uint finalVisibleRenderInstanceIndex = renderItem->mFirstRenderInstance + offsetVisibleRenderInstanceIndex;
-    workPc.mSceneVisibleRenderInstancesIndicesBuffer[finalVisibleRenderInstanceIndex] = renderInstance.mSceneInstanceIndex;
+    uint offsetVisibleRInstIndex;
+    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
+    uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
+    workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;
 }

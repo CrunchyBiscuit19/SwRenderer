@@ -37,10 +37,10 @@ public typedef float4x4 SwNodeTransform;
 
 public struct SwRenderItem {
     public uint mIndexCount;
-    public uint mRenderInstanceCount;
+    public uint mRInstCount;
     public uint mFirstIndex;
     public uint mVertexOffset;
-    public uint mFirstRenderInstance;
+    public uint mFirstRInst;
     public uint mMaterialIndex;
     public uint mNodeTransformIndex;
     public uint mModelIndex;
@@ -49,7 +49,7 @@ public struct SwRenderItem {
 };
 
 public struct SwRenderInstance {
-    public uint mRenderItemsIndex;
+    public uint mRItemIndex;
     public uint mSceneInstanceIndex;
 }
 

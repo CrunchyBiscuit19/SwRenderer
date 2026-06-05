@@ -53,7 +53,7 @@ void SwScene::initializeMiscPasses() {
     staticDeps.clear();
 
     // Gui
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRenderInstancesCountBuffer, SwDependency::BufferDepType::HostRead);
+    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsCount, SwDependency::BufferDepType::HostRead);
     mPasses[SwPass::Type::Gui] = SwPass(SwPass::Type::Gui, staticDeps, [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
             SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
@@ -91,7 +91,7 @@ void SwScene::initializeResources() {
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
     );
 
-    mSceneVisibleRenderInstancesIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+    mSceneVisibleRInstsIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
     );
 
@@ -189,12 +189,12 @@ void SwScene::markAllAssetsDelete() {
     }
 }
 
-void SwScene::regenerateRenderItemsAndRenderInstances() {
+void SwScene::regenerateRItemsAndRInsts() {
     SwBatch::sFirstRenderInstanceOffset = 0;
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
-            batch.getRenderItems().clear();
+            batch.getRItems().clear();
             batch.getRenderInstances().clear();
         }
     }
@@ -212,20 +212,20 @@ void SwScene::regenerateRenderItemsAndRenderInstances() {
             vk::BufferCopy renderItemsCopy{};
             renderItemsCopy.dstOffset = 0;
             renderItemsCopy.srcOffset = 0;
-            renderItemsCopy.size = batch.getRenderItems().size() * sizeof(SwRenderItem);
+            renderItemsCopy.size = batch.getRItems().size() * sizeof(SwRenderItem);
             vk::BufferCopy renderInstancesCopy{};
             renderInstancesCopy.dstOffset = 0;
             renderInstancesCopy.srcOffset = 0;
-            renderInstancesCopy.size = batch.getRenderInstances().size() * sizeof(SwRenderInstance);
+            renderInstancesCopy.size = batch.getRInsts().size() * sizeof(SwRenderInstance);
 
             SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, renderItemsCopy, renderInstancesCopy](vk::CommandBuffer cmd) {
                 batch.getRenderItemsStagingBuffer().copyFrom(cmd, batch.getRenderItems().data(), renderItemsCopy.size);
                 cmd.fillBuffer(batch.getPreCullRenderItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getPreCullRenderItemsBuffer().copyFrom(cmd, batch.getRenderItemsStagingBuffer(), renderItemsCopy);
-                batch.getPreCullRenderItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
+                batch.getInitialRItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+                batch.getInitialRItemsBuffer().copyFrom(cmd, batch.getRItemsStaging(), renderItemsCopy);
+                batch.getInitialRItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getRenderInstancesStagingBuffer().copyFrom(cmd, batch.getRenderInstances().data(), renderInstancesCopy.size);
+                batch.getRenderInstancesStagingBuffer().copyFrom(cmd, batch.getRInsts().data(), renderInstancesCopy.size);
                 cmd.fillBuffer(batch.getRenderInstancesBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 batch.getRenderInstancesBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getRenderInstancesBuffer().copyFrom(cmd, batch.getRenderInstancesStagingBuffer(), renderInstancesCopy);
@@ -477,7 +477,7 @@ void SwScene::perFrameUpdate() {
     } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
         realignInstancesOffset();
         reloadSceneInstancesBuffer();
-        regenerateRenderItemsAndRenderInstances();
+        regenerateRItemsAndRInsts();
     } else if (mFlags.mReloadMainInstancesBuffer) {
         reloadSceneInstancesBuffer();
     }

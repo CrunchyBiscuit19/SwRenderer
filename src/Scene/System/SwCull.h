@@ -25,23 +25,23 @@ struct Plane {
 };
 
 struct ResetPC : public SwPC<ResetPC> {
-    vk::DeviceAddress mRenderItemsBuffer;
-    std::uint32_t mRenderItemsLimit;
+    vk::DeviceAddress mRItemsBuffer;
+    std::uint32_t mRItemsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct WorkPC : public SwPC<WorkPC> {
-    vk::DeviceAddress mRenderItemsBuffer;
-    vk::DeviceAddress mRenderInstancesBuffer;
-    vk::DeviceAddress mRenderInstancesCountBuffer;
+    vk::DeviceAddress mRItemsBuffer;
+    vk::DeviceAddress mRInstsBuffer;
+    vk::DeviceAddress mRInstsCount;
     vk::DeviceAddress mFrustumBuffer;
     vk::DeviceAddress mPerFrameBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneVisibleRenderInstancesIndicesBuffer;
-    std::uint32_t mRenderInstancesLimit;
+    vk::DeviceAddress mSceneVisibleRInstsIndicesBuffer;
+    std::uint32_t mRInstsLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
 
@@ -49,10 +49,10 @@ struct WorkPC : public SwPC<WorkPC> {
 };
 
 struct CompactPC : SwPC<CompactPC> {
-    vk::DeviceAddress mPreRenderItemsBuffer;
-    vk::DeviceAddress mPostRenderItemsBuffer;
-    vk::DeviceAddress mPostRenderItemsCountBuffer;
-    std::uint32_t mPreRenderItemsLimit;
+    vk::DeviceAddress mPreRItemsBuffer;
+    vk::DeviceAddress mPostRItemsBuffer;
+    vk::DeviceAddress mPostRItemsCount;
+    std::uint32_t mPreRItemsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
