@@ -9,7 +9,6 @@
 
 namespace SwGeometry {
 
-static const std::filesystem::path DEPTH_PRE_PASS_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometry.vert.spv"};
 struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
@@ -24,10 +23,6 @@ struct WorkPC : SwPC<WorkPC> {
 
 struct Resources {
     WorkPC mWorkPushConstants;
-
-    SwGraphicsPipelineBundle mDepthPrePassBackCulledPipelineBundle;
-    SwGraphicsPipelineBundle mDepthPrePassNoFaceCulledPipelineBundle;
-    SwPipelineLayout mDepthPrePassPipelineLayout;
 };
 
 class System : public SwSystem {

@@ -24,8 +24,6 @@ struct Plane {
     Plane(glm::vec3 n, glm::vec3 p) : mNormal(glm::normalize(n)), mDistance(glm::dot(glm::normalize(n), p)) {}
 };
 
-enum class Phase { Frustum, Occlusion };
-
 struct ResetPC : public SwPC<ResetPC> {
     vk::DeviceAddress mRItemsBuffer;
     std::uint32_t mRItemsLimit;
@@ -43,12 +41,9 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneVisibleRInstsIndicesBuffer;
-    vk::DeviceAddress mFrustumVisibleRInstsBuffer;
-    vk::DeviceAddress mFrustumVisibleRInstsCount;
     std::uint32_t mRInstsLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
-    Phase mPhase;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

@@ -231,9 +231,7 @@ void SwScene::regenerateRItemsAndRInsts() {
                 batch.getRInstsBuffer().copyFrom(cmd, batch.getRInstsStaging(), RInstsCopy);
                 batch.getRInstsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getFrustumRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
                 batch.getOcclusionRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
-                batch.getFrustumVisibleRInstsBuffer().ensureCapacity(cmd, RInstsCopy.size);  // At least as big as mRInstsBuffer
             });
         }
     }
@@ -515,18 +513,14 @@ void SwScene::draw() {
     commandBuffer.reset();
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
     if (mSkybox.isActive() && mSkybox.isFileSelected()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
     }
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullResetFrustum]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkFrustum]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactFrustum]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryDepthPrePass]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullResetOcclusion]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkOcclusion]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactOcclusion]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     if (mPick.isPicked()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);

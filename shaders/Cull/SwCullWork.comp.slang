@@ -117,27 +117,11 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
 
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
-    // Get thread ID as index into which render instance for culling check.
-    // Frustum phase walks the full instance list (mRInstsBuffer / mRInstsLimit).
-    // Occlusion phase walks only the frustum survivors the frustum phase compacted into
-    // mRInstsBuffer; their count lives in mFrustumVisibleRInstsCount (GPU-side).
+    // Single-pass cull: walk the full instance list, apply frustum then occlusion.
     uint rInstsIndex = in.mDispatchThreadID.x;
-    uint rInstsLimit;
-    SwRenderInstance* rInstsBuffer;
-    switch (workPc.mPhase) {
-        case SwCull::Phase::Frustum:
-            rInstsLimit = workPc.mRInstsLimit;
-            rInstsBuffer = workPc.mRInstsBuffer;
-            break;
-        case SwCull::Phase::Occlusion:
-            rInstsLimit = *workPc.mFrustumVisibleRInstsCount;
-            rInstsBuffer = workPc.mFrustumVisibleRInstsBuffer;
-            break;
-    }
-
-    if (rInstsIndex >= rInstsLimit)
+    if (rInstsIndex >= workPc.mRInstsLimit)
         return;
-    SwRenderInstance rInst = rInstsBuffer[rInstsIndex];
+    SwRenderInstance rInst = workPc.mRInstsBuffer[rInstsIndex];
     SwRenderItem* rItem = &workPc.mRItemsBuffer[rInst.mRItemIndex];
 
     SwBounds* bounds = &workPc.mSceneBoundsBuffer[rItem->mBoundsIndex];
@@ -158,16 +142,9 @@ void main(SwCull::CSInput in) {
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
 
-    bool visible = true;
-    switch (workPc.mPhase) {
-        case SwCull::Phase::Frustum:
-            visible = frustumTest(frustum, aabbCorners);
-            break;
-        case SwCull::Phase::Occlusion:
-            // Survivors already passed the frustum test; only occlusion remains.
-            visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
-            break;
-    }
+    bool visible = frustumTest(frustum, aabbCorners);
+    if (visible)
+        visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
 
     if (!visible)
         return;
@@ -181,11 +158,4 @@ void main(SwCull::CSInput in) {
     InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
     uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
     workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;
-
-    // Frustum phase compacts the surviving instances so the occlusion phase only walks those.
-    if (workPc.mPhase == SwCull::Phase::Frustum) {
-        uint survivorSlot;
-        InterlockedAdd(*workPc.mFrustumVisibleRInstsCount, 1, survivorSlot);
-        workPc.mFrustumVisibleRInstsBuffer[survivorSlot].copyFrom(&rInst);
-    }
 }

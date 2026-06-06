@@ -8,85 +8,10 @@
 
 SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 
-void SwGeometry::System::initializeResources() {
-    mResources.mDepthPrePassPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(nullptr, SwGeometry::WorkPC::getRange());
-
-    SwShader depthPrePassVertexShader = SwShaderFactory::createShader(DEPTH_PRE_PASS_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-
-    SwGraphicsPipelineFactory::SwGraphicsPipelineOptions depthPrePassOptions;
-    depthPrePassOptions.mVertexShader = depthPrePassVertexShader.getRawModule();
-    depthPrePassOptions.mFragmentShader = std::nullopt;
-    depthPrePassOptions.mLayout = mResources.mDepthPrePassPipelineLayout.getRawLayout();
-    depthPrePassOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
-    depthPrePassOptions.mPolygonMode = vk::PolygonMode::eFill;
-    depthPrePassOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
-    depthPrePassOptions.mMultisamplingEnabled = false;
-    depthPrePassOptions.mSampleShadingEnabled = false;
-    depthPrePassOptions.mColorAttachments = {};
-    depthPrePassOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;
-    depthPrePassOptions.mDepthTestEnabled = true;
-    depthPrePassOptions.mDepthWriteEnabled = true;
-    depthPrePassOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    depthPrePassOptions.mCullMode = vk::CullModeFlagBits::eBack;
-    mResources.mDepthPrePassBackCulledPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(depthPrePassOptions);
-    depthPrePassOptions.mCullMode = vk::CullModeFlagBits::eNone;
-    mResources.mDepthPrePassNoFaceCulledPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(depthPrePassOptions);
-}
+void SwGeometry::System::initializeResources() {}
 
 void SwGeometry::System::initializePasses() {
     SwDependency staticDeps;
-
-    // Depth Pre-Pass (opaque only)
-    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    mScene.insertPass(SwPass::Type::GeometryDepthPrePass, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
-            SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
-            nullptr,
-            SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment()
-        );
-
-        cmd.beginRendering(renderInfo);
-        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
-        cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
-
-        for (auto& batchType : mScene.getBatchTypes()) {
-            if (batchType.first != SwMaterial::Type::Opaque) {
-                continue;
-            }
-            for (auto& batch : batchType.second | std::views::values) {
-                if (batch.getRItems().empty()) {
-                    continue;
-                }
-                SwGraphicsPipelineBundle& prePassBundle = batch.isDoubleSided() ? mResources.mDepthPrePassNoFaceCulledPipelineBundle
-                                                                                : mResources.mDepthPrePassBackCulledPipelineBundle;
-                cmd.bindPipeline(prePassBundle.getBindPoint(), prePassBundle.getRawPipeline());
-                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
-                cmd.pushConstants<SwGeometry::WorkPC>(
-                    prePassBundle.getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
-                );
-                cmd.drawIndexedIndirectCount(
-                    batch.getFrustumRItemsBuffer().getRawBuffer(),
-                    0,
-                    batch.getFrustumRItemsCount().getRawBuffer(),
-                    0,
-                    static_cast<std::uint32_t>(batch.getRItems().size()),
-                    sizeof(SwRenderItem)
-                );
-                SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-            }
-        }
-
-        cmd.endRendering();
-    });
-    staticDeps.clear();
 
     // Opaque and Masked
     staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
@@ -207,19 +132,6 @@ void SwGeometry::System::initializePasses() {
 
 void SwGeometry::System::refreshDynamicDependencies() {
     SwDependency dynamicDeps;
-
-    // DepthPrePass
-    dynamicDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
-    );
-    for (auto& batchType : mScene.getBatchTypes()) {
-        if (batchType.first != SwMaterial::Type::Opaque) continue;
-        for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
-    }
-    mScene.mPasses[SwPass::Type::GeometryDepthPrePass].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
 
     // GeometryOpaque
     dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);

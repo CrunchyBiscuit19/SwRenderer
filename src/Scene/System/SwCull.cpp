@@ -64,11 +64,11 @@ void SwCull::System::initializeResources() {
 void SwCull::System::initializePasses() {
     SwDependency staticDeps;
 
-    // ResetFrustum
+    // Reset
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
-    mScene.insertPass(SwPass::Type::CullResetFrustum, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
         cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneVisibleRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
@@ -78,9 +78,8 @@ void SwCull::System::initializePasses() {
                 if (batch.getRItems().empty()) {
                     continue;
                 }
-                cmd.fillBuffer(batch.getFrustumRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
-                cmd.fillBuffer(batch.getFrustumRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                cmd.fillBuffer(batch.getFrustumVisibleRInstsCount().getRawBuffer(), 0, vk::WholeSize, 0);
+                cmd.fillBuffer(batch.getOcclusionRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
+                cmd.fillBuffer(batch.getOcclusionRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
                 const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
                 mResources.mResetPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
                 mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
@@ -91,64 +90,8 @@ void SwCull::System::initializePasses() {
     });
     staticDeps.clear();
 
-    // WorkFrustum
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-    mScene.insertPass(SwPass::Type::CullWorkFrustum, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
-        mResources.mWorkPushConstants.mPerFrameBuffer =
-            SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
-        mResources.mWorkPushConstants.mPhase = SwCull::Phase::Frustum;
-        for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-            for (auto& batch : batchType | std::views::values) {
-                if (batch.getRItems().empty()) {
-                    continue;
-                }
-                cmd.bindDescriptorSets(
-                    mResources.mWorkPipelineBundle.getBindPoint(),
-                    mResources.mWorkPipelineBundle.getRawLayout(),
-                    0,
-                    mResources.mWorkDescriptorSet.getRawSet(),
-                    nullptr
-                );
-                mResources.mWorkPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-                mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
-                mResources.mWorkPushConstants.mFrustumVisibleRInstsBuffer = batch.getFrustumVisibleRInstsBuffer().getDeviceAddress().value();
-                mResources.mWorkPushConstants.mFrustumVisibleRInstsCount = batch.getFrustumVisibleRInstsCount().getDeviceAddress().value();
-                mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
-                cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
-                cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-            }
-        }
-    });
-    staticDeps.clear();
-
-    // CompactFrustum
-    mScene.insertPass(SwPass::Type::CullCompactFrustum, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
-        for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-            for (auto& batch : batchType | std::views::values) {
-                if (batch.getRItems().empty()) {
-                    continue;
-                }
-                mResources.mCompactPushConstants.mPreRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-                mResources.mCompactPushConstants.mPostRItemsBuffer = batch.getFrustumRItemsBuffer().getDeviceAddress().value();
-                mResources.mCompactPushConstants.mPostRItemsCount = batch.getFrustumRItemsCount().getDeviceAddress().value();
-                mResources.mCompactPushConstants.mPreRItemsLimit = batch.getRItems().size();
-                cmd.pushConstants<SwCull::CompactPC>(
-                    mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
-                );
-                cmd.dispatch(SwHelper::fastDivCeil(batch.getRItems().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-            }
-        }
-    });
-    staticDeps.clear();
-
-    // PrepOcclusion
+    // PrepOcclusion: build the Hi-Z pyramid from the depth image (last frame's depth, as the colour/depth geometry passes run after cull). Occlusion therefore
+    // lags one frame.
     staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
     staticDeps.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
@@ -192,31 +135,7 @@ void SwCull::System::initializePasses() {
     });
     staticDeps.clear();
 
-    // ResetOcclusion
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
-    mScene.insertPass(SwPass::Type::CullResetOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
-        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneVisibleRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
-        for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-            for (auto& batch : batchType | std::views::values) {
-                if (batch.getRItems().empty()) {
-                    continue;
-                }
-                cmd.fillBuffer(batch.getOcclusionRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
-                cmd.fillBuffer(batch.getOcclusionRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
-                mResources.mResetPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-                mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
-                cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
-                cmd.dispatch(SwHelper::fastDivCeil(rItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-            }
-        }
-    });
-    staticDeps.clear();
-
-    // WorkOcclusion
+    // Work: frustum + occlusion in a single pass over the full instance list.
     staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -224,11 +143,10 @@ void SwCull::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-    mScene.insertPass(SwPass::Type::CullWorkOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::CullWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
         mResources.mWorkPushConstants.mPerFrameBuffer =
             SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
-        mResources.mWorkPushConstants.mPhase = SwCull::Phase::Occlusion;
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
                 if (batch.getRItems().empty()) {
@@ -242,9 +160,7 @@ void SwCull::System::initializePasses() {
                     nullptr
                 );
                 mResources.mWorkPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-                // Occlusion walks only the frustum survivors; the GPU-side count bounds the loop.
-                mResources.mWorkPushConstants.mFrustumVisibleRInstsBuffer = batch.getFrustumVisibleRInstsBuffer().getDeviceAddress().value(); // TODO potential source of confusion
-                mResources.mWorkPushConstants.mFrustumVisibleRInstsCount = batch.getFrustumVisibleRInstsCount().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
                 mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
                 cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
                 cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
@@ -253,8 +169,8 @@ void SwCull::System::initializePasses() {
     });
     staticDeps.clear();
 
-    // CompactOcclusion
-    mScene.insertPass(SwPass::Type::CullCompactOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    // Compact
+    mScene.insertPass(SwPass::Type::CullCompact, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
@@ -295,48 +211,7 @@ void SwCull::System::initializePushConstants() {
 void SwCull::System::refreshDynamicDependencies() {
     SwDependency dynamicDeps;
 
-    // ResetFrustum
-    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-        for (auto& batch : batchType | std::views::values) {
-            if (batch.getRItems().empty()) continue;
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::TransferWrite);
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getFrustumRItemsCount(), SwDependency::BufferDepType::TransferWrite);
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getFrustumVisibleRInstsCount(), SwDependency::BufferDepType::TransferWrite);
-        }
-    }
-    mScene.mPasses[SwPass::Type::CullResetFrustum].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
-
-    // WorkFrustum
-    dynamicDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
-    );
-    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-        for (auto& batch : batchType | std::views::values) {
-            if (batch.getRItems().empty()) continue;
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getFrustumVisibleRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getFrustumVisibleRInstsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
-        }
-    }
-    mScene.mPasses[SwPass::Type::CullWorkFrustum].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
-
-    // CompactFrustum
-    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-        for (auto& batch : batchType | std::views::values) {
-            if (batch.getRItems().empty()) continue;
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getFrustumRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-            dynamicDeps.mWriteBuffers.emplace_back(&batch.getFrustumRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
-        }
-    }
-    mScene.mPasses[SwPass::Type::CullCompactFrustum].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
-
-    // ResetOcclusion
+    // Reset
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRItems().empty()) continue;
@@ -345,10 +220,10 @@ void SwCull::System::refreshDynamicDependencies() {
             dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsCount(), SwDependency::BufferDepType::TransferWrite);
         }
     }
-    mScene.mPasses[SwPass::Type::CullResetOcclusion].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullReset].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
-    // WorkOcclusion
+    // Work
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
@@ -356,14 +231,13 @@ void SwCull::System::refreshDynamicDependencies() {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRItems().empty()) continue;
             dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumVisibleRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFrustumVisibleRInstsCount(), SwDependency::BufferDepType::ComputeStorageRead);
+            dynamicDeps.mReadBuffers.emplace_back(&batch.getRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         }
     }
-    mScene.mPasses[SwPass::Type::CullWorkOcclusion].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullWork].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
-    // CompactOcclusion
+    // Compact
     for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
             if (batch.getRItems().empty()) continue;
@@ -372,7 +246,7 @@ void SwCull::System::refreshDynamicDependencies() {
             dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
         }
     }
-    mScene.mPasses[SwPass::Type::CullCompactOcclusion].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullCompact].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 }
 

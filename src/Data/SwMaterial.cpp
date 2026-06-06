@@ -140,8 +140,8 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getRawLayout();
             graphicsPipelineOptions.mColorAttachments =
                 std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
-            graphicsPipelineOptions.mDepthWriteEnabled = false;
-            graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eEqual;
+            graphicsPipelineOptions.mDepthWriteEnabled = true;
+            graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
             break;
         case fastgltf::AlphaMode::Mask:
             // Skipped by depth pre-pass; write depth normally with Reverse-Z test.
