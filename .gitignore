@@ -13,3 +13,5 @@ src/includes*
 /tools/*.exe
 *.hdr
 .claude/
+.conv/
+conv/

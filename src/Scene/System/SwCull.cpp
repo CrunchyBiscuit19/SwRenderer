@@ -275,8 +275,6 @@ void SwCull::System::initializePasses() {
     staticDeps.clear();
 
     // PublishCount
-    // The occlusion work pass leaves the final visible count in the scratch buffer. Copy it once
-    // into the host-visible published buffer so the GUI never reads a transient accumulator value.
     staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::TransferWrite);
     mScene.insertPass(SwPass::Type::CullPublishCount, std::move(staticDeps), [&](vk::CommandBuffer cmd) {

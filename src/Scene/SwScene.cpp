@@ -516,6 +516,9 @@ void SwScene::draw() {
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
+    if (mSkybox.isActive() && mSkybox.isFileSelected()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
+    }
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullResetFrustum]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkFrustum]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactFrustum]);
@@ -529,9 +532,6 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
-    }
-    if (mSkybox.isActive() && mSkybox.isFileSelected()) {
-        mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);
