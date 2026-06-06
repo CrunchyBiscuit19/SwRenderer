@@ -8,7 +8,8 @@ public:
     float mDrawTime;
     std::uint32_t mNumDrawCall;
     std::uint32_t mNumInitialRInsts;
-    SwAllocatedBuffer mRInstsCount;
+    SwAllocatedBuffer mRInstsScratchCount;
+    SwAllocatedBuffer mRInstsPublishedCount;
     float mSceneUpdateTime;
 
     SwStats();

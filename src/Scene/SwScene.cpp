@@ -53,7 +53,7 @@ void SwScene::initializeMiscPasses() {
     staticDeps.clear();
 
     // Gui
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsCount, SwDependency::BufferDepType::HostRead);
+    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::HostRead);
     mPasses[SwPass::Type::Gui] = SwPass(SwPass::Type::Gui, staticDeps, [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
             SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
@@ -524,6 +524,7 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullResetOcclusion]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullWorkOcclusion]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompactOcclusion]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     if (mPick.isPicked()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);

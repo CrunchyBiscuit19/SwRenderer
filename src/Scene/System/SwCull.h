@@ -66,8 +66,7 @@ struct PrepOcclusionPC : SwPC<PrepOcclusionPC> {
     glm::uvec2 mDepthPyramidExtent;
     glm::uvec2 mDepthFullExtent;
     glm::vec2 mDepthFullRatio;
-    std::uint32_t mLevel;
-    bool mReadFromFull;
+    std::int32_t mLevel;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

@@ -65,12 +65,12 @@ void SwCull::System::initializePasses() {
     SwDependency staticDeps;
 
     // ResetFrustum
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsCount, SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
     mScene.insertPass(SwPass::Type::CullResetFrustum, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
-        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsCount.getRawBuffer(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneVisibleRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
         mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
@@ -96,7 +96,7 @@ void SwCull::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsCount, SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     mScene.insertPass(SwPass::Type::CullWorkFrustum, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
@@ -155,14 +155,13 @@ void SwCull::System::initializePasses() {
     mScene.insertPass(SwPass::Type::CullPrepOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mPrepOcclusionPipelineBundle.getBindPoint(), mResources.mPrepOcclusionPipelineBundle.getRawPipeline());
         cmd.bindDescriptorSets(
-            vk::PipelineBindPoint::eCompute,
+            mResources.mPrepOcclusionPipelineBundle.getBindPoint(),
             mResources.mPrepOcclusionPipelineBundle.getRawLayout(),
             0,
             mResources.mPrepOcclusionDescriptorSet.getRawSet(),
             nullptr
         );
-        mResources.mPrepOcclusionPushConstants.mReadFromFull = true;
-        mResources.mPrepOcclusionPushConstants.mLevel = 0;
+        mResources.mPrepOcclusionPushConstants.mLevel = -1;
         cmd.pushConstants<SwCull::PrepOcclusionPC>(
             mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
         );
@@ -174,15 +173,7 @@ void SwCull::System::initializePasses() {
         mResources.mDepthPyramidImage.emitTransition(
             cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, 0
         );
-        mResources.mPrepOcclusionPushConstants.mReadFromFull = false;
         for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
-            cmd.bindDescriptorSets(
-                mResources.mPrepOcclusionPipelineBundle.getBindPoint(),
-                mResources.mPrepOcclusionPipelineBundle.getRawLayout(),
-                0,
-                mResources.mPrepOcclusionDescriptorSet.getRawSet(),
-                nullptr
-            );
             mResources.mPrepOcclusionPushConstants.mLevel = i;
             cmd.pushConstants<SwCull::PrepOcclusionPC>(
                 mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
@@ -192,7 +183,7 @@ void SwCull::System::initializePasses() {
             cmd.dispatch(
                 SwHelper::fastDivCeil(dstW, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(dstH, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1
             );
-            if (i < mResources.mDepthPyramidLevels - 2) {
+            if (i < mResources.mDepthPyramidLevels - 1 - 1) {
                 mResources.mDepthPyramidImage.emitTransition(
                     cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, i + 1
                 );
@@ -202,11 +193,11 @@ void SwCull::System::initializePasses() {
     staticDeps.clear();
 
     // ResetOcclusion
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsCount, SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
     mScene.insertPass(SwPass::Type::CullResetOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
-        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsCount.getRawBuffer(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneVisibleRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
         for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
             for (auto& batch : batchType | std::views::values) {
@@ -215,7 +206,7 @@ void SwCull::System::initializePasses() {
                 }
                 cmd.fillBuffer(batch.getOcclusionRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
                 cmd.fillBuffer(batch.getOcclusionRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());  // CAUTION soft limit
+                const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
                 mResources.mResetPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
                 mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
                 cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
@@ -226,12 +217,12 @@ void SwCull::System::initializePasses() {
     staticDeps.clear();
 
     // WorkOcclusion
-    staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
+    staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsCount, SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     mScene.insertPass(SwPass::Type::CullWorkOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
@@ -252,7 +243,7 @@ void SwCull::System::initializePasses() {
                 );
                 mResources.mWorkPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
                 // Occlusion walks only the frustum survivors; the GPU-side count bounds the loop.
-                mResources.mWorkPushConstants.mRInstsBuffer = batch.getFrustumVisibleRInstsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mFrustumVisibleRInstsBuffer = batch.getFrustumVisibleRInstsBuffer().getDeviceAddress().value(); // TODO potential source of confusion
                 mResources.mWorkPushConstants.mFrustumVisibleRInstsCount = batch.getFrustumVisibleRInstsCount().getDeviceAddress().value();
                 mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
                 cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
@@ -282,10 +273,25 @@ void SwCull::System::initializePasses() {
         }
     });
     staticDeps.clear();
+
+    // PublishCount
+    // The occlusion work pass leaves the final visible count in the scratch buffer. Copy it once
+    // into the host-visible published buffer so the GUI never reads a transient accumulator value.
+    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferRead);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::TransferWrite);
+    mScene.insertPass(SwPass::Type::CullPublishCount, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        const vk::BufferCopy region{0, 0, sizeof(std::uint32_t)};
+        cmd.copyBuffer(
+            SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(),
+            SwRenderer::sRendererContext.mStats->mRInstsPublishedCount.getRawBuffer(),
+            region
+        );
+    });
+    staticDeps.clear();
 }
 
 void SwCull::System::initializePushConstants() {
-    mResources.mWorkPushConstants.mRInstsCount = SwRenderer::sRendererContext.mStats->mRInstsCount.getDeviceAddress().value();
+    mResources.mWorkPushConstants.mRInstsCount = SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getDeviceAddress().value();
 }
 
 void SwCull::System::refreshDynamicDependencies() {

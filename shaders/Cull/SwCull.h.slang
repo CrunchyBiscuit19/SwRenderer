@@ -49,8 +49,7 @@ namespace SwCull {
         public uint2 mDepthPyramidExtent;
         public uint2 mDepthFullExtent;
         public float2 mDepthFullRatio;
-        public uint mLevel;
-        public bool mReadFromFull;
+        public int mLevel;
     };
 
     public struct CSInput {

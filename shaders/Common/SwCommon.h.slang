@@ -46,11 +46,31 @@ public struct SwRenderItem {
     public uint mModelIndex;
     public uint mFirstInstance;
     public uint mBoundsIndex;
+
+    [mutating]
+    public void copyFrom(SwRenderItem* src) {
+        this.mIndexCount = src.mIndexCount;
+        this.mRInstCount = src.mRInstCount;
+        this.mFirstIndex = src.mFirstIndex;
+        this.mVertexOffset = src.mVertexOffset;
+        this.mFirstRInst = src.mFirstRInst;
+        this.mMaterialIndex = src.mMaterialIndex;
+        this.mNodeTransformIndex = src.mNodeTransformIndex;
+        this.mModelIndex = src.mModelIndex;
+        this.mFirstInstance = src.mFirstInstance;
+        this.mBoundsIndex = src.mBoundsIndex;
+    }
 };
 
 public struct SwRenderInstance {
     public uint mRItemIndex;
     public uint mSceneInstanceIndex;
+
+    [mutating]
+    public void copyFrom(SwRenderInstance* src) {
+        this.mRItemIndex = src.mRItemIndex;
+        this.mSceneInstanceIndex = src.mSceneInstanceIndex;
+    }
 }
 
 public struct SwSunlight {

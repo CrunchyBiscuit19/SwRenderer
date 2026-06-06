@@ -81,7 +81,6 @@ void SwGeometry::System::initializePasses() {
                     sizeof(SwRenderItem)
                 );
                 SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-                SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
             }
         }
 

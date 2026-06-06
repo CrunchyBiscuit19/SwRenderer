@@ -20,6 +20,7 @@ public:
         CullResetOcclusion,
         CullWorkOcclusion,
         CullCompactOcclusion,
+        CullPublishCount,
         PickDraw,
         PickReadback,
         PickWork,

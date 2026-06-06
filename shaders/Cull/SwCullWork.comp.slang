@@ -109,9 +109,10 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
     float d2 = depthPyramidImage.Load(uint3(clampedBottomLeft.x, clampedBottomLeft.y, level));
     float d3 = depthPyramidImage.Load(uint3(clampedBottomRight.x, clampedBottomRight.y, level));
 
-    // Visible if closest is closer (greater than because of reverse-Z) than furthest depth
+    // Visible if the nearest point is closer-or-equal than the furthest occluder. 
+    // The depth pre-pass renders the instances being tested here, so frontmost surface finds its own depth in the pyramid
     float furthestDepthInPyramid = min(min(d0, d1), min(d2, d3));
-    return closestDepthInRInst > furthestDepthInPyramid;
+    return closestDepthInRInst >= furthestDepthInPyramid;
 }
 
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
@@ -121,11 +122,22 @@ void main(SwCull::CSInput in) {
     // Occlusion phase walks only the frustum survivors the frustum phase compacted into
     // mRInstsBuffer; their count lives in mFrustumVisibleRInstsCount (GPU-side).
     uint rInstsIndex = in.mDispatchThreadID.x;
-    uint rInstsLimit = (workPc.mPhase == SwCull::Phase::Occlusion) ? *workPc.mFrustumVisibleRInstsCount : workPc.mRInstsLimit;
+    uint rInstsLimit;
+    SwRenderInstance* rInstsBuffer;
+    switch (workPc.mPhase) {
+        case SwCull::Phase::Frustum:
+            rInstsLimit = workPc.mRInstsLimit;
+            rInstsBuffer = workPc.mRInstsBuffer;
+            break;
+        case SwCull::Phase::Occlusion:
+            rInstsLimit = *workPc.mFrustumVisibleRInstsCount;
+            rInstsBuffer = workPc.mFrustumVisibleRInstsBuffer;
+            break;
+    }
+
     if (rInstsIndex >= rInstsLimit)
         return;
-
-    SwRenderInstance rInst = workPc.mRInstsBuffer[rInstsIndex];
+    SwRenderInstance rInst = rInstsBuffer[rInstsIndex];
     SwRenderItem* rItem = &workPc.mRItemsBuffer[rInst.mRItemIndex];
 
     SwBounds* bounds = &workPc.mSceneBoundsBuffer[rItem->mBoundsIndex];
@@ -160,7 +172,7 @@ void main(SwCull::CSInput in) {
     if (!visible)
         return;
     uint _;
-    InterlockedAdd(*workPc.mRInstsCount, 1, _);  // CAUTION * or [0]
+    InterlockedAdd(*workPc.mRInstsCount, 1, _);
 
     // Write the indices of visible render instances to the visible instances indices buffer
     // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
@@ -174,6 +186,6 @@ void main(SwCull::CSInput in) {
     if (workPc.mPhase == SwCull::Phase::Frustum) {
         uint survivorSlot;
         InterlockedAdd(*workPc.mFrustumVisibleRInstsCount, 1, survivorSlot);
-        workPc.mFrustumVisibleRInstsBuffer[survivorSlot] = rInst;
+        workPc.mFrustumVisibleRInstsBuffer[survivorSlot].copyFrom(&rInst);
     }
 }

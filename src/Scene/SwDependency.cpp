@@ -77,6 +77,8 @@ const SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDependency:
             return {vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageRead};
         case SwDependency::BufferDepType::ComputeStorageWrite:
             return {vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageWrite};
+        case SwDependency::BufferDepType::TransferRead:
+            return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead};
         case SwDependency::BufferDepType::TransferWrite:
             return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite};
         case SwDependency::BufferDepType::HostWrite:

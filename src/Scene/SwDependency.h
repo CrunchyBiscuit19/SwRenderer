@@ -35,7 +35,7 @@ public:
         ImageDep(SwImage* image, vk::PipelineStageFlags2 stage, vk::AccessFlags2 access, vk::ImageLayout layout);
     };
 
-    enum class BufferDepType { VertexShaderStorageRead, IndexRead, IndirectRead, ComputeStorageRead, ComputeStorageWrite, TransferWrite, HostWrite, HostRead };
+    enum class BufferDepType { VertexShaderStorageRead, IndexRead, IndirectRead, ComputeStorageRead, ComputeStorageWrite, TransferRead, TransferWrite, HostWrite, HostRead };
     struct BufferDepDesc {
         vk::PipelineStageFlags2 mStage;
         vk::AccessFlags2 mAccess;
