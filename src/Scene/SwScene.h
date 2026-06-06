@@ -3,6 +3,7 @@
 #include <Data/SwAsset.h>
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
+#include <Gui/SwGui.h>
 #include <Resource/SwDescriptor.h>
 #include <Scene/System/SwCull.h>
 #include <Scene/System/SwSkybox.h>
@@ -30,6 +31,7 @@ private:
     friend class SwSkybox::System;
     friend class SwWBOIT::System;
     friend class SwGeometry::System;
+    friend class SwGui;
 
 
     SwCamera mCamera;
@@ -46,6 +48,7 @@ private:
     SwSkybox::System mSkybox;
     SwWBOIT::System mWBOIT;
     SwGeometry::System mGeometry;
+    SwGui mGui;
 
     SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
     SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;
@@ -88,7 +91,7 @@ public:
     void insertPass(SwPass::Type type, SwDependency deps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
 
     inline std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>>& getBatchTypes() { return mBatchTypes; }
-    inline std::unordered_map<std::uint32_t, SwBatch>& getBatchesByType(SwMaterial::Type type) { return mBatchTypes[type]; }
+    inline std::unordered_map<std::uint32_t, SwBatch>& getBatchMap(SwMaterial::Type type) { return mBatchTypes[type]; }
     inline SwCamera& getCamera() { return mCamera; }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
     inline std::unordered_map<std::uint32_t, SwAsset>& getAssets() { return mAssets; }

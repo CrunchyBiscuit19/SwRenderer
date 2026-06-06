@@ -6,7 +6,6 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
-#include <imgui_impl_vulkan.h>
 #include <quill/LogMacros.h>
 
 #include <glm/glm.hpp>
@@ -51,19 +50,6 @@ void SwScene::initializeMiscPasses() {
         SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().copyFrom(cmd, SwRenderer::sRendererContext.mSwapchain->getDrawImage());
     });
     staticDeps.clear();
-
-    // Gui
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::HostRead);
-    mPasses[SwPass::Type::Gui] = SwPass(SwPass::Type::Gui, staticDeps, [&](vk::CommandBuffer cmd) {
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
-            SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
-            SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
-            nullptr
-        );
-        cmd.beginRendering(renderInfo);
-        ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
-        cmd.endRendering();
-    });
 }
 
 void SwScene::initializeResources() {
@@ -108,12 +94,7 @@ void SwScene::refreshDynamicDependencies() {
     mPasses[SwPass::Type::CopyToSwapchain].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
-    // Gui
-    dynamicDeps.mWriteImages.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite
-    );
-    mPasses[SwPass::Type::Gui].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
+    mGui.refreshDynamicDependencies();
 }
 
 void SwScene::refresh() { refreshDynamicDependencies(); }
@@ -124,10 +105,11 @@ void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     );
 }
 
-SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this) {}
+SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mGui(*this) {}
 
 void SwScene::initialize() {
     mCamera.initialize();
+    mGui.initialize();
 
     initializeResources();
     initializeMiscPasses();
@@ -456,6 +438,8 @@ void SwScene::resetFlags() {
 }
 
 void SwScene::perFrameUpdate() {
+    mGui.refresh();
+
     const auto start = std::chrono::system_clock::now();
 
     mCamera.update(SwRenderer::sRendererContext.mStats->mFrameTime, static_cast<float>(SwRenderer::ONE_SECOND_IN_MS / SwRenderer::EXPECTED_FRAME_RATE));

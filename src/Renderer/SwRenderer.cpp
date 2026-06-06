@@ -208,8 +208,6 @@ SwRenderer::SwRenderer()
     mLogger.setFrameNumber(mSwapchain.getFrameNumberPtr());
     mStats.initialize();
 
-    mGui.initialize();
-
     SwMaterialResources::init();
     SwMaterial::init();
 
@@ -248,9 +246,8 @@ void SwRenderer::run() {
             mDevice.waitIdle();
         }
 
-        mGui.perFrameUpdate();
-        mStats.perFrameReset();
         mScene.perFrameUpdate();
+        mStats.perFrameReset();
         mSwapchain.getCurrentFrame().update();
 
         mScene.draw();

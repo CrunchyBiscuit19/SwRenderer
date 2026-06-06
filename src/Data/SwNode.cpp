@@ -41,7 +41,7 @@ void SwMeshNode::generateRItemsAndRInsts() {
 
         SwAsset& workingAsset = SwRenderer::sRendererContext.mScene->getAsset(mMesh.getAssetId());
         std::unordered_map<std::uint32_t, SwBatch>& workingBatchMap =
-            SwRenderer::sRendererContext.mScene->getBatchesByType(SwMaterial::getMaterialTypeFromAlphaMode(primitive.mMaterial.getAlphaMode()));
+            SwRenderer::sRendererContext.mScene->getBatchMap(SwMaterial::getMaterialTypeFromAlphaMode(primitive.mMaterial.getAlphaMode()));
 
         auto [it, inserted] = workingBatchMap.try_emplace(pipelineId, primitive);
         SwBatch& workingBatch = it->second;

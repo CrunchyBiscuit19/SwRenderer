@@ -6,10 +6,13 @@
 #define NOMINMAX  // imfilebrowser.h contains windows.h
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwDescriptor.h>
+#include <Scene/SwSystem.h>
 #include <imfilebrowser.h>
 #include <functional>
 
-class SwGui {
+class SwScene;
+
+class SwGui : public SwSystem {
 private:
     enum class SwGuiComponent { Scene, Camera, Stats, Controls };
 
@@ -26,15 +29,15 @@ private:
     void createDockSpace();
     void createOptionsWindow() const;
 
+    void initializeResources() override;
+    void initializePasses() override;
+
 public:
 
-    SwGui();
+    SwGui(SwScene& scene);
 
-    static void init();
-
-    void initialize();
-
-    void perFrameUpdate();
+    void refresh() override;
+    void refreshDynamicDependencies() override;
 
     ~SwGui();
 };

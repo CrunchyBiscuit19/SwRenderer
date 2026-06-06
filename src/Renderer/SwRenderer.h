@@ -1,6 +1,5 @@
 #pragma once
 
-#include <Gui/SwGui.h>
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwLogger.h>
@@ -62,7 +61,6 @@ private:
     SwSwapchain mSwapchain;
     SwStats mStats;
     SwEvents mEvents;
-    SwGui mGui;
 
     SwScene mScene;
 
