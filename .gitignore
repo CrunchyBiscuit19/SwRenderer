@@ -12,3 +12,4 @@ logs/
 src/includes*
 /tools/*.exe
 *.hdr
+.claude/
