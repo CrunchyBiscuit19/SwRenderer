@@ -24,6 +24,8 @@ struct Plane {
     Plane(glm::vec3 n, glm::vec3 p) : mNormal(glm::normalize(n)), mDistance(glm::dot(glm::normalize(n), p)) {}
 };
 
+enum class Phase { Early, Late };
+
 struct ResetPC : public SwPC<ResetPC> {
     vk::DeviceAddress mRItemsBuffer;
     std::uint32_t mRItemsLimit;
@@ -46,6 +48,7 @@ struct WorkPC : public SwPC<WorkPC> {
     std::uint32_t mRInstsLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
+    Phase mPhase;   
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

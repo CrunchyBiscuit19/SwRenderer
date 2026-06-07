@@ -1,14 +1,54 @@
 #include <algorithm>
+#include <cctype>
 #include <cstdlib>
 #include <filesystem>
 #include <format>
+#include <fstream>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <vector>
 
 namespace fs = std::filesystem;
 
 enum class ShaderType { Vert, Frag, Comp, Mod };
+
+// Collects the names of functions annotated with [shader("...")]. When a file declares its own
+// entry points this way it may expose several in one stage; slangc still defaults to looking for
+// "main" unless every entry point is named explicitly with -entry, so we parse them out here and
+// pass them all (packing them into a single SPIR-V module).
+std::vector<std::string> findAnnotatedEntryPoints(const fs::path& p) {
+    std::ifstream in(p);
+    std::string s((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::vector<std::string> entries;
+    const std::string tag = "[shader(";
+    for (size_t pos = 0; (pos = s.find(tag, pos)) != std::string::npos;) {
+        // Skip past the [shader(...)] attribute and any following attributes (e.g. [earlydepthstencil]).
+        size_t cursor = s.find(']', pos);
+        if (cursor == std::string::npos) break;
+        ++cursor;
+        while (true) {
+            while (cursor < s.size() && std::isspace(static_cast<unsigned char>(s[cursor]))) ++cursor;
+            if (cursor < s.size() && s[cursor] == '[') {
+                size_t close = s.find(']', cursor);
+                if (close == std::string::npos) { cursor = s.size(); break; }
+                cursor = close + 1;
+                continue;
+            }
+            break;
+        }
+        // Now positioned at "<ReturnType> <name>(": the entry-point name is the identifier just before '('.
+        size_t paren = s.find('(', cursor);
+        if (paren == std::string::npos) break;
+        size_t end = paren;
+        while (end > cursor && std::isspace(static_cast<unsigned char>(s[end - 1]))) --end;
+        size_t begin = end;
+        while (begin > cursor && (std::isalnum(static_cast<unsigned char>(s[begin - 1])) || s[begin - 1] == '_')) --begin;
+        if (begin < end) entries.push_back(s.substr(begin, end - begin));
+        pos = paren;
+    }
+    return entries;
+}
 
 std::string shaderType(ShaderType type, bool l = false) {
     if (l) {
@@ -112,10 +152,22 @@ int main() {
         }
         std::string outName = stem + "." + shaderType(type) + ".spv";
         fs::path outPath = outDir / outName;
-        std::string cmd = std::format("{} {} -o {} -I {} -I {} -stage {} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout",
-                                      slang, p.string(), outPath.string(),
-                                      p.parent_path().string(), outDir.string(),
-                                      shaderType(type, true));
+        std::string cmd;
+        std::vector<std::string> entryPoints = findAnnotatedEntryPoints(p);
+        if (!entryPoints.empty()) {
+            // Multiple [shader("...")] entry points: name each explicitly so they are all packed into one module.
+            cmd = std::format("{} {} -o {} -I {} -I {} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout",
+                              slang, p.string(), outPath.string(),
+                              p.parent_path().string(), outDir.string());
+            for (const auto& entryPoint : entryPoints) {
+                cmd += " -entry " + entryPoint;
+            }
+        } else {
+            cmd = std::format("{} {} -o {} -I {} -I {} -stage {} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout",
+                              slang, p.string(), outPath.string(),
+                              p.parent_path().string(), outDir.string(),
+                              shaderType(type, true));
+        }
         std::cout << "Compiling: " << outName << "\n";
         std::system(cmd.c_str());
     }

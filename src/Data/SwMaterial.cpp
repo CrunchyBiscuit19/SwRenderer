@@ -56,8 +56,8 @@ SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
 SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
 const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometry.vert.spv"};
 SwShader SwMaterial::sVertexShader;
-const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkOpaque.frag.spv"};
-SwShader SwMaterial::sOpaqueFragmentShader;
+const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkOpaqueMasked.frag.spv"};
+SwShader SwMaterial::sOpaqueMaskedFragmentShader;
 const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkTransparent.frag.spv"};
 SwShader SwMaterial::sTransparentFragmentShader;
 
@@ -90,7 +90,7 @@ void SwMaterial::init() {
         SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange());
 
     sVertexShader = SwShaderFactory::createShader(GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    sOpaqueFragmentShader = SwShaderFactory::createShader(GEOMETRY_OPAQUE_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    sOpaqueMaskedFragmentShader = SwShaderFactory::createShader(GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
     sTransparentFragmentShader = SwShaderFactory::createShader(GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
 
@@ -136,8 +136,12 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
     switch (materialPipelineOptions.alphaMode) {
         case fastgltf::AlphaMode::Opaque:
         case fastgltf::AlphaMode::Mask:
-            // Write depth normally with Reverse-Z test.
-            graphicsPipelineOptions.mFragmentShader = sOpaqueFragmentShader.getRawModule();
+            // Write depth normally with Reverse-Z test. Both share one fragment module; the masked
+            // entry point adds the alpha-cutout discard (and drops early depth-stencil) while the
+            // opaque entry point keeps [earlydepthstencil].
+            graphicsPipelineOptions.mFragmentShader = sOpaqueMaskedFragmentShader.getRawModule();
+            graphicsPipelineOptions.mFragmentEntryPoint =
+                materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask ? std::string(GEOMETRY_MASKED_ENTRY_POINT) : std::string(GEOMETRY_OPAQUE_ENTRY_POINT);
             graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getRawLayout();
             graphicsPipelineOptions.mColorAttachments =
                 std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
@@ -163,7 +167,7 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
 
 void SwMaterial::cleanup() {
     sTransparentFragmentShader.destroy();
-    sOpaqueFragmentShader.destroy();
+    sOpaqueMaskedFragmentShader.destroy();
     sVertexShader.destroy();
     sTransparentPipelineLayout.destroy();
     sOpaquePipelineLayout.destroy();

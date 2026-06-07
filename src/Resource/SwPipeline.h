@@ -86,6 +86,8 @@ public:
     struct SwGraphicsPipelineOptions {
         std::optional<vk::ShaderModule> mVertexShader{std::nullopt};
         std::optional<vk::ShaderModule> mFragmentShader{std::nullopt};
+        std::string mVertexEntryPoint{DEFAULT_SHADER_ENTRY_POINT};
+        std::string mFragmentEntryPoint{DEFAULT_SHADER_ENTRY_POINT};
         vk::PipelineLayout mLayout;
         vk::PrimitiveTopology mTopology;
         vk::PolygonMode mPolygonMode;
@@ -105,7 +107,8 @@ public:
 private:
     static void setShaders(
         std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStageCreateInfos, std::optional<vk::ShaderModule> vertexShader,
-        std::optional<vk::ShaderModule> fragmentShader
+        std::optional<vk::ShaderModule> fragmentShader, const std::string& vertexEntryPoint = DEFAULT_SHADER_ENTRY_POINT,
+        const std::string& fragmentEntryPoint = DEFAULT_SHADER_ENTRY_POINT
     );
     static void setInputTopology(vk::PipelineInputAssemblyStateCreateInfo& pipelineInputAssemblyStateCreateInfo, vk::PrimitiveTopology topology);
     static void setPolygonMode(vk::PipelineRasterizationStateCreateInfo& pipelineRasterizationStateCreateInfo, vk::PolygonMode mode);
@@ -130,12 +133,14 @@ public:
     struct SwComputePipelineOptions {
         vk::ShaderModule mComputeShader;
         vk::PipelineLayout mLayout;
+        std::string mComputeEntryPoint{DEFAULT_SHADER_ENTRY_POINT};
     };
 
     static SwComputePipelineBundle createComputePipeline(SwComputePipelineOptions options);
 
 private:
     static void setShaders(
-        vk::PipelineShaderStageCreateInfo& pipelineShaderStageCreateInfos, vk::ShaderModule computeShader
+        vk::PipelineShaderStageCreateInfo& pipelineShaderStageCreateInfos, vk::ShaderModule computeShader,
+        const std::string& computeEntryPoint = DEFAULT_SHADER_ENTRY_POINT
     );
 };

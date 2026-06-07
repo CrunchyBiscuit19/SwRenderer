@@ -111,8 +111,10 @@ private:
     static SwPipelineLayout sTransparentPipelineLayout;
     static const std::filesystem::path GEOMETRY_VERTEX_SHADER_PATH;
     static SwShader sVertexShader;
-    static const std::filesystem::path GEOMETRY_OPAQUE_FRAGMENT_SHADER_PATH;
-    static SwShader sOpaqueFragmentShader;
+    static const std::filesystem::path GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH;
+    static SwShader sOpaqueMaskedFragmentShader;
+    static constexpr std::string_view GEOMETRY_OPAQUE_ENTRY_POINT{"mainOpaque"};
+    static constexpr std::string_view GEOMETRY_MASKED_ENTRY_POINT{"mainMasked"};
     static const std::filesystem::path GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH;
     static SwShader sTransparentFragmentShader;
 

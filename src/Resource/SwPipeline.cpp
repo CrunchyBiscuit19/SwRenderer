@@ -47,7 +47,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
     vk::PipelineColorBlendStateCreateInfo pipelineColorBlendStateCreateInfo;
     vk::PipelineDepthStencilStateCreateInfo pipelineDepthStencilStateCreateInfo;
 
-    setShaders(pipelineShaderStageCreateInfos, options.mVertexShader, options.mFragmentShader);
+    setShaders(pipelineShaderStageCreateInfos, options.mVertexShader, options.mFragmentShader, options.mVertexEntryPoint, options.mFragmentEntryPoint);
     setInputTopology(pipelineInputAssemblyStateCreateInfo, options.mTopology);
     setPolygonMode(pipelineRasterizationStateCreateInfo, options.mPolygonMode);
     setCullMode(pipelineRasterizationStateCreateInfo, options.mCullMode, options.mFrontFace);
@@ -85,17 +85,17 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
 
 void SwGraphicsPipelineFactory::setShaders(
     std::vector<vk::PipelineShaderStageCreateInfo>& pipelineShaderStageCreateInfos, std::optional<vk::ShaderModule> vertexShader,
-    std::optional<vk::ShaderModule> fragmentShader
+    std::optional<vk::ShaderModule> fragmentShader, const std::string& vertexEntryPoint, const std::string& fragmentEntryPoint
 ) {
     pipelineShaderStageCreateInfos.clear();
     if (vertexShader.has_value()) {
         pipelineShaderStageCreateInfos.emplace_back(
-            vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eVertex, vertexShader.value(), DEFAULT_SHADER_ENTRY_POINT.c_str()
+            vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eVertex, vertexShader.value(), vertexEntryPoint.c_str()
         );
     }
     if (fragmentShader.has_value()) {
         pipelineShaderStageCreateInfos.emplace_back(
-            vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eFragment, fragmentShader.value(), DEFAULT_SHADER_ENTRY_POINT.c_str()
+            vk::PipelineShaderStageCreateFlags{}, vk::ShaderStageFlagBits::eFragment, fragmentShader.value(), fragmentEntryPoint.c_str()
         );
     }
 }
@@ -185,7 +185,7 @@ void SwGraphicsPipelineFactory::enableDepthTest(
 SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(SwComputePipelineOptions options) {
     vk::PipelineShaderStageCreateInfo pipelineShaderStageCreateInfo;
 
-    setShaders(pipelineShaderStageCreateInfo, options.mComputeShader);
+    setShaders(pipelineShaderStageCreateInfo, options.mComputeShader, options.mComputeEntryPoint);
 
     vk::ComputePipelineCreateInfo computePipelineInfo{};
     computePipelineInfo.layout = options.mLayout;
@@ -195,8 +195,10 @@ SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(SwComput
     return SwComputePipelineBundle(vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo)), options.mLayout);
 }
 
-void SwComputePipelineFactory::setShaders(vk::PipelineShaderStageCreateInfo& pipelineShaderStageCreateInfo, vk::ShaderModule computeShader) {
+void SwComputePipelineFactory::setShaders(
+    vk::PipelineShaderStageCreateInfo& pipelineShaderStageCreateInfo, vk::ShaderModule computeShader, const std::string& computeEntryPoint
+) {
     pipelineShaderStageCreateInfo.stage = vk::ShaderStageFlagBits::eCompute;
     pipelineShaderStageCreateInfo.module = computeShader;
-    pipelineShaderStageCreateInfo.pName = DEFAULT_SHADER_ENTRY_POINT.data();
+    pipelineShaderStageCreateInfo.pName = computeEntryPoint.c_str();
 }

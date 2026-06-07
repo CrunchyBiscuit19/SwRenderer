@@ -7,8 +7,6 @@ public uniform Texture2D<float> depthPyramidImage;
 [[vk::push_constant]]
 SwCull::WorkPC workPc;
 
-// Transform all corners of the AABB to world space, in place. Both the frustum and
-// occlusion tests operate on world-space corners, so this is shared by both phases.
 void transformCornersToWorld(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwInstance* currInstance, SwNodeTransform* nodeTransform) {
     for (uint j = 0; j < SwCull::NUM_AABB_CORNERS; j++) {
         aabbCorners[j] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[j]));
@@ -109,24 +107,33 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
     float d2 = depthPyramidImage.Load(uint3(clampedBottomLeft.x, clampedBottomLeft.y, level));
     float d3 = depthPyramidImage.Load(uint3(clampedBottomRight.x, clampedBottomRight.y, level));
 
-    // Visible if the nearest point is closer-or-equal than the furthest occluder. 
+    // Visible if the nearest point is closer-or-equal than the furthest occluder.
     // The depth pre-pass renders the instances being tested here, so frontmost surface finds its own depth in the pyramid
     float furthestDepthInPyramid = min(min(d0, d1), min(d2, d3));
     return closestDepthInRInst >= furthestDepthInPyramid;
 }
 
+void markVisibleRInst(SwRenderItem* rItem, SwRenderInstance* rInst, SwCull::WorkPC* workPc) {
+    // Write the indices of visible render instances to the visible instances indices buffer
+    // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
+    // Then index into the instances buffer with that index to get the actual instance data
+    uint offsetVisibleRInstIndex;
+    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
+    uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
+    workPc->mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst->mSceneInstanceIndex;
+}
+
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
-    // Single-pass cull: walk the full instance list, apply frustum then occlusion.
     uint rInstsIndex = in.mDispatchThreadID.x;
     if (rInstsIndex >= workPc.mRInstsLimit)
         return;
-    SwRenderInstance rInst = workPc.mRInstsBuffer[rInstsIndex];
-    SwRenderItem* rItem = &workPc.mRItemsBuffer[rInst.mRItemIndex];
+    SwRenderInstance* rInst = &workPc.mRInstsBuffer[rInstsIndex];
+    SwRenderItem* rItem = &workPc.mRItemsBuffer[rInst->mRItemIndex];
 
     SwBounds* bounds = &workPc.mSceneBoundsBuffer[rItem->mBoundsIndex];
     SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rItem->mNodeTransformIndex];
-    SwInstance* instance = &workPc.mSceneInstancesBuffer[rInst.mSceneInstanceIndex];
+    SwInstance* instance = &workPc.mSceneInstancesBuffer[rInst->mSceneInstanceIndex];
     SwCull::Plane* frustum = workPc.mFrustumBuffer;
     SwPerspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
@@ -142,20 +149,22 @@ void main(SwCull::CSInput in) {
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
 
+    if (workPc.mPhase == SwCull::Phase::Early) {
+        // Frustum on previously visible only (check mSceneVisibilityRInstsReadBuffer)
+        // Write 1 into mSceneVisibilityRInstsWriteBuffer if visible
+        // Save into mSceneVisibleRInstsIndicesBuffer
+    } else {
+        // Frustum + Occlusion on all
+        // Read mSceneVisibilityRInstsWriteBuffer to see if it is already visible
+        // Write 1 into mSceneVisibilityRInstsWriteBuffer if visible
+        // Save into mSceneVisibleRInstsIndicesBuffer if it wasn't previously visible
+    }
+
     bool visible = frustumTest(frustum, aabbCorners);
     if (visible)
         visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
-
     if (!visible)
         return;
     uint _;
     InterlockedAdd(*workPc.mRInstsCount, 1, _);
-
-    // Write the indices of visible render instances to the visible instances indices buffer
-    // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
-    // Then index into the instances buffer with that index to get the actual instance data
-    uint offsetVisibleRInstIndex;
-    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
-    uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
-    workPc.mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst.mSceneInstanceIndex;
 }

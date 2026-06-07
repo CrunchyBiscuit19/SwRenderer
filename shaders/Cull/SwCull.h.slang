@@ -18,6 +18,8 @@ namespace SwCull {
         public uint mRItemsLimit;
     };
 
+    public enum Phase { Early, Late };
+
     public struct WorkPC {
         public SwRenderItem* mRItemsBuffer;
         public SwRenderInstance* mRInstsBuffer;
@@ -28,9 +30,12 @@ namespace SwCull {
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
         public uint* mSceneVisibleRInstsIndicesBuffer;
+        public uint* mSceneVisibilityRInstsReadBuffer;
+        public uint* mSceneVisibilityRInstsWriteBuffer;
         public uint mRInstsLimit;
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;
+        public Phase mPhase;
     };
 
     public struct CompactPC {

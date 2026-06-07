@@ -83,7 +83,10 @@ void SwScene::initializeResources() {
 
     for (std::uint32_t i = 0; i < mSceneVisibilityRInstsBuffers.size(); i++) {
         mSceneVisibilityRInstsBuffers[i] = SwBufferFactory::createAllocatedBuffer(
-            vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
+            vk::BufferUsageFlagBits::eStorageBuffer,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t),
+            true
         );
     }
 
@@ -153,6 +156,12 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
             mFlags.mAssetLoaded = true;
         }
     }
+
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        for (auto& sceneVisibilityRInstsBuffer : mSceneVisibilityRInstsBuffers) {
+            cmd.fillBuffer(sceneVisibilityRInstsBuffer.getRawBuffer(), 0, vk::WholeSize, 0);  // Clear to 0 to mark all render instances as not visible again.
+        }
+    });
 }
 
 void SwScene::unloadAssets() {
