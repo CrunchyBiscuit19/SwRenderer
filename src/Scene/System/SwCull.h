@@ -41,6 +41,8 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneVisibleRInstsIndicesBuffer;
+    vk::DeviceAddress mSceneVisibilityRInstsReadBuffer;  
+    vk::DeviceAddress mSceneVisibilityRInstsWriteBuffer;  
     std::uint32_t mRInstsLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
@@ -97,6 +99,10 @@ private:
 
     bool mFreeze{false};
 
+    void initializeOtherPasses();
+    void initializeEarlyPasses();
+    void initializeLatePasses();
+
     void initializeResources() override;
     void initializePasses() override;
     void initializePushConstants() override;
@@ -109,7 +115,13 @@ public:
     inline bool getFreeze() { return mFreeze; }
     inline bool* getFreezePtr() { return &mFreeze; }
 
+    void refreshOtherDynamicDependencies();
+    void refreshEarlyDynamicDependencies();
+    void refreshLateDynamicDependencies();
+
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
+
+    void refresh() override;
 };
 };  // namespace SwCull

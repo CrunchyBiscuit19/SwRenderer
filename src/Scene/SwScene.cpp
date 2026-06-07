@@ -81,6 +81,12 @@ void SwScene::initializeResources() {
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
     );
 
+    for (std::uint32_t i = 0; i < mSceneVisibilityRInstsBuffers.size(); i++) {
+        mSceneVisibilityRInstsBuffers[i] = SwBufferFactory::createAllocatedBuffer(
+            vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
+        );
+    }
+
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
@@ -213,7 +219,7 @@ void SwScene::regenerateRItemsAndRInsts() {
                 batch.getRInstsBuffer().copyFrom(cmd, batch.getRInstsStaging(), RInstsCopy);
                 batch.getRInstsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getOcclusionRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
+                batch.getLateRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
             });
         }
     }
@@ -497,22 +503,26 @@ void SwScene::draw() {
     commandBuffer.reset();
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
     if (mSkybox.isActive() && mSkybox.isFileSelected()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullWork]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullCompact]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyCompact]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryEarlyOpaque]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryMasked]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);
     if (mPick.isPicked()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
     }
-    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryOpaque]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CopyToSwapchain]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);

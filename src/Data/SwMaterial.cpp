@@ -135,16 +135,8 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
     graphicsPipelineOptions.mDepthTestEnabled = true;
     switch (materialPipelineOptions.alphaMode) {
         case fastgltf::AlphaMode::Opaque:
-            // Depth pre-pass already wrote depth; test for exact match, no re-write.
-            graphicsPipelineOptions.mFragmentShader = sOpaqueFragmentShader.getRawModule();
-            graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getRawLayout();
-            graphicsPipelineOptions.mColorAttachments =
-                std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
-            graphicsPipelineOptions.mDepthWriteEnabled = true;
-            graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-            break;
         case fastgltf::AlphaMode::Mask:
-            // Skipped by depth pre-pass; write depth normally with Reverse-Z test.
+            // Write depth normally with Reverse-Z test.
             graphicsPipelineOptions.mFragmentShader = sOpaqueFragmentShader.getRawModule();
             graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getRawLayout();
             graphicsPipelineOptions.mColorAttachments =

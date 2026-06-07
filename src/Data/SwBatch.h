@@ -36,8 +36,10 @@ private:
     std::vector<SwRenderItem> mRItems;
     SwStagingBuffer mRItemsStaging;
     SwAllocatedBuffer mInitialRItemsBuffer;
-    SwAllocatedBuffer mOcclusionRItemsBuffer;
-    SwAllocatedBuffer mOcclusionRItemsCount;
+    SwAllocatedBuffer mEarlyRItemsBuffer; // Compacted early draw list 
+    SwAllocatedBuffer mEarlyRItemsCount;   
+    SwAllocatedBuffer mLateRItemsBuffer;
+    SwAllocatedBuffer mLateRItemsCount;
 
     std::vector<SwRenderInstance> mRInsts;
     SwStagingBuffer mRInstsStaging;
@@ -57,14 +59,18 @@ public:
 
     inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return *mGraphicsPipelineBundle; }
     inline bool isDoubleSided() const { return mDoubleSided; }
+    
     inline std::vector<SwRenderItem>& getRItems() { return mRItems; }
-    inline std::vector<SwRenderInstance>& getRInsts() { return mRInsts; }
     inline SwStagingBuffer& getRItemsStaging() { return mRItemsStaging; }
-    inline SwStagingBuffer& getRInstsStaging() { return mRInstsStaging; }
     inline SwAllocatedBuffer& getInitialRItemsBuffer() { return mInitialRItemsBuffer; }
-    inline SwAllocatedBuffer& getOcclusionRItemsBuffer() { return mOcclusionRItemsBuffer; }
-    inline SwAllocatedBuffer& getOcclusionRItemsCount() { return mOcclusionRItemsCount; }
-    inline SwAllocatedBuffer& getFinalRItemsBuffer() { return mOcclusionRItemsBuffer; }  // Return whatever is the last one for future-proofing
-    inline SwAllocatedBuffer& getFinalRItemsCount() { return mOcclusionRItemsCount; }  // Return whatever is the last one for future-proofing
+    inline SwAllocatedBuffer& getEarlyRItemsBuffer() { return mEarlyRItemsBuffer; }
+    inline SwAllocatedBuffer& getEarlyRItemsCount() { return mEarlyRItemsCount; }
+    inline SwAllocatedBuffer& getLateRItemsBuffer() { return mLateRItemsBuffer; }
+    inline SwAllocatedBuffer& getLateRItemsCount() { return mLateRItemsCount; }
+    inline SwAllocatedBuffer& getFinalRItemsBuffer() { return mLateRItemsBuffer; }  // Return whatever is the last one for future-proofing
+    inline SwAllocatedBuffer& getFinalRItemsCount() { return mLateRItemsCount; }  // Return whatever is the last one for future-proofing
+
+    inline std::vector<SwRenderInstance>& getRInsts() { return mRInsts; }
+    inline SwStagingBuffer& getRInstsStaging() { return mRInstsStaging; }
     inline SwAllocatedBuffer& getRInstsBuffer() { return mRInstsBuffer; }
 };

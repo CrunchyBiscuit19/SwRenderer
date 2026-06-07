@@ -3,7 +3,7 @@
 #include <Data/SwAsset.h>
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
-#include <Gui/SwGui.h>
+#include <Scene/System/SwGui.h>
 #include <Resource/SwDescriptor.h>
 #include <Scene/System/SwCull.h>
 #include <Scene/System/SwSkybox.h>
@@ -63,6 +63,8 @@ private:
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
     SwAllocatedBuffer mSceneVisibleRInstsIndicesBuffer;
+    std::array<SwAllocatedBuffer, 2> mSceneVisibilityRInstsBuffers;
+    std::uint32_t mSceneVisibilityRInstsBufferReadIndex;
 
     SwRenderGraph mRenderGraph;
 
@@ -101,9 +103,11 @@ public:
                std::views::values | std::views::join | std::views::values;
     }
     inline std::unordered_map<std::uint32_t, SwBatch>& getBatchMap(SwMaterial::Type type) { return mBatchTypes[type]; }
+    
     inline SwCamera& getCamera() { return mCamera; }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
     inline std::unordered_map<std::uint32_t, SwAsset>& getAssets() { return mAssets; }
+    
     inline SwDescriptorSet& getSceneMaterialResourcesDescriptorSet() { return mSceneMaterialResourcesDescriptorSet; }
     inline SwAllocatedBuffer& getSceneVertexBuffer() { return mSceneVertexBuffer; }
     inline SwAllocatedBuffer& getSceneIndexBuffer() { return mSceneIndexBuffer; }
@@ -112,6 +116,10 @@ public:
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
     inline SwAllocatedBuffer& getSceneVisibleRInstsIndicesBuffer() { return mSceneVisibleRInstsIndicesBuffer; }
+    inline void toggleSceneVisibilityRInstsBuffer() { mSceneVisibilityRInstsBufferReadIndex = 1 - mSceneVisibilityRInstsBufferReadIndex; }
+    inline SwAllocatedBuffer& getSceneVisibilityRInstsReadBuffer() { return mSceneVisibilityRInstsBuffers[mSceneVisibilityRInstsBufferReadIndex]; }
+    inline SwAllocatedBuffer& getSceneVisibilityRInstsWriteBuffer() { return mSceneVisibilityRInstsBuffers[mSceneVisibilityRInstsBufferReadIndex]; }
+
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
     inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }

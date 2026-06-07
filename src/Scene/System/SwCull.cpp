@@ -8,6 +8,229 @@
 
 SwCull::System::System(SwScene& scene) : SwSystem(scene) {}
 
+void SwCull::System::initializeOtherPasses() {
+    SwDependency staticDeps;
+
+    // Reset
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
+
+    mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
+        
+        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneVisibleRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
+        mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
+        cmd.fillBuffer(mScene.getSceneVisibilityRInstsWriteBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            if (batch.getRItems().empty()) {
+                continue;
+            }
+
+            cmd.fillBuffer(batch.getLateRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getLateRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+
+            const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
+            mResources.mResetPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
+            mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
+            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+
+            cmd.dispatch(SwHelper::fastDivCeil(rItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        }
+    });
+    staticDeps.clear();
+
+    // PublishCount
+    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferRead);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::TransferWrite);
+
+    mScene.insertPass(SwPass::Type::CullPublishCount, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        const vk::BufferCopy region{0, 0, sizeof(std::uint32_t)};
+        cmd.copyBuffer(
+            SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(),
+            SwRenderer::sRendererContext.mStats->mRInstsPublishedCount.getRawBuffer(),
+            region
+        );
+    });
+    staticDeps.clear();
+}
+
+void SwCull::System::initializeEarlyPasses() {
+    SwDependency staticDeps;
+
+    // EarlyWork
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+
+    mScene.insertPass(SwPass::Type::CullEarlyWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
+        
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            if (batch.getRItems().empty()) {
+                continue;
+            }
+            
+            cmd.bindDescriptorSets(
+                mResources.mWorkPipelineBundle.getBindPoint(),
+                mResources.mWorkPipelineBundle.getRawLayout(),
+                0,
+                mResources.mWorkDescriptorSet.getRawSet(),
+                nullptr
+            );
+            
+            mResources.mWorkPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
+            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        }
+    });
+    staticDeps.clear();
+
+    // EarlyCompact
+    mScene.insertPass(SwPass::Type::CullEarlyCompact, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
+
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            if (batch.getRItems().empty()) {
+                continue;
+            }
+
+            mResources.mCompactPushConstants.mPreRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRItemsBuffer = batch.getEarlyRItemsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRItemsCount = batch.getEarlyRItemsCount().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPreRItemsLimit = batch.getRItems().size();
+            cmd.pushConstants<SwCull::CompactPC>(
+                mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
+            );
+            
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRItems().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        }
+    });
+    staticDeps.clear();
+}
+
+void SwCull::System::initializeLatePasses() {
+    SwDependency staticDeps;
+
+    // PrepOcclusion
+    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
+    staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
+    staticDeps.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
+
+    mScene.insertPass(SwPass::Type::CullPrepOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mPrepOcclusionPipelineBundle.getBindPoint(), mResources.mPrepOcclusionPipelineBundle.getRawPipeline());
+        
+        cmd.bindDescriptorSets(
+            mResources.mPrepOcclusionPipelineBundle.getBindPoint(),
+            mResources.mPrepOcclusionPipelineBundle.getRawLayout(),
+            0,
+            mResources.mPrepOcclusionDescriptorSet.getRawSet(),
+            nullptr
+        );
+        
+        mResources.mPrepOcclusionPushConstants.mLevel = -1;
+        cmd.pushConstants<SwCull::PrepOcclusionPC>(
+            mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+        );
+        
+        cmd.dispatch(
+            SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().height, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            1
+        );
+        
+        mResources.mDepthPyramidImage.emitTransition(
+            cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, 0
+        );
+        
+        for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
+            mResources.mPrepOcclusionPushConstants.mLevel = i;
+            cmd.pushConstants<SwCull::PrepOcclusionPC>(
+                mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+            );
+            
+            const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidImage.getExtent().width >> (i + 1));
+            const std::uint32_t dstH = std::max(1u, mResources.mDepthPyramidImage.getExtent().height >> (i + 1));
+            cmd.dispatch(
+                SwHelper::fastDivCeil(dstW, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(dstH, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1
+            );
+            
+            if (i < mResources.mDepthPyramidLevels - 1 - 1) {
+                mResources.mDepthPyramidImage.emitTransition(
+                    cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, i + 1
+                );
+            }
+        }
+    });
+    staticDeps.clear();
+
+
+    // LateWork
+    staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+
+    mScene.insertPass(SwPass::Type::CullLateWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
+
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            if (batch.getRItems().empty()) {
+                continue;
+            }
+
+            cmd.bindDescriptorSets(
+                mResources.mWorkPipelineBundle.getBindPoint(),
+                mResources.mWorkPipelineBundle.getRawLayout(),
+                0,
+                mResources.mWorkDescriptorSet.getRawSet(),
+                nullptr
+            );
+
+            mResources.mWorkPushConstants.mRItemsBuffer = batch.getEarlyRItemsBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
+            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        }
+    });
+    staticDeps.clear();
+
+    // LateCompact
+    mScene.insertPass(SwPass::Type::CullLateCompact, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
+
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            if (batch.getRItems().empty()) {
+                continue;
+            }
+
+            mResources.mCompactPushConstants.mPreRItemsBuffer = batch.getEarlyRItemsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRItemsBuffer = batch.getLateRItemsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRItemsCount = batch.getLateRItemsCount().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPreRItemsLimit = batch.getRItems().size();
+            cmd.pushConstants<SwCull::CompactPC>(
+                mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
+            );
+
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRItems().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        }
+    });
+    staticDeps.clear();
+}
+
 void SwCull::System::initializeResources() {
     // Reset*
     mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::ResetPC::getRange());
@@ -60,189 +283,106 @@ void SwCull::System::initializeResources() {
 }
 
 void SwCull::System::initializePasses() {
-    SwDependency staticDeps;
-
-    // Reset
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
-    mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
-        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneVisibleRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
-        mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
-                continue;
-            }
-            cmd.fillBuffer(batch.getOcclusionRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
-            cmd.fillBuffer(batch.getOcclusionRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-            const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
-            mResources.mResetPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-            mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
-            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
-            cmd.dispatch(SwHelper::fastDivCeil(rItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-        }
-    });
-    staticDeps.clear();
-
-    // PrepOcclusion: build the Hi-Z pyramid from the depth image (last frame's depth, as the colour/depth geometry passes run after cull). Occlusion therefore
-    // lags one frame.
-    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
-    staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
-    staticDeps.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
-    mScene.insertPass(SwPass::Type::CullPrepOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mPrepOcclusionPipelineBundle.getBindPoint(), mResources.mPrepOcclusionPipelineBundle.getRawPipeline());
-        cmd.bindDescriptorSets(
-            mResources.mPrepOcclusionPipelineBundle.getBindPoint(),
-            mResources.mPrepOcclusionPipelineBundle.getRawLayout(),
-            0,
-            mResources.mPrepOcclusionDescriptorSet.getRawSet(),
-            nullptr
-        );
-        mResources.mPrepOcclusionPushConstants.mLevel = -1;
-        cmd.pushConstants<SwCull::PrepOcclusionPC>(
-            mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
-        );
-        cmd.dispatch(
-            SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(mResources.mDepthPyramidImage.getExtent().height, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            1
-        );
-        mResources.mDepthPyramidImage.emitTransition(
-            cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, 0
-        );
-        for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
-            mResources.mPrepOcclusionPushConstants.mLevel = i;
-            cmd.pushConstants<SwCull::PrepOcclusionPC>(
-                mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
-            );
-            const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidImage.getExtent().width >> (i + 1));
-            const std::uint32_t dstH = std::max(1u, mResources.mDepthPyramidImage.getExtent().height >> (i + 1));
-            cmd.dispatch(
-                SwHelper::fastDivCeil(dstW, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(dstH, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1
-            );
-            if (i < mResources.mDepthPyramidLevels - 1 - 1) {
-                mResources.mDepthPyramidImage.emitTransition(
-                    cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderSampledRead, vk::ImageLayout::eGeneral, i + 1
-                );
-            }
-        }
-    });
-    staticDeps.clear();
-
-    // Work: frustum + occlusion in a single pass over the full instance list.
-    staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-    mScene.insertPass(SwPass::Type::CullWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
-        mResources.mWorkPushConstants.mPerFrameBuffer =
-            SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
-                continue;
-            }
-            cmd.bindDescriptorSets(
-                mResources.mWorkPipelineBundle.getBindPoint(),
-                mResources.mWorkPipelineBundle.getRawLayout(),
-                0,
-                mResources.mWorkDescriptorSet.getRawSet(),
-                nullptr
-            );
-            mResources.mWorkPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
-            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
-            cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-        }
-    });
-    staticDeps.clear();
-
-    // Compact
-    mScene.insertPass(SwPass::Type::CullCompact, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
-                continue;
-            }
-            mResources.mCompactPushConstants.mPreRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPostRItemsBuffer = batch.getOcclusionRItemsBuffer().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPostRItemsCount = batch.getOcclusionRItemsCount().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPreRItemsLimit = batch.getRItems().size();
-            cmd.pushConstants<SwCull::CompactPC>(
-                mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
-            );
-            cmd.dispatch(SwHelper::fastDivCeil(batch.getRItems().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-        }
-    });
-    staticDeps.clear();
-
-    // PublishCount
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::TransferWrite);
-    mScene.insertPass(SwPass::Type::CullPublishCount, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        const vk::BufferCopy region{0, 0, sizeof(std::uint32_t)};
-        cmd.copyBuffer(
-            SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(),
-            SwRenderer::sRendererContext.mStats->mRInstsPublishedCount.getRawBuffer(),
-            region
-        );
-    });
-    staticDeps.clear();
+    initializeOtherPasses();
+    initializeEarlyPasses();
+    initializeLatePasses();
 }
 
 void SwCull::System::initializePushConstants() {
     mResources.mWorkPushConstants.mRInstsCount = SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getDeviceAddress().value();
 }
 
-void SwCull::System::refreshDynamicDependencies() {
+void SwCull::System::refreshOtherDynamicDependencies() {
     SwDependency dynamicDeps;
 
     // Reset
+    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::TransferWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRItems().empty()) continue;
         dynamicDeps.mWriteBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsBuffer(), SwDependency::BufferDepType::TransferWrite);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsCount(), SwDependency::BufferDepType::TransferWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsBuffer(), SwDependency::BufferDepType::TransferWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsCount(), SwDependency::BufferDepType::TransferWrite);
     }
     mScene.mPasses[SwPass::Type::CullReset].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
+}
 
-    // Work
+void SwCull::System::refreshEarlyDynamicDependencies() {
+    SwDependency dynamicDeps;
+
+    // EarlyWork
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
+    dynamicDeps.mReadBuffers.emplace_back(mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    dynamicDeps.mWriteBuffers.emplace_back(mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRItems().empty()) continue;
         dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         dynamicDeps.mReadBuffers.emplace_back(&batch.getRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     }
-    mScene.mPasses[SwPass::Type::CullWork].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullEarlyWork].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
-    // Compact
+    // EarlyCompact
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRItems().empty()) continue;
         dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getOcclusionRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
-    mScene.mPasses[SwPass::Type::CullCompact].setDynamicDeps(std::move(dynamicDeps));
+    mScene.mPasses[SwPass::Type::CullEarlyCompact].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 }
 
+void SwCull::System::refreshLateDynamicDependencies() {
+    SwDependency dynamicDeps;
+
+    // LateWork
+    dynamicDeps.mReadBuffers.emplace_back(
+        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
+    );
+    dynamicDeps.mReadBuffers.emplace_back(mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    dynamicDeps.mWriteBuffers.emplace_back(mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+        if (batch.getRItems().empty()) continue;
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    }
+    mScene.mPasses[SwPass::Type::CullLateWork].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
+
+    // LateCompact
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+        if (batch.getRItems().empty()) continue;
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
+    }
+    mScene.mPasses[SwPass::Type::CullLateCompact].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
+}
+
+void SwCull::System::refreshDynamicDependencies() {
+    refreshOtherDynamicDependencies();
+    refreshEarlyDynamicDependencies();
+    refreshLateDynamicDependencies();
+}
+
 void SwCull::System::refreshPushConstants() {
+    mResources.mWorkPushConstants.mFrustumBuffer = mScene.getCamera().getFrustumBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mFrustumBuffer = mScene.getCamera().getFrustumBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneVisibleRInstsIndicesBuffer = mScene.getSceneVisibleRInstsIndicesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibilityRInstsReadBuffer = mScene.getSceneVisibilityRInstsReadBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibilityRInstsWriteBuffer = mScene.getSceneVisibilityRInstsWriteBuffer().getDeviceAddress().value();
+}
+
+void SwCull::System::refresh() { 
+    mScene.toggleSceneVisibilityRInstsBuffer(); 
+    SwSystem::refresh();
 }
 
 void SwCull::System::reInitializeOnResize() {

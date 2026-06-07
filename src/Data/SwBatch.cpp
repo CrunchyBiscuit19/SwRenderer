@@ -9,19 +9,31 @@ SwBatch::SwBatch(SwPrimitive& primitive) {
     mDoubleSided = primitive.mMaterial.isDoubleSided();
 
     mRItemsStaging = SwBufferFactory::createStagingBuffer(RENDER_ITEMS_INITIAL_BUFFER_SIZE);
+
     mInitialRItemsBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         RENDER_ITEMS_INITIAL_BUFFER_SIZE,
         true
     );
-    mOcclusionRItemsBuffer = SwBufferFactory::createAllocatedBuffer(
+
+    mEarlyRItemsBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         RENDER_ITEMS_INITIAL_BUFFER_SIZE,
         true
     );
-    mOcclusionRItemsCount = SwBufferFactory::createAllocatedBuffer(
+    mEarlyRItemsCount = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, sizeof(uint32_t), true
+    );
+
+    mLateRItemsBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        RENDER_ITEMS_INITIAL_BUFFER_SIZE,
+        true
+    );
+    mLateRItemsCount = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, sizeof(uint32_t), true
     );
 

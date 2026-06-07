@@ -1,4 +1,4 @@
-#include <Gui/SwGui.h>
+#include <Scene/System/SwGui.h>
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
