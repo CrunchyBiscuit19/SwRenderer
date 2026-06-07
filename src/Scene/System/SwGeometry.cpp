@@ -63,7 +63,6 @@ void SwGeometry::System::initializePasses() {
             );
             
             SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-            SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
         }
 
         cmd.endRendering();
@@ -280,6 +279,7 @@ void SwGeometry::System::refreshDynamicDependencies() {
     dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Transparent)) {
         dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsCount(), SwDependency::BufferDepType::IndirectRead);
     }
     mScene.mPasses[SwPass::Type::GeometryTransparent].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();

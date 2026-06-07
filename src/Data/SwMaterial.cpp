@@ -45,7 +45,7 @@ void SwMaterialResources::init() {
     SwMaterialTexture::sDefaultWhiteTexture =
         SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
     SwMaterialTexture::sDefaultErrorTexture =
-        SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
+        SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::Checkerboard], &SwSampler::sDefaultSampler);
 };
 
 void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
