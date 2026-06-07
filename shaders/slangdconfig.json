@@ -1,0 +1,13 @@
+{
+    "slang.additionalSearchPaths": [
+        "c:\\Projects\\SwRenderer\\shaders\\out",
+        "c:\\Projects\\SwRenderer\\shaders\\Common",
+        "c:\\Projects\\SwRenderer\\shaders\\Cull",
+        "c:\\Projects\\SwRenderer\\shaders\\Geometry",
+        "c:\\Projects\\SwRenderer\\shaders\\Pick",
+        "c:\\Projects\\SwRenderer\\shaders\\Skybox",
+        "c:\\Projects\\SwRenderer\\shaders\\WBOIT"
+    ],
+    "slang.predefinedMacros": [],
+    "slang.format.clangFormatStyle": "Google"
+}

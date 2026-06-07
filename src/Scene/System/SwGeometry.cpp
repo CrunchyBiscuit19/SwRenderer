@@ -4,8 +4,6 @@
 #include <Scene/System/SwGeometry.h>
 #include <Scene/SwScene.h>
 
-#include <ranges>
-
 SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwGeometry::System::initializeResources() {}
@@ -32,39 +30,34 @@ void SwGeometry::System::initializePasses() {
 
         cmd.beginRendering(renderInfo);
 
-        for (auto& batchType : mScene.getBatchTypes()) {
-            if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) {
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask)) {
+            if (batch.getRItems().empty()) {
                 continue;
             }
-            for (auto& batch : batchType.second | std::views::values) {
-                if (batch.getRItems().empty()) {
-                    continue;
-                }
-                cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
-                SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
-                cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
-                cmd.bindDescriptorSets(
-                    batch.getGraphicsPipelineBundle().getBindPoint(),
-                    batch.getGraphicsPipelineBundle().getRawLayout(),
-                    0,
-                    mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
-                    nullptr
-                );
-                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
-                cmd.pushConstants<SwGeometry::WorkPC>(
-                    batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
-                );
-                cmd.drawIndexedIndirectCount(
-                    batch.getFinalRItemsBuffer().getRawBuffer(),
-                    0,
-                    batch.getFinalRItemsCount().getRawBuffer(),
-                    0,
-                    static_cast<std::uint32_t>(batch.getRItems().size()),
-                    sizeof(SwRenderItem)
-                );
-                SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-                SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size(); 
-            }
+            cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
+            SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
+            cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
+            cmd.bindDescriptorSets(
+                batch.getGraphicsPipelineBundle().getBindPoint(),
+                batch.getGraphicsPipelineBundle().getRawLayout(),
+                0,
+                mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
+                nullptr
+            );
+            mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
+            cmd.pushConstants<SwGeometry::WorkPC>(
+                batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
+            );
+            cmd.drawIndexedIndirectCount(
+                batch.getFinalRItemsBuffer().getRawBuffer(),
+                0,
+                batch.getFinalRItemsCount().getRawBuffer(),
+                0,
+                static_cast<std::uint32_t>(batch.getRItems().size()),
+                sizeof(SwRenderItem)
+            );
+            SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+            SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
         }
 
         cmd.endRendering();
@@ -91,39 +84,34 @@ void SwGeometry::System::initializePasses() {
 
         cmd.beginRendering(renderInfo);
 
-        for (auto& batchType : mScene.getBatchTypes()) {
-            if (batchType.first != SwMaterial::Type::Transparent) {
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Transparent)) {
+            if (batch.getRItems().empty()) {
                 continue;
             }
-            for (auto& batch : batchType.second | std::views::values) {
-                if (batch.getRItems().empty()) {
-                    continue;
-                }
-                cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
-                SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
-                cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
-                cmd.bindDescriptorSets(
-                    batch.getGraphicsPipelineBundle().getBindPoint(),
-                    batch.getGraphicsPipelineBundle().getRawLayout(),
-                    0,
-                    mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
-                    nullptr
-                );
-                mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
-                cmd.pushConstants<SwGeometry::WorkPC>(
-                    batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
-                );
-                cmd.drawIndexedIndirectCount(
-                    batch.getFinalRItemsBuffer().getRawBuffer(),
-                    0,
-                    batch.getFinalRItemsCount().getRawBuffer(),
-                    0,
-                    static_cast<std::uint32_t>(batch.getRItems().size()),
-                    sizeof(SwRenderItem)
-                );
-                SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-                SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
-            }
+            cmd.bindPipeline(batch.getGraphicsPipelineBundle().getBindPoint(), batch.getGraphicsPipelineBundle().getRawPipeline());
+            SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
+            cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
+            cmd.bindDescriptorSets(
+                batch.getGraphicsPipelineBundle().getBindPoint(),
+                batch.getGraphicsPipelineBundle().getRawLayout(),
+                0,
+                mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
+                nullptr
+            );
+            mResources.mWorkPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
+            cmd.pushConstants<SwGeometry::WorkPC>(
+                batch.getGraphicsPipelineBundle().getRawLayout(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants
+            );
+            cmd.drawIndexedIndirectCount(
+                batch.getFinalRItemsBuffer().getRawBuffer(),
+                0,
+                batch.getFinalRItemsCount().getRawBuffer(),
+                0,
+                static_cast<std::uint32_t>(batch.getRItems().size()),
+                sizeof(SwRenderItem)
+            );
+            SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+            SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
         }
         cmd.endRendering();
     });
@@ -135,22 +123,16 @@ void SwGeometry::System::refreshDynamicDependencies() {
 
     // GeometryOpaque
     dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    for (auto& batchType : mScene.getBatchTypes()) {
-        if (batchType.first != SwMaterial::Type::Opaque && batchType.first != SwMaterial::Type::Mask) continue;
-        for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask)) {
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
     }
     mScene.mPasses[SwPass::Type::GeometryOpaque].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
     // GeometryTransparent
     dynamicDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    for (auto& batchType : mScene.getBatchTypes()) {
-        if (batchType.first != SwMaterial::Type::Transparent) continue;
-        for (auto& batch : batchType.second | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Transparent)) {
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
     }
     mScene.mPasses[SwPass::Type::GeometryTransparent].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();

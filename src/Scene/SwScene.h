@@ -13,6 +13,10 @@
 #include <Scene/SwRenderGraph.h>
 #include <Scene/System/SwWBOIT.h>
 
+#include <algorithm>
+#include <array>
+#include <concepts>
+#include <ranges>
 #include <unordered_set>
 
 class SwScene {
@@ -90,7 +94,12 @@ public:
 
     void insertPass(SwPass::Type type, SwDependency deps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
 
-    inline std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>>& getBatchTypes() { return mBatchTypes; }
+    template <std::same_as<SwMaterial::Type>... Types>
+    auto getBatchIt(Types... types) {
+        std::array<SwMaterial::Type, sizeof...(Types)> requested{types...};
+        return mBatchTypes | std::views::filter([requested](const auto& pair) { return std::ranges::find(requested, pair.first) != requested.end(); }) |
+               std::views::values | std::views::join | std::views::values;
+    }
     inline std::unordered_map<std::uint32_t, SwBatch>& getBatchMap(SwMaterial::Type type) { return mBatchTypes[type]; }
     inline SwCamera& getCamera() { return mCamera; }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }

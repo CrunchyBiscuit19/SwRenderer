@@ -7,8 +7,6 @@
 #include <Scene/SwScene.h>
 #include <quill/LogMacros.h>
 
-#include <ranges>
-
 SwPick::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwPick::System::initializeResources() {
@@ -88,22 +86,20 @@ void SwPick::System::initializePasses() {
         cmd.bindPipeline(mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getRawPipeline());
         SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
-        for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-            for (auto& batch : batchType | std::views::values) {
-                if (batch.getRItems().empty()) {
-                    continue;
-                }
-                mResources.mDrawPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
-                cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
-                cmd.drawIndexedIndirectCount(
-                    batch.getFinalRItemsBuffer().getRawBuffer(),
-                    0,
-                    batch.getFinalRItemsCount().getRawBuffer(),
-                    0,
-                    static_cast<std::uint32_t>(batch.getRItems().size()),
-                    sizeof(SwRenderItem)
-                );
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            if (batch.getRItems().empty()) {
+                continue;
             }
+            mResources.mDrawPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
+            cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+            cmd.drawIndexedIndirectCount(
+                batch.getFinalRItemsBuffer().getRawBuffer(),
+                0,
+                batch.getFinalRItemsCount().getRawBuffer(),
+                0,
+                static_cast<std::uint32_t>(batch.getRItems().size()),
+                sizeof(SwRenderItem)
+            );
         }
 
         cmd.endRendering();
@@ -201,10 +197,8 @@ void SwPick::System::refreshDynamicDependencies() {
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
     );
-    for (auto& batchType : mScene.getBatchTypes() | std::views::values) {
-        for (auto& batch : batchType | std::views::values) {
-            dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
     }
     mScene.mPasses[SwPass::Type::PickDraw].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();

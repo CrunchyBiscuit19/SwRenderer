@@ -26,6 +26,7 @@ project(SwRenderer)
 file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.slang"
 	"${CMAKE_CURRENT_SOURCE_DIR}/shaders/**/*.slang"
+	"${CMAKE_CURRENT_SOURCE_DIR}/shaders/slangdconfig.json"
 )
 add_custom_target(Shaders ALL SOURCES ${SLANG_SOURCES})
 
