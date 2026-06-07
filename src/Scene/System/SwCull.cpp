@@ -172,7 +172,6 @@ void SwCull::System::initializeLatePasses() {
     });
     staticDeps.clear();
 
-
     // LateWork
     staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -314,8 +313,8 @@ void SwCull::System::refreshEarlyDynamicDependencies() {
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
-    dynamicDeps.mReadBuffers.emplace_back(mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    dynamicDeps.mWriteBuffers.emplace_back(mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRItems().empty()) continue;
         dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -342,8 +341,8 @@ void SwCull::System::refreshLateDynamicDependencies() {
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
-    dynamicDeps.mReadBuffers.emplace_back(mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    dynamicDeps.mWriteBuffers.emplace_back(mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRItems().empty()) continue;
         dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
