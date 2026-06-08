@@ -27,7 +27,7 @@ bool frustumTest(SwCull::Plane* frustum, float4[SwCull::NUM_AABB_CORNERS] aabbCo
     // For each plane build the corner which will produce max result in point-normal plane equation
     // Point-normal plane equation is positive if it's on the side of the plane the normal is pointing
     // Frustum plane normals point inward => non-negative result means at least 1 corner is on correct side of the plane
-    // At least 1 corner on correct side of all 6 planes means render instance is within frustum and therefore visible
+    // At least 1 corner on correct side of all 6 planes means render item is within frustum and therefore visible
     for (uint i = 0; i < SwCull::NUM_FRUSTUM_PLANES; i++) {
         SwCull::Plane p = frustum[i];
         float4 chosen;
@@ -47,7 +47,7 @@ bool frustumTest(SwCull::Plane* frustum, float4[SwCull::NUM_AABB_CORNERS] aabbCo
 bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
-    float closestDepthInRInst = 0.f;
+    float closestDepthInRi = 0.f;
 
     // Transform AABB corners to NDC / Screen space and find min/max XY and closest Z
     // Vulkan NDC is [0, 1] for Z and [-1, 1] for XY
@@ -65,7 +65,7 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
         aabbMinNdc = min(aabbMinNdc, ndc);
         aabbMaxNdc = max(aabbMaxNdc, ndc);
 
-        closestDepthInRInst = max(closestDepthInRInst, ndc.z);
+        closestDepthInRi = max(closestDepthInRi, ndc.z);
     }
 
     // Convert NDC XY from [-1,1] to [0, drawExtents]
@@ -110,30 +110,30 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
     // Visible if the nearest point is closer-or-equal than the furthest occluder.
     // The depth pre-pass renders the instances being tested here, so frontmost surface finds its own depth in the pyramid
     float furthestDepthInPyramid = min(min(d0, d1), min(d2, d3));
-    return closestDepthInRInst >= furthestDepthInPyramid;
+    return closestDepthInRi >= furthestDepthInPyramid;
 }
 
-void markDrawRInstIndex(SwRenderItem* rItem, SwRenderInstance* rInst, uint* sceneDrawRInstsIndicesBuffer) {
-    // Write the indices of to-draw render instances to the draw instances indices buffer
+void markDrawRiIndex(SwRenderCommand* rc, SwRenderItem* ri, uint* sceneDrawRisIndicesBuffer) {
+    // Write the indices of to-draw render items to the draw instances indices buffer
     // Index into to-draw instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
-    uint offsetVisibleRInstIndex;
-    InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
-    uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
-    sceneDrawRInstsIndicesBuffer[visibleRInstIndex] = rInst->mSceneInstanceIndex;
+    uint offsetVisibleRiIndex;
+    InterlockedAdd(rc->mRiCount, 1, offsetVisibleRiIndex);
+    uint visibleRiIndex = rc->mFirstRi + offsetVisibleRiIndex;
+    sceneDrawRisIndicesBuffer[visibleRiIndex] = ri->mSceneInstanceIndex;
 }
 
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
-    uint rInstsIndex = in.mDispatchThreadID.x;
-    if (rInstsIndex >= workPc.mRInstsLimit)
+    uint risIndex = in.mDispatchThreadID.x;
+    if (risIndex >= workPc.mRisLimit)
         return;
-    SwRenderInstance* rInst = &workPc.mRInstsBuffer[rInstsIndex];
-    SwRenderItem* rItem = &workPc.mRItemsBuffer[rInst->mRItemIndex];
+    SwRenderItem* ri = &workPc.mRisBuffer[risIndex];
+    SwRenderCommand* rc = &workPc.mRcsBuffer[ri->mRcIndex];
 
-    SwBounds* bounds = &workPc.mSceneBoundsBuffer[rItem->mBoundsIndex];
-    SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rItem->mNodeTransformIndex];
-    SwInstance* instance = &workPc.mSceneInstancesBuffer[rInst->mSceneInstanceIndex];
+    SwBounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
+    SwInstance* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
     SwCull::Plane* frustum = workPc.mFrustumBuffer;
     SwPerspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
@@ -149,40 +149,40 @@ void main(SwCull::CSInput in) {
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
 
-    // Visibility is per render instance, but mSceneInstanceIndex is shared across render items that
+    // Visibility is per render item, but mSceneInstanceIndex is shared across render commands that
     // reference the same asset instance (multi-primitive assets), so it collides. Derive the unique
-    // global slot from the item's disjoint mFirstRInst range: mSceneInstanceIndex == mFirstInstance + i.
-    uint rInstVisIndex = rItem->mFirstRInst + (rInst->mSceneInstanceIndex - rItem->mFirstInstance);
+    // global slot from the item's disjoint mFirstRi range: mSceneInstanceIndex == mFirstInstance + i.
+    uint riVisIndex = rc->mFirstRi + (ri->mSceneInstanceIndex - rc->mFirstInstance);
 
     bool draw = true;
     if (workPc.mPhase == SwCull::Phase::Early) {
-        // Frustum on previously visible only (check mSceneVisibilityRInstsReadBuffer)
-        // Write 1 into mSceneVisibilityRInstsWriteBuffer if previously visible
-        // Save into mSceneDrawRInstsIndicesBuffer
-        bool prevVisible = (workPc.mSceneVisibilityRInstsReadBuffer[rInstVisIndex] == 1);
+        // Frustum on previously visible only (check mSceneVisibilityRisReadBuffer)
+        // Write 1 into mSceneVisibilityRisWriteBuffer if previously visible
+        // Save into mSceneDrawRisIndicesBuffer
+        bool prevVisible = (workPc.mSceneVisibilityRisReadBuffer[riVisIndex] == 1);
         if (prevVisible)
             prevVisible = frustumTest(frustum, aabbCorners);
         if (prevVisible) {
-            workPc.mSceneVisibilityRInstsWriteBuffer[rInstVisIndex] = 1;
-            markDrawRInstIndex(rItem, rInst, workPc.mSceneDrawRInstsIndicesBuffer);
+            workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = 1;
+            markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
             draw = true;
         }
     } else {
         // Frustum + Occlusion on all
-        // Read mSceneVisibilityRInstsWriteBuffer to see if it currently is visible
-        // Write 1 into mSceneVisibilityRInstsWriteBuffer if currently visible
-        // Save into mSceneDrawRInstsIndicesBuffer if currently visible and wasn't previously visible
+        // Read mSceneVisibilityRisWriteBuffer to see if it currently is visible
+        // Write 1 into mSceneVisibilityRisWriteBuffer if currently visible
+        // Save into mSceneDrawRisIndicesBuffer if currently visible and wasn't previously visible
         bool currVisible = frustumTest(frustum, aabbCorners) && occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
-        bool prevVisible = (workPc.mSceneVisibilityRInstsWriteBuffer[rInstVisIndex] == 1);
+        bool prevVisible = (workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] == 1);
         if (currVisible) {
-            workPc.mSceneVisibilityRInstsWriteBuffer[rInstVisIndex] = 1;
+            workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = 1;
             if (!prevVisible) {
-                markDrawRInstIndex(rItem, rInst, workPc.mSceneDrawRInstsIndicesBuffer);
+                markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
                 draw = true;
             }
         }
     }
     uint _;
     if (draw)
-        InterlockedAdd(*workPc.mRInstsCount, 1, _);
+        InterlockedAdd(*workPc.mRisCount, 1, _);
 }

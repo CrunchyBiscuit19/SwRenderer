@@ -27,25 +27,25 @@ struct Plane {
 enum class Phase { Early, Late };
 
 struct ResetPC : public SwPC<ResetPC> {
-    vk::DeviceAddress mRItemsBuffer;
-    std::uint32_t mRItemsLimit;
+    vk::DeviceAddress mRcsBuffer;
+    std::uint32_t mRcsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct WorkPC : public SwPC<WorkPC> {
-    vk::DeviceAddress mRItemsBuffer;
-    vk::DeviceAddress mRInstsBuffer;
-    vk::DeviceAddress mRInstsCount;
+    vk::DeviceAddress mRcsBuffer;
+    vk::DeviceAddress mRisBuffer;
+    vk::DeviceAddress mRisCount;
     vk::DeviceAddress mFrustumBuffer;
     vk::DeviceAddress mPerFrameBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneDrawRInstsIndicesBuffer;
-    vk::DeviceAddress mSceneVisibilityRInstsReadBuffer;  
-    vk::DeviceAddress mSceneVisibilityRInstsWriteBuffer;  
-    std::uint32_t mRInstsLimit;
+    vk::DeviceAddress mSceneDrawRisIndicesBuffer;
+    vk::DeviceAddress mSceneVisibilityRisReadBuffer;  
+    vk::DeviceAddress mSceneVisibilityRisWriteBuffer;  
+    std::uint32_t mRisLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
     Phase mPhase;   
@@ -54,10 +54,10 @@ struct WorkPC : public SwPC<WorkPC> {
 };
 
 struct CompactPC : SwPC<CompactPC> {
-    vk::DeviceAddress mPreRItemsBuffer;
-    vk::DeviceAddress mPostRItemsBuffer;
-    vk::DeviceAddress mPostRItemsCount;
-    std::uint32_t mPreRItemsLimit;
+    vk::DeviceAddress mPreRcsBuffer;
+    vk::DeviceAddress mPostRcsBuffer;
+    vk::DeviceAddress mPostRcsCount;
+    std::uint32_t mPreRcsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

@@ -57,7 +57,7 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 
 **Batch/instance pipeline**: Scene geometry is streamed into GPU-resident buffers per material type (opaque, mask, transparent). A compute-shader cull pass (`SwCull`) populates indirect draw commands; `SwGeometry` issues the indirect draws.
 
-**Instances/Render Items/Render Instances**: Instances refer to instances of loaded assets. Render items are generated for every mesh node created from a loaded GLTF file, which hold data for each indirect draw command in VkDrawIndexedIndirectCount. Render instances refer to the instances belonging to a specific render item's mesh node. There are as many render instances of a mesh node as there are instances of a loaded asset from which the mesh node is created from. 
+**Instances/Render Commands/Render Items**: Instances refer to instances of loaded assets. Render commands are generated for every mesh node created from a loaded GLTF file, which hold data for each indirect draw command in VkDrawIndexedIndirectCount. Render items refer to the instances belonging to a specific render command's mesh node. There are as many render items of a mesh node as there are instances of a loaded asset from which the mesh node is created from. 
 
 **Systems** (`src/Scene/Sw*.cpp`): Each rendering feature is a self-contained system registered with the scene — `SwCull`, `SwGeometry`, `SwPick`, `SwSkybox`, `SwWBOIT`. They each own their pipelines, descriptors, and pass definitions.
 

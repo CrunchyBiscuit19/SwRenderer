@@ -6,18 +6,18 @@ SwCull::CompactPC compactPc;
 
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
-    // Get thread ID as index into render item
-    uint rItemsIndex = in.mDispatchThreadID.x;
-    if (rItemsIndex >= compactPc.mPreRItemsLimit)
+    // Get thread ID as index into render command
+    uint rcsIndex = in.mDispatchThreadID.x;
+    if (rcsIndex >= compactPc.mPreRcsLimit)
         return;
 
-    // Copy over render items with more than zero instances, and increment counter
-    SwRenderItem* rItem = &compactPc.mPreRItemsBuffer[rItemsIndex];
+    // Copy over render commands with more than zero instances, and increment counter
+    SwRenderCommand* rc = &compactPc.mPreRcsBuffer[rcsIndex];
 
-    if (rItem->mRInstCount == 0)
+    if (rc->mRiCount == 0)
         return;
 
-    uint writeRItemsIndex;
-    InterlockedAdd(*compactPc.mPostRItemsCount, 1, writeRItemsIndex);
-    compactPc.mPostRItemsBuffer[writeRItemsIndex].copyFrom(rItem);
+    uint writeRcsIndex;
+    InterlockedAdd(*compactPc.mPostRcsCount, 1, writeRcsIndex);
+    compactPc.mPostRcsBuffer[writeRcsIndex].copyFrom(rc);
 }

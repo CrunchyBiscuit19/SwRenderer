@@ -12,45 +12,45 @@ void SwCull::System::initializeOtherPasses() {
     SwDependency staticDeps;
 
     // Reset
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
 
     mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
         
-        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneDrawRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneDrawRisIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
         mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
-        cmd.fillBuffer(mScene.getSceneVisibilityRInstsWriteBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
+            if (batch.getRcs().empty()) {
                 continue;
             }
 
-            cmd.fillBuffer(batch.getLateRItemsCount().getRawBuffer(), 0, vk::WholeSize, 0);
-            cmd.fillBuffer(batch.getLateRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getLateRcsCount().getRawBuffer(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getLateRcsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
 
-            const std::uint32_t rItemsCount = static_cast<std::uint32_t>(batch.getRItems().size());
-            mResources.mResetPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-            mResources.mResetPushConstants.mRItemsLimit = rItemsCount;
+            const std::uint32_t rcsCount = static_cast<std::uint32_t>(batch.getRcs().size());
+            mResources.mResetPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
+            mResources.mResetPushConstants.mRcsLimit = rcsCount;
             cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
 
-            cmd.dispatch(SwHelper::fastDivCeil(rItemsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+            cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
     });
     staticDeps.clear();
 
     // PublishCount
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::TransferRead);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisPublishedCount, SwDependency::BufferDepType::TransferWrite);
 
     mScene.insertPass(SwPass::Type::CullPublishCount, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         const vk::BufferCopy region{0, 0, sizeof(std::uint32_t)};
         cmd.copyBuffer(
-            SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(),
-            SwRenderer::sRendererContext.mStats->mRInstsPublishedCount.getRawBuffer(),
+            SwRenderer::sRendererContext.mStats->mRisScratchCount.getRawBuffer(),
+            SwRenderer::sRendererContext.mStats->mRisPublishedCount.getRawBuffer(),
             region
         );
     });
@@ -65,14 +65,14 @@ void SwCull::System::initializeEarlyPasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
     mScene.insertPass(SwPass::Type::CullEarlyWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
         
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
+            if (batch.getRcs().empty()) {
                 continue;
             }
             
@@ -84,13 +84,13 @@ void SwCull::System::initializeEarlyPasses() {
                 nullptr
             );
             
-            mResources.mWorkPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
+            mResources.mWorkPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRisBuffer = batch.getRisBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
             mResources.mWorkPushConstants.mPhase = SwCull::Phase::Early;
             cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
-            cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
     });
     staticDeps.clear();
@@ -100,19 +100,19 @@ void SwCull::System::initializeEarlyPasses() {
         cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
+            if (batch.getRcs().empty()) {
                 continue;
             }
 
-            mResources.mCompactPushConstants.mPreRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPostRItemsBuffer = batch.getEarlyRItemsBuffer().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPostRItemsCount = batch.getEarlyRItemsCount().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPreRItemsLimit = batch.getRItems().size();
+            mResources.mCompactPushConstants.mPreRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRcsBuffer = batch.getEarlyRcsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRcsCount = batch.getEarlyRcsCount().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPreRcsLimit = batch.getRcs().size();
             cmd.pushConstants<SwCull::CompactPC>(
                 mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
             );
             
-            cmd.dispatch(SwHelper::fastDivCeil(batch.getRItems().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRcs().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
     });
     staticDeps.clear();
@@ -179,14 +179,14 @@ void SwCull::System::initializeLatePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
     mScene.insertPass(SwPass::Type::CullLateWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
+            if (batch.getRcs().empty()) {
                 continue;
             }
 
@@ -198,13 +198,13 @@ void SwCull::System::initializeLatePasses() {
                 nullptr
             );
 
-            mResources.mWorkPushConstants.mRItemsBuffer = batch.getEarlyRItemsBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
+            mResources.mWorkPushConstants.mRcsBuffer = batch.getEarlyRcsBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRisBuffer = batch.getRisBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
             mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
             cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
-            cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
     });
     staticDeps.clear();
@@ -214,19 +214,19 @@ void SwCull::System::initializeLatePasses() {
         cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
+            if (batch.getRcs().empty()) {
                 continue;
             }
 
-            mResources.mCompactPushConstants.mPreRItemsBuffer = batch.getEarlyRItemsBuffer().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPostRItemsBuffer = batch.getLateRItemsBuffer().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPostRItemsCount = batch.getLateRItemsCount().getDeviceAddress().value();
-            mResources.mCompactPushConstants.mPreRItemsLimit = batch.getRItems().size();
+            mResources.mCompactPushConstants.mPreRcsBuffer = batch.getEarlyRcsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRcsBuffer = batch.getLateRcsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPostRcsCount = batch.getLateRcsCount().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPreRcsLimit = batch.getRcs().size();
             cmd.pushConstants<SwCull::CompactPC>(
                 mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
             );
 
-            cmd.dispatch(SwHelper::fastDivCeil(batch.getRItems().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+            cmd.dispatch(SwHelper::fastDivCeil(batch.getRcs().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
     });
     staticDeps.clear();
@@ -290,19 +290,19 @@ void SwCull::System::initializePasses() {
 }
 
 void SwCull::System::initializePushConstants() {
-    mResources.mWorkPushConstants.mRInstsCount = SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getDeviceAddress().value();
+    mResources.mWorkPushConstants.mRisCount = SwRenderer::sRendererContext.mStats->mRisScratchCount.getDeviceAddress().value();
 }
 
 void SwCull::System::refreshOtherDynamicDependencies() {
     SwDependency dynamicDeps;
 
     // Reset
-    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::TransferWrite);
+    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::TransferWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-        if (batch.getRItems().empty()) continue;
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsBuffer(), SwDependency::BufferDepType::TransferWrite);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsCount(), SwDependency::BufferDepType::TransferWrite);
+        if (batch.getRcs().empty()) continue;
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsBuffer(), SwDependency::BufferDepType::TransferWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsCount(), SwDependency::BufferDepType::TransferWrite);
     }
     mScene.mPasses[SwPass::Type::CullReset].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
@@ -315,22 +315,22 @@ void SwCull::System::refreshEarlyDynamicDependencies() {
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
-    dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-        if (batch.getRItems().empty()) continue;
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        if (batch.getRcs().empty()) continue;
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getRisBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     }
     mScene.mPasses[SwPass::Type::CullEarlyWork].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
     // EarlyCompact
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-        if (batch.getRItems().empty()) continue;
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
+        if (batch.getRcs().empty()) continue;
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRcsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
     mScene.mPasses[SwPass::Type::CullEarlyCompact].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
@@ -343,22 +343,22 @@ void SwCull::System::refreshLateDynamicDependencies() {
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
-    dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRInstsReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRInstsWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-        if (batch.getRItems().empty()) continue;
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getRInstsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        if (batch.getRcs().empty()) continue;
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getRisBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     }
     mScene.mPasses[SwPass::Type::CullLateWork].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
 
     // LateCompact
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-        if (batch.getRItems().empty()) continue;
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRItemsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
+        if (batch.getRcs().empty()) continue;
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
     mScene.mPasses[SwPass::Type::CullLateCompact].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
@@ -376,13 +376,13 @@ void SwCull::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneDrawRInstsIndicesBuffer = mScene.getSceneDrawRInstsIndicesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibilityRInstsReadBuffer = mScene.getSceneVisibilityRInstsReadBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibilityRInstsWriteBuffer = mScene.getSceneVisibilityRInstsWriteBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibilityRisReadBuffer = mScene.getSceneVisibilityRisReadBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneVisibilityRisWriteBuffer = mScene.getSceneVisibilityRisWriteBuffer().getDeviceAddress().value();
 }
 
 void SwCull::System::refresh() { 
-    mScene.toggleSceneVisibilityRInstsBuffer(); 
+    mScene.toggleSceneVisibilityRisBuffer(); 
     SwSystem::refresh();
 }
 

@@ -9,12 +9,12 @@
 template <typename BatchRange>
 void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBuffer cmd, BatchRange&& batches, bool early) {
     for (auto& batch : batches) {
-        if (batch.getRItems().empty()) {
+        if (batch.getRcs().empty()) {
             continue;
         }
 
-        auto& itemsBuffer = early ? batch.getEarlyRItemsBuffer() : batch.getFinalRItemsBuffer();
-        auto& countBuffer = early ? batch.getEarlyRItemsCount() : batch.getFinalRItemsCount();
+        auto& itemsBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
+        auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
         auto& pipeline = batch.getGraphicsPipelineBundle();
 
         cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getRawPipeline());
@@ -24,17 +24,17 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
             pipeline.getBindPoint(), pipeline.getRawLayout(), 0, scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), nullptr
         );
 
-        resources.mWorkPushConstants.mDrawRItemsBuffer = itemsBuffer.getDeviceAddress().value();
+        resources.mWorkPushConstants.mDrawRcsBuffer = itemsBuffer.getDeviceAddress().value();
         cmd.pushConstants<SwGeometry::WorkPC>(pipeline.getRawLayout(), SwGeometry::WorkPC::sStages, 0, resources.mWorkPushConstants);
 
         cmd.drawIndexedIndirectCount(
-            itemsBuffer.getRawBuffer(), 0, countBuffer.getRawBuffer(), 0, static_cast<std::uint32_t>(batch.getRItems().size()), sizeof(SwRenderItem)
+            itemsBuffer.getRawBuffer(), 0, countBuffer.getRawBuffer(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
         );
 
         SwRenderer::sRendererContext.mStats->mNumDrawCall++;
         if (!early) {
             // Counted once per batch; the early opaque pass draws the same opaque batches, so skip it there.
-            SwRenderer::sRendererContext.mStats->mNumInitialRInsts += batch.getRInsts().size();
+            SwRenderer::sRendererContext.mStats->mNumInitialRis += batch.getRis().size();
         }
     }
 }
@@ -52,7 +52,7 @@ void SwGeometry::System::initializePasses() {
         deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        deps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     };
 
@@ -100,8 +100,8 @@ void SwGeometry::System::refreshDynamicDependencies() {
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
         );
         for (auto& batch : batches) {
-            auto& itemsBuffer = early ? batch.getEarlyRItemsBuffer() : batch.getFinalRItemsBuffer();
-            auto& countBuffer = early ? batch.getEarlyRItemsCount() : batch.getFinalRItemsCount();
+            auto& itemsBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
+            auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
             dynamicDeps.mReadBuffers.emplace_back(&itemsBuffer, SwDependency::BufferDepType::IndirectRead);
             dynamicDeps.mReadBuffers.emplace_back(&countBuffer, SwDependency::BufferDepType::IndirectRead);
         }
@@ -119,6 +119,6 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneDrawRInstsIndicesBuffer = mScene.getSceneDrawRInstsIndicesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

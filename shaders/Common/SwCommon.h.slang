@@ -35,12 +35,12 @@ public struct SwMaterialConstant {
 
 public typedef float4x4 SwNodeTransform;
 
-public struct SwRenderItem {
+public struct SwRenderCommand {
     public uint mIndexCount;
-    public uint mRInstCount;
+    public uint mRiCount;
     public uint mFirstIndex;
     public uint mVertexOffset;
-    public uint mFirstRInst;
+    public uint mFirstRi;
     public uint mMaterialIndex;
     public uint mNodeTransformIndex;
     public uint mModelIndex;
@@ -48,12 +48,12 @@ public struct SwRenderItem {
     public uint mBoundsIndex;
 
     [mutating]
-    public void copyFrom(SwRenderItem* src) {
+    public void copyFrom(SwRenderCommand* src) {
         this.mIndexCount = src.mIndexCount;
-        this.mRInstCount = src.mRInstCount;
+        this.mRiCount = src.mRiCount;
         this.mFirstIndex = src.mFirstIndex;
         this.mVertexOffset = src.mVertexOffset;
-        this.mFirstRInst = src.mFirstRInst;
+        this.mFirstRi = src.mFirstRi;
         this.mMaterialIndex = src.mMaterialIndex;
         this.mNodeTransformIndex = src.mNodeTransformIndex;
         this.mModelIndex = src.mModelIndex;
@@ -62,13 +62,13 @@ public struct SwRenderItem {
     }
 };
 
-public struct SwRenderInstance {
-    public uint mRItemIndex;
+public struct SwRenderItem {
+    public uint mRcIndex;
     public uint mSceneInstanceIndex;
 
     [mutating]
-    public void copyFrom(SwRenderInstance* src) {
-        this.mRItemIndex = src.mRItemIndex;
+    public void copyFrom(SwRenderItem* src) {
+        this.mRcIndex = src.mRcIndex;
         this.mSceneInstanceIndex = src.mSceneInstanceIndex;
     }
 }

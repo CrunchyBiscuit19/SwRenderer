@@ -145,8 +145,8 @@ void SwGui::initializeResources() {
         ImGui::Text("Draw Time:  %.2fms", SwRenderer::sRendererContext.mStats->mDrawTime);
         ImGui::Text("Update Time: %.2fms", SwRenderer::sRendererContext.mStats->mSceneUpdateTime);
         ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall);
-        ImGui::Text("Pre-Cull Render Instances: %i", SwRenderer::sRendererContext.mStats->mNumInitialRInsts);
-        ImGui::Text("Post-Cull Render Instances: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRInstsPublishedCount.getMappedPtr()));
+        ImGui::Text("Pre-Cull Render Items: %i", SwRenderer::sRendererContext.mStats->mNumInitialRis);
+        ImGui::Text("Post-Cull Render Items: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRisPublishedCount.getMappedPtr()));
     };
     mGuiComponents[SwGuiComponent::Controls] = [this]() {
         ImGui::Text("[G] Toggle GUI");
@@ -183,7 +183,7 @@ void SwGui::initializePasses() {
     SwDependency staticDeps;
 
     // Gui
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsPublishedCount, SwDependency::BufferDepType::HostRead);
+    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisPublishedCount, SwDependency::BufferDepType::HostRead);
     mScene.insertPass(SwPass::Type::Gui, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
             SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),

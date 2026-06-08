@@ -14,35 +14,35 @@ namespace SwCull {
     }
 
     public struct ResetPC {
-        public SwRenderItem* mRItemsBuffer;
-        public uint mRItemsLimit;
+        public SwRenderCommand* mRcsBuffer;
+        public uint mRcsLimit;
     };
 
     public enum Phase { Early, Late };
 
     public struct WorkPC {
-        public SwRenderItem* mRItemsBuffer;
-        public SwRenderInstance* mRInstsBuffer;
-        public uint* mRInstsCount;
+        public SwRenderCommand* mRcsBuffer;
+        public SwRenderItem* mRisBuffer;
+        public uint* mRisCount;
         public Plane* mFrustumBuffer;
         public SwPerFrameData* mPerFrameBuffer;
         public SwBounds* mSceneBoundsBuffer;
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
-        public uint* mSceneDrawRInstsIndicesBuffer;
-        public uint* mSceneVisibilityRInstsReadBuffer;
-        public uint* mSceneVisibilityRInstsWriteBuffer;
-        public uint mRInstsLimit;
+        public uint* mSceneDrawRisIndicesBuffer;
+        public uint* mSceneVisibilityRisReadBuffer;
+        public uint* mSceneVisibilityRisWriteBuffer;
+        public uint mRisLimit;
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;
         public Phase mPhase;
     };
 
     public struct CompactPC {
-        public SwRenderItem* mPreRItemsBuffer;
-        public SwRenderItem* mPostRItemsBuffer;
-        public uint* mPostRItemsCount;
-        public uint mPreRItemsLimit;
+        public SwRenderCommand* mPreRcsBuffer;
+        public SwRenderCommand* mPostRcsBuffer;
+        public uint* mPostRcsCount;
+        public uint mPreRcsLimit;
     };
 
     public struct PrepOcclusionPC {

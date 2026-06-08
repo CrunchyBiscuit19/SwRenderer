@@ -73,7 +73,7 @@ void SwPick::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::PickDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
@@ -87,18 +87,18 @@ void SwPick::System::initializePasses() {
         SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRItems().empty()) {
+            if (batch.getRcs().empty()) {
                 continue;
             }
-            mResources.mDrawPushConstants.mDrawRItemsBuffer = batch.getFinalRItemsBuffer().getDeviceAddress().value();
+            mResources.mDrawPushConstants.mDrawRcsBuffer = batch.getFinalRcsBuffer().getDeviceAddress().value();
             cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
             cmd.drawIndexedIndirectCount(
-                batch.getFinalRItemsBuffer().getRawBuffer(),
+                batch.getFinalRcsBuffer().getRawBuffer(),
                 0,
-                batch.getFinalRItemsCount().getRawBuffer(),
+                batch.getFinalRcsCount().getRawBuffer(),
                 0,
-                static_cast<std::uint32_t>(batch.getRItems().size()),
-                sizeof(SwRenderItem)
+                static_cast<std::uint32_t>(batch.getRcs().size()),
+                sizeof(SwRenderCommand)
             );
         }
 
@@ -198,7 +198,7 @@ void SwPick::System::refreshDynamicDependencies() {
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
     );
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRItemsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
     }
     mScene.mPasses[SwPass::Type::PickDraw].setDynamicDeps(std::move(dynamicDeps));
     dynamicDeps.clear();
@@ -208,8 +208,8 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneDrawRInstsIndicesBuffer =
-        mScene.getSceneDrawRInstsIndicesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneDrawRisIndicesBuffer =
+        mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }
 

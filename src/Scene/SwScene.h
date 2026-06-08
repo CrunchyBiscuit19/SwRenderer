@@ -62,9 +62,9 @@ private:
     SwAllocatedBuffer mSceneNodeTransformsBuffer;
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
-    SwAllocatedBuffer mSceneDrawRInstsIndicesBuffer;
-    std::array<SwAllocatedBuffer, 2> mSceneVisibilityRInstsBuffers;
-    std::uint32_t mSceneVisibilityRInstsBufferReadIndex{0};
+    SwAllocatedBuffer mSceneDrawRisIndicesBuffer;
+    std::array<SwAllocatedBuffer, 2> mSceneVisibilityRisBuffers;
+    std::uint32_t mSceneVisibilityRisBufferReadIndex{0};
 
     SwRenderGraph mRenderGraph;
 
@@ -83,7 +83,7 @@ public:
     static constexpr std::uint32_t SCENE_INITIAL_NUM_NODES{1 << 12};
     static constexpr std::uint32_t SCENE_INITIAL_NUM_INSTANCES{1 << 8};
     static constexpr std::uint32_t SCENE_INITIAL_NUM_BOUNDS{1 << 12};
-    static constexpr std::uint32_t SCENE_INITIAL_NUM_RENDER_INSTANCES{1 << 18};
+    static constexpr std::uint32_t SCENE_INITIAL_NUM_RENDER_ITEMS{1 << 18};
 
     Flags mFlags;
 
@@ -115,10 +115,10 @@ public:
     inline SwAllocatedBuffer& getSceneNodeTransformsBuffer() { return mSceneNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
-    inline SwAllocatedBuffer& getSceneDrawRInstsIndicesBuffer() { return mSceneDrawRInstsIndicesBuffer; }
-    inline void toggleSceneVisibilityRInstsBuffer() { mSceneVisibilityRInstsBufferReadIndex = 1 - mSceneVisibilityRInstsBufferReadIndex; }
-    inline SwAllocatedBuffer& getSceneVisibilityRInstsReadBuffer() { return mSceneVisibilityRInstsBuffers[mSceneVisibilityRInstsBufferReadIndex]; }
-    inline SwAllocatedBuffer& getSceneVisibilityRInstsWriteBuffer() { return mSceneVisibilityRInstsBuffers[1 - mSceneVisibilityRInstsBufferReadIndex]; }
+    inline SwAllocatedBuffer& getSceneDrawRisIndicesBuffer() { return mSceneDrawRisIndicesBuffer; }
+    inline void toggleSceneVisibilityRisBuffer() { mSceneVisibilityRisBufferReadIndex = 1 - mSceneVisibilityRisBufferReadIndex; }
+    inline SwAllocatedBuffer& getSceneVisibilityRisReadBuffer() { return mSceneVisibilityRisBuffers[mSceneVisibilityRisBufferReadIndex]; }
+    inline SwAllocatedBuffer& getSceneVisibilityRisWriteBuffer() { return mSceneVisibilityRisBuffers[1 - mSceneVisibilityRisBufferReadIndex]; }
 
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
@@ -129,7 +129,7 @@ public:
     void unloadInstances();
     void markAllAssetsDelete();
 
-    void regenerateRItemsAndRInsts();
+    void regenerateRcsAndRis();
 
     void realignVertexIndexOffset();
     void realignMaterialOffset();

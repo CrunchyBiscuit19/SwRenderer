@@ -7,12 +7,12 @@
 
 struct SwPrimitive;
 
-struct SwRenderItem {
+struct SwRenderCommand {
     std::uint32_t mIndexCount;
-    std::uint32_t mRInstCount;
+    std::uint32_t mRiCount;
     std::uint32_t mFirstIndex;
     std::uint32_t mVertexOffset;
-    std::uint32_t mFirstRInst;
+    std::uint32_t mFirstRi;
     std::uint32_t mMaterialIndex;
     std::uint32_t mNodeTransformIndex;
     std::uint32_t mAssetIndex;
@@ -20,33 +20,33 @@ struct SwRenderItem {
     std::uint32_t mBoundsIndex;
 };
 
-struct SwRenderInstance {
-    std::uint32_t mRItemIndex;  // rename to: mRItemIndex
+struct SwRenderItem {
+    std::uint32_t mRcIndex;  // rename to: mRcIndex
     std::uint32_t mSceneInstanceIndex;
 };
 
 class SwBatch {
 private:
-    static constexpr std::uint32_t RENDER_ITEMS_INITIAL_BUFFER_SIZE{sizeof(SwRenderItem) * (1 << 10)};
-    static constexpr std::uint32_t RENDER_INSTANCES_INITIAL_BUFFER_SIZE{sizeof(SwRenderInstance) * (1 << 13)};
+    static constexpr std::uint32_t RENDER_COMMANDS_INITIAL_BUFFER_SIZE{sizeof(SwRenderCommand) * (1 << 10)};
+    static constexpr std::uint32_t RENDER_ITEMS_INITIAL_BUFFER_SIZE{sizeof(SwRenderItem) * (1 << 13)};
 
     SwGraphicsPipelineBundle* mGraphicsPipelineBundle{nullptr};
     bool mDoubleSided{false};
 
-    std::vector<SwRenderItem> mRItems;
-    SwStagingBuffer mRItemsStaging;
-    SwAllocatedBuffer mInitialRItemsBuffer;
-    SwAllocatedBuffer mEarlyRItemsBuffer; // Compacted early draw list 
-    SwAllocatedBuffer mEarlyRItemsCount;   
-    SwAllocatedBuffer mLateRItemsBuffer;
-    SwAllocatedBuffer mLateRItemsCount;
+    std::vector<SwRenderCommand> mRcs;
+    SwStagingBuffer mRcsStaging;
+    SwAllocatedBuffer mInitialRcsBuffer;
+    SwAllocatedBuffer mEarlyRcsBuffer; // Compacted early draw list 
+    SwAllocatedBuffer mEarlyRcsCount;   
+    SwAllocatedBuffer mLateRcsBuffer;
+    SwAllocatedBuffer mLateRcsCount;
 
-    std::vector<SwRenderInstance> mRInsts;
-    SwStagingBuffer mRInstsStaging;
-    SwAllocatedBuffer mRInstsBuffer;
+    std::vector<SwRenderItem> mRis;
+    SwStagingBuffer mRisStaging;
+    SwAllocatedBuffer mRisBuffer;
 
 public:
-    static std::uint32_t sFirstRInstOffset;
+    static std::uint32_t sFirstRiOffset;
 
     SwBatch() = default;
     SwBatch(SwPrimitive& primitive);
@@ -60,17 +60,17 @@ public:
     inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return *mGraphicsPipelineBundle; }
     inline bool isDoubleSided() const { return mDoubleSided; }
     
-    inline std::vector<SwRenderItem>& getRItems() { return mRItems; }
-    inline SwStagingBuffer& getRItemsStaging() { return mRItemsStaging; }
-    inline SwAllocatedBuffer& getInitialRItemsBuffer() { return mInitialRItemsBuffer; }
-    inline SwAllocatedBuffer& getEarlyRItemsBuffer() { return mEarlyRItemsBuffer; }
-    inline SwAllocatedBuffer& getEarlyRItemsCount() { return mEarlyRItemsCount; }
-    inline SwAllocatedBuffer& getLateRItemsBuffer() { return mLateRItemsBuffer; }
-    inline SwAllocatedBuffer& getLateRItemsCount() { return mLateRItemsCount; }
-    inline SwAllocatedBuffer& getFinalRItemsBuffer() { return mLateRItemsBuffer; }  // Return whatever is the last one for future-proofing
-    inline SwAllocatedBuffer& getFinalRItemsCount() { return mLateRItemsCount; }  // Return whatever is the last one for future-proofing
+    inline std::vector<SwRenderCommand>& getRcs() { return mRcs; }
+    inline SwStagingBuffer& getRcsStaging() { return mRcsStaging; }
+    inline SwAllocatedBuffer& getInitialRcsBuffer() { return mInitialRcsBuffer; }
+    inline SwAllocatedBuffer& getEarlyRcsBuffer() { return mEarlyRcsBuffer; }
+    inline SwAllocatedBuffer& getEarlyRcsCount() { return mEarlyRcsCount; }
+    inline SwAllocatedBuffer& getLateRcsBuffer() { return mLateRcsBuffer; }
+    inline SwAllocatedBuffer& getLateRcsCount() { return mLateRcsCount; }
+    inline SwAllocatedBuffer& getFinalRcsBuffer() { return mLateRcsBuffer; }  // Return whatever is the last one for future-proofing
+    inline SwAllocatedBuffer& getFinalRcsCount() { return mLateRcsCount; }  // Return whatever is the last one for future-proofing
 
-    inline std::vector<SwRenderInstance>& getRInsts() { return mRInsts; }
-    inline SwStagingBuffer& getRInstsStaging() { return mRInstsStaging; }
-    inline SwAllocatedBuffer& getRInstsBuffer() { return mRInstsBuffer; }
+    inline std::vector<SwRenderItem>& getRis() { return mRis; }
+    inline SwStagingBuffer& getRisStaging() { return mRisStaging; }
+    inline SwAllocatedBuffer& getRisBuffer() { return mRisBuffer; }
 };

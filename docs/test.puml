@@ -4,8 +4,8 @@ struct SwGeometryPushConstants {
     + mSceneMaterialConstantsBuffer: vk::DeviceAddress
     + mSceneNodeTransformsBuffer: vk::DeviceAddress
     + mSceneInstancesBuffer: vk::DeviceAddress
-    + mSceneVisibleRenderItemsBuffer: vk::DeviceAddress
-    + mSceneVisibleRenderInstancesInstanceIndexBuffer: vk::DeviceAddress
+    + mSceneVisibleRenderCommandsBuffer: vk::DeviceAddress
+    + mSceneVisibleRenderItemsInstanceIndexBuffer: vk::DeviceAddress
 }
 
 struct SwSceneFlags {
@@ -34,7 +34,7 @@ class SwScene {
     - mSceneMaterialConstantsBuffer: SwAllocatedBuffer 
     - mSceneInstancesBuffer: SwAllocatedBuffer 
     - mSceneBoundsBuffer: SwAllocatedBuffer 
-    - mSceneVisibleRenderInstancesInstanceIndexBuffer: SwAllocatedBuffer 
+    - mSceneVisibleRenderItemsInstanceIndexBuffer: SwAllocatedBuffer 
 }
 
 class SwAsset {
@@ -159,12 +159,12 @@ class SwMaterial {
     {static} - mTransparentPipelineLayout: SwPipelineLayout
 }
 
-struct SwRenderItem {
+struct SwRenderCommand {
     + mIndexCount: std::uint32_t
-    + mRenderInstanceCount: std::uint32_t
+    + mRenderItemCount: std::uint32_t
     + mFirstIndex: std::uint32_t
     + mVertexOffset: std::uint32_t
-    + mFirstRenderInstance: std::uint32_t
+    + mFirstRenderItem: std::uint32_t
     + mMaterialIndex: std::uint32_t
     + mNodeTransformIndex: std::uint32_t
     + mAssetIndex: std::uint32_t
@@ -172,21 +172,21 @@ struct SwRenderItem {
     + mBoundsIndex: std::uint32_t
 }
 
-struct SwRenderInstance {
-    + mRenderItemIndex: std::uint32_t
+struct SwRenderItem {
+    + mRenderCommandIndex: std::uint32_t
     + mSceneInstanceIndex: std::uint32_t
 }
 
 class SwBatch {
-    {static} - mFirstRenderInstanceOffset: std::uint32_t
+    {static} - mFirstRenderItemOffset: std::uint32_t
     - mPipelineBundle: SwPipelineBundle
-    - mRenderItems: std::vector<SwRenderItem>
-    - renderItemsStagingBuffer: SwStagingBuffer
-    - preCullRenderItemsBuffer: SwAllocatedBuffer
-    - postCullRenderItemsBuffer: SwAllocatedBuffer
-    - postCullRenderItemsCountBuffer: SwAllocatedBuffer
-    - mRenderInstance: std::vector<RenderInstance>
-    - mRenderInstancesStagingBuffer: SwStagingBuffer
-    - mRenderInstancesBuffer: SwAllocatedBuffer
+    - mRenderCommands: std::vector<SwRenderCommand>
+    - renderCommandsStagingBuffer: SwStagingBuffer
+    - preCullRenderCommandsBuffer: SwAllocatedBuffer
+    - postCullRenderCommandsBuffer: SwAllocatedBuffer
+    - postCullRenderCommandsCountBuffer: SwAllocatedBuffer
+    - mRenderItem: std::vector<RenderItem>
+    - mRenderItemsStagingBuffer: SwStagingBuffer
+    - mRenderItemsBuffer: SwAllocatedBuffer
 }
 @enduml 

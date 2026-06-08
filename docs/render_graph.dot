@@ -31,13 +31,13 @@ digraph RenderGraph {
     node [shape=cylinder, style="filled", fillcolor="#F5A623", fontcolor=black, penwidth=0];
 
     perspectiveBuffer                          [label="mPerspectiveBuffer\n(per-frame)"];
-    renderInstancesCountBuffer                 [label="mRenderInstancesCountBuffer"];
-    mainVisibleRenderInstancesInstanceIndexBuf [label="mMainVisibleRenderInstances\nInstanceIndexBuffer"];
+    renderItemsCountBuffer                 [label="mRenderItemsCountBuffer"];
+    mainVisibleRenderItemsInstanceIndexBuf [label="mMainVisibleRenderItems\nInstanceIndexBuffer"];
     mainIndexBuffer                            [label="mMainIndexBuffer"];
-    preCullRenderItemsBuffer                   [label="preCullRenderItemsBuffer\n(per-batch)"];
-    postCullRenderItemsBuffer                  [label="postCullRenderItemsBuffer\n(per-batch)"];
-    postCullRenderItemsCountBuffer             [label="postCullRenderItemsCountBuffer\n(per-batch)"];
-    renderInstancesBuffer                      [label="renderInstancesBuffer\n(per-batch)"];
+    preCullRenderCommandsBuffer                   [label="preCullRenderCommandsBuffer\n(per-batch)"];
+    postCullRenderCommandsBuffer                  [label="postCullRenderCommandsBuffer\n(per-batch)"];
+    postCullRenderCommandsCountBuffer             [label="postCullRenderCommandsCountBuffer\n(per-batch)"];
+    renderItemsBuffer                      [label="renderItemsBuffer\n(per-batch)"];
     pickerBuffer                               [label="mPicker.mBuffer\n(host-visible)"];
 
     // Image resources (folders)
@@ -63,11 +63,11 @@ digraph RenderGraph {
     edge [color="#417505", fontcolor="#417505"];  // reads (default)
 
     // ---------- cullReset ----------
-    cullReset -> renderInstancesCountBuffer                 [color="#D0021B", fontcolor="#D0021B", label="W"];
-    cullReset -> mainVisibleRenderInstancesInstanceIndexBuf [color="#D0021B", fontcolor="#D0021B", label="W"];
-    cullReset -> postCullRenderItemsBuffer                  [color="#D0021B", fontcolor="#D0021B", label="W"];
-    cullReset -> postCullRenderItemsCountBuffer             [color="#D0021B", fontcolor="#D0021B", label="W"];
-    preCullRenderItemsBuffer -> cullReset                   [color="#F5A623", fontcolor="#F5A623", style=dashed, label="RW", dir=both];
+    cullReset -> renderItemsCountBuffer                 [color="#D0021B", fontcolor="#D0021B", label="W"];
+    cullReset -> mainVisibleRenderItemsInstanceIndexBuf [color="#D0021B", fontcolor="#D0021B", label="W"];
+    cullReset -> postCullRenderCommandsBuffer                  [color="#D0021B", fontcolor="#D0021B", label="W"];
+    cullReset -> postCullRenderCommandsCountBuffer             [color="#D0021B", fontcolor="#D0021B", label="W"];
+    preCullRenderCommandsBuffer -> cullReset                   [color="#F5A623", fontcolor="#F5A623", style=dashed, label="RW", dir=both];
 
     // ---------- cullDepthPyramid ----------
     depthImage -> cullDepthPyramid                          [label="R"];
@@ -76,14 +76,14 @@ digraph RenderGraph {
     // ---------- cullCull ----------
     depthPyramidImage -> cullCull                           [label="R"];
     perspectiveBuffer -> cullCull                           [label="R"];
-    renderInstancesBuffer -> cullCull                       [label="R"];
-    cullCull -> mainVisibleRenderInstancesInstanceIndexBuf  [color="#D0021B", fontcolor="#D0021B", label="W"];
-    preCullRenderItemsBuffer -> cullCull                    [color="#F5A623", fontcolor="#F5A623", style=dashed, label="RW", dir=both];
+    renderItemsBuffer -> cullCull                       [label="R"];
+    cullCull -> mainVisibleRenderItemsInstanceIndexBuf  [color="#D0021B", fontcolor="#D0021B", label="W"];
+    preCullRenderCommandsBuffer -> cullCull                    [color="#F5A623", fontcolor="#F5A623", style=dashed, label="RW", dir=both];
 
     // ---------- cullCompact ----------
-    preCullRenderItemsBuffer -> cullCompact                 [label="R"];
-    cullCompact -> postCullRenderItemsBuffer                [color="#D0021B", fontcolor="#D0021B", label="W"];
-    cullCompact -> postCullRenderItemsCountBuffer           [color="#D0021B", fontcolor="#D0021B", label="W"];
+    preCullRenderCommandsBuffer -> cullCompact                 [label="R"];
+    cullCompact -> postCullRenderCommandsBuffer                [color="#D0021B", fontcolor="#D0021B", label="W"];
+    cullCompact -> postCullRenderCommandsCountBuffer           [color="#D0021B", fontcolor="#D0021B", label="W"];
 
     // ---------- clearScreen ----------
     clearScreen -> drawImage                                [color="#D0021B", fontcolor="#D0021B", label="W"];
@@ -99,8 +99,8 @@ digraph RenderGraph {
     // ---------- pickDraw ----------
     perspectiveBuffer -> pickDraw                           [label="R"];
     mainIndexBuffer -> pickDraw                             [label="R"];
-    postCullRenderItemsBuffer -> pickDraw                   [label="R"];
-    postCullRenderItemsCountBuffer -> pickDraw              [label="R (indirect)"];
+    postCullRenderCommandsBuffer -> pickDraw                   [label="R"];
+    postCullRenderCommandsCountBuffer -> pickDraw              [label="R (indirect)"];
     pickDraw -> pickImage                                   [color="#D0021B", fontcolor="#D0021B", label="W"];
     pickDraw -> pickDepthImage                              [color="#D0021B", fontcolor="#D0021B", label="W"];
 
@@ -118,9 +118,9 @@ digraph RenderGraph {
     perspectiveBuffer -> geometryOpaque                     [label="R"];
     materialTextures -> geometryOpaque                      [label="R"];
     mainIndexBuffer -> geometryOpaque                       [label="R"];
-    postCullRenderItemsBuffer -> geometryOpaque             [label="R"];
-    postCullRenderItemsCountBuffer -> geometryOpaque        [label="R (indirect)"];
-    mainVisibleRenderInstancesInstanceIndexBuf -> geometryOpaque [label="R"];
+    postCullRenderCommandsBuffer -> geometryOpaque             [label="R"];
+    postCullRenderCommandsCountBuffer -> geometryOpaque        [label="R (indirect)"];
+    mainVisibleRenderItemsInstanceIndexBuf -> geometryOpaque [label="R"];
     geometryOpaque -> drawImage                             [color="#D0021B", fontcolor="#D0021B", label="W"];
     geometryOpaque -> depthImage                            [color="#D0021B", fontcolor="#D0021B", label="W"];
 
@@ -128,9 +128,9 @@ digraph RenderGraph {
     perspectiveBuffer -> geometryTransparent                [label="R"];
     materialTextures -> geometryTransparent                 [label="R"];
     mainIndexBuffer -> geometryTransparent                  [label="R"];
-    postCullRenderItemsBuffer -> geometryTransparent        [label="R"];
-    postCullRenderItemsCountBuffer -> geometryTransparent   [label="R (indirect)"];
-    mainVisibleRenderInstancesInstanceIndexBuf -> geometryTransparent [label="R"];
+    postCullRenderCommandsBuffer -> geometryTransparent        [label="R"];
+    postCullRenderCommandsCountBuffer -> geometryTransparent   [label="R (indirect)"];
+    mainVisibleRenderItemsInstanceIndexBuf -> geometryTransparent [label="R"];
     depthImage -> geometryTransparent                       [label="R (test)"];
     geometryTransparent -> accumImage                       [color="#D0021B", fontcolor="#D0021B", label="W"];
     geometryTransparent -> revealageImage                   [color="#D0021B", fontcolor="#D0021B", label="W"];

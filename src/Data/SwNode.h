@@ -38,7 +38,7 @@ public:
 
     void refreshTransform(const glm::mat4& parentTransform);
 
-    virtual void generateRItemsAndRInsts();
+    virtual void generateRcsAndRis();
 
     static void init();
     static void cleanup();
@@ -50,5 +50,5 @@ class SwMeshNode : public SwNode {
 public:
     SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh);
 
-    void generateRItemsAndRInsts() override;
+    void generateRcsAndRis() override;
 };

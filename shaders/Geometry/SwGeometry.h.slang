@@ -10,8 +10,8 @@ namespace SwGeometry {
         public SwMaterialConstant* mSceneMaterialConstantsBuffer;
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
-        public uint* mSceneDrawRInstsIndicesBuffer;
-        public SwRenderItem *mDrawRItemsBuffer;
+        public uint* mSceneDrawRisIndicesBuffer;
+        public SwRenderCommand *mDrawRcsBuffer;
         public SwPerFrameData *mPerFrameBuffer;
     };
 

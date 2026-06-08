@@ -12,8 +12,8 @@ void SwNode::refreshTransform(const glm::mat4& parentTransform) {
     for (const auto& child : mChildren) child->refreshTransform(mWorldTransform);
 }
 
-void SwNode::generateRItemsAndRInsts() {
-    for (const auto& child : mChildren) child->generateRItemsAndRInsts();
+void SwNode::generateRcsAndRis() {
+    for (const auto& child : mChildren) child->generateRcsAndRis();
 }
 
 SwNode::SwNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform)
@@ -35,7 +35,7 @@ void SwNode::cleanup() { sNodeTransformsStaging.destroy(); }
 SwMeshNode::SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh)
     : SwNode(name, relativeNodeIndex, localTransform), mMesh(mesh) {}
 
-void SwMeshNode::generateRItemsAndRInsts() {
+void SwMeshNode::generateRcsAndRis() {
     for (auto& primitive : mMesh.getPrimitives()) {
         std::uint32_t pipelineId = primitive.mMaterial.getPipelineBundle().getID();
 
@@ -45,12 +45,12 @@ void SwMeshNode::generateRItemsAndRInsts() {
 
         auto [it, inserted] = workingBatchMap.try_emplace(pipelineId, primitive);
         SwBatch& workingBatch = it->second;
-        workingBatch.getRItems().emplace_back(
+        workingBatch.getRcs().emplace_back(
             primitive.mIndexCount,
             0,  // Instance count set to 0, incremented inside culling compute shader
             mMesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
             mMesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
-            SwBatch::sFirstRInstOffset,
+            SwBatch::sFirstRiOffset,
             workingAsset.mFirstMaterialInScene + primitive.mMaterial.mRelativeMaterialIndex,
             workingAsset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
             workingAsset.getId(),
@@ -58,14 +58,14 @@ void SwMeshNode::generateRItemsAndRInsts() {
             workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
         );
 
-        std::uint32_t rItemIndex = static_cast<std::uint32_t>(workingBatch.getRItems().size() - 1);
+        std::uint32_t rcIndex = static_cast<std::uint32_t>(workingBatch.getRcs().size() - 1);
         std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
         for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
-            workingBatch.getRInsts().emplace_back(rItemIndex, instanceIndex + i);
+            workingBatch.getRis().emplace_back(rcIndex, instanceIndex + i);
         }
 
-        SwBatch::sFirstRInstOffset += workingAsset.getInstances().size();
+        SwBatch::sFirstRiOffset += workingAsset.getInstances().size();
     }
 
-    SwNode::generateRItemsAndRInsts();
+    SwNode::generateRcsAndRis();
 }

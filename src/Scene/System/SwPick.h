@@ -24,8 +24,8 @@ struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneDrawRInstsIndicesBuffer;
-    vk::DeviceAddress mDrawRItemsBuffer;
+    vk::DeviceAddress mSceneDrawRisIndicesBuffer;
+    vk::DeviceAddress mDrawRcsBuffer;
     vk::DeviceAddress mPerFrameBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;

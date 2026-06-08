@@ -77,18 +77,18 @@ void SwScene::initializeResources() {
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
     );
 
-    mSceneDrawRInstsIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
+    mSceneDrawRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t), true
     );
 
-    for (std::uint32_t i = 0; i < mSceneVisibilityRInstsBuffers.size(); i++) {
-        mSceneVisibilityRInstsBuffers[i] = SwBufferFactory::createAllocatedBuffer(
+    for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
+        mSceneVisibilityRisBuffers[i] = SwBufferFactory::createAllocatedBuffer(
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t),
+            SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
             true
         );
-        LOG_DEBUG(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{}", mSceneVisibilityRInstsBuffers[i].getDeviceAddress().has_value());
+        LOG_DEBUG(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{}", mSceneVisibilityRisBuffers[i].getDeviceAddress().has_value());
     }
 
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
@@ -159,8 +159,8 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
     }
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
-        for (auto& sceneVisibilityRInstsBuffer : mSceneVisibilityRInstsBuffers) {
-            cmd.fillBuffer(sceneVisibilityRInstsBuffer.getRawBuffer(), 0, vk::WholeSize, 0);  // Clear to 0 to mark all render instances as not visible again.
+        for (auto& sceneVisibilityRisBuffer : mSceneVisibilityRisBuffers) {
+            cmd.fillBuffer(sceneVisibilityRisBuffer.getRawBuffer(), 0, vk::WholeSize, 0);  // Clear to 0 to mark all render items as not visible again.
         }
     });
 }
@@ -187,49 +187,49 @@ void SwScene::markAllAssetsDelete() {
     }
 }
 
-void SwScene::regenerateRItemsAndRInsts() {
-    SwBatch::sFirstRInstOffset = 0;
+void SwScene::regenerateRcsAndRis() {
+    SwBatch::sFirstRiOffset = 0;
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
-            batch.getRItems().clear();
-            batch.getRInsts().clear();
+            batch.getRcs().clear();
+            batch.getRis().clear();
         }
     }
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getInstances().size() == 0) continue;
-        asset.generateRItemsAndRInsts();
+        asset.generateRcsAndRis();
     }
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
-            if (batch.getRItems().empty()) {
+            if (batch.getRcs().empty()) {
                 continue;
             }
 
-            vk::BufferCopy RItemsCopy{};
-            RItemsCopy.dstOffset = 0;
-            RItemsCopy.srcOffset = 0;
-            RItemsCopy.size = batch.getRItems().size() * sizeof(SwRenderItem);
-            vk::BufferCopy RInstsCopy{};
-            RInstsCopy.dstOffset = 0;
-            RInstsCopy.srcOffset = 0;
-            RInstsCopy.size = batch.getRInsts().size() * sizeof(SwRenderInstance);
+            vk::BufferCopy RcsCopy{};
+            RcsCopy.dstOffset = 0;
+            RcsCopy.srcOffset = 0;
+            RcsCopy.size = batch.getRcs().size() * sizeof(SwRenderCommand);
+            vk::BufferCopy RisCopy{};
+            RisCopy.dstOffset = 0;
+            RisCopy.srcOffset = 0;
+            RisCopy.size = batch.getRis().size() * sizeof(SwRenderItem);
 
-            SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, RItemsCopy, RInstsCopy](vk::CommandBuffer cmd) {
-                batch.getRItemsStaging().copyFrom(cmd, batch.getRItems().data(), RItemsCopy.size);
-                cmd.fillBuffer(batch.getInitialRItemsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                batch.getInitialRItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getInitialRItemsBuffer().copyFrom(cmd, batch.getRItemsStaging(), RItemsCopy);
-                batch.getInitialRItemsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
+            SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, RcsCopy, RisCopy](vk::CommandBuffer cmd) {
+                batch.getRcsStaging().copyFrom(cmd, batch.getRcs().data(), RcsCopy.size);
+                cmd.fillBuffer(batch.getInitialRcsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+                batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+                batch.getInitialRcsBuffer().copyFrom(cmd, batch.getRcsStaging(), RcsCopy);
+                batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getRInstsStaging().copyFrom(cmd, batch.getRInsts().data(), RInstsCopy.size);
-                cmd.fillBuffer(batch.getRInstsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-                batch.getRInstsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getRInstsBuffer().copyFrom(cmd, batch.getRInstsStaging(), RInstsCopy);
-                batch.getRInstsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
+                batch.getRisStaging().copyFrom(cmd, batch.getRis().data(), RisCopy.size);
+                cmd.fillBuffer(batch.getRisBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+                batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+                batch.getRisBuffer().copyFrom(cmd, batch.getRisStaging(), RisCopy);
+                batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getLateRItemsBuffer().ensureCapacity(cmd, RItemsCopy.size);  // At least as big as mInitialRItemsBuffer
+                batch.getLateRcsBuffer().ensureCapacity(cmd, RcsCopy.size);  // At least as big as mInitialRcsBuffer
             });
         }
     }
@@ -473,11 +473,11 @@ void SwScene::perFrameUpdate() {
     if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
         realignOffsets();
         reloadSceneBuffers();
-        regenerateRItemsAndRInsts();
+        regenerateRcsAndRis();
     } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
         realignInstancesOffset();
         reloadSceneInstancesBuffer();
-        regenerateRItemsAndRInsts();
+        regenerateRcsAndRis();
     } else if (mFlags.mReloadMainInstancesBuffer) {
         reloadSceneInstancesBuffer();
     }

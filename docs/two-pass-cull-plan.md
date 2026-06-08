@@ -59,7 +59,7 @@ uint32_t mVisibilityReadIndex{0};    // 0 → A is read (prev frame), B is write
 `mVisibilityRead`  — prev frame's results; read by CullEarlyWork to identify the safe set.  
 `mVisibilityWrite` — zeroed in CullReset; written by CullEarlyWork and CullLateWork.
 
-Sizing: must have enough capacity for number of render instances. Reallocate (and re-register dynamic deps) whenever
+Sizing: must have enough capacity for number of render items. Reallocate (and re-register dynamic deps) whenever
 the scene instance count changes, following the same `SwBufferFactory` generation pattern used
 elsewhere.
 
@@ -71,22 +71,22 @@ everything. Correct by construction.
 Add alongside the existing occlusion buffers:
 
 ```cpp
-SwAllocatedBuffer mEarlyRItemsBuffer;   // SwRenderItem[], compacted early draw list
-SwAllocatedBuffer mEarlyRItemsCount;    // uint32_t, count of compacted early items
+SwAllocatedBuffer mEarlyRcsBuffer;   // SwRenderCommand[], compacted early draw list
+SwAllocatedBuffer mEarlyRcsCount;    // uint32_t, count of compacted early items
 ```
 
-The existing `mOcclusionRItemsBuffer` / `mOcclusionRItemsCount` become the **late** draw list
+The existing `mOcclusionRcsBuffer` / `mOcclusionRcsCount` become the **late** draw list
 (rename optional but clarifying).
 
 Accessors to add to `SwBatch`:
 
 ```cpp
-inline SwAllocatedBuffer& getEarlyRItemsBuffer() { return mEarlyRItemsBuffer; }
-inline SwAllocatedBuffer& getEarlyRItemsCount()  { return mEarlyRItemsCount; }
+inline SwAllocatedBuffer& getEarlyRcsBuffer() { return mEarlyRcsBuffer; }
+inline SwAllocatedBuffer& getEarlyRcsCount()  { return mEarlyRcsCount; }
 ```
 
-`getFinalRItemsBuffer()` / `getFinalRItemsCount()` should point to the late buffer (last in the
-chain), which they already do via `mOcclusionRItemsBuffer`.
+`getFinalRcsBuffer()` / `getFinalRcsCount()` should point to the late buffer (last in the
+chain), which they already do via `mOcclusionRcsBuffer`.
 
 ### SwPass::Type — new entries
 
@@ -122,7 +122,7 @@ Add to `SwCull::WorkPC` (both CPU struct in `SwCull.h` and Slang struct in `SwCu
 Add: zero `mVisibilityWriteBuffer` (not read — it must survive from last frame).
 
 ```slang
-// existing: fillBuffer for RInstsScratchCount, RItemCounts, etc.
+// existing: fillBuffer for RisScratchCount, RcCounts, etc.
 // new:
 memset(workPc.mVisibilityWriteBuffer, 0, workPc.mSceneInstancesLimit * sizeof(uint));
 ```
@@ -135,7 +135,7 @@ in the CullReset pass callback, same as the existing fills.
 Copy of `SwCullWork.comp.slang`. Change `main()`:
 
 ```slang
-uint instIdx = rInst.mSceneInstanceIndex;
+uint instIdx = ri.mSceneInstanceIndex;
 bool lastVisible = workPc.mVisibilityReadBuffer[instIdx] != 0;
 
 // Early pass: only draw what was visible last frame
@@ -147,10 +147,10 @@ InterlockedOr(workPc.mVisibilityWriteBuffer[instIdx], 1u);
 
 // Write to early visible-instances list (same atomics as current CullWork)
 uint _;
-InterlockedAdd(*workPc.mRInstsCount, 1, _);
+InterlockedAdd(*workPc.mRisCount, 1, _);
 uint offset;
-InterlockedAdd(rItem->mRInstCount, 1, offset);
-workPc.mSceneVisibleRInstsIndicesBuffer[rItem->mFirstRInst + offset] = instIdx;
+InterlockedAdd(rc->mRiCount, 1, offset);
+workPc.mSceneVisibleRisIndicesBuffer[rc->mFirstRi + offset] = instIdx;
 ```
 
 No occlusion test — the early set is trusted from last frame's visibility.
@@ -160,7 +160,7 @@ No occlusion test — the early set is trusted from last frame's visibility.
 Copy of `SwCullWork.comp.slang`. Change `main()`:
 
 ```slang
-uint instIdx = rInst.mSceneInstanceIndex;
+uint instIdx = ri.mSceneInstanceIndex;
 bool lastVisible = workPc.mVisibilityReadBuffer[instIdx] != 0;
 
 // Late pass: skip anything already handled by the early pass
@@ -173,10 +173,10 @@ if (!visible) return;
 InterlockedOr(workPc.mVisibilityWriteBuffer[instIdx], 1u);
 
 uint _;
-InterlockedAdd(*workPc.mRInstsCount, 1, _);
+InterlockedAdd(*workPc.mRisCount, 1, _);
 uint offset;
-InterlockedAdd(rItem->mRInstCount, 1, offset);
-workPc.mSceneVisibleRInstsIndicesBuffer[rItem->mFirstRInst + offset] = instIdx;
+InterlockedAdd(rc->mRiCount, 1, offset);
+workPc.mSceneVisibleRisIndicesBuffer[rc->mFirstRi + offset] = instIdx;
 ```
 
 `occlusionCull()` is unchanged — it samples the same `depthPyramidImage` descriptor, which at
@@ -197,13 +197,13 @@ Replace the single `CullWork` + `CullCompact` + `CullPublishCount` sequence with
 CullReset           — unchanged, plus fillBuffer for mVisibilityWrite
 CullPrepOcclusion   — unchanged (reads last frame's depth)
 CullEarlyWork       — new pipeline; WorkPC with mVisibilityRead/Write
-CullEarlyCompact    — reuse compact pipeline; src=InitialRItems, dst=EarlyRItems
+CullEarlyCompact    — reuse compact pipeline; src=InitialRcs, dst=EarlyRcs
 CullPublishCount    — keep here or move to end (counts early visible set)
 [geometry passes registered by SwGeometry]
 CullPrepOcclusionSameFrame — second Hi-Z build; same pipeline/descriptor, but
                               depth already has early geometry in it
 CullLateWork        — new pipeline; WorkPC with mVisibilityRead/Write
-CullLateCompact     — reuse compact pipeline; src=InitialRItems, dst=LateRItems
+CullLateCompact     — reuse compact pipeline; src=InitialRcs, dst=LateRcs
 CullPublishCount    — second publish (or accumulate into same counter)
 ```
 
@@ -215,10 +215,10 @@ descriptor set. No new resources needed; just a second registered pass of type
 
 Add dynamic deps for the new passes:
 
-- `CullEarlyWork` write: `mEarlyRItemsBuffer` (per batch)
-- `CullEarlyCompact` read/write: `InitialRItems` / `EarlyRItems`
-- `CullLateWork` write: `LateRItemsBuffer` (per batch)
-- `CullLateCompact` read/write: `InitialRItems` / `LateRItems`
+- `CullEarlyWork` write: `mEarlyRcsBuffer` (per batch)
+- `CullEarlyCompact` read/write: `InitialRcs` / `EarlyRcs`
+- `CullLateWork` write: `LateRcsBuffer` (per batch)
+- `CullLateCompact` read/write: `InitialRcs` / `LateRcs`
 - Both Work passes read: `mVisibilityReadBuffer`; write: `mVisibilityWriteBuffer`
 
 ### Visibility buffer swap
@@ -239,11 +239,11 @@ This can live in `SwCull::System::refreshPushConstants()`.
 Add `initializeEarlyPass()` and `initializeLatePass()` (or parameterise the existing
 `initializePass()`) to register `GeometryEarlyOpaque` and `GeometryLateOpaque`.
 
-`GeometryEarlyOpaque` uses `mEarlyRItemsBuffer` / `mEarlyRItemsCount` for indirect draws.  
-`GeometryLateOpaque` uses `mLateRItemsBuffer` / `mLateRItemsCount`.
+`GeometryEarlyOpaque` uses `mEarlyRcsBuffer` / `mEarlyRcsCount` for indirect draws.  
+`GeometryLateOpaque` uses `mLateRcsBuffer` / `mLateRcsCount`.
 
 Both use the same `WorkPC`, vertex shader, and fragment shader as the current `GeometryOpaque`.
-The only difference is which draw-RItems buffer is passed via push constants.
+The only difference is which draw-Rcs buffer is passed via push constants.
 
 ---
 
@@ -262,7 +262,7 @@ The only difference is which draw-RItems buffer is passed via push constants.
 ## Implementation Order
 
 1. Add `mVisibilityBufA/B` to `SwScene`. Wire CullReset to zero the write side.
-2. Add `mEarlyRItemsBuffer/Count` to `SwBatch`.
+2. Add `mEarlyRcsBuffer/Count` to `SwBatch`.
 3. Add new `SwPass::Type` entries.
 4. Write `SwCullEarlyWork.comp.slang` and compile to `.spv`.
 5. Register `CullEarlyWork` + `CullEarlyCompact` in `SwCull::System`.

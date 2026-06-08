@@ -478,10 +478,10 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     constructNodes();
 }
 
-void SwAsset::generateRItemsAndRInsts() {
+void SwAsset::generateRcsAndRis() {
     if (mDelete) return;
     for (auto& topNode : mTopNodes) {
-        topNode->generateRItemsAndRInsts();
+        topNode->generateRcsAndRis();
     }
 }
 
