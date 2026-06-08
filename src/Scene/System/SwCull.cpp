@@ -87,6 +87,7 @@ void SwCull::System::initializeEarlyPasses() {
             mResources.mWorkPushConstants.mRItemsBuffer = batch.getInitialRItemsBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
+            mResources.mWorkPushConstants.mPhase = SwCull::Phase::Early;
             cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
@@ -200,6 +201,7 @@ void SwCull::System::initializeLatePasses() {
             mResources.mWorkPushConstants.mRItemsBuffer = batch.getEarlyRItemsBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRInstsBuffer = batch.getRInstsBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRInstsLimit = batch.getRInsts().size();
+            mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
             cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRInsts().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);

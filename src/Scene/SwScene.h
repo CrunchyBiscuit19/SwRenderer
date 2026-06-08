@@ -118,7 +118,7 @@ public:
     inline SwAllocatedBuffer& getSceneDrawRInstsIndicesBuffer() { return mSceneDrawRInstsIndicesBuffer; }
     inline void toggleSceneVisibilityRInstsBuffer() { mSceneVisibilityRInstsBufferReadIndex = 1 - mSceneVisibilityRInstsBufferReadIndex; }
     inline SwAllocatedBuffer& getSceneVisibilityRInstsReadBuffer() { return mSceneVisibilityRInstsBuffers[mSceneVisibilityRInstsBufferReadIndex]; }
-    inline SwAllocatedBuffer& getSceneVisibilityRInstsWriteBuffer() { return mSceneVisibilityRInstsBuffers[mSceneVisibilityRInstsBufferReadIndex]; }
+    inline SwAllocatedBuffer& getSceneVisibilityRInstsWriteBuffer() { return mSceneVisibilityRInstsBuffers[1 - mSceneVisibilityRInstsBufferReadIndex]; }
 
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }

@@ -149,16 +149,21 @@ void main(SwCull::CSInput in) {
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
 
+    // Visibility is per render instance, but mSceneInstanceIndex is shared across render items that
+    // reference the same asset instance (multi-primitive assets), so it collides. Derive the unique
+    // global slot from the item's disjoint mFirstRInst range: mSceneInstanceIndex == mFirstInstance + i.
+    uint rInstVisIndex = rItem->mFirstRInst + (rInst->mSceneInstanceIndex - rItem->mFirstInstance);
+
     bool draw = true;
     if (workPc.mPhase == SwCull::Phase::Early) {
         // Frustum on previously visible only (check mSceneVisibilityRInstsReadBuffer)
         // Write 1 into mSceneVisibilityRInstsWriteBuffer if previously visible
         // Save into mSceneDrawRInstsIndicesBuffer
-        bool prevVisible = (workPc.mSceneVisibilityRInstsReadBuffer[rInst->mSceneInstanceIndex] == 1);  // rItem->mFirstRInst + rInstsIndex
+        bool prevVisible = (workPc.mSceneVisibilityRInstsReadBuffer[rInstVisIndex] == 1);
         if (prevVisible)
             prevVisible = frustumTest(frustum, aabbCorners);
         if (prevVisible) {
-            workPc.mSceneVisibilityRInstsWriteBuffer[rInst->mSceneInstanceIndex] = 1;
+            workPc.mSceneVisibilityRInstsWriteBuffer[rInstVisIndex] = 1;
             markDrawRInstIndex(rItem, rInst, workPc.mSceneDrawRInstsIndicesBuffer);
             draw = true;
         }
@@ -167,11 +172,10 @@ void main(SwCull::CSInput in) {
         // Read mSceneVisibilityRInstsWriteBuffer to see if it currently is visible
         // Write 1 into mSceneVisibilityRInstsWriteBuffer if currently visible
         // Save into mSceneDrawRInstsIndicesBuffer if currently visible and wasn't previously visible
-        bool currVisible = frustumTest(frustum, aabbCorners);
-        currVisible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
-        bool prevVisible = (workPc.mSceneVisibilityRInstsWriteBuffer[rInst->mSceneInstanceIndex] == 1);
+        bool currVisible = frustumTest(frustum, aabbCorners) && occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
+        bool prevVisible = (workPc.mSceneVisibilityRInstsWriteBuffer[rInstVisIndex] == 1);
         if (currVisible) {
-            workPc.mSceneVisibilityRInstsWriteBuffer[rInst->mSceneInstanceIndex] = 1;
+            workPc.mSceneVisibilityRInstsWriteBuffer[rInstVisIndex] = 1;
             if (!prevVisible) {
                 markDrawRInstIndex(rItem, rInst, workPc.mSceneDrawRInstsIndicesBuffer);
                 draw = true;
