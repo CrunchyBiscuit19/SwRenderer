@@ -48,7 +48,8 @@ struct WorkPC : public SwPC<WorkPC> {
     std::uint32_t mRisLimit;
     glm::vec2 mDrawExtents;
     glm::uvec2 mDepthPyramidExtents;
-    Phase mPhase;   
+    Phase mPhase;
+    std::uint32_t mHasEarlyDraw;  // late phase: 1 if this batch was drawn by the early geometry pass (opaque only)
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

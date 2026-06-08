@@ -72,8 +72,9 @@ void SwCull::System::initializeEarlyPasses() {
 
     mScene.insertPass(SwPass::Type::CullEarlyWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
-        
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+
+        // Only opaque has an early geometry pass; masked/transparent are handled entirely in the late pass.
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
             if (batch.getRcs().empty()) {
                 continue;
             }
@@ -209,27 +210,37 @@ void SwCull::System::initializeLatePasses() {
     mScene.insertPass(SwPass::Type::CullLateWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
 
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRcs().empty()) {
-                continue;
+        // Opaque batches are partially drawn by the early geometry pass, so the late pass only emits
+        // the newly-visible delta (mHasEarlyDraw = 1). Masked/transparent have no early geometry pass
+        // and are drawn solely from the late list, so they must emit the full visible set
+        // (mHasEarlyDraw = 0).
+        auto dispatchBatches = [&](auto&& batches, std::uint32_t hasEarlyDraw) {
+            for (auto& batch : batches) {
+                if (batch.getRcs().empty()) {
+                    continue;
+                }
+
+                cmd.bindDescriptorSets(
+                    mResources.mWorkPipelineBundle.getBindPoint(),
+                    mResources.mWorkPipelineBundle.getRawLayout(),
+                    0,
+                    mResources.mWorkDescriptorSet.getRawSet(),
+                    nullptr
+                );
+
+                mResources.mWorkPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mRisBuffer = batch.getRisBuffer().getDeviceAddress().value();
+                mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
+                mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
+                mResources.mWorkPushConstants.mHasEarlyDraw = hasEarlyDraw;
+                cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+
+                cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
             }
+        };
 
-            cmd.bindDescriptorSets(
-                mResources.mWorkPipelineBundle.getBindPoint(),
-                mResources.mWorkPipelineBundle.getRawLayout(),
-                0,
-                mResources.mWorkDescriptorSet.getRawSet(),
-                nullptr
-            );
-
-            mResources.mWorkPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRisBuffer = batch.getRisBuffer().getDeviceAddress().value();
-            mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
-            mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
-            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
-
-            cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-        }
+        dispatchBatches(mScene.getBatchIt(SwMaterial::Type::Opaque), 1u);
+        dispatchBatches(mScene.getBatchIt(SwMaterial::Type::Mask, SwMaterial::Type::Transparent), 0u);
     });
     staticDeps.clear();
 

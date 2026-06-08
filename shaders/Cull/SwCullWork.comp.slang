@@ -171,8 +171,10 @@ void main(SwCull::CSInput in) {
         workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible ? 1u : 0u;
 
         // Draw only the newly-visible delta — anything that was visible last frame (read == 1)
-        // was already drawn by the early pass.
-        bool drawnEarly = (workPc.mSceneVisibilityRisReadBuffer[riVisIndex] == 1);
+        // was already drawn by the early pass. This only holds for batches that actually have an
+        // early geometry pass (opaque); masked/transparent are drawn solely here, so they must
+        // emit the full visible set every frame.
+        bool drawnEarly = (workPc.mHasEarlyDraw != 0) && (workPc.mSceneVisibilityRisReadBuffer[riVisIndex] == 1);
         if (currVisible && !drawnEarly) {
             markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
             draw = true;

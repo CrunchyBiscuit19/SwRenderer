@@ -36,6 +36,7 @@ namespace SwCull {
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;
         public Phase mPhase;
+        public uint mHasEarlyDraw;
     };
 
     public struct CompactPC {

@@ -228,7 +228,8 @@ void SwScene::regenerateRcsAndRis() {
                 batch.getRisBuffer().copyFrom(cmd, batch.getRisStaging(), RisCopy);
                 batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-                batch.getLateRcsBuffer().ensureCapacity(cmd, RcsCopy.size);  // At least as big as mInitialRcsBuffer
+                batch.getEarlyRcsBuffer().ensureCapacity(cmd, RcsCopy.size);  // At least as big as mInitialRcsBuffer
+                batch.getLateRcsBuffer().ensureCapacity(cmd, RcsCopy.size);   // At least as big as mInitialRcsBuffer
             });
         }
     }
