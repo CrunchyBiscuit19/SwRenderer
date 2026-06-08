@@ -33,13 +33,13 @@ namespace SwCull {
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
-        public uint* mSceneVisibilityRisReadBuffer;
-        public uint* mSceneVisibilityRisWriteBuffer;
+        public bool* mSceneVisibilityRisReadBuffer;
+        public bool* mSceneVisibilityRisWriteBuffer;
         public uint mRisLimit;
         public float2 mDrawExtents;
         public uint2 mDepthPyramidExtents;
         public Phase mPhase;
-        public uint mHasEarlyDraw;
+        public bool mHasEarlyDraw;
     };
 
     public struct CompactPC {

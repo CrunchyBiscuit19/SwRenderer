@@ -4,6 +4,9 @@ import SwCommon;
 [[vk::binding(0, 0)]]
 public uniform Texture2D<float> depthPyramidImage;
 
+[[vk::binding(1, 0)]]
+public uniform SamplerState minSampler;
+
 [[vk::push_constant]]
 SwCull::WorkPC workPc;
 
@@ -154,7 +157,7 @@ void main(SwCull::CSInput in) {
     bool draw = false;
     if (workPc.mPhase == SwCull::Phase::Early) {
         // Draw whatever was visible last frame (frustum only). Do not modify visibility.
-        bool prevVisible = (workPc.mSceneVisibilityRisReadBuffer[riVisIndex] == 1);
+        bool prevVisible = workPc.mSceneVisibilityRisReadBuffer[riVisIndex];
         if (prevVisible)
             prevVisible = !SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners);
         if (prevVisible) {
@@ -168,12 +171,12 @@ void main(SwCull::CSInput in) {
         // and short-circuiting keeps occlusion from running when the frustum test already failed.
         bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&
                            (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents));
-        workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible ? 1u : 0u;
+        workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible;
 
         // Draw only the newly-visible delta — anything that was visible last frame (read == 1)
         // was already drawn by the early pass. This only holds for batches that actually have an
         // early geometry pass (opaque), others (masked / transparent) must draw all visible here.
-        bool drawnEarly = (workPc.mHasEarlyDraw != 0) && (workPc.mSceneVisibilityRisReadBuffer[riVisIndex] == 1);
+        bool drawnEarly = workPc.mHasEarlyDraw && workPc.mSceneVisibilityRisReadBuffer[riVisIndex];
         if (currVisible && !drawnEarly) {
             markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
             draw = true;
