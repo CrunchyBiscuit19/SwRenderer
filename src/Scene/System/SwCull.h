@@ -85,6 +85,7 @@ struct Resources {
     SwPipelineLayout mWorkPipelineLayout;
     SwDescriptorSet mWorkDescriptorSet;
     SwDescriptorLayout mWorkDescriptorLayout;
+    SwSampler mWorkDepthPyramidSampler;
     SwCull::WorkPC mWorkPushConstants;
 
     SwComputePipelineBundle mPrepOcclusionPipelineBundle;

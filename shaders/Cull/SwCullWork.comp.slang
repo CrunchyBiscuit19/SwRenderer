@@ -81,38 +81,21 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
     float2 aabbMinPyramid = aabbMinScreen * pyramidRatio;
     float2 aabbMaxPyramid = aabbMaxScreen * pyramidRatio;
 
-    // floor+clamp to [0, pyramidExtent] before converting to uint.
-    // Negative values arise when the AABB projects off the top-left of the screen;
-    // converting a negative float to uint is undefined behaviour.
-    float2 pyramidExtentF = float2(workPc.mDepthPyramidExtents);
-    uint2 pMin = uint2(clamp(floor(aabbMinPyramid), float2(0.f), pyramidExtentF));
-    uint2 pMax = uint2(clamp(floor(aabbMaxPyramid), float2(0.f), pyramidExtentF));
+    // Pick the mip where the footprint spans at most one level-0 texel (1.f guard avoids a
+    // negative level when the footprint is sub-texel). At this level a single bilinear fetch
+    // covers a 2x2 neighbourhood, so it fully overlaps the footprint.
+    float2 footprint = aabbMaxPyramid - aabbMinPyramid;
+    float level = ceil(log2(max(max(footprint.x, footprint.y), 1.f)));
 
-    // Compute information needed to look up in the depth pyramid
-    uint width = max(pMax.x - pMin.x, 1u);
-    uint height = max(pMax.y - pMin.y, 1u);
-    uint2 topLeft = pMin;
-    uint2 topRight = uint2(pMax.x, pMin.y);
-    uint2 bottomLeft = uint2(pMin.x, pMax.y);
-    uint2 bottomRight = pMax;
-
-    // Adjusted for levels, then clamp within the mip size
-    uint level = uint(ceil(log2(float(max(width, height)))));
-    uint2 mipSize = (workPc.mDepthPyramidExtents + (1u << level) - 1u) >> level;
-    uint2 clampedTopLeft = clamp(topLeft >> level, uint2(0, 0), mipSize - 1u);
-    uint2 clampedTopRight = clamp(topRight >> level, uint2(0, 0), mipSize - 1u);
-    uint2 clampedBottomLeft = clamp(bottomLeft >> level, uint2(0, 0), mipSize - 1u);
-    uint2 clampedBottomRight = clamp(bottomRight >> level, uint2(0, 0), mipSize - 1u);
-
-    // Sample the four corners of the AABB footprint at the selected mip level
-    float d0 = depthPyramidImage.Load(uint3(clampedTopRight.x, clampedTopRight.y, level));
-    float d1 = depthPyramidImage.Load(uint3(clampedTopLeft.x, clampedTopLeft.y, level));
-    float d2 = depthPyramidImage.Load(uint3(clampedBottomLeft.x, clampedBottomLeft.y, level));
-    float d3 = depthPyramidImage.Load(uint3(clampedBottomRight.x, clampedBottomRight.y, level));
+    // Sample once at the footprint center. The min-reduction sampler returns the minimum (i.e.
+    // furthest, in reverse-Z) depth across the covered texels — the furthest occluder.
+    // Clamp the UV to [0,1] since the center can fall off-screen (negative) for items at the edge.
+    float2 centerPyramid = (aabbMinPyramid + aabbMaxPyramid) * 0.5f;
+    float2 uv = clamp(centerPyramid / float2(workPc.mDepthPyramidExtents), float2(0.f), float2(1.f));
 
     // Visible if the nearest point is closer-or-equal than the furthest occluder.
     // The depth pre-pass renders the instances being tested here, so frontmost surface finds its own depth in the pyramid
-    float furthestDepthInPyramid = min(min(d0, d1), min(d2, d3));
+    float furthestDepthInPyramid = depthPyramidImage.SampleLevel(minSampler, uv, level);
     return closestDepthInRi >= furthestDepthInPyramid;
 }
 

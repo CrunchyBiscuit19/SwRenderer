@@ -312,7 +312,19 @@ void SwCull::System::initializeResources() {
         {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}}, vk::ShaderStageFlagBits::eCompute
     );
     mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
-    mResources.mWorkDescriptorSet.writeSampler(1, mResources.mDepthPyramidMinSampler.getRawSampler());
+
+    vk::SamplerReductionModeCreateInfo workReductionInfo{vk::SamplerReductionMode::eMin};
+    vk::SamplerCreateInfo workSamplerInfo{};
+    workSamplerInfo.setPNext(&workReductionInfo);
+    workSamplerInfo.setMagFilter(vk::Filter::eLinear);
+    workSamplerInfo.setMinFilter(vk::Filter::eLinear);
+    workSamplerInfo.setMipmapMode(vk::SamplerMipmapMode::eNearest);
+    workSamplerInfo.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
+    workSamplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+    workSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
+    workSamplerInfo.setMaxLod(VK_LOD_CLAMP_NONE);
+    mResources.mWorkDepthPyramidSampler = SwSamplerFactory::createSampler(workSamplerInfo);
+    mResources.mWorkDescriptorSet.writeSampler(1, mResources.mWorkDepthPyramidSampler.getRawSampler());
 
     mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), SwCull::WorkPC::getRange());
     SwShader workShader = SwShaderFactory::createShader(CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
