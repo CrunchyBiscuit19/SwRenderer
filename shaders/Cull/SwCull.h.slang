@@ -8,6 +8,9 @@ namespace SwCull {
     public static const uint NUM_FRUSTUM_PLANES = 6;
     public static const uint NUM_AABB_CORNERS = 8;
 
+    public static const bool ENABLE_FRUSTUM_CULL = true;
+    public static const bool ENABLE_OCCLUSION_CULL = true;
+
     public struct Plane {
         public float3 mNormal;
         public float mDistance;
