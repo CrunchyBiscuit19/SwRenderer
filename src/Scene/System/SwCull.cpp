@@ -123,6 +123,28 @@ void SwCull::System::initializeEarlyPasses() {
 void SwCull::System::initializeLatePasses() {
     SwDependency staticDeps;
 
+    // LateReset
+    // Zero initialRcs.mRiCount after the early compact has snapshotted it, so the late work pass
+    // restarts its per-rc fill at 0. This keeps the late draw list to just the newly-visible delta
+    // (rather than re-emitting everything the early pass already drew).
+    mScene.insertPass(SwPass::Type::CullLateReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
+
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            if (batch.getRcs().empty()) {
+                continue;
+            }
+
+            const std::uint32_t rcsCount = static_cast<std::uint32_t>(batch.getRcs().size());
+            mResources.mResetPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
+            mResources.mResetPushConstants.mRcsLimit = rcsCount;
+            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+
+            cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        }
+    });
+    staticDeps.clear();
+
     // PrepOcclusion
     staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
@@ -342,6 +364,14 @@ void SwCull::System::refreshEarlyDynamicDependencies() {
 
 void SwCull::System::refreshLateDynamicDependencies() {
     SwDependency dynamicDeps;
+
+    // LateReset
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+        if (batch.getRcs().empty()) continue;
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    }
+    mScene.mPasses[SwPass::Type::CullLateReset].setDynamicDeps(std::move(dynamicDeps));
+    dynamicDeps.clear();
 
     // LateWork
     dynamicDeps.mReadBuffers.emplace_back(

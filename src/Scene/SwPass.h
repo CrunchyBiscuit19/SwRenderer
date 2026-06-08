@@ -18,6 +18,7 @@ public:
         CullEarlyCompact,
         GeometryEarlyOpaque,
         CullPrepOcclusion,
+        CullLateReset,
         CullLateWork,
         CullLateCompact,
         CullPublishCount,

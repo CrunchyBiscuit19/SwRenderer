@@ -521,6 +521,7 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyCompact]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryEarlyOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateReset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateWork]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
