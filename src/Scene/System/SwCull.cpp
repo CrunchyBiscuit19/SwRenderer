@@ -13,14 +13,14 @@ void SwCull::System::initializeOtherPasses() {
 
     // Reset
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::TransferWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
 
     mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
         
         cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRInstsScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneVisibleRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(mScene.getSceneDrawRInstsIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
         mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
         cmd.fillBuffer(mScene.getSceneVisibilityRInstsWriteBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
 
@@ -66,7 +66,7 @@ void SwCull::System::initializeEarlyPasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
     mScene.insertPass(SwPass::Type::CullEarlyWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
@@ -179,7 +179,7 @@ void SwCull::System::initializeLatePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRInstsScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+    staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
     mScene.insertPass(SwPass::Type::CullLateWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
@@ -374,7 +374,7 @@ void SwCull::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibleRInstsIndicesBuffer = mScene.getSceneVisibleRInstsIndicesBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneDrawRInstsIndicesBuffer = mScene.getSceneDrawRInstsIndicesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneVisibilityRInstsReadBuffer = mScene.getSceneVisibilityRInstsReadBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneVisibilityRInstsWriteBuffer = mScene.getSceneVisibilityRInstsWriteBuffer().getDeviceAddress().value();
 }

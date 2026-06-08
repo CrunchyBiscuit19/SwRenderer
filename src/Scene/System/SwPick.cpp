@@ -73,7 +73,7 @@ void SwPick::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibleRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneDrawRInstsIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::PickDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
@@ -208,8 +208,8 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneVisibleRInstsIndicesBuffer =
-        mScene.getSceneVisibleRInstsIndicesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneDrawRInstsIndicesBuffer =
+        mScene.getSceneDrawRInstsIndicesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }
 

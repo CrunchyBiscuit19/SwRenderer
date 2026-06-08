@@ -77,7 +77,7 @@ void SwScene::initializeResources() {
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
     );
 
-    mSceneVisibleRInstsIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+    mSceneDrawRInstsIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t), true
     );
 
@@ -88,6 +88,7 @@ void SwScene::initializeResources() {
             SCENE_INITIAL_NUM_RENDER_INSTANCES * sizeof(std::uint32_t),
             true
         );
+        LOG_DEBUG(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{}", mSceneVisibilityRInstsBuffers[i].getDeviceAddress().has_value());
     }
 
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(

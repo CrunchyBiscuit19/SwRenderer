@@ -38,16 +38,16 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 
 ### Layer Breakdown
 
-| Directory | Responsibility |
-|-----------|---------------|
-| `src/Renderer/` | Core: device, swapchain, context, logger, stats, events, immediate submission |
+| Directory       | Responsibility                                                                                                |
+| --------------- | ------------------------------------------------------------------------------------------------------------- |
+| `src/Renderer/` | Core: device, swapchain, context, logger, stats, events, immediate submission                                 |
 | `src/Resource/` | Vulkan resource RAII wrappers: buffers, images, pipelines, descriptors, samplers, fences, semaphores, shaders |
-| `src/Scene/` | Render graph, passes, systems, and per-system logic |
-| `src/Data/` | CPU-side data: assets, meshes, nodes, instances, batches, cameras, materials |
-| `src/Gui/` | Dear ImGui integration and file browser |
-| `shaders/` | Slang shaders organised by system (Cull, Geometry, Pick, Skybox, WBOIT, Common) |
-| `docs/` | Graphviz diagrams of the render graph and pass dependencies |
-| `thirdParty/` | Vendored dependencies |
+| `src/Scene/`    | Render graph, passes, systems, and per-system logic                                                           |
+| `src/Data/`     | CPU-side data: assets, meshes, nodes, instances, batches, cameras, materials                                  |
+| `src/Gui/`      | Dear ImGui integration and file browser                                                                       |
+| `shaders/`      | Slang shaders organised by system (Cull, Geometry, Pick, Skybox, WBOIT, Common)                               |
+| `docs/`         | Graphviz diagrams of the render graph and pass dependencies                                                   |
+| `thirdParty/`   | Vendored dependencies                                                                                         |
 
 ### Key Architectural Patterns
 
@@ -56,6 +56,8 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 **Resource factories**: `SwBufferFactory<T>` and `SwImageFactory` are template-based factories that track a "generation" counter to detect when a resource has been resized/recreated, so dependent descriptors can be invalidated cheaply.
 
 **Batch/instance pipeline**: Scene geometry is streamed into GPU-resident buffers per material type (opaque, mask, transparent). A compute-shader cull pass (`SwCull`) populates indirect draw commands; `SwGeometry` issues the indirect draws.
+
+**Instances/Render Items/Render Instances**: Instances refer to instances of loaded assets. Render items are generated for every mesh node created from a loaded GLTF file, which hold data for each indirect draw command in VkDrawIndexedIndirectCount. Render instances refer to the instances belonging to a specific render item's mesh node. There are as many render instances of a mesh node as there are instances of a loaded asset from which the mesh node is created from. 
 
 **Systems** (`src/Scene/Sw*.cpp`): Each rendering feature is a self-contained system registered with the scene — `SwCull`, `SwGeometry`, `SwPick`, `SwSkybox`, `SwWBOIT`. They each own their pipelines, descriptors, and pass definitions.
 

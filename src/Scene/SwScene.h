@@ -62,9 +62,9 @@ private:
     SwAllocatedBuffer mSceneNodeTransformsBuffer;
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
-    SwAllocatedBuffer mSceneVisibleRInstsIndicesBuffer;
+    SwAllocatedBuffer mSceneDrawRInstsIndicesBuffer;
     std::array<SwAllocatedBuffer, 2> mSceneVisibilityRInstsBuffers;
-    std::uint32_t mSceneVisibilityRInstsBufferReadIndex;
+    std::uint32_t mSceneVisibilityRInstsBufferReadIndex{0};
 
     SwRenderGraph mRenderGraph;
 
@@ -115,7 +115,7 @@ public:
     inline SwAllocatedBuffer& getSceneNodeTransformsBuffer() { return mSceneNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
-    inline SwAllocatedBuffer& getSceneVisibleRInstsIndicesBuffer() { return mSceneVisibleRInstsIndicesBuffer; }
+    inline SwAllocatedBuffer& getSceneDrawRInstsIndicesBuffer() { return mSceneDrawRInstsIndicesBuffer; }
     inline void toggleSceneVisibilityRInstsBuffer() { mSceneVisibilityRInstsBufferReadIndex = 1 - mSceneVisibilityRInstsBufferReadIndex; }
     inline SwAllocatedBuffer& getSceneVisibilityRInstsReadBuffer() { return mSceneVisibilityRInstsBuffers[mSceneVisibilityRInstsBufferReadIndex]; }
     inline SwAllocatedBuffer& getSceneVisibilityRInstsWriteBuffer() { return mSceneVisibilityRInstsBuffers[mSceneVisibilityRInstsBufferReadIndex]; }

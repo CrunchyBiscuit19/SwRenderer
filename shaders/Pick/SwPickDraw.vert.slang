@@ -13,7 +13,7 @@ SwPick::VSOutput main(SwPick::VSInput in) {
     SwRenderItem rItem = pickDrawPc.mDrawRItemsBuffer[in.mDrawIndex];
 
     uint firstRInst = rItem.mFirstRInst;
-    uint mSceneInstanceIndex = pickDrawPc.mSceneVisibleRInstsIndicesBuffer[in.mInstanceIndex];
+    uint mSceneInstanceIndex = pickDrawPc.mSceneDrawRInstsIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = pickDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
     uint mSceneNodeTransformIndex = pickDrawPc.mDrawRItemsBuffer[in.mDrawIndex].mNodeTransformIndex;

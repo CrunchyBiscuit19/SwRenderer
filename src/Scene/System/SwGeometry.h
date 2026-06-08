@@ -14,7 +14,7 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneVisibleRInstsIndicesBuffer;
+    vk::DeviceAddress mSceneDrawRInstsIndicesBuffer;
     vk::DeviceAddress mDrawRItemsBuffer;
     vk::DeviceAddress mPerFrameBuffer;
 

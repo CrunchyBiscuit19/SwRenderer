@@ -113,14 +113,14 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
     return closestDepthInRInst >= furthestDepthInPyramid;
 }
 
-void markVisibleRInst(SwRenderItem* rItem, SwRenderInstance* rInst, SwCull::WorkPC* workPc) {
-    // Write the indices of visible render instances to the visible instances indices buffer
-    // Index into visible instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
+void markDrawRInstIndex(SwRenderItem* rItem, SwRenderInstance* rInst, uint* sceneDrawRInstsIndicesBuffer) {
+    // Write the indices of to-draw render instances to the draw instances indices buffer
+    // Index into to-draw instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
     uint offsetVisibleRInstIndex;
     InterlockedAdd(rItem->mRInstCount, 1, offsetVisibleRInstIndex);
     uint visibleRInstIndex = rItem->mFirstRInst + offsetVisibleRInstIndex;
-    workPc->mSceneVisibleRInstsIndicesBuffer[visibleRInstIndex] = rInst->mSceneInstanceIndex;
+    sceneDrawRInstsIndicesBuffer[visibleRInstIndex] = rInst->mSceneInstanceIndex;
 }
 
 [numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
@@ -149,22 +149,36 @@ void main(SwCull::CSInput in) {
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
 
+    bool draw = true;
     if (workPc.mPhase == SwCull::Phase::Early) {
         // Frustum on previously visible only (check mSceneVisibilityRInstsReadBuffer)
-        // Write 1 into mSceneVisibilityRInstsWriteBuffer if visible
-        // Save into mSceneVisibleRInstsIndicesBuffer
+        // Write 1 into mSceneVisibilityRInstsWriteBuffer if previously visible
+        // Save into mSceneDrawRInstsIndicesBuffer
+        bool prevVisible = (workPc.mSceneVisibilityRInstsReadBuffer[rInst->mSceneInstanceIndex] == 1);  // rItem->mFirstRInst + rInstsIndex
+        if (prevVisible)
+            prevVisible = frustumTest(frustum, aabbCorners);
+        if (prevVisible) {
+            workPc.mSceneVisibilityRInstsWriteBuffer[rInst->mSceneInstanceIndex] = 1;
+            markDrawRInstIndex(rItem, rInst, workPc.mSceneDrawRInstsIndicesBuffer);
+            draw = true;
+        }
     } else {
         // Frustum + Occlusion on all
-        // Read mSceneVisibilityRInstsWriteBuffer to see if it is already visible
-        // Write 1 into mSceneVisibilityRInstsWriteBuffer if visible
-        // Save into mSceneVisibleRInstsIndicesBuffer if it wasn't previously visible
+        // Read mSceneVisibilityRInstsWriteBuffer to see if it currently is visible
+        // Write 1 into mSceneVisibilityRInstsWriteBuffer if currently visible
+        // Save into mSceneDrawRInstsIndicesBuffer if currently visible and wasn't previously visible
+        bool currVisible = frustumTest(frustum, aabbCorners);
+        currVisible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
+        bool prevVisible = (workPc.mSceneVisibilityRInstsWriteBuffer[rInst->mSceneInstanceIndex] == 1);
+        if (currVisible) {
+            workPc.mSceneVisibilityRInstsWriteBuffer[rInst->mSceneInstanceIndex] = 1;
+            if (!prevVisible) {
+                markDrawRInstIndex(rItem, rInst, workPc.mSceneDrawRInstsIndicesBuffer);
+                draw = true;
+            }
+        }
     }
-
-    bool visible = frustumTest(frustum, aabbCorners);
-    if (visible)
-        visible = occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
-    if (!visible)
-        return;
     uint _;
-    InterlockedAdd(*workPc.mRInstsCount, 1, _);
+    if (draw)
+        InterlockedAdd(*workPc.mRInstsCount, 1, _);
 }

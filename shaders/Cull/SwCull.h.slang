@@ -29,7 +29,7 @@ namespace SwCull {
         public SwBounds* mSceneBoundsBuffer;
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
-        public uint* mSceneVisibleRInstsIndicesBuffer;
+        public uint* mSceneDrawRInstsIndicesBuffer;
         public uint* mSceneVisibilityRInstsReadBuffer;
         public uint* mSceneVisibilityRInstsWriteBuffer;
         public uint mRInstsLimit;
