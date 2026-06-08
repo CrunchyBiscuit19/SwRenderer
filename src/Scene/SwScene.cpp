@@ -88,7 +88,6 @@ void SwScene::initializeResources() {
             SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
             true
         );
-        LOG_DEBUG(SwRenderer::sRendererContext.mLogger->getQuillPtr(), "{}", mSceneVisibilityRisBuffers[i].getDeviceAddress().has_value());
     }
 
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(

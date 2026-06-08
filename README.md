@@ -129,3 +129,108 @@ docs/         - Graphviz render graph and pass dependency diagrams
 tools/        - Shader compiler source and build script
 resources/    - Test assets (New Sponza glTF, skybox faces)
 ```
+
+---
+
+## Scene Data Model
+
+The renderer is GPU-driven: the CPU uploads a flat description of *what could be drawn*, and a compute cull pass decides *what actually gets drawn* each frame. Understanding the pipeline means understanding five CPU-side concepts and how they are flattened into GPU buffers. The headline relationship is:
+
+> **One render command per (mesh-node primitive). One render item per (render command × asset instance).**
+
+### The five concepts
+
+| Concept | Type | Lives in | One per... |
+|---------|------|----------|------------|
+| **Asset** | `SwAsset` | — | loaded glTF file |
+| **Node** / **Mesh Node** | `SwNode` / `SwMeshNode` | `SwAsset::mNodes` | glTF node (mesh nodes additionally reference a `SwMesh`) |
+| **Instance** | `SwInstance` | `SwAsset::mInstances` | placed copy of the whole asset (its own transform) |
+| **Render Command (RC)** | `SwRenderCommand` | `SwBatch::mRcs` | primitive of a mesh node |
+| **Render Item (RI)** | `SwRenderItem` | `SwBatch::mRis` | RC × instance |
+
+**Asset** (`SwAsset`) — everything parsed from one glTF file: its meshes, materials, node hierarchy, per-mesh bounds (AABBs), and a list of **instances**. When an asset is added to the scene it is given contiguous base offsets into the scene-wide GPU buffers: `mFirstNodeTransformInScene`, `mFirstMaterialInScene`, `mFirstInstanceInScene`, and `mFirstBoundInScene`. These offsets are what turn an asset's *relative* indices into *scene-absolute* indices.
+
+**Nodes and Mesh Nodes** (`SwNode` / `SwMeshNode`) — the glTF transform hierarchy. A plain `SwNode` is just a named transform with children; an `SwMeshNode` additionally holds a reference to a `SwMesh`. A `SwMesh` is a list of `SwPrimitive`s, where each primitive is an index range (`mRelativeFirstIndex`, `mIndexCount`, `mRelativeVertexOffset`) plus the `SwMaterial` it is drawn with. The primitive is the smallest drawable unit, because a single mesh can mix materials (and therefore pipelines).
+
+**Instances** (`SwInstance`) — a placement of the *entire* asset in the world, carrying its own transform matrix (`SwInstance::Data::mTransformMatrix`). Calling `SwAsset::createInstance(...)` appends one. If an asset has 3 instances, the whole node hierarchy is effectively drawn 3 times, each with a different instance transform composed on top of each node's local transform.
+
+**Render Commands** (`SwRenderCommand`) — produced by `SwMeshNode::generateRcsAndRis()`, which walks the node tree and emits **one RC per primitive of each mesh node**. The first five fields are laid out to match `VkDrawIndexedIndirectCommand`:
+
+| Field | Role |
+|-------|------|
+| `mIndexCount` | index count of the primitive |
+| `mRiCount` | **instance count — starts at 0**, incremented by the cull shader as RIs survive |
+| `mFirstIndex` | `mesh.mFirstIndexInScene + primitive.mRelativeFirstIndex` |
+| `mVertexOffset` | `mesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset` |
+| `mFirstRi` | base offset of this RC's render items (doubles as `firstInstance`) |
+| `mMaterialIndex` | `asset.mFirstMaterialInScene + material.mRelativeMaterialIndex` |
+| `mNodeTransformIndex` | `asset.mFirstNodeTransformInScene + node.mRelativeNodeIndex` |
+| `mAssetIndex` / `mModelIndex` | owning asset id |
+| `mFirstInstance` | `asset.mFirstInstanceInScene` (base into the scene instances buffer) |
+| `mBoundsIndex` | `asset.mFirstBoundInScene + mesh.mRelativeFirstBounds` |
+
+So an RC bundles a draw range with *indices into the scene-wide material, transform, bounds, and instance buffers* — everything the GPU needs except which specific instances are visible.
+
+**Render Items** (`SwRenderItem`) — the (RC × instance) cross product. For each RC, `generateRcsAndRis()` emits **one RI per instance of the asset**. Each RI is tiny:
+
+- `mRcIndex` — which RC this item belongs to.
+- `mSceneInstanceIndex` — `asset.mFirstInstanceInScene + i`, i.e. the absolute index of instance *i* in the scene instances buffer.
+
+The RI is the unit of culling: the cull shader dispatches **one thread per RI**.
+
+### Batches
+
+RCs and RIs are not global lists — they are grouped into `SwBatch`es. Each batch holds all RCs/RIs that share one **graphics pipeline** (`pipelineId`). Batches are stored in per-material-type maps (opaque / mask / transparent), keyed by pipeline id, on the scene. `SwBatch::sFirstRiOffset` is a running counter that hands each RC a unique, non-overlapping `mFirstRi` window across all batches, so the scene-wide "draw RIs indices" buffer never has two RCs writing to the same slots.
+
+### How it links together in buffers
+
+For a single batch, the relationship between the RIs buffer, the RCs buffer, and the scene-wide instances buffer looks like this. Here an asset with **2 instances** (scene indices 5 and 6) contributes a mesh node with **2 primitives**, producing RC[0] and RC[1], and 2 RIs each:
+
+```
+ mRisBuffer (per batch)                 mRcsBuffer (per batch, == indirect draw buffer)
+ +--------------------------+           +-------------------------------------------------+
+ | RI[0] rc=0  sceneInst=5  |--rc-->    | RC[0] firstRi=0  riCount=(0->cull)              |
+ | RI[1] rc=0  sceneInst=6  |--rc-->    |       indexCount firstIndex vertexOffset        |
+ | RI[2] rc=1  sceneInst=5  |--rc-->    |       materialIdx nodeXformIdx boundsIdx        |--+
+ | RI[3] rc=1  sceneInst=6  |--rc-->    | RC[1] firstRi=2  riCount=(0->cull) ...          |  |
+ +--------------------------+           +-------------------------------------------------+  |
+        |  mSceneInstanceIndex                       | mBoundsIndex / mNodeTransformIndex /  |
+        |                                            | mMaterialIndex (scene-wide buffers)   |
+        v                                            v                                       |
+ Scene instances buffer                  Scene bounds / node-transform / material buffers <--+
+ +-----------------------+
+ | ...                   |
+ | inst[5]  transform    |   <- shared by RI[0] and RI[2]
+ | inst[6]  transform    |   <- shared by RI[1] and RI[3]
+ +-----------------------+
+```
+
+Reading the links:
+
+- **RI → RC**: `RI.mRcIndex` indexes `mRcsBuffer` within the same batch. Every RI knows the draw it belongs to.
+- **RI → instance**: `RI.mSceneInstanceIndex` indexes the scene-wide instances buffer for the world transform.
+- **RC → scene resources**: `mBoundsIndex`, `mNodeTransformIndex`, `mMaterialIndex`, `mFirstInstance` index the scene-wide bounds, node-transform, material, and instance buffers respectively.
+- **RC ↔ RI window**: `RC.mFirstRi` is the base slot in the scene "draw RIs indices" buffer that this RC owns; `RC.mRiCount` is how many of its RIs survived culling (filled in at runtime).
+
+### What the cull pass does with this layout
+
+Each cull thread takes one RI and reconstructs its full draw context purely by following the indices above (`SwCullWork.comp.slang`):
+
+```
+ri  = mRisBuffer[threadId]
+rc  = mRcsBuffer[ri.mRcIndex]
+bounds        = mSceneBoundsBuffer[rc.mBoundsIndex]
+nodeTransform = mSceneNodeTransformsBuffer[rc.mNodeTransformIndex]
+instance      = mSceneInstancesBuffer[ri.mSceneInstanceIndex]
+```
+
+It transforms the bounds AABB by `instance * nodeTransform`, runs the frustum (and, in the late phase, occlusion) test, and if the RI is visible it `InterlockedAdd`s into `rc.mRiCount` to claim a compacted slot and writes the surviving `mSceneInstanceIndex` into `mSceneDrawRisIndicesBuffer[rc.mFirstRi + offset]`.
+
+Because the RCs are laid out as `VkDrawIndexedIndirectCommand`s, the populated `mRiCount` *is* the instance count and `mFirstRi` *is* the `firstInstance`. At draw time the vertex shader reads back the visible instance:
+
+```
+sceneInstanceIndex = mSceneDrawRisIndicesBuffer[gl_InstanceIndex]   // gl_InstanceIndex starts at mFirstRi
+transform          = mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix
+```
+
+— closing the loop from RI, through the compacted draw list, back to the per-instance transform.

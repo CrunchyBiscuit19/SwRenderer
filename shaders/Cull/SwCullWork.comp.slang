@@ -149,37 +149,33 @@ void main(SwCull::CSInput in) {
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
 
-    // Visibility is per render item, but mSceneInstanceIndex is shared across render commands that
-    // reference the same asset instance (multi-primitive assets), so it collides. Derive the unique
-    // global slot from the item's disjoint mFirstRi range: mSceneInstanceIndex == mFirstInstance + i.
     uint riVisIndex = rc->mFirstRi + (ri->mSceneInstanceIndex - rc->mFirstInstance);
 
-    bool draw = true;
+    bool draw = false;
     if (workPc.mPhase == SwCull::Phase::Early) {
-        // Frustum on previously visible only (check mSceneVisibilityRisReadBuffer)
-        // Write 1 into mSceneVisibilityRisWriteBuffer if previously visible
-        // Save into mSceneDrawRisIndicesBuffer
+        // Draw whatever was visible last frame (frustum only). The early pass trusts last
+        // frame's occlusion result and does NOT touch the visibility buffer — the late pass
+        // owns the authoritative visibility for the next frame.
         bool prevVisible = (workPc.mSceneVisibilityRisReadBuffer[riVisIndex] == 1);
         if (prevVisible)
             prevVisible = frustumTest(frustum, aabbCorners);
         if (prevVisible) {
-            workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = 1;
             markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
             draw = true;
         }
     } else {
-        // Frustum + Occlusion on all
-        // Read mSceneVisibilityRisWriteBuffer to see if it currently is visible
-        // Write 1 into mSceneVisibilityRisWriteBuffer if currently visible
-        // Save into mSceneDrawRisIndicesBuffer if currently visible and wasn't previously visible
+        // Frustum + same-frame occlusion on all items. This is the authoritative test: write
+        // the result (0 OR 1) so occluded objects leave the visible set next frame, otherwise
+        // anything once visible would be redrawn forever and occlusion would cull nothing.
         bool currVisible = frustumTest(frustum, aabbCorners) && occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents);
-        bool prevVisible = (workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] == 1);
-        if (currVisible) {
-            workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = 1;
-            if (!prevVisible) {
-                markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
-                draw = true;
-            }
+        workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible ? 1u : 0u;
+
+        // Draw only the newly-visible delta — anything that was visible last frame (read == 1)
+        // was already drawn by the early pass.
+        bool drawnEarly = (workPc.mSceneVisibilityRisReadBuffer[riVisIndex] == 1);
+        if (currVisible && !drawnEarly) {
+            markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
+            draw = true;
         }
     }
     uint _;

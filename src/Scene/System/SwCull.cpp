@@ -29,6 +29,8 @@ void SwCull::System::initializeOtherPasses() {
                 continue;
             }
 
+            cmd.fillBuffer(batch.getEarlyRcsCount().getRawBuffer(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getEarlyRcsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
             cmd.fillBuffer(batch.getLateRcsCount().getRawBuffer(), 0, vk::WholeSize, 0);
             cmd.fillBuffer(batch.getLateRcsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
 
@@ -198,7 +200,7 @@ void SwCull::System::initializeLatePasses() {
                 nullptr
             );
 
-            mResources.mWorkPushConstants.mRcsBuffer = batch.getEarlyRcsBuffer().getDeviceAddress().value();
+            mResources.mWorkPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRisBuffer = batch.getRisBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
             mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
@@ -218,7 +220,7 @@ void SwCull::System::initializeLatePasses() {
                 continue;
             }
 
-            mResources.mCompactPushConstants.mPreRcsBuffer = batch.getEarlyRcsBuffer().getDeviceAddress().value();
+            mResources.mCompactPushConstants.mPreRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
             mResources.mCompactPushConstants.mPostRcsBuffer = batch.getLateRcsBuffer().getDeviceAddress().value();
             mResources.mCompactPushConstants.mPostRcsCount = batch.getLateRcsCount().getDeviceAddress().value();
             mResources.mCompactPushConstants.mPreRcsLimit = batch.getRcs().size();
@@ -301,6 +303,8 @@ void SwCull::System::refreshOtherDynamicDependencies() {
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRcs().empty()) continue;
         dynamicDeps.mWriteBuffers.emplace_back(&batch.getInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::TransferWrite);
+        dynamicDeps.mWriteBuffers.emplace_back(&batch.getEarlyRcsCount(), SwDependency::BufferDepType::TransferWrite);
         dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsBuffer(), SwDependency::BufferDepType::TransferWrite);
         dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsCount(), SwDependency::BufferDepType::TransferWrite);
     }
@@ -347,7 +351,7 @@ void SwCull::System::refreshLateDynamicDependencies() {
     dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRcs().empty()) continue;
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         dynamicDeps.mReadBuffers.emplace_back(&batch.getRisBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     }
     mScene.mPasses[SwPass::Type::CullLateWork].setDynamicDeps(std::move(dynamicDeps));
@@ -356,7 +360,7 @@ void SwCull::System::refreshLateDynamicDependencies() {
     // LateCompact
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         if (batch.getRcs().empty()) continue;
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         dynamicDeps.mWriteBuffers.emplace_back(&batch.getLateRcsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
