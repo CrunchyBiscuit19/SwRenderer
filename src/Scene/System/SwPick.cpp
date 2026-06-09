@@ -1,3 +1,4 @@
+#include <Data/SwMaterial.h>
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
@@ -19,7 +20,8 @@ void SwPick::System::initializeResources() {
     );
     mResources.mReadbackDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mReadbackDescriptorLayout);
 
-    mResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwPick::DrawPC::getRange());
+    mResources.mDrawPipelineLayout =
+        SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwPick::DrawPC::getRange());
 
     SwShader drawVertexShader = SwShaderFactory::createShader(PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader drawFragmentShader = SwShaderFactory::createShader(PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -44,7 +46,12 @@ void SwPick::System::initializeResources() {
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mResources.mDrawPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
+
+    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
+    mResources.mDrawOpaqueTransparentPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
+
+    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
+    mResources.mDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
 
     mResources.mReadbackPipelineLayout =
         SwPipelineFactory::createPipelineLayout(mResources.mReadbackDescriptorLayout.getRawLayout(), SwPick::ReadbackPC::getRange());
@@ -68,44 +75,63 @@ void SwPick::System::initializePasses() {
 
     // Pick Draw
     staticDeps.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    staticDeps.mWriteImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    staticDeps.mReadImages.emplace_back(&mResources.mDepthImage, SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::PickDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
-        vk::RenderingAttachmentInfo depthAttachment = mResources.mDepthImage.generateRenderingAttachment();
+        vk::RenderingAttachmentInfo depthAttachment = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo =
             SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, depthAttachment);
 
         cmd.beginRendering(renderInfo);
 
-        cmd.bindPipeline(mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getRawPipeline());
-
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
 
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
-        
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            if (batch.getRcs().empty()) {
-                continue;
+        cmd.bindDescriptorSets(
+            mResources.mDrawOpaqueTransparentPipelineBundle.getBindPoint(),  // Same across opaque / transparent / masked
+            mResources.mDrawPipelineLayout.getRawLayout(),
+            0,
+            mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
+            nullptr
+        );
+
+        // Draw only the culled commands, mirroring what the geometry pass put in the shared depth image. 
+        // Opaque / transparent share one pipeline, while masked uses the discard one.
+        auto drawBatches = [&](auto&& batches, SwGraphicsPipelineBundle& pipeline, bool early) {
+            cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getRawPipeline());
+
+            for (auto& batch : batches) {
+                if (batch.getRcs().empty()) {
+                    continue;
+                }
+
+                auto& rcBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
+                auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
+
+                mResources.mDrawPushConstants.mDrawRcsBuffer = rcBuffer.getDeviceAddress().value();
+                cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+
+                cmd.drawIndexedIndirectCount(
+                    rcBuffer.getRawBuffer(),
+                    0,
+                    countBuffer.getRawBuffer(),
+                    0,
+                    static_cast<std::uint32_t>(batch.getRcs().size()),
+                    sizeof(SwRenderCommand)
+                );
             }
-        
-            mResources.mDrawPushConstants.mDrawRcsBuffer = batch.getFinalRcsBuffer().getDeviceAddress().value();
-            cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
-            
-            cmd.drawIndexedIndirectCount(
-                batch.getFinalRcsBuffer().getRawBuffer(),
-                0,
-                batch.getFinalRcsCount().getRawBuffer(),
-                0,
-                static_cast<std::uint32_t>(batch.getRcs().size()),
-                sizeof(SwRenderCommand)
-            );
-        }
+        };
+
+        drawBatches(mScene.getBatchIt(SwMaterial::Type::Opaque), mResources.mDrawOpaqueTransparentPipelineBundle, true);
+        drawBatches(mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Transparent), mResources.mDrawOpaqueTransparentPipelineBundle, false);
+        drawBatches(mScene.getBatchIt(SwMaterial::Type::Mask), mResources.mDrawMaskedPipelineBundle, false);
 
         cmd.endRendering();
     });
@@ -185,12 +211,9 @@ void SwPick::System::reInitializeOnResize() {
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         false
     );
-    mResources.mDepthImage =
-        SwImageFactory::createDepthImage2D(nullptr, SwSwapchain::DEPTH_FORMAT, imageExtent, vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         mResources.mReadbackImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-        mResources.mDepthImage.emitTransition(cmd, SwDependency::ImageDepType::DepthAttachmentReadWrite);
     });
 
     mResources.mReadbackDescriptorSet.writeImage(0, mResources.mReadbackImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
@@ -204,6 +227,9 @@ void SwPick::System::refreshDynamicDependencies() {
     dynamicDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
     );
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
+        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+    }
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
         dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
     }
@@ -213,6 +239,7 @@ void SwPick::System::refreshDynamicDependencies() {
 
 void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneDrawRisIndicesBuffer =

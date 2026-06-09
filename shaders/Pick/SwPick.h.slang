@@ -3,8 +3,11 @@ module SwPicker;
 import SwCommon;
 
 namespace SwPick {
+    public static const uint NUM_PBR_IMAGES = 5;
+
     public struct DrawPC {
         public SwVertex* mSceneVertexBuffer;
+        public SwMaterialConstant* mSceneMaterialConstantsBuffer;
         public SwNodeTransform* mSceneNodeTransformsBuffer;
         public SwInstance* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
@@ -20,6 +23,10 @@ namespace SwPick {
 
     public struct VSOutput {
         public float4 mPosition : SV_Position;
+        public float2 mUv : TEXCOORD0;
+        public float4 mColor : COLOR0;
+        public nointerpolation float mAlphaCutoff;
+        public nointerpolation uint mMaterialIndex;
         public nointerpolation uint mModelIndex;
         public nointerpolation uint mInstanceIndex;
     };

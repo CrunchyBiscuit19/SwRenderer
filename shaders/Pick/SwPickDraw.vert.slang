@@ -12,18 +12,24 @@ SwPick::VSOutput main(SwPick::VSInput in) {
 
     SwRenderCommand rc = pickDrawPc.mDrawRcsBuffer[in.mDrawIndex];
 
-    uint firstRi = rc.mFirstRi;
     uint mSceneInstanceIndex = pickDrawPc.mSceneDrawRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = pickDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
-    uint mSceneNodeTransformIndex = pickDrawPc.mDrawRcsBuffer[in.mDrawIndex].mNodeTransformIndex;
+    uint mSceneNodeTransformIndex = rc.mNodeTransformIndex;
     float4x4 nodeTransformMatrix = pickDrawPc.mSceneNodeTransformsBuffer[mSceneNodeTransformIndex];
+
+    uint sceneMaterialIndex = rc.mMaterialIndex;
+    SwMaterialConstant materialConstant = pickDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     out.mPosition =
         mul(mul(mul(mul(pickDrawPc.mPerFrameBuffer->mPerspective.mProj, pickDrawPc.mPerFrameBuffer->mPerspective.mView), instanceTransformMatrix),
                 nodeTransformMatrix),
             position);
-    out.mModelIndex = pickDrawPc.mDrawRcsBuffer[in.mDrawIndex].mModelIndex;
+    out.mUv = v.mUv;
+    out.mColor = v.mColor * materialConstant.mBaseFactor;
+    out.mAlphaCutoff = materialConstant.mAlphaCutoff;
+    out.mMaterialIndex = sceneMaterialIndex;
+    out.mModelIndex = rc.mModelIndex;
     out.mInstanceIndex = mSceneInstanceIndex;
 
     return out;

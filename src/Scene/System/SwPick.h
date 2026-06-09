@@ -19,9 +19,12 @@ constexpr float PICK_IMGUIZMO_SIZE = 0.15f;
 static const std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwPickDraw.vert.spv"};
 static const std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwPickDraw.frag.spv"};
 static const std::filesystem::path PICK_READBACK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwPickReadback.comp.spv"};
+constexpr std::string_view PICK_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
+constexpr std::string_view PICK_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;
+    vk::DeviceAddress mSceneMaterialConstantsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneDrawRisIndicesBuffer;
@@ -44,20 +47,16 @@ struct ReadbackData {
 
 struct Resources {
     SwAllocatedBuffer mReadbackBuffer;
-    
     SwColorImage2D mReadbackImage;
-    SwDepthImage2D mDepthImage;
-
     SwDescriptorSet mReadbackDescriptorSet;
     SwDescriptorLayout mReadbackDescriptorLayout;
-    
     ReadbackPC mReadbackPushConstants;
-    
     SwComputePipelineBundle mReadbackPipelineBundle;
     SwPipelineLayout mReadbackPipelineLayout;
 
     DrawPC mDrawPushConstants;
-    SwGraphicsPipelineBundle mDrawPipelineBundle;
+    SwGraphicsPipelineBundle mDrawOpaqueTransparentPipelineBundle;
+    SwGraphicsPipelineBundle mDrawMaskedPipelineBundle;
     SwPipelineLayout mDrawPipelineLayout;
 
     ImGuizmo::OPERATION mImguizmoOperation{ImGuizmo::TRANSLATE};

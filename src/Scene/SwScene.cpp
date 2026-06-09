@@ -20,7 +20,6 @@ void SwScene::initializeMiscPasses() {
     staticDeps.mWriteImages.emplace_back(&mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     staticDeps.mWriteImages.emplace_back(&mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     staticDeps.mWriteImages.emplace_back(&mPick.getResources().mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    staticDeps.mWriteImages.emplace_back(&mPick.getResources().mDepthImage, SwDependency::ImageDepType::DepthAttachmentWrite);
     mPasses[SwPass::Type::ClearImages] = SwPass(SwPass::Type::ClearImages, staticDeps, [&](vk::CommandBuffer cmd) {
         std::array<vk::RenderingAttachmentInfo, 4> colorAttachments = {
             SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
@@ -32,12 +31,6 @@ void SwScene::initializeMiscPasses() {
             SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
         vk::RenderingInfo renderInfo =
             SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachments, depthAttachment);
-
-        cmd.beginRendering(renderInfo);
-        cmd.endRendering();
-
-        depthAttachment = mPick.getResources().mDepthImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
-        renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), nullptr, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
