@@ -70,6 +70,46 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ---
 
+## Roadmap & Future Work
+
+Planned lighting/shading features, ordered roughly by a sensible build sequence (later items
+depend on earlier ones). Difficulty is rated relative to *this* renderer — the render graph
+auto-inserts barriers and the GPU-driven cull/indirect path already exists, which makes adding
+passes cheap but makes anything touching the per-cascade/per-light draw path more involved.
+Several items overlap the **PBR Implementation Checklist** above; see the detailed plan in
+[`docs/lighting-plan.md`](docs/lighting-plan.md) for Phases 1–3.
+
+Legend — **Easy**: a shader + a buffer. **Medium**: a new pass or non-trivial data plumbing.
+**Hard**: a whole subsystem.
+
+| # | Feature | Difficulty | Feasibility notes |
+|---|---------|------------|-------------------|
+| 1 | Basic lighting (directional Lambert/Phong) | Easy | Mostly already present; just un-hardcode the sun into `PerFrameData`. Phase 1. |
+| 2 | Gamma correction | Easy | Largely handled by sRGB swapchain/texture formats already; make the convention explicit and audit linear-space math. Do alongside HDR. |
+| 3 | Lighting maps (diffuse/spec/normal driving shading) | Easy | All 5 PBR textures already loaded; just sample and use them. |
+| 4 | Light casters (attenuation/cone math) | Easy | Pure shader math once light data is in a buffer. |
+| 5 | Multiple lights | Easy–Medium | Needs a `Light` SSBO + count; trivial in forward until counts grow (then → Forward+). Phase 3. |
+| 6 | Point / Directional / Spot lights | Easy | One tagged `Light` struct covers all three (`KHR_lights_punctual`). Tie to scene via `SwLightNode`. Phase 3. |
+| 7 | Normal mapping | Medium | **Blocker:** `Sw::Vertex` has no tangents — must add the attribute and generate them (MikkTSpace) on load. TBN in shader is the easy part. |
+| 8 | PBR theory + PBR lighting (Cook-Torrance GGX) | Medium | The core direct-lighting BRDF. Straightforward once lighting maps + lights exist. Phase 2. |
+| 9 | HDR render target + tone mapping | Medium | Switch geometry target to a float format, add a tone-map pass. Render graph makes the pass trivial; the work is threading the new target through WBOIT composite/FXAA. |
+| 10 | Parallax / parallax-occlusion mapping | Medium | Easy once tangents (item 7) exist, **but** glTF rarely ships height maps (`KHR_materials_*` displacement is uncommon) — asset support is the real snag. |
+| 11 | Physically-based bloom | Medium | Mip-chain down/up-sample (CoD/Jimenez). Needs HDR first. You already run compute post passes (FXAA), so the pattern is established. |
+| 12 | SSAO | Medium–Hard | Needs view-space depth + normals. You're forward-only, so this forces a depth/normal prepass (already a TODO) before the AO + blur passes. |
+| 13 | PBR IBL (irradiance + prefilter + BRDF LUT) | Hard | Several one-time precompute passes (split-sum). Builds on the existing cubemap skybox infra, but the prefilter mip chain + BRDF LUT is a real chunk of work. |
+| 14 | Cascaded shadow maps | Hard | The biggest single subsystem: per-cascade depth render, light-space matrices, cascade splitting, PCF/filtering — and ideally per-cascade culling through the existing GPU-driven indirect path. |
+| 15 | Area lights | Hard | Real-time area lights (LTC) are mathematically heavy and a notable jump beyond punctual lights; defer until punctual + IBL are solid. |
+| 16 | Forward+ (tiled/clustered light culling) | Hard | Compute light binning + depth prepass + per-tile light lists. Only pays off at high light counts; your compute-cull background helps conceptually but it's a substantial system. |
+
+**Overall feasibility:** items 1–6 are quick wins that mostly reuse existing data and scaffolding.
+Item 7 (tangents) is the first real data-model change and gates normal/parallax mapping. Items
+8–9 complete a respectable direct-lit PBR pipeline. Everything from 12 onward is "new subsystem"
+territory — individually feasible in this architecture, but each is a project in its own right.
+The two genuinely hard, high-value milestones are **cascaded shadow maps** and **PBR IBL**;
+**area lights** and **Forward+** are the most speculative and should come last.
+
+---
+
 ## Build
 
 Requirements: CMake 4.3.2+, Ninja, MSVC with C++23, Vulkan 1.4 capable GPU.
