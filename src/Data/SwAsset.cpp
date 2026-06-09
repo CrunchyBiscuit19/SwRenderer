@@ -477,6 +477,7 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     constructMaterials();
     constructMeshes();
     constructNodes();
+    SwRenderer::sRendererContext.mScene->mFlags.mAssetLoaded = true;
 }
 
 void SwAsset::generateRcsAndRis() {

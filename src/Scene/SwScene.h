@@ -129,8 +129,7 @@ public:
     inline SwFXAA::System& getFXAASystem() { return mFXAA; }
 
     void loadAssets(const std::vector<std::filesystem::path>& files);
-    void unloadAssets();
-    void unloadInstances();
+    void unloadAssetsAndInstances();
     void markAllAssetsDelete();
 
     void regenerateRcsAndRis();

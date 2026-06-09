@@ -148,7 +148,6 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
         if (inserted) {
             it->second.createInstance(mCamera);
             mAlreadyLoadedAssets.insert(shortPath);
-            mFlags.mAssetLoaded = true;
         }
     }
 
@@ -159,20 +158,22 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
     });
 }
 
-void SwScene::unloadAssets() {
+void SwScene::unloadAssetsAndInstances() {
     std::erase_if(mAssets, [&](std::pair<const std::uint32_t, SwAsset>& pair) {
-        if (pair.second.isMarkedDelete()) {
-            mAlreadyLoadedAssets.erase(pair.second.getName());
+        SwAsset& asset = pair.second;
+        if (asset.isMarkedDelete()) {
+            mAlreadyLoadedAssets.erase(asset.getName());
             mFlags.mAssetUnloaded = true;
+            std::erase_if(asset.getInstances(), [&](const SwInstance& instance) {
+                if (instance.isMarkedDelete() && &instance == SwRenderer::sRendererContext.mScene->getPickSystem().getResources().mSelectedInstance) {
+                    SwRenderer::sRendererContext.mScene->getPickSystem().getResources().mSelectedInstance = nullptr;
+                    mFlags.mInstanceUnloaded = true;
+                }
+                return instance.isMarkedDelete();
+            });
         }
-        return pair.second.isMarkedDelete();
+        return asset.isMarkedDelete();
     });
-}
-
-void SwScene::unloadInstances() {
-    for (auto& asset : mAssets | std::views::values) {
-        std::erase_if(asset.getInstances(), [&](const SwInstance& instance) { return instance.isMarkedDelete(); });
-    }
 }
 
 void SwScene::markAllAssetsDelete() {
@@ -455,8 +456,7 @@ void SwScene::perFrameUpdate() {
 
     mCamera.update(SwRenderer::sRendererContext.mStats->mFrameTime, static_cast<float>(SwRenderer::ONE_SECOND_IN_MS / SwRenderer::EXPECTED_FRAME_RATE));
 
-    unloadAssets();
-    unloadInstances();
+    unloadAssetsAndInstances();
 
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getReloadInstancesFlag()) {

@@ -36,7 +36,7 @@ private:
     std::vector<std::shared_ptr<SwNode>> mNodes;
     SwAllocatedBuffer mNodeTransformsBuffer;
 
-    std::vector<SwInstance> mInstances;
+    std::deque<SwInstance> mInstances;
     SwAllocatedBuffer mInstancesBuffer;
 
     std::uint32_t mNumBounds;
@@ -81,7 +81,7 @@ public:
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
     inline std::string getName() { return mName; }
     inline std::uint32_t getId() { return mId; }
-    inline std::vector<SwInstance>& getInstances() { return mInstances; }
+    inline std::deque<SwInstance>& getInstances() { return mInstances; }
     inline bool isMarkedDelete() { return mDelete; }
     inline bool getReloadInstancesFlag() { return mReloadInstancesFlag; }
     inline std::span<SwMesh> getMeshes() { return mMeshes; }
