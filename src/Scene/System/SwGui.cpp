@@ -1,8 +1,8 @@
-#include <Scene/System/SwGui.h>
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Scene/SwScene.h>
+#include <Scene/System/SwGui.h>
 #include <fmt/core.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
@@ -13,9 +13,7 @@
 #include <ranges>
 #include <vulkan/vulkan_raii.hpp>
 
-
 SwGui::SwGui(SwScene& scene) : SwSystem(scene) {}
-
 
 void SwGui::initializeResources() {
     ImGui::CreateContext();
@@ -79,6 +77,7 @@ void SwGui::initializeResources() {
     };
     mGuiComponents[SwGuiComponent::Scene] = [this]() {
         ImGui::Indent();
+
         for (auto& asset : mScene.getAssets() | std::views::values) {
             const auto name = asset.getName();
             ImGui::PushStyleColor(ImGuiCol_Header, static_cast<ImVec4>(IMGUI_HEADER_GREEN));
@@ -120,6 +119,12 @@ void SwGui::initializeResources() {
             ImGui::SliderFloat3("Sunlight Direction", glm::value_ptr(mScene.mPerspective.mData.sunlightDirection), 0.f, 10.f);
             ImGui::InputFloat("Sunlight Power", &mScene.mPerspective.mData.sunlightDirection[3]);
         }*/
+
+        ImGui::Unindent();
+    };
+    mGuiComponents[SwGuiComponent::Options] = [this]() {
+        ImGui::Indent();
+
         if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::Button("Change Skybox")) {
                 mSelectSkyboxFileBrowser.Open();
@@ -129,7 +134,6 @@ void SwGui::initializeResources() {
                 mScene.getSkyboxSystem().toggleActive();
             }
         }
-        ImGui::Unindent();
 
         mSelectSkyboxFileBrowser.Display();
         if (mSelectSkyboxFileBrowser.HasSelected()) {
@@ -137,6 +141,12 @@ void SwGui::initializeResources() {
             mScene.getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxFile);
             mSelectSkyboxFileBrowser.ClearSelected();
         }
+
+        if (ImGui::CollapsingHeader("FXAA", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::Checkbox("Toggle FXAA", mScene.getFXAASystem().getActivePtr());
+        }
+
+        ImGui::Unindent();
     };
     mGuiComponents[SwGuiComponent::Stats] = [this]() {
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());

@@ -531,7 +531,9 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::FXAAWork]);
+    if (mFXAA.isActive()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::FXAAWork]);
+    }
     mRenderGraph.addPass(&mPasses[SwPass::Type::CopyToSwapchain]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);
     mRenderGraph.addOutput(&SwRenderer::sRendererContext.mSwapchain->getDrawImage());

@@ -32,6 +32,7 @@ struct Resources {
 class System : public SwSystem, public SwSystem::Resizable {
 private:
     Resources mResources;
+    bool mActive{true};
 
     void initializeResources() override;
     void initializePasses() override;
@@ -42,5 +43,7 @@ public:
     System(SwScene& scene);
 
     inline Resources& getResources() { return mResources; }
+    inline bool isActive() const { return mActive; }
+    inline bool* getActivePtr() { return &mActive; }
 };
 }  // namespace SwFXAA
