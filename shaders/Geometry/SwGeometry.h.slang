@@ -3,16 +3,14 @@ module SwGeometry;
 import SwCommon;
 
 namespace SwGeometry {
-    public static const uint NUM_PBR_IMAGES = 5;
-
     public struct WorkPC {
-        public SwVertex* mSceneVertexBuffer;
-        public SwMaterialConstant* mSceneMaterialConstantsBuffer;
-        public SwNodeTransform* mSceneNodeTransformsBuffer;
-        public SwInstance* mSceneInstancesBuffer;
+        public Sw::Vertex* mSceneVertexBuffer;
+        public Sw::MaterialConstant* mSceneMaterialConstantsBuffer;
+        public Sw::NodeTransform* mSceneNodeTransformsBuffer;
+        public Sw::Instance* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
-        public SwRenderCommand *mDrawRcsBuffer;
-        public SwPerFrameData *mPerFrameBuffer;
+        public Sw::RenderCommand *mDrawRcsBuffer;
+        public Sw::PerFrameData *mPerFrameBuffer;
     };
 
     public struct VSInput {

@@ -1,11 +1,12 @@
 import SwPick;
+import SwCommon;
 
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
 
 uint2 shade(SwPick::FSInput in, bool masked) {
     if (masked) {
-        float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * SwPick::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
+        float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * Sw::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
         if (in.mColor.a * diffuseColor.a < in.mAlphaCutoff)
             discard;
     }

@@ -29,6 +29,7 @@ public:
         PickReadback,
         PickWork,
         WBOITComposite,
+        FXAAWork,
         CopyToSwapchain,
         Gui
     };

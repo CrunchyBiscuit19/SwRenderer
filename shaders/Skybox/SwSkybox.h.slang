@@ -8,7 +8,7 @@ namespace SwSkybox {
     };
     public struct WorkPC {
         public SwSkybox::Vertex* mWorkVertexBuffer;
-        public SwPerFrameData* mPerFrameBuffer;
+        public Sw::PerFrameData* mPerFrameBuffer;
     };
     public struct VSInput {
         public uint mVertexIndex : SV_VulkanVertexID;

@@ -121,7 +121,7 @@ void SwSwapchain::onResizeInitialize() {
         DRAW_FORMAT,
         vk::Extent3D{mWindowExtent, 1},
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment |
-            vk::ImageUsageFlagBits::eStorage,
+            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
         false,
         DRAW_CLEAR_VALUE
     );

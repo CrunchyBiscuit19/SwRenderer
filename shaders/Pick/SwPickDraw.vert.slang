@@ -7,10 +7,10 @@ SwPick::DrawPC pickDrawPc;
 SwPick::VSOutput main(SwPick::VSInput in) {
     SwPick::VSOutput out;
 
-    SwVertex v = pickDrawPc.mSceneVertexBuffer[in.mVertexIndex];
+    Sw::Vertex v = pickDrawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwRenderCommand rc = pickDrawPc.mDrawRcsBuffer[in.mDrawIndex];
+    Sw::RenderCommand rc = pickDrawPc.mDrawRcsBuffer[in.mDrawIndex];
 
     uint mSceneInstanceIndex = pickDrawPc.mSceneDrawRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = pickDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
@@ -19,7 +19,7 @@ SwPick::VSOutput main(SwPick::VSInput in) {
     float4x4 nodeTransformMatrix = pickDrawPc.mSceneNodeTransformsBuffer[mSceneNodeTransformIndex];
 
     uint sceneMaterialIndex = rc.mMaterialIndex;
-    SwMaterialConstant materialConstant = pickDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
+    Sw::MaterialConstant materialConstant = pickDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     out.mPosition =
         mul(mul(mul(mul(pickDrawPc.mPerFrameBuffer->mPerspective.mProj, pickDrawPc.mPerFrameBuffer->mPerspective.mView), instanceTransformMatrix),

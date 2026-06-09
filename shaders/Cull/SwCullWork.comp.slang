@@ -10,7 +10,7 @@ public uniform SamplerState minSampler;
 [[vk::push_constant]]
 SwCull::WorkPC workPc;
 
-void transformCornersToWorld(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwInstance* currInstance, SwNodeTransform* nodeTransform) {
+void transformCornersToWorld(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, Sw::Instance* currInstance, Sw::NodeTransform* nodeTransform) {
     for (uint j = 0; j < SwCull::NUM_AABB_CORNERS; j++) {
         aabbCorners[j] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[j]));
     }
@@ -47,7 +47,7 @@ bool frustumTest(SwCull::Plane* frustum, float4[SwCull::NUM_AABB_CORNERS] aabbCo
     return visible;
 }
 
-bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
+bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, Sw::Perspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
     float closestDepthInRi = 0.f;
@@ -99,7 +99,7 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, SwPerspec
     return closestDepthInRi >= furthestDepthInPyramid;
 }
 
-void markDrawRiIndex(SwRenderCommand* rc, SwRenderItem* ri, uint* sceneDrawRisIndicesBuffer) {
+void markDrawRiIndex(Sw::RenderCommand* rc, Sw::RenderItem* ri, uint* sceneDrawRisIndicesBuffer) {
     // Write the indices of to-draw render items to the draw instances indices buffer
     // Index into to-draw instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
@@ -109,19 +109,19 @@ void markDrawRiIndex(SwRenderCommand* rc, SwRenderItem* ri, uint* sceneDrawRisIn
     sceneDrawRisIndicesBuffer[visibleRiIndex] = ri->mSceneInstanceIndex;
 }
 
-[numthreads(SwCull::MAX_1D_WORKGROUP_THREADS, 1, 1)]
+[numthreads(Sw::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
     if (risIndex >= workPc.mRisLimit)
         return;
-    SwRenderItem* ri = &workPc.mRisBuffer[risIndex];
-    SwRenderCommand* rc = &workPc.mRcsBuffer[ri->mRcIndex];
+    Sw::RenderItem* ri = &workPc.mRisBuffer[risIndex];
+    Sw::RenderCommand* rc = &workPc.mRcsBuffer[ri->mRcIndex];
 
-    SwBounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
-    SwNodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    SwInstance* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
+    Sw::Bounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    Sw::NodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
+    Sw::Instance* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
     SwCull::Plane* frustum = workPc.mFrustumBuffer;
-    SwPerspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
+    Sw::Perspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMax.z, 1.f),

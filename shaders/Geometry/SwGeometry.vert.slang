@@ -10,10 +10,10 @@ SwGeometry::WorkPC workPc;
 SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     SwGeometry::VSOutput out;
 
-    SwVertex v = workPc.mSceneVertexBuffer[in.mVertexIndex];
+    Sw::Vertex v = workPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwRenderCommand rc = workPc.mDrawRcsBuffer[in.mDrawIndex];
+    Sw::RenderCommand rc = workPc.mDrawRcsBuffer[in.mDrawIndex];
 
     uint sceneInstanceIndex = workPc.mSceneDrawRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = workPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
@@ -22,7 +22,7 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     float4x4 nodeTransformMatrix = workPc.mSceneNodeTransformsBuffer[sceneNodeTransformIndex];
 
     uint sceneMaterialIndex = workPc.mDrawRcsBuffer[in.mDrawIndex].mMaterialIndex;
-    SwMaterialConstant materialConstant = workPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
+    Sw::MaterialConstant materialConstant = workPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     out.mPosition =
         mul(mul(mul(mul(workPc.mPerFrameBuffer->mPerspective.mProj, workPc.mPerFrameBuffer->mPerspective.mView), instanceTransformMatrix), nodeTransformMatrix),

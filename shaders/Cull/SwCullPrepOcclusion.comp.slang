@@ -12,7 +12,7 @@
     [[vk::push_constant]]
     SwCull::PrepOcclusionPC prepOcclusionPc;
 
-    [numthreads(SwCull::MAX_2D_WORKGROUP_THREADS, SwCull::MAX_2D_WORKGROUP_THREADS, 1)]
+    [numthreads(Sw::MAX_2D_WORKGROUP_THREADS, Sw::MAX_2D_WORKGROUP_THREADS, 1)]
     void main(SwCull::CSInput in) {
         uint2 writePos = in.mDispatchThreadID.xy;
 

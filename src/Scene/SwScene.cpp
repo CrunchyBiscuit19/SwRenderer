@@ -107,7 +107,7 @@ void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     );
 }
 
-SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mGui(*this) {}
+SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mFXAA(*this), mGui(*this) {}
 
 void SwScene::initialize() {
     mCamera.initialize();
@@ -121,12 +121,14 @@ void SwScene::initialize() {
     mSkybox.initialize();
     mWBOIT.initialize();
     mGeometry.initialize();
+    mFXAA.initialize();
 }
 
 void SwScene::resize() {
     mCull.resize();
     mPick.resize();
     mWBOIT.resize();
+    mFXAA.resize();
 }
 
 void SwScene::insertPass(SwPass::Type type, SwDependency deps, std::function<void(vk::CommandBuffer)> callback, bool mustRun) {
@@ -482,6 +484,7 @@ void SwScene::perFrameUpdate() {
     mSkybox.refresh();
     mWBOIT.refresh();
     mGeometry.refresh();
+    mFXAA.refresh();
 
     SwRenderer::sRendererContext.mImmSubmit->queuedSubmit();
 
@@ -522,12 +525,13 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryMasked]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);
-    if (mPick.isPicked()) {
+    if (mPick.isPicked()) { // This block always after geometry draws since it uses the same depth image
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::FXAAWork]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CopyToSwapchain]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);
     mRenderGraph.addOutput(&SwRenderer::sRendererContext.mSwapchain->getDrawImage());

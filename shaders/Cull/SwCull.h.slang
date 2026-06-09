@@ -1,10 +1,8 @@
 module SwCull;
 
-import SwCommon;
+__exported import SwCommon;
 
 namespace SwCull {
-    public static const uint MAX_1D_WORKGROUP_THREADS = 1024;
-    public static const uint MAX_2D_WORKGROUP_THREADS = 32;
     public static const uint NUM_FRUSTUM_PLANES = 6;
     public static const uint NUM_AABB_CORNERS = 8;
 
@@ -17,21 +15,21 @@ namespace SwCull {
     }
 
     public struct ResetPC {
-        public SwRenderCommand* mRcsBuffer;
+        public Sw::RenderCommand* mRcsBuffer;
         public uint mRcsLimit;
     };
 
     public enum Phase { Early, Late };
 
     public struct WorkPC {
-        public SwRenderCommand* mRcsBuffer;
-        public SwRenderItem* mRisBuffer;
+        public Sw::RenderCommand* mRcsBuffer;
+        public Sw::RenderItem* mRisBuffer;
         public uint* mRisCount;
         public Plane* mFrustumBuffer;
-        public SwPerFrameData* mPerFrameBuffer;
-        public SwBounds* mSceneBoundsBuffer;
-        public SwNodeTransform* mSceneNodeTransformsBuffer;
-        public SwInstance* mSceneInstancesBuffer;
+        public Sw::PerFrameData* mPerFrameBuffer;
+        public Sw::Bounds* mSceneBoundsBuffer;
+        public Sw::NodeTransform* mSceneNodeTransformsBuffer;
+        public Sw::Instance* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
         public bool* mSceneVisibilityRisReadBuffer;
         public bool* mSceneVisibilityRisWriteBuffer;
@@ -43,8 +41,8 @@ namespace SwCull {
     };
 
     public struct CompactPC {
-        public SwRenderCommand* mPreRcsBuffer;
-        public SwRenderCommand* mPostRcsBuffer;
+        public Sw::RenderCommand* mPreRcsBuffer;
+        public Sw::RenderCommand* mPostRcsBuffer;
         public uint* mPostRcsCount;
         public uint mPreRcsLimit;
     };
