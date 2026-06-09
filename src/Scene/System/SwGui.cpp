@@ -186,7 +186,7 @@ void SwGui::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisPublishedCount, SwDependency::BufferDepType::HostRead);
     mScene.insertPass(SwPass::Type::Gui, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
-            SwRenderer::sRendererContext.mSwapchain->getWindowExtent(),
+            SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(),
             SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
             nullptr
         );

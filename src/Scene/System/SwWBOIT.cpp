@@ -59,7 +59,7 @@ void SwWBOIT::System::initializePasses() {
     deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
     mScene.insertPass(SwPass::Type::WBOITComposite, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, nullptr);
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, nullptr);
 
         cmd.beginRendering(renderInfo);
 
@@ -67,7 +67,7 @@ void SwWBOIT::System::initializePasses() {
         cmd.bindDescriptorSets(
             mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawLayout(), 0, mResources.mWorkDescriptorSet.getRawSet(), nullptr
         );
-        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
+        SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
         SwRenderer::sRendererContext.mStats->mNumDrawCall++;
 
@@ -80,14 +80,14 @@ void SwWBOIT::System::reInitializeOnResize() {
     mResources.mAccumImage = SwImageFactory::createColorImage2D(
         nullptr,
         SwSwapchain::DRAW_FORMAT,
-        vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1},
+        SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D(),
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
     mResources.mRvlImage = SwImageFactory::createColorImage2D(
         nullptr,
         SwWBOIT::RVL_FORMAT,
-        vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1},
+        SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D(),
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false,
         SwWBOIT::RVL_CLEAR_VALUE

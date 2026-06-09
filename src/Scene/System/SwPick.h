@@ -44,20 +44,21 @@ struct ReadbackData {
 
 struct Resources {
     SwAllocatedBuffer mReadbackBuffer;
-
+    
     SwColorImage2D mReadbackImage;
     SwDepthImage2D mDepthImage;
 
     SwDescriptorSet mReadbackDescriptorSet;
     SwDescriptorLayout mReadbackDescriptorLayout;
+    
+    ReadbackPC mReadbackPushConstants;
+    
+    SwComputePipelineBundle mReadbackPipelineBundle;
+    SwPipelineLayout mReadbackPipelineLayout;
 
     DrawPC mDrawPushConstants;
     SwGraphicsPipelineBundle mDrawPipelineBundle;
     SwPipelineLayout mDrawPipelineLayout;
-
-    ReadbackPC mReadbackPushConstants;
-    SwComputePipelineBundle mReadbackPipelineBundle;
-    SwPipelineLayout mReadbackPipelineLayout;
 
     ImGuizmo::OPERATION mImguizmoOperation{ImGuizmo::TRANSLATE};
     SwInstance* mSelectedInstance{nullptr};

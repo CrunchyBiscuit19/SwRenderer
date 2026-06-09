@@ -449,11 +449,11 @@ void SwCull::System::refresh() {
 
 void SwCull::System::reInitializeOnResize() {
     // PrepOcclusion
-    vk::Extent3D depthPyramidExtent = vk::Extent3D{
-        SwHelper::previousPow2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().width),
-        SwHelper::previousPow2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().height),
-        1,
-    };
+    vk::Extent3D depthImageExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
+    vk::Extent3D depthPyramidExtent = depthImageExtent;
+    depthPyramidExtent.width = SwHelper::previousPow2(depthPyramidExtent.width);
+    depthPyramidExtent.height = SwHelper::previousPow2(depthPyramidExtent.height);
+    
     mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(depthPyramidExtent);
     mResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
         nullptr, vk::Format::eR32Sfloat, depthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
@@ -476,16 +476,15 @@ void SwCull::System::reInitializeOnResize() {
     }
     mResources.mPrepOcclusionDescriptorSet.pushWrites();
 
-    vk::Extent3D depthExtent = vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1};
     mResources.mPrepOcclusionPushConstants.mDepthPyramidExtent = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
-    mResources.mPrepOcclusionPushConstants.mDepthFullExtent = glm::uvec2(depthExtent.width, depthExtent.height);
+    mResources.mPrepOcclusionPushConstants.mDepthFullExtent = glm::uvec2(depthImageExtent.width, depthImageExtent.height);
     mResources.mPrepOcclusionPushConstants.mDepthFullRatio =
-        glm::vec2(depthPyramidExtent.width / static_cast<float>(depthExtent.width), depthPyramidExtent.height / static_cast<float>(depthExtent.height));
+        glm::vec2(depthPyramidExtent.width / static_cast<float>(depthImageExtent.width), depthPyramidExtent.height / static_cast<float>(depthImageExtent.height));
 
     // Work*
     mResources.mWorkDescriptorSet.writeImage(0, mResources.mDepthPyramidImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mWorkDescriptorSet.pushWrites();
-    vk::Extent2D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent();
+    vk::Extent2D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D();
     mResources.mWorkPushConstants.mDrawExtents = glm::vec2(drawExtent.width, drawExtent.height);
     mResources.mWorkPushConstants.mDepthPyramidExtents = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }

@@ -18,7 +18,7 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
         auto& pipeline = batch.getGraphicsPipelineBundle();
 
         cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getRawPipeline());
-        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
+        SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.bindIndexBuffer(scene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
         cmd.bindDescriptorSets(
             pipeline.getBindPoint(), pipeline.getRawLayout(), 0, scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), nullptr
@@ -68,7 +68,7 @@ void SwGeometry::System::initializePasses() {
         mScene.insertPass(type, std::move(staticDeps), [&, early, materialType](vk::CommandBuffer cmd) {
             vk::RenderingAttachmentInfo color = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
             vk::RenderingAttachmentInfo depth = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
-            cmd.beginRendering(SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), color, depth));
+            cmd.beginRendering(SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), color, depth));
             drawBatches(mScene, mResources, cmd, mScene.getBatchIt(materialType), early);
             cmd.endRendering();
         });
@@ -85,7 +85,7 @@ void SwGeometry::System::initializePasses() {
             mScene.mWBOIT.getResources().mRvlImage.generateRenderingAttachment(),
         };
         vk::RenderingAttachmentInfo depth = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
-        cmd.beginRendering(SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colors, depth));
+        cmd.beginRendering(SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colors, depth));
         drawBatches(mScene, mResources, cmd, mScene.getBatchIt(SwMaterial::Type::Transparent), false);
         cmd.endRendering();
     });

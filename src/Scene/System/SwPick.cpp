@@ -79,19 +79,24 @@ void SwPick::System::initializePasses() {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
         vk::RenderingAttachmentInfo depthAttachment = mResources.mDepthImage.generateRenderingAttachment();
         const vk::RenderingInfo renderInfo =
-            SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
+            SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, depthAttachment);
 
         cmd.beginRendering(renderInfo);
 
         cmd.bindPipeline(mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getRawPipeline());
-        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
+
+        SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
+
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
+        
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
             if (batch.getRcs().empty()) {
                 continue;
             }
+        
             mResources.mDrawPushConstants.mDrawRcsBuffer = batch.getFinalRcsBuffer().getDeviceAddress().value();
             cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+            
             cmd.drawIndexedIndirectCount(
                 batch.getFinalRcsBuffer().getRawBuffer(),
                 0,
@@ -118,6 +123,7 @@ void SwPick::System::initializePasses() {
             mResources.mReadbackBuffer.copyFromUnchecked(glm::value_ptr(mousePos), sizeof(SwPick::ReadbackData::mCoords));
 
             cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getRawPipeline());
+
             cmd.bindDescriptorSets(
                 mResources.mReadbackPipelineBundle.getBindPoint(),
                 mResources.mReadbackPipelineBundle.getRawLayout(),
@@ -125,9 +131,11 @@ void SwPick::System::initializePasses() {
                 mResources.mReadbackDescriptorSet.getRawSet(),
                 nullptr
             );
+
             cmd.pushConstants<SwPick::ReadbackPC>(
                 mResources.mReadbackPipelineBundle.getRawLayout(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
             );
+
             cmd.dispatch(1, 1, 1);
         },
         true
@@ -169,7 +177,7 @@ void SwPick::System::initializePasses() {
 void SwPick::System::initializePushConstants() { mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value(); }
 
 void SwPick::System::reInitializeOnResize() {
-    vk::Extent3D imageExtent = vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1};
+    vk::Extent3D imageExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
     mResources.mReadbackImage = SwImageFactory::createColorImage2D(
         nullptr,
         vk::Format::eR32G32Uint,
@@ -177,7 +185,6 @@ void SwPick::System::reInitializeOnResize() {
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,
         false
     );
-
     mResources.mDepthImage =
         SwImageFactory::createDepthImage2D(nullptr, SwSwapchain::DEPTH_FORMAT, imageExtent, vk::ImageUsageFlagBits::eDepthStencilAttachment);
 
@@ -239,8 +246,8 @@ void SwPick::System::generatePickFrame() {
     ImGuizmo::SetRect(
         0,
         0,
-        static_cast<float>(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().width),
-        static_cast<float>(SwRenderer::sRendererContext.mSwapchain->getWindowExtent().height)
+        static_cast<float>(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().width),
+        static_cast<float>(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().height)
     );
 
     ImGuizmo::Manipulate(

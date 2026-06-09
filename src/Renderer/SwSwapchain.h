@@ -100,7 +100,8 @@ public:
     inline SwFrame& getPreviousFrame() { return mFrames[(mFrameNumber - 1) % NUM_FRAME_OVERLAP]; }
     inline bool getResizeRequested() const { return mResizeRequested; }
     inline void setResizeRequested(bool resizeRequested) { mResizeRequested = resizeRequested; }
-    inline vk::Extent2D getWindowExtent() const { return mWindowExtent; }
+    inline vk::Extent2D getWindowExtent2D() const { return mWindowExtent; }
+    inline vk::Extent3D getWindowExtent3D() const { return vk::Extent3D{mWindowExtent, 1}; }
     inline SwSwapchainImage& getCurrentSwapchainImage() { return mSwapchainImages[mSwapchainIndex]; }
 
     void acquireNextImage(uint64_t timeout);

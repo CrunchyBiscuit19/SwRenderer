@@ -85,7 +85,7 @@ void SwSkybox::System::initializePasses() {
     mScene.insertPass(SwPass::Type::SkyboxWork, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingAttachmentInfo depthAttachment = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachment, depthAttachment);
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, depthAttachment);
 
         cmd.beginRendering(renderInfo);
 
@@ -93,7 +93,7 @@ void SwSkybox::System::initializePasses() {
         cmd.bindDescriptorSets(
             mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawLayout(), 0, mResources.mWorkDescriptorSet.getRawSet(), nullptr
         );
-        SwPass::setViewportScissors(cmd, vk::Extent3D{SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), 1});
+        SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.pushConstants<SwSkybox::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwSkybox::WorkPC::sStages, 0, mResources.mWorkPushConstants);
         cmd.draw(SwSkybox::NUM_SKYBOX_VERTICES, 1, 0, 0);
         SwRenderer::sRendererContext.mStats->mNumDrawCall++;

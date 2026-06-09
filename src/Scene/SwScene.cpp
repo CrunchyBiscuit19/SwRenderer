@@ -31,13 +31,13 @@ void SwScene::initializeMiscPasses() {
         vk::RenderingAttachmentInfo depthAttachment =
             SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
         vk::RenderingInfo renderInfo =
-            SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), colorAttachments, depthAttachment);
+            SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachments, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
 
         depthAttachment = mPick.getResources().mDepthImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
-        renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent(), nullptr, depthAttachment);
+        renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), nullptr, depthAttachment);
 
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
