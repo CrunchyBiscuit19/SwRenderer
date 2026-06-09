@@ -28,8 +28,9 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
         mul(mul(mul(mul(workPc.mPerFrameBuffer->mPerspective.mProj, workPc.mPerFrameBuffer->mPerspective.mView), instanceTransformMatrix), nodeTransformMatrix),
             position);
     out.mNormal = v.mNormal;
-    out.mUv = float2(v.mUv.x, v.mUv.y);
+    out.mUv = v.mUv;
     out.mColor = v.mColor * materialConstant.mBaseFactor;
+    out.mAlphaCutoff = materialConstant.mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
     return out;
 }

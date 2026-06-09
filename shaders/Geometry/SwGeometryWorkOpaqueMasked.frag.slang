@@ -14,7 +14,7 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     float sunlightPower = 1.f;
 
     float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * SwGeometry::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
-    if (masked && diffuseColor.a < 0.0001f)
+    if (masked && in.mColor.a * diffuseColor.a < in.mAlphaCutoff)
         discard;
 
     float4 color = in.mColor * diffuseColor;

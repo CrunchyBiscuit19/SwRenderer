@@ -31,6 +31,7 @@ public struct SwMaterialConstant {
     public float2 mMetallicRoughnessFactor;
     public float mNormalScale;
     public float mOcclusionStrength;
+    public float mAlphaCutoff;
 };
 
 public typedef float4x4 SwNodeTransform;

@@ -57,6 +57,7 @@ public:
     glm::vec2 mMetallicRoughnessFactor;
     float mNormalScale;
     float mOcclusionStrength;
+    float mAlphaCutoff;
 
     static void init();
     static void cleanup();

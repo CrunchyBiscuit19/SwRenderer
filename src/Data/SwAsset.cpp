@@ -230,6 +230,7 @@ void SwAsset::constructMaterials() {
         if (material.occlusionTexture.has_value()) {
             constants.mOcclusionStrength = material.occlusionTexture.value().strength;
         }
+        constants.mAlphaCutoff = material.alphaMode == fastgltf::AlphaMode::Mask ? material.alphaCutoff : -1.f;
         materialConstants.emplace_back(constants);
 
         auto retrieveImage = [&](std::uint32_t imageIndex, SwMaterialTexture::Type texType) -> SwColorImage2D& {
