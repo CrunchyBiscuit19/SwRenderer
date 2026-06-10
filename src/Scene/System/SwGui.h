@@ -12,19 +12,25 @@
 
 class SwScene;
 
-class SwGui : public SwSystem {
-private:
-    enum class SwGuiComponent { Camera, Scene, Options, Stats, Controls };
+namespace SwGui {
 
-    static constexpr ImVec4 IMGUI_HEADER_GREEN{0.22f, 0.69f, 0.502f, 1.0f};
-    static constexpr ImVec4 IMGUI_BUTTON_RED{0.66f, 0.16f, 0.16f, 1.0f};
+enum class SwGuiComponent { Camera, Scene, Options, Stats, Controls };
 
+constexpr ImVec4 IMGUI_HEADER_GREEN{0.22f, 0.69f, 0.502f, 1.0f};
+constexpr ImVec4 IMGUI_BUTTON_RED{0.66f, 0.16f, 0.16f, 1.0f};
 
+struct Resources {
     SwDescriptorPool mDescriptorPool;
-    bool mCollapsed{false};
     std::unordered_map<SwGuiComponent, std::function<void()>> mGuiComponents;
     ImGui::FileBrowser mSelectAssetsFileBrowser;
     ImGui::FileBrowser mSelectSkyboxFileBrowser;
+};
+
+class System : public SwSystem {
+private:
+    Resources mResources;
+
+    bool mCollapsed{false};
 
     void createDockSpace();
     void createOptionsWindow() const;
@@ -33,11 +39,14 @@ private:
     void initializePasses() override;
 
 public:
+    System(SwScene& scene);
 
-    SwGui(SwScene& scene);
+    inline Resources& getResources() { return mResources; }
 
     void refresh() override;
     void refreshDynamicDependencies() override;
 
-    ~SwGui();
+    ~System();
 };
+
+}  // namespace SwGui

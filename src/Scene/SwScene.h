@@ -38,8 +38,7 @@ private:
     friend class SwWBOIT::System;
     friend class SwGeometry::System;
     friend class SwFXAA::System;
-    friend class SwGui;
-
+    friend class SwGui::System;
 
     SwCamera mCamera;
 
@@ -57,7 +56,7 @@ private:
     SwGeometry::System mGeometry;
     SwFXAA::System mFXAA;
     SwLighting::System mLighting;
-    SwGui mGui;
+    SwGui::System mGui;
 
     SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
     SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;

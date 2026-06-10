@@ -13,9 +13,9 @@
 #include <ranges>
 #include <vulkan/vulkan_raii.hpp>
 
-SwGui::SwGui(SwScene& scene) : SwSystem(scene) {}
+SwGui::System::System(SwScene& scene) : SwSystem(scene) {}
 
-void SwGui::initializeResources() {
+void SwGui::System::initializeResources() {
     ImGui::CreateContext();
     ImGui_ImplSDL2_InitForVulkan(SwRenderer::sRendererContext.mSwapchain->getWindowPtr());
 
@@ -27,14 +27,14 @@ void SwGui::initializeResources() {
     std::array<SwPoolSizeRatio, 1> ratios{
         {vk::DescriptorType::eCombinedImageSampler, 1000},
     };
-    mDescriptorPool = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorPool(ratios, 100);
+    mResources.mDescriptorPool = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorPool(ratios, 100);
 
     ImGui_ImplVulkan_InitInfo initInfo = {};
     initInfo.Instance = **SwRenderer::sRendererContext.mInstance;
     initInfo.PhysicalDevice = **SwRenderer::sRendererContext.mChosenGPU;
     initInfo.Device = **SwRenderer::sRendererContext.mDevice;
     initInfo.Queue = **SwRenderer::sRendererContext.mGraphicsQueue;
-    initInfo.DescriptorPool = mDescriptorPool.getRawPool();
+    initInfo.DescriptorPool = mResources.mDescriptorPool.getRawPool();
     initInfo.MinImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
     initInfo.ImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
     initInfo.UseDynamicRendering = true;
@@ -59,15 +59,16 @@ void SwGui::initializeResources() {
         col.z = pow(col.z, gamma);
     }
 
-    mSelectAssetsFileBrowser = ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection | ImGuiFileBrowserFlags_ConfirmOnEnter, ASSETS_PATH);
-    mSelectAssetsFileBrowser.SetTitle("Select GLTF / GLB File");
-    mSelectAssetsFileBrowser.SetTypeFilters({".glb", ".gltf"});
+    mResources.mSelectAssetsFileBrowser =
+        ImGui::FileBrowser::FileBrowser(ImGuiFileBrowserFlags_MultipleSelection | ImGuiFileBrowserFlags_ConfirmOnEnter, ASSETS_PATH);
+    mResources.mSelectAssetsFileBrowser.SetTitle("Select GLTF / GLB File");
+    mResources.mSelectAssetsFileBrowser.SetTypeFilters({".glb", ".gltf"});
 
-    mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(0, SKYBOXES_PATH);
-    mSelectSkyboxFileBrowser.SetTitle("Select HDR Skybox Image");
-    mSelectSkyboxFileBrowser.SetTypeFilters({".hdr"});
+    mResources.mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(0, SKYBOXES_PATH);
+    mResources.mSelectSkyboxFileBrowser.SetTitle("Select HDR Skybox Image");
+    mResources.mSelectSkyboxFileBrowser.SetTypeFilters({".hdr"});
 
-    mGuiComponents[SwGuiComponent::Camera] = [this]() {
+    mResources.mGuiComponents[SwGuiComponent::Camera] = [this]() {
         ImGui::Text("Camera Mode: %s", magic_enum::enum_name(mScene.getCamera().getMovementMode()).data());
         ImGui::Text("Mouse Mode: %s", (mScene.getCamera().getRelativeMode() ? "RELATIVE" : "NORMAL"));
         glm::vec3 camPos = mScene.getCamera().getPosition();
@@ -75,7 +76,7 @@ void SwGui::initializeResources() {
         ImGui::Text("Pitch & Yaw: [%.1f, %.1f]", mScene.getCamera().getPitch(), mScene.getCamera().getYaw());
         ImGui::Text("Speed: %.2f / %.2f", mScene.getCamera().getSpeed(), SwCamera::MAX_CAMERA_SPEED);
     };
-    mGuiComponents[SwGuiComponent::Scene] = [this]() {
+    mResources.mGuiComponents[SwGuiComponent::Scene] = [this]() {
         ImGui::Indent();
 
         for (auto& asset : mScene.getAssets() | std::views::values) {
@@ -123,12 +124,12 @@ void SwGui::initializeResources() {
 
         ImGui::Unindent();
     };
-    mGuiComponents[SwGuiComponent::Options] = [this]() {
+    mResources.mGuiComponents[SwGuiComponent::Options] = [this]() {
         ImGui::Indent();
 
         if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen)) {
             if (ImGui::Button("Change Skybox")) {
-                mSelectSkyboxFileBrowser.Open();
+                mResources.mSelectSkyboxFileBrowser.Open();
             }
             ImGui::SameLine();
             if (ImGui::Button("Toggle Skybox")) {
@@ -136,11 +137,11 @@ void SwGui::initializeResources() {
             }
         }
 
-        mSelectSkyboxFileBrowser.Display();
-        if (mSelectSkyboxFileBrowser.HasSelected()) {
-            std::filesystem::path selectedSkyboxFile = mSelectSkyboxFileBrowser.GetSelected();
+        mResources.mSelectSkyboxFileBrowser.Display();
+        if (mResources.mSelectSkyboxFileBrowser.HasSelected()) {
+            std::filesystem::path selectedSkyboxFile = mResources.mSelectSkyboxFileBrowser.GetSelected();
             mScene.getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxFile);
-            mSelectSkyboxFileBrowser.ClearSelected();
+            mResources.mSelectSkyboxFileBrowser.ClearSelected();
         }
 
         if (ImGui::CollapsingHeader("FXAA", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -149,7 +150,7 @@ void SwGui::initializeResources() {
 
         ImGui::Unindent();
     };
-    mGuiComponents[SwGuiComponent::Stats] = [this]() {
+    mResources.mGuiComponents[SwGuiComponent::Stats] = [this]() {
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());
         ImGui::Text("FPS:  %.2f", 1000.f / SwRenderer::sRendererContext.mStats->mFrameTime);
         ImGui::Text("Frame Time:  %.2fms", SwRenderer::sRendererContext.mStats->mFrameTime);
@@ -159,7 +160,7 @@ void SwGui::initializeResources() {
         ImGui::Text("Pre-Cull Render Items: %i", SwRenderer::sRendererContext.mStats->mNumInitialRis);
         ImGui::Text("Post-Cull Render Items: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRisPublishedCount.getMappedPtr()));
     };
-    mGuiComponents[SwGuiComponent::Controls] = [this]() {
+    mResources.mGuiComponents[SwGuiComponent::Controls] = [this]() {
         ImGui::Text("[G] Toggle GUI");
         ImGui::Text("[Alt + Enter] Toggle Borderless Fullscreen");
         ImGui::Text("[C] Change Camera Mode");
@@ -184,13 +185,13 @@ void SwGui::initializeResources() {
         }
 
         if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            mSelectAssetsFileBrowser.Open();
+            mResources.mSelectAssetsFileBrowser.Open();
             mScene.getCamera().setRelativeMode(SDL_FALSE);
         }
     });
 }
 
-void SwGui::initializePasses() {
+void SwGui::System::initializePasses() {
     SwDependency staticDeps;
 
     // Gui
@@ -208,7 +209,7 @@ void SwGui::initializePasses() {
     staticDeps.clear();
 }
 
-void SwGui::refresh() {
+void SwGui::System::refresh() {
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL2_NewFrame();
     ImGui::NewFrame();
@@ -217,17 +218,17 @@ void SwGui::refresh() {
     createOptionsWindow();
     mScene.getPickSystem().generatePickFrame();
 
-    mSelectAssetsFileBrowser.Display();
-    if (mSelectAssetsFileBrowser.HasSelected()) {
-        auto selectedFiles = mSelectAssetsFileBrowser.GetMultiSelected();
+    mResources.mSelectAssetsFileBrowser.Display();
+    if (mResources.mSelectAssetsFileBrowser.HasSelected()) {
+        auto selectedFiles = mResources.mSelectAssetsFileBrowser.GetMultiSelected();
         mScene.loadAssets(selectedFiles);
-        mSelectAssetsFileBrowser.ClearSelected();
+        mResources.mSelectAssetsFileBrowser.ClearSelected();
     }
 
     ImGui::Render();
 }
 
-void SwGui::refreshDynamicDependencies() {
+void SwGui::System::refreshDynamicDependencies() {
     SwDependency dynamicDeps;
 
     // Gui
@@ -238,7 +239,7 @@ void SwGui::refreshDynamicDependencies() {
     dynamicDeps.clear();
 }
 
-void SwGui::createDockSpace() {
+void SwGui::System::createDockSpace() {
     static ImGuiDockNodeFlags dockSpaceFlags = ImGuiDockNodeFlags_NoDockingOverCentralNode | ImGuiDockNodeFlags_PassthruCentralNode;
     static ImGuiWindowFlags windowFlags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize |
                                           ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus |
@@ -260,7 +261,7 @@ void SwGui::createDockSpace() {
     ImGui::PopStyleVar(3);
 }
 
-void SwGui::createOptionsWindow() const {
+void SwGui::System::createOptionsWindow() const {
     if (mCollapsed) return;
     if (!ImGui::Begin("Options", nullptr, ImGuiWindowFlags_NoDecoration)) {
         ImGui::End();
@@ -270,14 +271,14 @@ void SwGui::createOptionsWindow() const {
         ImGui::End();
         return;
     }
-    for (auto& component : mGuiComponents) {
+    for (auto& component : mResources.mGuiComponents) {
         if (!ImGui::CollapsingHeader(magic_enum::enum_name(component.first).data())) continue;
         component.second();
     }
     ImGui::End();
 }
 
-SwGui::~SwGui() {
+SwGui::System::~System() {
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
 }
