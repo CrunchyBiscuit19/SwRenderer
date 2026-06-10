@@ -62,8 +62,8 @@ void SwPick::System::initializeResources() {
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);
-        if (keyState[SDL_SCANCODE_DELETE] && mResources.mSelectedInstance != nullptr && e.type == SDL_KEYDOWN && !e.key.repeat) {
-            mResources.mSelectedInstance->markDelete();
+        if (keyState[SDL_SCANCODE_DELETE] && mSelectedInstance != nullptr && e.type == SDL_KEYDOWN && !e.key.repeat) {
+            mSelectedInstance->markDelete();
         }
     });
 
@@ -182,18 +182,18 @@ void SwPick::System::initializePasses() {
             );
 
             if (read.x == 0 || read.y == 0) {
-                mResources.mSelectedInstance = nullptr;
+                mSelectedInstance = nullptr;
                 return;
             }
             std::uint32_t assetId = read.x - 1;
             if (!mScene.getAssets().contains(assetId)) {
-                mResources.mSelectedInstance = nullptr;
+                mSelectedInstance = nullptr;
                 return;
             }
             SwAsset& selectedAsset = mScene.getAssets()[assetId];
 
             std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
-            mResources.mSelectedInstance = &selectedAsset.getInstances()[localInstanceIndex];
+            mSelectedInstance = &selectedAsset.getInstances()[localInstanceIndex];
         },
         true
     );
@@ -248,23 +248,23 @@ void SwPick::System::refreshPushConstants() {
 }
 
 void SwPick::System::changePickOperation() {
-    switch (mResources.mImguizmoOperation) {
+    switch (mImguizmoOperation) {
         case ImGuizmo::TRANSLATE:
-            mResources.mImguizmoOperation = ImGuizmo::ROTATE;
+            mImguizmoOperation = ImGuizmo::ROTATE;
             break;
         case ImGuizmo::ROTATE:
-            mResources.mImguizmoOperation = ImGuizmo::SCALEU;
+            mImguizmoOperation = ImGuizmo::SCALEU;
             break;
         case ImGuizmo::SCALEU:
-            mResources.mImguizmoOperation = ImGuizmo::TRANSLATE;
+            mImguizmoOperation = ImGuizmo::TRANSLATE;
             break;
         default:
-            mResources.mImguizmoOperation = ImGuizmo::TRANSLATE;
+            mImguizmoOperation = ImGuizmo::TRANSLATE;
     }
 }
 
 void SwPick::System::generatePickFrame() {
-    if (mResources.mSelectedInstance == nullptr) return;
+    if (mSelectedInstance == nullptr) return;
 
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
@@ -280,13 +280,13 @@ void SwPick::System::generatePickFrame() {
     ImGuizmo::Manipulate(
         glm::value_ptr(mScene.getCamera().getPerspective().getView()),
         glm::value_ptr(mScene.getCamera().getPerspective().getProjGL()),
-        mResources.mImguizmoOperation,
+        mImguizmoOperation,
         ImGuizmo::WORLD,
-        glm::value_ptr(mResources.mSelectedInstance->getData().mTransformMatrix)
+        glm::value_ptr(mSelectedInstance->getData().mTransformMatrix)
     );
 
     if (ImGuizmo::IsUsing()) {
-        mScene.getAsset(mResources.mSelectedInstance->getAssetId()).setReloadInstancesFlag(true);
+        mScene.getAsset(mSelectedInstance->getAssetId()).setReloadInstancesFlag(true);
     }
 }
 

@@ -170,8 +170,8 @@ void SwScene::unloadAssetsAndInstances() {
             mAlreadyLoadedAssets.erase(asset.getName());
             mFlags.mAssetUnloaded = true;
             std::erase_if(asset.getInstances(), [&](const SwInstance& instance) {
-                if (instance.isMarkedDelete() && &instance == SwRenderer::sRendererContext.mScene->getPickSystem().getResources().mSelectedInstance) {
-                    SwRenderer::sRendererContext.mScene->getPickSystem().getResources().mSelectedInstance = nullptr;
+                if (instance.isMarkedDelete() && &instance == SwRenderer::sRendererContext.mScene->getPickSystem().getSelectedInstancePtr()) {
+                    SwRenderer::sRendererContext.mScene->getPickSystem().setSelectedInstancePtr(nullptr);
                     mFlags.mInstanceUnloaded = true;
                 }
                 return instance.isMarkedDelete();

@@ -58,13 +58,13 @@ struct Resources {
     SwGraphicsPipelineBundle mDrawOpaqueTransparentPipelineBundle;
     SwGraphicsPipelineBundle mDrawMaskedPipelineBundle;
     SwPipelineLayout mDrawPipelineLayout;
-
-    ImGuizmo::OPERATION mImguizmoOperation{ImGuizmo::TRANSLATE};
-    SwInstance* mSelectedInstance{nullptr};
 };
 class System : public SwSystem, public SwSystem::Resizable {
 private:
     Resources mResources;
+
+    ImGuizmo::OPERATION mImguizmoOperation{ImGuizmo::TRANSLATE};
+    SwInstance* mSelectedInstance{nullptr};
 
     void initializeResources() override;
     void initializePasses() override;
@@ -80,6 +80,9 @@ public:
     bool isPicked();
 
     inline Resources& getResources() { return mResources; }
+    inline ImGuizmo::OPERATION getImguizmoOperation() { return mImguizmoOperation; }
+    inline SwInstance* getSelectedInstancePtr() { return mSelectedInstance; }
+    inline void setSelectedInstancePtr(SwInstance* selectedInstancePtr) { mSelectedInstance = selectedInstancePtr; }
 
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
