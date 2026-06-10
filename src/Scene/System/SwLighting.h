@@ -7,10 +7,14 @@
 
 namespace SwLighting {
 
-class System : public SwSystem {
-private:
+struct Resources {
     std::vector<SwLight::Data> mAssetLights;  // per-instance records emitted by asset SwLightNodes during regen
     std::vector<SwLight> mGlobalLights;       // STUB: editor/default lights with no owning asset — empty for now
+};
+
+class System : public SwSystem {
+private:
+    Resources mResources;
 
     void initializeResources() override;
     void initializePasses() override;
@@ -18,8 +22,9 @@ private:
 public:
     System(SwScene& scene);
 
-    inline std::vector<SwLight::Data>& getAssetLights() { return mAssetLights; }
-    inline std::vector<SwLight>& getGlobalLights() { return mGlobalLights; }
+    inline Resources& getResources() { return mResources; }
+    inline std::vector<SwLight::Data>& getAssetLights() { return mResources.mAssetLights; }
+    inline std::vector<SwLight>& getGlobalLights() { return mResources.mGlobalLights; }
 };
 
 }  // namespace SwLighting
