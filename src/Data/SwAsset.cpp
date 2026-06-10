@@ -57,6 +57,17 @@ vk::SamplerAddressMode SwAsset::extractAddressMode(fastgltf::Wrap wrap) {
     }
 }
 
+SwLight::Type SwAsset::mapLightType(fastgltf::LightType type) {
+    switch (type) {
+        case fastgltf::LightType::Directional:
+            return SwLight::Type::Directional;
+        case fastgltf::LightType::Spot:
+            return SwLight::Type::Spot;
+        case fastgltf::LightType::Point:
+        default:
+            return SwLight::Type::Point;
+    }
+}
 
 void SwAsset::cleanup() { sSamplers.clear(); }
 
@@ -64,7 +75,7 @@ std::string SwAsset::getNameFromFilePath(const std::filesystem::path& assetPath)
 
 void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     mName = getNameFromFilePath(assetPath);
-    fastgltf::Parser parser{};
+    fastgltf::Parser parser{fastgltf::Extensions::KHR_lights_punctual};
     fastgltf::Asset gltf;
     fastgltf::GltfDataBuffer data;
     constexpr auto gltfOptions = fastgltf::Options::DontRequireValidAssetMember | fastgltf::Options::AllowDouble | fastgltf::Options::LoadGLBBuffers |
@@ -405,6 +416,22 @@ void SwAsset::constructMeshes() {
     });
 }
 
+void SwAsset::constructLights() {
+    mLights.reserve(mRawAsset.lights.size());  // reserve once so SwLightNode references stay valid
+
+    for (const fastgltf::Light& rawLight : mRawAsset.lights) {
+        SwLight::Params params;
+        params.mType = mapLightType(rawLight.type);
+        params.mColor = glm::vec3(rawLight.color[0], rawLight.color[1], rawLight.color[2]);
+        params.mIntensity = rawLight.intensity;
+        if (rawLight.range.has_value()) params.mRange = rawLight.range.value();
+        if (rawLight.innerConeAngle.has_value()) params.mInnerConeAngle = rawLight.innerConeAngle.value();
+        if (rawLight.outerConeAngle.has_value()) params.mOuterConeAngle = rawLight.outerConeAngle.value();
+
+        mLights.emplace_back(params);
+    }
+}
+
 void SwAsset::constructNodes() {
     mNodes.reserve(mRawAsset.nodes.size());
 
@@ -434,6 +461,8 @@ void SwAsset::constructNodes() {
         std::shared_ptr<SwNode> localNode = std::make_shared<SwNode>(name, relativeNodeIndex, localTransform);
         if (rawNode.meshIndex.has_value()) {
             localNode = std::make_shared<SwMeshNode>(name, relativeNodeIndex, localTransform, mMeshes[*rawNode.meshIndex]);
+        } else if (rawNode.lightIndex.has_value()) {
+            localNode = std::make_shared<SwLightNode>(name, relativeNodeIndex, localTransform, mLights[*rawNode.lightIndex], mId);
         }
 
         mNodes.emplace_back(localNode);
@@ -476,6 +505,7 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     constructSamplerAndSamplerOptions();
     constructMaterials();
     constructMeshes();
+    constructLights();
     constructNodes();
     SwRenderer::sRendererContext.mScene->mFlags.mAssetLoaded = true;
 }

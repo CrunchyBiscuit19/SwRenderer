@@ -69,3 +69,18 @@ void SwMeshNode::generateRcsAndRis() {
 
     SwNode::generateRcsAndRis();
 }
+
+SwLightNode::SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwLight& light, std::uint32_t assetId)
+    : SwNode(name, relativeNodeIndex, localTransform), mLight(light), mAssetId(assetId) {}
+
+void SwLightNode::generateRcsAndRis() {
+    SwScene& scene = *SwRenderer::sRendererContext.mScene;
+    SwAsset& asset = scene.getAsset(mAssetId);
+
+    const std::uint32_t nodeTransformIndex = asset.mFirstNodeTransformInScene + mRelativeNodeIndex;
+    for (std::uint32_t i = 0; i < asset.getInstances().size(); i++) {
+        scene.getLightingSystem().getAssetLights().emplace_back(mLight.toData(nodeTransformIndex, asset.mFirstInstanceInScene + i));
+    }
+
+    SwNode::generateRcsAndRis();  // recurse to children
+}

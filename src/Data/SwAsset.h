@@ -25,13 +25,18 @@ private:
     fastgltf::Asset mRawAsset;
 
     std::vector<SwMesh> mMeshes;
+
+    std::vector<SwLight> mLights;
+
     static std::unordered_map<SwSamplerOptions, SwSampler> sSamplers;
     std::vector<SwSamplerOptions> mSamplerOptions;
+    
     std::vector<std::optional<SwColorImage2D>> mImages;
     std::vector<bool> mImageCreated;
+    
     std::vector<SwMaterial> mMaterials;
     SwAllocatedBuffer mMaterialConstantsBuffer;
-
+    
     std::vector<std::shared_ptr<SwNode>> mTopNodes;
     std::vector<std::shared_ptr<SwNode>> mNodes;
     SwAllocatedBuffer mNodeTransformsBuffer;
@@ -45,6 +50,7 @@ private:
     static vk::Filter extractFilter(fastgltf::Filter filter);
     static vk::SamplerMipmapMode extractMipmapMode(fastgltf::Filter filter);
     static vk::SamplerAddressMode extractAddressMode(fastgltf::Wrap wrap);
+    static SwLight::Type mapLightType(fastgltf::LightType type);
 
     void loadRawAsset(std::filesystem::path& assetPath);
     void constructBuffers();
@@ -52,6 +58,7 @@ private:
     void constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type texType);
     void constructMaterials();
     void constructMeshes();
+    void constructLights();
     void constructNodes();
 
 public:
@@ -86,6 +93,7 @@ public:
     inline bool getReloadInstancesFlag() { return mReloadInstancesFlag; }
     inline std::span<SwMesh> getMeshes() { return mMeshes; }
     inline std::span<SwMaterial> getMaterials() { return mMaterials; }
+    inline std::span<SwLight> getLights() { return mLights; }
     inline std::span<std::shared_ptr<SwNode>> getNodes() { return mNodes; }
     inline SwAllocatedBuffer& getMaterialConstantsBuffer() { return mMaterialConstantsBuffer; }
     inline SwAllocatedBuffer& getNodeTransformsBuffer() { return mNodeTransformsBuffer; }

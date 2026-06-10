@@ -113,6 +113,7 @@ void SwGui::initializeResources() {
             }
             ImGui::PopStyleColor();
         }
+        
         /*if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) { // TODO introduce lighting later
             ImGui::ColorEdit3("Ambient Color", glm::value_ptr(mScene.mPerspective.mData.ambientColor));
             ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(mScene.mPerspective.mData.sunlightColor));

@@ -74,6 +74,10 @@ void SwScene::initializeResources() {
         vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t), true
     );
 
+    mSceneLightsBuffer = SwBufferFactory::createAllocatedBuffer(
+        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_LIGHTS * sizeof(SwLight::Data), true
+    );
+
     for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
         mSceneVisibilityRisBuffers[i] = SwBufferFactory::createAllocatedBuffer(
             vk::BufferUsageFlagBits::eStorageBuffer,
@@ -107,7 +111,7 @@ void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     );
 }
 
-SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mFXAA(*this), mGui(*this) {}
+SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mFXAA(*this), mLighting(*this), mGui(*this) {}
 
 void SwScene::initialize() {
     mCamera.initialize();
@@ -122,6 +126,7 @@ void SwScene::initialize() {
     mWBOIT.initialize();
     mGeometry.initialize();
     mFXAA.initialize();
+    mLighting.initialize();
 }
 
 void SwScene::resize() {
@@ -184,6 +189,7 @@ void SwScene::markAllAssetsDelete() {
 
 void SwScene::regenerateRcsAndRis() {
     SwBatch::sFirstRiOffset = 0;
+    mLighting.getAssetLights().clear();
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
@@ -193,8 +199,10 @@ void SwScene::regenerateRcsAndRis() {
     }
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getInstances().size() == 0) continue;
-        asset.generateRcsAndRis();
+        asset.generateRcsAndRis();  // SwLightNodes append their per-instance light records into the lighting system
     }
+
+    reloadSceneLightsBuffer();
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
@@ -404,6 +412,27 @@ void SwScene::reloadSceneInstancesBuffer() {
             mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy);
         });
     }
+}
+
+void SwScene::reloadSceneLightsBuffer() {
+    if (mLighting.getAssetLights().empty()) {
+        return;
+    }
+
+    const vk::DeviceSize lightsSize = mLighting.getAssetLights().size() * sizeof(SwLight::Data);
+
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, lightsSize](vk::CommandBuffer cmd) {
+        mSceneLightsBuffer.ensureCapacity(cmd, lightsSize);
+
+        vk::BufferCopy lightsCopy{};
+        lightsCopy.dstOffset = 0;
+        lightsCopy.srcOffset = 0;
+        lightsCopy.size = lightsSize;
+
+        SwLight::sLightsStaging.copyFrom(cmd, mLighting.getAssetLights().data(), lightsSize);
+        mSceneLightsBuffer.copyFrom(cmd, SwLight::sLightsStaging, lightsCopy);
+        mSceneLightsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+    });
 }
 
 void SwScene::reloadSceneMaterialResourcesArray() {

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Data/SwLight.h>
 #include <Resource/SwBuffer.h>
 
 #include <glm/glm.hpp>
@@ -49,6 +50,18 @@ class SwMeshNode : public SwNode {
 
 public:
     SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh);
+
+    void generateRcsAndRis() override;
+};
+
+class SwLightNode : public SwNode {
+    SwLight& mLight;  
+    std::uint32_t mAssetId;
+
+public:
+    SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwLight& light, std::uint32_t assetId);
+
+    inline SwLight& getLight() { return mLight; }
 
     void generateRcsAndRis() override;
 };

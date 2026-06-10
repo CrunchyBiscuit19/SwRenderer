@@ -11,6 +11,7 @@
 #include <Scene/System/SwPick.h>
 #include <Scene/System/SwGeometry.h>
 #include <Scene/System/SwFXAA.h>
+#include <Scene/System/SwLighting.h>
 #include <Scene/SwRenderGraph.h>
 #include <Scene/System/SwWBOIT.h>
 
@@ -55,6 +56,7 @@ private:
     SwWBOIT::System mWBOIT;
     SwGeometry::System mGeometry;
     SwFXAA::System mFXAA;
+    SwLighting::System mLighting;
     SwGui mGui;
 
     SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
@@ -68,6 +70,8 @@ private:
     SwAllocatedBuffer mSceneDrawRisIndicesBuffer;
     std::array<SwAllocatedBuffer, 2> mSceneVisibilityRisBuffers;
     std::uint32_t mSceneVisibilityRisBufferReadIndex{0};
+
+    SwAllocatedBuffer mSceneLightsBuffer;  // fed from mLighting's light lists in reloadSceneLightsBuffer()
 
     SwRenderGraph mRenderGraph;
 
@@ -87,6 +91,7 @@ public:
     static constexpr std::uint32_t SCENE_INITIAL_NUM_INSTANCES{1 << 8};
     static constexpr std::uint32_t SCENE_INITIAL_NUM_BOUNDS{1 << 12};
     static constexpr std::uint32_t SCENE_INITIAL_NUM_RENDER_ITEMS{1 << 18};
+    static constexpr std::uint32_t SCENE_INITIAL_NUM_LIGHTS{1 << 6};
 
     Flags mFlags;
 
@@ -119,6 +124,7 @@ public:
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
     inline SwAllocatedBuffer& getSceneDrawRisIndicesBuffer() { return mSceneDrawRisIndicesBuffer; }
+    inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
     inline void toggleSceneVisibilityRisBuffer() { mSceneVisibilityRisBufferReadIndex = 1 - mSceneVisibilityRisBufferReadIndex; }
     inline SwAllocatedBuffer& getSceneVisibilityRisReadBuffer() { return mSceneVisibilityRisBuffers[mSceneVisibilityRisBufferReadIndex]; }
     inline SwAllocatedBuffer& getSceneVisibilityRisWriteBuffer() { return mSceneVisibilityRisBuffers[1 - mSceneVisibilityRisBufferReadIndex]; }
@@ -127,6 +133,7 @@ public:
     inline SwPick::System& getPickSystem() { return mPick; }
     inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }
     inline SwFXAA::System& getFXAASystem() { return mFXAA; }
+    inline SwLighting::System& getLightingSystem() { return mLighting; }
 
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssetsAndInstances();
@@ -147,6 +154,7 @@ public:
     void reloadSceneNodeTransformsBuffer();
     void reloadSceneBoundsBuffer();
     void reloadSceneInstancesBuffer();
+    void reloadSceneLightsBuffer();
     void reloadSceneMaterialResourcesArray();
     void reloadSceneBuffers();
 

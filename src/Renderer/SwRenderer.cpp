@@ -202,6 +202,7 @@ SwRenderer::SwRenderer()
     SwMesh::init();
     SwBounds::init();
     SwNode::init();
+    SwLight::init();
     SwMaterialConstants::init();
 
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
@@ -264,6 +265,7 @@ SwRenderer::~SwRenderer() {
     SwMesh::cleanup();
     SwBounds::cleanup();
     SwNode::cleanup();
+    SwLight::cleanup();
     SwMaterialConstants::cleanup();
     SwMaterialResources::cleanup();
     SwImageFactory::cleanup();
