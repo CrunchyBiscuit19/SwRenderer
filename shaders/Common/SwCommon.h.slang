@@ -11,8 +11,18 @@ namespace Sw {
         public float4x4 mProj;
     };
 
+    public struct Sunlight {
+        public float3 mAmbient;
+        public float mIntensity;
+        public float3 mDirection;
+        public float mPad0;
+        public float3 mColor;
+        public float mPad1;
+    };
+
     public struct PerFrameData {
         public Perspective mPerspective;
+        public Sunlight mSunlight;
     };
 
     public struct Vertex {
@@ -79,11 +89,4 @@ namespace Sw {
             this.mSceneInstanceIndex = src.mSceneInstanceIndex;
         }
     }
-
-    public struct Sunlight {
-        public float3 mAmbient;
-        public float3 mDirection;
-        public float mIntensity;
-        public float3 mColor;
-    };
 }

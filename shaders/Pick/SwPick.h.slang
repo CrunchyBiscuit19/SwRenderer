@@ -31,6 +31,17 @@ namespace SwPick {
 
     public typedef VSOutput FSInput;
 
+    // Opaque / transparent picking only needs the IDs (no alpha test), so it carries a minimal set of
+    // varyings. Pairing this with the full VSOutput would leave the unused outputs unconsumed by the
+    // fragment stage, which the validation layers flag.
+    public struct VSOutputOpaque {
+        public float4 mPosition : SV_Position;
+        public nointerpolation uint mModelIndex;
+        public nointerpolation uint mInstanceIndex;
+    };
+
+    public typedef VSOutputOpaque FSInputOpaque;
+
     public struct ReadbackData {
         public int2 mCoords;
         public uint2 mRead;

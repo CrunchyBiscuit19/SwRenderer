@@ -4,7 +4,9 @@ import SwPick;
 [[vk::push_constant]]
 SwPick::DrawPC pickDrawPc;
 
-SwPick::VSOutput main(SwPick::VSInput in) {
+// Shared transform work for both pick draw vertex entry points. The opaque entry only consumes the
+// IDs, so the material-constant fetch below is dead-code-eliminated for it.
+SwPick::VSOutput computeVertex(SwPick::VSInput in) {
     SwPick::VSOutput out;
 
     Sw::Vertex v = pickDrawPc.mSceneVertexBuffer[in.mVertexIndex];
@@ -33,4 +35,20 @@ SwPick::VSOutput main(SwPick::VSInput in) {
     out.mInstanceIndex = mSceneInstanceIndex;
 
     return out;
+}
+
+[shader("vertex")]
+SwPick::VSOutputOpaque mainOpaque(SwPick::VSInput in) {
+    SwPick::VSOutput full = computeVertex(in);
+
+    SwPick::VSOutputOpaque out;
+    out.mPosition = full.mPosition;
+    out.mModelIndex = full.mModelIndex;
+    out.mInstanceIndex = full.mInstanceIndex;
+    return out;
+}
+
+[shader("vertex")]
+SwPick::VSOutput mainMasked(SwPick::VSInput in) {
+    return computeVertex(in);
 }

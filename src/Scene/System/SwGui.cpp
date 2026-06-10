@@ -115,12 +115,13 @@ void SwGui::System::initializeResources() {
             ImGui::PopStyleColor();
         }
         
-        /*if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) { // TODO introduce lighting later
-            ImGui::ColorEdit3("Ambient Color", glm::value_ptr(mScene.mPerspective.mData.ambientColor));
-            ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(mScene.mPerspective.mData.sunlightColor));
-            ImGui::SliderFloat3("Sunlight Direction", glm::value_ptr(mScene.mPerspective.mData.sunlightDirection), 0.f, 10.f);
-            ImGui::InputFloat("Sunlight Power", &mScene.mPerspective.mData.sunlightDirection[3]);
-        }*/
+        if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
+            SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
+            ImGui::ColorEdit3("Ambient Color", glm::value_ptr(sunlight.mAmbient));
+            ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(sunlight.mColor));
+            ImGui::SliderFloat3("Sunlight Direction", glm::value_ptr(sunlight.mDirection), -1.f, 1.f);
+            ImGui::InputFloat("Sunlight Intensity", &sunlight.mIntensity);
+        }
 
         ImGui::Unindent();
     };

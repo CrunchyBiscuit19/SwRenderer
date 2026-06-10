@@ -19,9 +19,14 @@
 struct SwRendererContext;
 
 class SwFrame {
-private:
-    static constexpr std::uint32_t PER_FRAME_BUFFER_SIZE{sizeof(SwPerspective)};
+public:
+    struct Data {
+        SwPerspective mPerspective;
+        SwSunlight mSunlight;
+    };
 
+private:
+    static constexpr std::uint32_t PER_FRAME_BUFFER_SIZE{sizeof(Data)};
 
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;

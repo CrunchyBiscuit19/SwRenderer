@@ -8,8 +8,9 @@
 namespace SwLighting {
 
 struct Resources {
-    std::vector<SwLight::Data> mAssetLights;  // per-instance records emitted by asset SwLightNodes during regen
-    std::vector<SwLight> mGlobalLights;       // STUB: editor/default lights with no owning asset — empty for now
+    SwSunlight mSunlight;                     // Single scene-global directional light, uploaded per frame via PerFrameData
+    std::vector<SwLight::Data> mAssetLights;  // Per-instance records emitted by asset SwLightNodes during regen
+    std::vector<SwLight> mGlobalLights;       // Editor lights with no owning asset — STUB empty for now
 };
 
 class System : public SwSystem {
@@ -23,6 +24,7 @@ public:
     System(SwScene& scene);
 
     inline Resources& getResources() { return mResources; }
+    inline SwSunlight& getSunlight() { return mResources.mSunlight; }
     inline std::vector<SwLight::Data>& getAssetLights() { return mResources.mAssetLights; }
     inline std::vector<SwLight>& getGlobalLights() { return mResources.mGlobalLights; }
 };

@@ -47,9 +47,11 @@ void SwPick::System::initializeResources() {
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
 
+    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
     drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
     mResources.mDrawOpaqueTransparentPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
 
+    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
     drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
     mResources.mDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
 

@@ -52,3 +52,13 @@ public:
     static void init();
     static void cleanup();
 };
+
+struct SwSunlight {
+    glm::vec3 mAmbient{0.03f};
+    float mIntensity{1.f};
+    glm::vec3 mDirection{1.f, 0.f, 0.f};
+    float mPad0{0.f};
+    glm::vec3 mColor{1.f};
+    float mPad1{0.f};
+};
+static_assert(sizeof(SwSunlight) == 48);

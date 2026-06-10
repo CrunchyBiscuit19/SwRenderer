@@ -1,4 +1,4 @@
-#include <Data/SwCamera.h>
+
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <VkBootstrap.h>
@@ -18,8 +18,12 @@ void SwFrame::initialize() {
 }
 
 void SwFrame::update() {
-    SwPerspective perspective = SwRenderer::sRendererContext.mScene->getCamera().getPerspective();
-    mPerFrameBuffer.copyFromUnchecked(&perspective, sizeof(SwPerspective));
+    SwScene& scene = *SwRenderer::sRendererContext.mScene;
+    Data perFrameData{
+        .mPerspective = scene.getCamera().getPerspective(),
+        .mSunlight = scene.getLightingSystem().getSunlight(),
+    };
+    mPerFrameBuffer.copyFromUnchecked(&perFrameData, sizeof(Data));
 }
 
 vk::ClearColorValue SwSwapchain::DRAW_CLEAR_VALUE{.463f, .616f, .859f, 0.f};

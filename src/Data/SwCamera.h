@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Data/SwLight.h>
 #include <Scene/System/SwCull.h>
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwBuffer.h>
