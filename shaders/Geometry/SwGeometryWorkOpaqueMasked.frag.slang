@@ -4,6 +4,9 @@ import SwCommon;
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
 
+[[vk::push_constant]]
+SwGeometry::WorkPC workPc;
+
 // Shared shading for the opaque and masked geometry passes. `masked` is a compile-time
 // constant at each entry point below, so the opaque path folds away the discard entirely
 // (no OpKill -> [earlydepthstencil] stays valid and early-Z is preserved), while the masked
@@ -14,8 +17,11 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     float sunlightPower = 1.f;
 
     float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * Sw::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
-    if (masked && in.mColor.a * diffuseColor.a < in.mAlphaCutoff)
-        discard;
+    if (masked) {
+        float alphaCutoff = workPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex].mAlphaCutoff;
+        if (in.mColor.a * diffuseColor.a < alphaCutoff)
+            discard;
+    }
 
     float4 color = in.mColor * diffuseColor;
     float finalAlpha = color.a;
@@ -47,5 +53,3 @@ SwGeometry::FSOutputOpaque mainMasked(SwGeometry::FSInput in) : SV_Target {
     output.mColor = shade(in, true);
     return output;
 }
-
-// TODO un-hardcode sunlight data

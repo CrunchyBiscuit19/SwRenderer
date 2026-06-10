@@ -12,10 +12,6 @@ SwDependency::ImageDep::ImageDep(SwImage* image, vk::PipelineStageFlags2 stage, 
 const SwDependency::ImageDepDesc SwDependency::ImageDepDesc::get(SwDependency::ImageDepType type) {
     switch (type) {
         case SwDependency::ImageDepType::ColorAttachmentReadWrite:
-            // Read is required as well as write: every color attachment in this engine is loaded (loadOp=eLoad)
-            // and many are blended (dstColorBlendFactor != eZero), both of which read the destination. Without
-            // eColorAttachmentRead in the barrier's dstAccessMask, a preceding clear/write is not guaranteed
-            // visible to the subsequent load/blend, producing stale-destination ghosting.
             return {
                 vk::PipelineStageFlagBits2::eColorAttachmentOutput,
                 vk::AccessFlagBits2::eColorAttachmentRead | vk::AccessFlagBits2::eColorAttachmentWrite,
@@ -69,6 +65,8 @@ const SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDependency:
     switch (type) {
         case SwDependency::BufferDepType::VertexShaderStorageRead:
             return {vk::PipelineStageFlagBits2::eVertexShader, vk::AccessFlagBits2::eShaderStorageRead};
+        case SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead:
+            return {vk::PipelineStageFlagBits2::eVertexShader | vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderStorageRead};
         case SwDependency::BufferDepType::IndexRead:
             return {vk::PipelineStageFlagBits2::eIndexInput, vk::AccessFlagBits2::eIndexRead};
         case SwDependency::BufferDepType::IndirectRead:

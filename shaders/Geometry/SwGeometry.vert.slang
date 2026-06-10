@@ -30,7 +30,6 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     out.mNormal = v.mNormal;
     out.mUv = v.mUv;
     out.mColor = v.mColor * materialConstant.mBaseFactor;
-    out.mAlphaCutoff = materialConstant.mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
     return out;
 }

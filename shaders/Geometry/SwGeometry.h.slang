@@ -24,7 +24,6 @@ namespace SwGeometry {
         public float3 mNormal : NORMAL;
         public float2 mUv : TEXCOORD0;
         public float4 mColor : COLOR0;
-        public nointerpolation float mAlphaCutoff;
         public nointerpolation uint mMaterialIndex;
     };
 

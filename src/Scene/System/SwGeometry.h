@@ -18,7 +18,7 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mDrawRcsBuffer;
     vk::DeviceAddress mPerFrameBuffer;
 
-    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 };
 
 struct Resources {
