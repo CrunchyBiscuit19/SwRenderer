@@ -69,7 +69,7 @@ namespace SwGeometry {
         float3 albedo, float3 worldPos, float3 normal, Sw::Sunlight sun, Sw::Light* lights, uint lightCount, Sw::Instance* instances,
         Sw::NodeTransform* nodeTransforms
     ) {
-        float3 toSunDir = normalize(-sun.mDirection);  
+        float3 toSunDir = sun.getDirection();  // unit vector from the surface toward the sun
         float3 color = albedo * max(dot(normal, toSunDir), 0.f) * sun.mColor * sun.mIntensity;
         color += albedo * sun.mAmbient;
         for (uint i = 0; i < lightCount; i++) {

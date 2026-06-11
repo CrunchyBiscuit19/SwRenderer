@@ -56,14 +56,6 @@ public:
 struct SwSunlight {
     glm::vec3 mAmbient{0.03f};
     float mIntensity{1.f};
-    glm::vec3 mDirection{1.f, 0.f, 0.f};
-    float mPad0{0.f};
+    glm::vec2 mAzimuthElevation{0.f};  
     glm::vec3 mColor{1.f};
-    float mPad1{0.f};
-
-    static glm::vec3 azimuthElevationToDirection(float azimuth, float elevation) {
-        const float cosElev = cos(elevation);
-        return glm::vec3(cos(azimuth) * cosElev, sin(elevation), sin(azimuth) * cosElev);
-    }
 };
-static_assert(sizeof(SwSunlight) == 48);

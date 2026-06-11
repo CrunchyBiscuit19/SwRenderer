@@ -119,7 +119,12 @@ void SwGui::System::initializeResources() {
             SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
             ImGui::ColorEdit3("Ambient Color", glm::value_ptr(sunlight.mAmbient));
             ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(sunlight.mColor));
-            ImGui::SliderFloat3("Sunlight Direction", glm::value_ptr(sunlight.mDirection), -1.f, 1.f);
+            glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
+            if (ImGui::SliderFloat2(
+                    "Sunlight Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
+                )) {
+                sunlight.mAzimuthElevation = glm::radians(azimuthElevationDeg);
+            }
             ImGui::InputFloat("Sunlight Intensity", &sunlight.mIntensity);
         }
 

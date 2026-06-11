@@ -14,10 +14,13 @@ namespace Sw {
     public struct Sunlight {
         public float3 mAmbient;
         public float mIntensity;
-        public float3 mDirection;
-        public float mPad0;
+        public float2 mAzimuthElevation;   
         public float3 mColor;
-        public float mPad1;
+
+        public float3 getDirection() {
+            float cosElev = cos(mAzimuthElevation.y);
+            return float3(cos(mAzimuthElevation.x) * cosElev, sin(mAzimuthElevation.y), sin(mAzimuthElevation.x) * cosElev);
+        }
     };
 
     public enum LightType : uint {
