@@ -133,6 +133,7 @@ public:
     inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }
     inline SwFXAA::System& getFXAASystem() { return mFXAA; }
     inline SwLighting::System& getLightingSystem() { return mLighting; }
+    inline SwRenderGraph& getRenderGraph() { return mRenderGraph; }
 
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssetsAndInstances();

@@ -165,6 +165,9 @@ void SwGui::System::initializeResources() {
         ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall);
         ImGui::Text("Pre-Cull Render Items: %i", SwRenderer::sRendererContext.mStats->mNumInitialRis);
         ImGui::Text("Post-Cull Render Items: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRisPublishedCount.getMappedPtr()));
+        if (ImGui::Button("Create Render Graph")) {
+            mScene.getRenderGraph().requestRenderGraph();
+        }
     };
     mResources.mGuiComponents[SwGuiComponent::Controls] = [this]() {
         ImGui::Text("[G] Toggle GUI");
