@@ -7,14 +7,8 @@ public uniform Sampler2D materialResources[];
 [[vk::push_constant]]
 SwGeometry::WorkPC workPc;
 
-// Shared shading for the opaque and masked geometry passes. `masked` is a compile-time
-// constant at each entry point below, so the opaque path folds away the discard entirely
-// (no OpKill -> [earlydepthstencil] stays valid and early-Z is preserved), while the masked
-// path keeps the alpha-cutout discard.
 float4 shade(SwGeometry::FSInput in, bool masked) {
     float3 normal = normalize(in.mNormal);
-    float3 sunlightDir = normalize(float3(1.f, 0.f, 0.f));
-    float sunlightPower = 1.f;
 
     float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * Sw::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
     if (masked) {
@@ -24,17 +18,12 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     }
 
     float4 color = in.mColor * diffuseColor;
-    float finalAlpha = color.a;
-    float diffuse = max(dot(normal, sunlightDir), 0.f);
-    float4 sunlight = float4(float3(1.f), 1.f) * sunlightPower;
+    float3 lit = SwGeometry::shadeLit(
+        color.rgb, in.mWorldPos, normal, workPc.mPerFrameBuffer->mSunlight, workPc.mSceneLightsBuffer, workPc.mLightCount, workPc.mSceneInstancesBuffer,
+        workPc.mSceneNodeTransformsBuffer
+    );
 
-    float4 lightColor = color * diffuse * sunlight;
-    float4 ambient = color * float4(float3(1.f), 1.f);
-
-    float4 finalColor = lightColor + ambient;
-    finalColor.a = finalAlpha;
-
-    return finalColor;
+    return float4(lit, color.a);
 }
 
 // Opaque geometry: no discard, so early depth test/write is safe.

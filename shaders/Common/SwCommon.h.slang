@@ -20,6 +20,24 @@ namespace Sw {
         public float mPad1;
     };
 
+    public enum LightType : uint {
+        Directional = 0,
+        Point = 1,
+        Spot = 2
+    };
+
+    public struct Light {
+        public float3 mColor;
+        public float mIntensity;
+        public LightType mType;                 
+        public float mRange;               // Less than or equal to 0 = infinite
+        public float mInnerCos;            // spot inner cone, cos
+        public float mOuterCos;            // spot outer cone, cos
+        public uint mNodeTransformIndex;   // into the scene node-transform buffer
+        public uint mInstanceIndex;        // into the scene instance buffer
+        public float2 mPad;
+    };
+
     public struct PerFrameData {
         public Perspective mPerspective;
         public Sunlight mSunlight;

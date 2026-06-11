@@ -17,6 +17,8 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mSceneDrawRisIndicesBuffer;
     vk::DeviceAddress mDrawRcsBuffer;
     vk::DeviceAddress mPerFrameBuffer;
+    vk::DeviceAddress mSceneLightsBuffer;
+    std::uint32_t mLightCount;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 };

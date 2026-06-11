@@ -50,9 +50,11 @@ void SwGeometry::System::initializePasses() {
         deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        // Node transforms + instances are read in the VS (geometry) and again in the FS (punctual-light transform resolution).
+        deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+        deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        deps.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     };
 
@@ -97,7 +99,7 @@ void SwGeometry::System::refreshDynamicDependencies() {
     auto setDynamicDeps = [&](SwPass::Type type, auto&& batches, bool early) {
         SwDependency dynamicDeps;
         dynamicDeps.mReadBuffers.emplace_back(
-            &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
+            &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
         );
         for (auto& batch : batches) {
             auto& itemsBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
@@ -121,4 +123,6 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mSceneLightsBuffer = mScene.getSceneLightsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mLightCount = static_cast<std::uint32_t>(mScene.getLightingSystem().getAssetLights().size());
 }

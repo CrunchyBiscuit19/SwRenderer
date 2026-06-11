@@ -24,10 +24,12 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     uint sceneMaterialIndex = workPc.mDrawRcsBuffer[in.mDrawIndex].mMaterialIndex;
     Sw::MaterialConstant materialConstant = workPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
-    out.mPosition =
-        mul(mul(mul(mul(workPc.mPerFrameBuffer->mPerspective.mProj, workPc.mPerFrameBuffer->mPerspective.mView), instanceTransformMatrix), nodeTransformMatrix),
-            position);
-    out.mNormal = v.mNormal;
+    float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
+    float4 worldPosition = mul(modelMatrix, position);
+
+    out.mPosition = mul(mul(workPc.mPerFrameBuffer->mPerspective.mProj, workPc.mPerFrameBuffer->mPerspective.mView), worldPosition);
+    out.mWorldPos = worldPosition.xyz;
+    out.mNormal = normalize(mul((float3x3)modelMatrix, v.mNormal));  // world-space normal; uniform scale only, so normalize absorbs the scale
     out.mUv = v.mUv;
     out.mColor = v.mColor * materialConstant.mBaseFactor;
     out.mMaterialIndex = sceneMaterialIndex;
