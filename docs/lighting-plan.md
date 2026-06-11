@@ -26,6 +26,7 @@ directional light first. "More lights" is then a generalization, not a rewrite.
 Phase 1  Data-driven sun + emissive + world-space normals   (one PR)
 Phase 2  PBR material shading (metallic-roughness BRDF)
 Phase 3  Multiple punctual lights (Light SSBO + SwLightNode)
+Phase 4  Image-based lighting (diffuse irradiance + specular prefilter + BRDF LUT)
 ```
 
 ---
@@ -100,8 +101,7 @@ across the codebase. Normal mapping needs a tangent basis.
 - Add `float4 mTangent` to `Sw::Vertex` and the matching C++ vertex layout.
 - Load tangents from glTF in `SwAsset.cpp`; generate them (e.g. per-triangle, or MikkTSpace)
   when the asset lacks a tangent attribute.
-- Build the TBN in the VS or FS and transform the sampled normal map
-  (index `+2`) by `mNormalScale`.
+- Build the TBN in the VS and transform the sampled normal map (index `+2`) by `mNormalScale`.
 
 ### 2b. BRDF
 
@@ -180,6 +180,70 @@ attenuation for point (`1/d²`, clamped by `range`) and the cone falloff for spo
 - **Light culling** — clustered/forward+ once light counts grow.
 - **Emissive as real light** — emissive meshes illuminating their surroundings needs GI
   (ray tracing, probes, VPLs). Phase 1 emissive only makes surfaces glow, it does not cast light.
+
+---
+
+## Phase 4 — Image-based lighting
+
+Goal: replace the constant/hemisphere ambient term left as a placeholder in Phase 2b with a real
+environment-derived ambient — diffuse irradiance and specular reflections from the skybox. This is
+the term that makes metals reflect their surroundings and dielectrics pick up sky/ground color.
+
+Depends on Phase 2 (a Cook-Torrance BRDF with a cleanly separated ambient/IBL term) and Phase 2c
+(tone mapping — IBL outputs HDR irradiance). Independent of Phase 3: IBL and punctual lights add
+into the same accumulator, so either can land first once Phase 2 is done.
+
+### 4a. Environment source
+
+`SwSkybox` already loads an environment cubemap; reuse it as the IBL source rather than introducing
+a second one.
+
+- Require an HDR/float environment cubemap (the prefilter integrals are meaningless on an LDR,
+  already-tone-mapped image). Confirm the skybox cubemap format is float (e.g. `R16G16B16A16_SFLOAT`),
+  and load equirectangular `.hdr` → cubemap if the current path is LDR only.
+- These maps are static per environment: bake once when the skybox changes, not per frame. A
+  one-shot compute/render pass driven off a "skybox dirty" flag, analogous to how other one-time
+  resources are built.
+
+### 4b. Diffuse irradiance map
+
+- Convolve the environment cubemap into a small (e.g. 32×32 per face) irradiance cubemap: for each
+  output direction, integrate cosine-weighted radiance over the hemisphere.
+- A compute shader (new `shaders/IBL/` system) writing a cubemap `SwImage`, owned by the IBL system
+  and exposed to the geometry frag shaders via descriptor like the other bound textures.
+
+### 4c. Specular prefilter + BRDF LUT
+
+- **Prefiltered environment map**: a mip-chained cubemap where mip level encodes roughness; each
+  level is the GGX-importance-sampled convolution of the environment for that roughness. Sample with
+  `roughness * maxMip` at runtime (split-sum approximation).
+- **BRDF integration LUT**: a 2D `R16G16_SFLOAT` lookup over (NdotV, roughness) holding the scale/bias
+  for the environment Fresnel term. Bake once at startup — it is independent of the environment, so it
+  never needs rebuilding.
+
+### 4d. Consume in the shading function
+
+In the shared `SwBRDF` module from Phase 2b, replace the placeholder ambient with:
+
+- Diffuse: `irradiance(N) * albedo * (1 - metallic)`.
+- Specular: `prefiltered(R, roughness) * (F0 * brdfLut.x + brdfLut.y)`.
+- Multiply the whole IBL contribution by the material occlusion term (Phase 2b already routes AO to
+  the ambient/IBL slot), and add it to the direct-light accumulator from Phases 1/3.
+
+### Phase 4 done when
+
+A rough dielectric picks up sky/ground color, a smooth metal mirrors the environment, and a
+roughness sweep transitions smoothly from sharp reflection to diffuse — with the punctual lights from
+Phases 1/3 still adding on top.
+
+### Out of scope (note for later)
+
+- **Local reflection probes** — multiple parallax-corrected IBL volumes for indoor scenes; Phase 4 is
+  a single global environment only.
+- **Screen-space reflections** — dynamic-geometry reflections that IBL (static environment) cannot
+  capture.
+- **Dynamic environment capture** — re-baking the probe from the live scene rather than a fixed
+  skybox.
 
 ---
 
