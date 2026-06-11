@@ -29,7 +29,8 @@ public:
         PickReadback,
         PickWork,
         WBOITComposite,
-        FXAAWork,
+        Tonemap,
+        FXAA,
         CopyToSwapchain,
         Gui
     };

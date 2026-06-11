@@ -10,7 +10,7 @@
 #include <Scene/SwPass.h>
 #include <Scene/System/SwPick.h>
 #include <Scene/System/SwGeometry.h>
-#include <Scene/System/SwFXAA.h>
+#include <Scene/System/SwPostProcess.h>
 #include <Scene/System/SwLighting.h>
 #include <Scene/SwRenderGraph.h>
 #include <Scene/System/SwWBOIT.h>
@@ -37,7 +37,7 @@ private:
     friend class SwSkybox::System;
     friend class SwWBOIT::System;
     friend class SwGeometry::System;
-    friend class SwFXAA::System;
+    friend class SwPostProcess::System;
     friend class SwGui::System;
 
     SwCamera mCamera;
@@ -54,7 +54,7 @@ private:
     SwSkybox::System mSkybox;
     SwWBOIT::System mWBOIT;
     SwGeometry::System mGeometry;
-    SwFXAA::System mFXAA;
+    SwPostProcess::System mPostProcess;
     SwLighting::System mLighting;
     SwGui::System mGui;
 
@@ -131,7 +131,7 @@ public:
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
     inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }
-    inline SwFXAA::System& getFXAASystem() { return mFXAA; }
+    inline SwPostProcess::System& getPostProcessSystem() { return mPostProcess; }
     inline SwLighting::System& getLightingSystem() { return mLighting; }
     inline SwRenderGraph& getRenderGraph() { return mRenderGraph; }
 

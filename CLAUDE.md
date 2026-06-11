@@ -4,19 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Build Commands
 
-Build presets are defined in `CMakePresets.json`. Configure and build from the repo root:
+> **The user builds the C++ themselves — do NOT build or configure the C++ project.** After making
+> code changes, hand back to the user to compile; do not run `cmake`/`msbuild`/Ninja yourself. (You
+> are still responsible for compiling shaders — see Shader Compilation below.)
+
+Build presets are defined in `CMakePresets.json` (configure presets only; there are no build
+presets). Generator: Ninja. Compiler: MSVC with C++23. Binaries output to `C:\Projects\SwRenderer\bin`.
+
+For reference, the user configures/builds with:
 
 ```powershell
-# Configure (choose a preset)
 cmake --preset x64-debug
-cmake --preset x64-release
-
-# Build
 cmake --build --preset x64-debug
-cmake --build --preset x64-release
 ```
-
-Binaries output to `C:\Projects\SwRenderer\bin`. Generator: Ninja. Compiler: MSVC with C++23.
 
 ### Shader Compilation
 

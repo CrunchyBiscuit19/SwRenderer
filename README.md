@@ -64,9 +64,8 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 - [x] Transparency pass (WBOIT — accumulation + reveal + composite)
 - [x] Skybox pass
 - [x] Mouse pick pass (draw + compute readback)
-- [ ] Depth pre-pass
-- [x] Frustum culling (compute, 6-plane AABB)
-- [ ] Occlusion culling (depth pyramid built; culling logic present but commented out)
+- [x] Depth pre-pass
+- [x] Two-Pass Frustum + Occlusion Culling
 
 ---
 
@@ -82,24 +81,24 @@ Several items overlap the **PBR Implementation Checklist** above; see the detail
 Legend — **Easy**: a shader + a buffer. **Medium**: a new pass or non-trivial data plumbing.
 **Hard**: a whole subsystem.
 
-| # | Feature | Difficulty | Feasibility notes |
-|---|---------|------------|-------------------|
-| 1 | Basic lighting (directional Lambert/Phong) | Easy | Mostly already present; just un-hardcode the sun into `PerFrameData`. Phase 1. |
-| 2 | Gamma correction | Easy | Largely handled by sRGB swapchain/texture formats already; make the convention explicit and audit linear-space math. Do alongside HDR. |
-| 3 | Lighting maps (diffuse/spec/normal driving shading) | Easy | All 5 PBR textures already loaded; just sample and use them. |
-| 4 | Light casters (attenuation/cone math) | Easy | Pure shader math once light data is in a buffer. |
-| 5 | Multiple lights | Easy–Medium | Needs a `Light` SSBO + count; trivial in forward until counts grow (then → Forward+). Phase 3. |
-| 6 | Point / Directional / Spot lights | Easy | One tagged `Light` struct covers all three (`KHR_lights_punctual`). Tie to scene via `SwLightNode`. Phase 3. |
-| 7 | Normal mapping | Medium | **Blocker:** `Sw::Vertex` has no tangents — must add the attribute and generate them (MikkTSpace) on load. TBN in shader is the easy part. |
-| 8 | PBR theory + PBR lighting (Cook-Torrance GGX) | Medium | The core direct-lighting BRDF. Straightforward once lighting maps + lights exist. Phase 2. |
-| 9 | HDR render target + tone mapping | Medium | Switch geometry target to a float format, add a tone-map pass. Render graph makes the pass trivial; the work is threading the new target through WBOIT composite/FXAA. |
-| 10 | Parallax / parallax-occlusion mapping | Medium | Easy once tangents (item 7) exist, **but** glTF rarely ships height maps (`KHR_materials_*` displacement is uncommon) — asset support is the real snag. |
-| 11 | Physically-based bloom | Medium | Mip-chain down/up-sample (CoD/Jimenez). Needs HDR first. You already run compute post passes (FXAA), so the pattern is established. |
-| 12 | SSAO | Medium–Hard | Needs view-space depth + normals. You're forward-only, so this forces a depth/normal prepass (already a TODO) before the AO + blur passes. |
-| 13 | PBR IBL (irradiance + prefilter + BRDF LUT) | Hard | Several one-time precompute passes (split-sum). Builds on the existing cubemap skybox infra, but the prefilter mip chain + BRDF LUT is a real chunk of work. |
-| 14 | Cascaded shadow maps | Hard | The biggest single subsystem: per-cascade depth render, light-space matrices, cascade splitting, PCF/filtering — and ideally per-cascade culling through the existing GPU-driven indirect path. |
-| 15 | Area lights | Hard | Real-time area lights (LTC) are mathematically heavy and a notable jump beyond punctual lights; defer until punctual + IBL are solid. |
-| 16 | Forward+ (tiled/clustered light culling) | Hard | Compute light binning + depth prepass + per-tile light lists. Only pays off at high light counts; your compute-cull background helps conceptually but it's a substantial system. |
+| #   | Feature                                             | Difficulty  | Feasibility notes                                                                                                                                                                               |
+| --- | --------------------------------------------------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Basic lighting (directional Lambert/Phong)          | Easy        | Mostly already present; just un-hardcode the sun into `PerFrameData`. Phase 1.                                                                                                                  |
+| 2   | Gamma correction                                    | Easy        | Largely handled by sRGB swapchain/texture formats already; make the convention explicit and audit linear-space math. Do alongside HDR.                                                          |
+| 3   | Lighting maps (diffuse/spec/normal driving shading) | Easy        | All 5 PBR textures already loaded; just sample and use them.                                                                                                                                    |
+| 4   | Light casters (attenuation/cone math)               | Easy        | Pure shader math once light data is in a buffer.                                                                                                                                                |
+| 5   | Multiple lights                                     | Easy–Medium | Needs a `Light` SSBO + count; trivial in forward until counts grow (then → Forward+). Phase 3.                                                                                                  |
+| 6   | Point / Directional / Spot lights                   | Easy        | One tagged `Light` struct covers all three (`KHR_lights_punctual`). Tie to scene via `SwLightNode`. Phase 3.                                                                                    |
+| 7   | Normal mapping                                      | Medium      | **Blocker:** `Sw::Vertex` has no tangents — must add the attribute and generate them (MikkTSpace) on load. TBN in shader is the easy part.                                                      |
+| 8   | PBR theory + PBR lighting (Cook-Torrance GGX)       | Medium      | The core direct-lighting BRDF. Straightforward once lighting maps + lights exist. Phase 2.                                                                                                      |
+| 9   | HDR render target + tone mapping                    | Medium      | Switch geometry target to a float format, add a tone-map pass. Render graph makes the pass trivial; the work is threading the new target through WBOIT composite/FXAA.                          |
+| 10  | Parallax / parallax-occlusion mapping               | Medium      | Easy once tangents (item 7) exist, **but** glTF rarely ships height maps (`KHR_materials_*` displacement is uncommon) — asset support is the real snag.                                         |
+| 11  | Physically-based bloom                              | Medium      | Mip-chain down/up-sample (CoD/Jimenez). Needs HDR first. You already run compute post passes (FXAA), so the pattern is established.                                                             |
+| 12  | SSAO                                                | Medium–Hard | Needs view-space depth + normals. You're forward-only, so this forces a depth/normal prepass (already a TODO) before the AO + blur passes.                                                      |
+| 13  | PBR IBL (irradiance + prefilter + BRDF LUT)         | Hard        | Several one-time precompute passes (split-sum). Builds on the existing cubemap skybox infra, but the prefilter mip chain + BRDF LUT is a real chunk of work.                                    |
+| 14  | Cascaded shadow maps                                | Hard        | The biggest single subsystem: per-cascade depth render, light-space matrices, cascade splitting, PCF/filtering — and ideally per-cascade culling through the existing GPU-driven indirect path. |
+| 15  | Area lights                                         | Hard        | Real-time area lights (LTC) are mathematically heavy and a notable jump beyond punctual lights; defer until punctual + IBL are solid.                                                           |
+| 16  | Forward+ (tiled/clustered light culling)            | Hard        | Compute light binning + depth prepass + per-tile light lists. Only pays off at high light counts; your compute-cull background helps conceptually but it's a substantial system.                |
 
 **Overall feasibility:** items 1–6 are quick wins that mostly reuse existing data and scaffolding.
 Item 7 (tangents) is the first real data-model change and gates normal/parallax mapping. Items
@@ -139,19 +138,19 @@ tools\build.bat              # build the shader compiler
 
 All dependencies are vendored under `thirdParty/`:
 
-| Library | Purpose |
-|---------|---------|
-| Vulkan SDK | GPU API |
-| SDL2 | Window and input |
-| glm | Math |
-| fastgltf | glTF 2.0 loading |
-| vk-bootstrap | Vulkan init boilerplate |
-| VMA | GPU memory allocation |
+| Library          | Purpose                 |
+| ---------------- | ----------------------- |
+| Vulkan SDK       | GPU API                 |
+| SDL2             | Window and input        |
+| glm              | Math                    |
+| fastgltf         | glTF 2.0 loading        |
+| vk-bootstrap     | Vulkan init boilerplate |
+| VMA              | GPU memory allocation   |
 | ImGui + ImGuizmo | In-engine UI and gizmos |
-| Quill | Async logging |
-| fmt | String formatting |
-| stb_image | Texture loading |
-| magic_enum | Enum reflection |
+| Quill            | Async logging           |
+| fmt              | String formatting       |
+| stb_image        | Texture loading         |
+| magic_enum       | Enum reflection         |
 
 ---
 
@@ -180,13 +179,13 @@ The renderer is GPU-driven: the CPU uploads a flat description of *what could be
 
 ### The five concepts
 
-| Concept | Type | Lives in | One per... |
-|---------|------|----------|------------|
-| **Asset** | `SwAsset` | — | loaded glTF file |
-| **Node** / **Mesh Node** | `SwNode` / `SwMeshNode` | `SwAsset::mNodes` | glTF node (mesh nodes additionally reference a `SwMesh`) |
-| **Instance** | `SwInstance` | `SwAsset::mInstances` | placed copy of the whole asset (its own transform) |
-| **Render Command (RC)** | `SwRenderCommand` | `SwBatch::mRcs` | primitive of a mesh node |
-| **Render Item (RI)** | `SwRenderItem` | `SwBatch::mRis` | RC × instance |
+| Concept                  | Type                    | Lives in              | One per...                                               |
+| ------------------------ | ----------------------- | --------------------- | -------------------------------------------------------- |
+| **Asset**                | `SwAsset`               | —                     | loaded glTF file                                         |
+| **Node** / **Mesh Node** | `SwNode` / `SwMeshNode` | `SwAsset::mNodes`     | glTF node (mesh nodes additionally reference a `SwMesh`) |
+| **Instance**             | `SwInstance`            | `SwAsset::mInstances` | placed copy of the whole asset (its own transform)       |
+| **Render Command (RC)**  | `SwRenderCommand`       | `SwBatch::mRcs`       | primitive of a mesh node                                 |
+| **Render Item (RI)**     | `SwRenderItem`          | `SwBatch::mRis`       | RC × instance                                            |
 
 **Asset** (`SwAsset`) — everything parsed from one glTF file: its meshes, materials, node hierarchy, per-mesh bounds (AABBs), and a list of **instances**. When an asset is added to the scene it is given contiguous base offsets into the scene-wide GPU buffers: `mFirstNodeTransformInScene`, `mFirstMaterialInScene`, `mFirstInstanceInScene`, and `mFirstBoundInScene`. These offsets are what turn an asset's *relative* indices into *scene-absolute* indices.
 
@@ -196,18 +195,18 @@ The renderer is GPU-driven: the CPU uploads a flat description of *what could be
 
 **Render Commands** (`SwRenderCommand`) — produced by `SwMeshNode::generateRcsAndRis()`, which walks the node tree and emits **one RC per primitive of each mesh node**. The first five fields are laid out to match `VkDrawIndexedIndirectCommand`:
 
-| Field | Role |
-|-------|------|
-| `mIndexCount` | index count of the primitive |
-| `mRiCount` | **instance count — starts at 0**, incremented by the cull shader as RIs survive |
-| `mFirstIndex` | `mesh.mFirstIndexInScene + primitive.mRelativeFirstIndex` |
-| `mVertexOffset` | `mesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset` |
-| `mFirstRi` | base offset of this RC's render items (doubles as `firstInstance`) |
-| `mMaterialIndex` | `asset.mFirstMaterialInScene + material.mRelativeMaterialIndex` |
-| `mNodeTransformIndex` | `asset.mFirstNodeTransformInScene + node.mRelativeNodeIndex` |
-| `mAssetIndex` / `mModelIndex` | owning asset id |
-| `mFirstInstance` | `asset.mFirstInstanceInScene` (base into the scene instances buffer) |
-| `mBoundsIndex` | `asset.mFirstBoundInScene + mesh.mRelativeFirstBounds` |
+| Field                         | Role                                                                            |
+| ----------------------------- | ------------------------------------------------------------------------------- |
+| `mIndexCount`                 | index count of the primitive                                                    |
+| `mRiCount`                    | **instance count — starts at 0**, incremented by the cull shader as RIs survive |
+| `mFirstIndex`                 | `mesh.mFirstIndexInScene + primitive.mRelativeFirstIndex`                       |
+| `mVertexOffset`               | `mesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset`                   |
+| `mFirstRi`                    | base offset of this RC's render items (doubles as `firstInstance`)              |
+| `mMaterialIndex`              | `asset.mFirstMaterialInScene + material.mRelativeMaterialIndex`                 |
+| `mNodeTransformIndex`         | `asset.mFirstNodeTransformInScene + node.mRelativeNodeIndex`                    |
+| `mAssetIndex` / `mModelIndex` | owning asset id                                                                 |
+| `mFirstInstance`              | `asset.mFirstInstanceInScene` (base into the scene instances buffer)            |
+| `mBoundsIndex`                | `asset.mFirstBoundInScene + mesh.mRelativeFirstBounds`                          |
 
 So an RC bundles a draw range with *indices into the scene-wide material, transform, bounds, and instance buffers* — everything the GPU needs except which specific instances are visible.
 

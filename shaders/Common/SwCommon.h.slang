@@ -44,6 +44,7 @@ namespace Sw {
     public struct PerFrameData {
         public Perspective mPerspective;
         public Sunlight mSunlight;
+        public float3 mCameraWorldPos;
     };
 
     public struct Vertex {
@@ -51,6 +52,7 @@ namespace Sw {
         public float3 mNormal;
         public float4 mColor;
         public float2 mUv;
+        public float4 mTangent; // w for handedness
     };
 
     public struct Bounds {

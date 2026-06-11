@@ -11,6 +11,7 @@ struct SwVertex {
     glm::vec3 mNormal{0.f, 1.f, 0.f};
     glm::vec4 mColor{1.f, 1.f, 1.f, 1.f};
     glm::vec2 mUv{0.f, 0.f};
+    glm::vec4 mTangent{1.f, 0.f, 0.f, 1.f};  // w = handedness
 
     SwVertex() = default;
     SwVertex(glm::vec3 position, glm::vec3 normal, glm::vec4 color, glm::vec2 uv);

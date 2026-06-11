@@ -22,6 +22,7 @@ void SwFrame::update() {
     Data perFrameData{
         .mPerspective = scene.getCamera().getPerspective(),
         .mSunlight = scene.getLightingSystem().getSunlight(),
+        .mCameraWorldPos = scene.getCamera().getPosition(),
     };
     mPerFrameBuffer.copyFromUnchecked(&perFrameData, sizeof(Data));
 }

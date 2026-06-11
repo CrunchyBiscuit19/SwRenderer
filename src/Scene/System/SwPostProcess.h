@@ -11,28 +11,44 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 
-namespace SwFXAA {
-static const std::filesystem::path FXAA_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwFXAAWork.comp.spv"};
+namespace SwPostProcess {
+static const std::filesystem::path TONEMAP_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwTonemap.comp.spv"};
+static const std::filesystem::path FXAA_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwFXAA.comp.spv"};
 
-struct WorkPC : SwPC<WorkPC> {
+struct TonemapPC : SwPC<TonemapPC> {
+    float mExposure{1.f};
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct FXAAPC : SwPC<FXAAPC> {
     glm::vec2 mInverseScreenSize;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct Resources {
-    SwComputePipelineBundle mWorkPipelineBundle;
-    SwPipelineLayout mWorkPipelineLayout;
-    SwDescriptorSet mWorkDescriptorSet;
-    SwDescriptorLayout mWorkDescriptorLayout;
-    SwSampler mWorkSampler;
-    SwFXAA::WorkPC mWorkPushConstants;
+    // Tonemap: HDR draw image resolved in place to LDR (always runs).
+    SwComputePipelineBundle mTonemapPipelineBundle;
+    SwPipelineLayout mTonemapPipelineLayout;
+    SwDescriptorSet mTonemapDescriptorSet;
+    SwDescriptorLayout mTonemapDescriptorLayout;
+    SwPostProcess::TonemapPC mTonemapPushConstants;
+
+    // FXAA: edge-aware anti-aliasing, in place on the (now LDR) draw image (toggleable).
+    SwComputePipelineBundle mFXAAPipelineBundle;
+    SwPipelineLayout mFXAAPipelineLayout;
+    SwDescriptorSet mFXAADescriptorSet;
+    SwDescriptorLayout mFXAADescriptorLayout;
+    SwSampler mFXAASampler;
+    SwPostProcess::FXAAPC mFXAAPushConstants;
 };
 
 class System : public SwSystem, public SwSystem::Resizable {
 private:
     Resources mResources;
-    bool mActive{true};
+
+    bool mFXAAActive{true};
 
     void initializeResources() override;
     void initializePasses() override;
@@ -43,7 +59,8 @@ public:
     System(SwScene& scene);
 
     inline Resources& getResources() { return mResources; }
-    inline bool isActive() const { return mActive; }
-    inline bool* getActivePtr() { return &mActive; }
+    inline bool isFXAAActive() const { return mFXAAActive; }
+    inline bool* getFXAAActivePtr() { return &mFXAAActive; }
+    inline float* getExposurePtr() { return &mResources.mTonemapPushConstants.mExposure; }
 };
-}  // namespace SwFXAA
+}  // namespace SwPostProcess

@@ -23,6 +23,7 @@ public:
     struct Data {
         SwPerspective mPerspective;
         SwSunlight mSunlight;
+        glm::vec3 mCameraWorldPos;
     };
 
 private:

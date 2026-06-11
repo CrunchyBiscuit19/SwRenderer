@@ -117,15 +117,15 @@ void SwGui::System::initializeResources() {
         
         if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
             SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
-            ImGui::ColorEdit3("Ambient Color", glm::value_ptr(sunlight.mAmbient));
-            ImGui::ColorEdit3("Sunlight Color", glm::value_ptr(sunlight.mColor));
+            ImGui::ColorEdit3("Ambient", glm::value_ptr(sunlight.mAmbient));
+            ImGui::ColorEdit3("Color", glm::value_ptr(sunlight.mColor));
             glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
             if (ImGui::SliderFloat2(
-                    "Sunlight Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
+                    "Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
                 )) {
                 sunlight.mAzimuthElevation = glm::radians(azimuthElevationDeg);
             }
-            ImGui::InputFloat("Sunlight Intensity", &sunlight.mIntensity);
+            ImGui::SliderFloat("Intensity", &sunlight.mIntensity, 0.f, 5.f, "%.2f");
         }
 
         ImGui::Unindent();
@@ -150,8 +150,9 @@ void SwGui::System::initializeResources() {
             mResources.mSelectSkyboxFileBrowser.ClearSelected();
         }
 
-        if (ImGui::CollapsingHeader("FXAA", ImGuiTreeNodeFlags_DefaultOpen)) {
-            ImGui::Checkbox("Toggle FXAA", mScene.getFXAASystem().getActivePtr());
+        if (ImGui::CollapsingHeader("Post-process", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::SliderFloat("Exposure", mScene.getPostProcessSystem().getExposurePtr(), 0.f, 8.f, "%.2f");
+            ImGui::Checkbox("Toggle FXAA", mScene.getPostProcessSystem().getFXAAActivePtr());
         }
 
         ImGui::Unindent();

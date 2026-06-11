@@ -111,7 +111,7 @@ void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     );
 }
 
-SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mFXAA(*this), mLighting(*this), mGui(*this) {}
+SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
 
 void SwScene::initialize() {
     mCamera.initialize();
@@ -125,7 +125,7 @@ void SwScene::initialize() {
     mSkybox.initialize();
     mWBOIT.initialize();
     mGeometry.initialize();
-    mFXAA.initialize();
+    mPostProcess.initialize();
     mLighting.initialize();
 }
 
@@ -133,7 +133,7 @@ void SwScene::resize() {
     mCull.resize();
     mPick.resize();
     mWBOIT.resize();
-    mFXAA.resize();
+    mPostProcess.resize();
 }
 
 void SwScene::insertPass(SwPass::Type type, SwDependency deps, std::function<void(vk::CommandBuffer)> callback, bool mustRun) {
@@ -513,7 +513,7 @@ void SwScene::perFrameUpdate() {
     mSkybox.refresh();
     mWBOIT.refresh();
     mGeometry.refresh();
-    mFXAA.refresh();
+    mPostProcess.refresh();
 
     SwRenderer::sRendererContext.mImmSubmit->queuedSubmit();
 
@@ -560,8 +560,9 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
-    if (mFXAA.isActive()) {
-        mRenderGraph.addPass(&mPasses[SwPass::Type::FXAAWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::Tonemap]);
+    if (mPostProcess.isFXAAActive()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::FXAA]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::CopyToSwapchain]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::Gui]);

@@ -349,6 +349,14 @@ void SwAsset::constructMeshes() {
                     vertices[vertexStartOffset + pos].mColor = c;
                 });
             }
+
+            // Load tangents (xyz + handedness)
+            auto tangents = p.findAttribute("TANGENT");
+            if (tangents != p.attributes.end()) {
+                fastgltf::iterateAccessorWithIndex<glm::vec4>(mRawAsset, mRawAsset.accessors[tangents->second], [&](glm::vec4 t, size_t pos) {
+                    vertices[vertexStartOffset + pos].mTangent = t;
+                });
+            }
         }
 
         std::uint32_t numVertices = vertices.size();
