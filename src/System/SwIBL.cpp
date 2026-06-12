@@ -1,8 +1,8 @@
-#include <Misc/SwHelper.h>
+#include <Renderer/SwHelper.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwShader.h>
-#include <Scene/System/SwIBL.h>
+#include <System/SwIBL.h>
 #include <Scene/SwScene.h>
 
 SwDescriptorLayout SwIBL::System::sConsumeDescriptorLayout{};

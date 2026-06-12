@@ -6,8 +6,8 @@
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
-#include <Scene/System/SwGeometry.h>
-#include <Scene/System/SwIBL.h>
+#include <System/SwGeometry.h>
+#include <System/SwIBL.h>
 #include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <magic_enum.hpp>

@@ -3,7 +3,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
-#include <Scene/System/SwSkybox.h>
+#include <System/SwSkybox.h>
 #include <stb_image.h>
 
 SwSkybox::System::System(SwScene& scene) : SwSystem(scene) {}

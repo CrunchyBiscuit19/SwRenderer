@@ -1,9 +1,9 @@
-#include <Misc/SwHelper.h>
+#include <Renderer/SwHelper.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
-#include <Scene/System/SwPostProcess.h>
+#include <System/SwPostProcess.h>
 #include <Scene/SwScene.h>
 #include <quill/LogMacros.h>
 

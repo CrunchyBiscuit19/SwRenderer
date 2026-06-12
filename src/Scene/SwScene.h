@@ -3,18 +3,18 @@
 #include <Data/SwAsset.h>
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
-#include <Scene/System/SwGui.h>
+#include <System/SwGui.h>
 #include <Resource/SwDescriptor.h>
-#include <Scene/System/SwCull.h>
-#include <Scene/System/SwIBL.h>
-#include <Scene/System/SwSkybox.h>
+#include <System/SwCull.h>
+#include <System/SwIBL.h>
+#include <System/SwSkybox.h>
 #include <Scene/SwPass.h>
-#include <Scene/System/SwPick.h>
-#include <Scene/System/SwGeometry.h>
-#include <Scene/System/SwPostProcess.h>
-#include <Scene/System/SwLighting.h>
+#include <System/SwPick.h>
+#include <System/SwGeometry.h>
+#include <System/SwPostProcess.h>
+#include <System/SwLighting.h>
 #include <Scene/SwRenderGraph.h>
-#include <Scene/System/SwWBOIT.h>
+#include <System/SwWBOIT.h>
 
 #include <algorithm>
 #include <array>

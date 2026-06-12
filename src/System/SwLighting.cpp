@@ -1,4 +1,4 @@
-#include <Scene/System/SwLighting.h>
+#include <System/SwLighting.h>
 #include <Scene/SwScene.h>
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}

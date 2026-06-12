@@ -11,7 +11,7 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
-#include <Scene/System/SwIBL.h>
+#include <System/SwIBL.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>

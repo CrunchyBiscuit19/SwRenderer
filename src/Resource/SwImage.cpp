@@ -1,4 +1,4 @@
-#include <Misc/SwHelper.h>
+#include <Renderer/SwHelper.h>
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwImage.h>
 

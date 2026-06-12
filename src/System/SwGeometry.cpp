@@ -1,7 +1,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwShader.h>
-#include <Scene/System/SwGeometry.h>
+#include <System/SwGeometry.h>
 #include <Scene/SwScene.h>
 
 // Issues one indirect draw per non-empty batch. `early` pulls commands from the batch's
@@ -54,7 +54,6 @@ void SwGeometry::System::initializePasses() {
         deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        // Node transforms + instances are read in the VS (geometry) and again in the FS (punctual-light transform resolution).
         deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);

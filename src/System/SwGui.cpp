@@ -2,7 +2,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Scene/SwScene.h>
-#include <Scene/System/SwGui.h>
+#include <System/SwGui.h>
 #include <fmt/core.h>
 #include <imgui_impl_sdl2.h>
 #include <imgui_impl_vulkan.h>
