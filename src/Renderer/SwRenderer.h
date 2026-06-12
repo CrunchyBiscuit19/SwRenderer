@@ -79,12 +79,6 @@ public:
 
     inline std::uint64_t getFrameNumber() const { return mSwapchain.getFrameNumber(); };
 
-    template <typename T>
-    inline static void labelResourceDebug(T& resource, const char* name) {
-        vk::DebugUtilsObjectNameInfoEXT nameInfo{VulkanResourceInfo<T>::resourceType, VulkanResourceInfo<T>::getHandle(resource), name};
-        mDevice.setDebugUtilsObjectNameEXT(nameInfo);
-    };
-
     void run();
     void draw();
 

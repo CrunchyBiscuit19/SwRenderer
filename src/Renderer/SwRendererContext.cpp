@@ -5,8 +5,6 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwDescriptor.h>
 
-#include <vulkan/vulkan_raii.hpp>
-
 SwRendererContext::SwRendererContext(
     vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
     vk::raii::Queue* computeQueue,

@@ -2,10 +2,9 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <VkBootstrap.h>
-
+#include <fmt/core.h>
 
 SwFrame::SwFrame() : mCommandPool(nullptr), mCommandBuffer(nullptr), mRenderFence(nullptr), mAvailableSemaphore(nullptr) {}
-
 
 void SwFrame::initialize() {
     mCommandPool = SwCommandPoolFactory::createCommandPool(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
@@ -108,6 +107,7 @@ void SwSwapchain::onResizeInitialize() {
         otherImageViews.emplace_back(SwRenderer::sRendererContext.mDevice->createImageView(unormImageViewCreateInfo));
 
         SwSwapchainImage swapchainImage(
+            fmt::format("SwapchainImage{}", i),
             vkbSwapchain.get_images().value()[i],
             formats[0],
             vk::Extent3D(vkbSwapchain.extent, 1),
@@ -122,6 +122,7 @@ void SwSwapchain::onResizeInitialize() {
 
 
     mDrawImage = SwImageFactory::createColorImage2D(
+        "SwapchainDrawImage",
         nullptr,
         DRAW_FORMAT,
         vk::Extent3D{mWindowExtent, 1},
@@ -131,6 +132,7 @@ void SwSwapchain::onResizeInitialize() {
         DRAW_CLEAR_VALUE
     );
     mDepthImage = SwImageFactory::createDepthImage2D(
+        "SwapchainDepthImage",
         nullptr,
         DEPTH_FORMAT,
         mDrawImage.getExtent(),

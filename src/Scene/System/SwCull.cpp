@@ -5,6 +5,7 @@
 #include <Resource/SwShader.h>
 #include <Scene/System/SwCull.h>
 #include <quill/LogMacros.h>
+#include <fmt/core.h>
 
 SwCull::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -456,10 +457,12 @@ void SwCull::System::reInitializeOnResize() {
     
     mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(depthPyramidExtent);
     mResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
+        "DepthPyramidImage",
         nullptr, vk::Format::eR32Sfloat, depthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidImage.addImageView(
+            fmt::format("DepthPyramidImage_Level{:0>4}", i),
             mResources.mDepthPyramidImage.getMainFormat(), vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, i, 1
         );
     }

@@ -203,7 +203,7 @@ void SwAsset::constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type t
         imageSize.width = static_cast<std::uint32_t>(width);
         imageSize.height = static_cast<std::uint32_t>(height);
         imageSize.depth = 1;
-        newImage = SwImageFactory::createColorImage2D(data, imageFormat, imageSize, vk::ImageUsageFlagBits::eSampled, true);
+        newImage = SwImageFactory::createColorImage2D(fmt::format("{}_Image{:0>4}", mName, imageIndex), data, imageFormat, imageSize, vk::ImageUsageFlagBits::eSampled, true);
         stbi_image_free(data);
     } else {
         throw std::runtime_error(fmt::format("{} failed to read image {}: {}", mName, imageIndex, stbi_failure_reason() ? stbi_failure_reason() : "Unknown"));

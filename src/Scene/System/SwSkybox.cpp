@@ -121,6 +121,7 @@ void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path>
     }
 
     mResources.mWorkImage = SwImageFactory::createColorImage2D(
+        "SkyboxWorkImage",
         data,
         vk::Format::eR32G32B32A32Sfloat,
         vk::Extent3D{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height), 1},
