@@ -19,6 +19,8 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mPerFrameBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     std::uint32_t mLightCount;
+    float mMaxPrefilterMip;  // highest mip index of the SwIBL specular prefilter chain
+    float mIblIntensity;     // scales the image-based ambient term (GUI-controlled)
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 };

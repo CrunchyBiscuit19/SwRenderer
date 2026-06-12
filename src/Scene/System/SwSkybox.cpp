@@ -141,6 +141,8 @@ void SwSkybox::System::reinitializeOnUpdate(std::optional<std::filesystem::path>
         vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mWorkDescriptorSet.pushWrites();
+
+    mScene.getIBLSystem().bakeFromEnvironment(mResources.mWorkImage.getRawMainImageView(), mResources.mWorkSampler.getRawSampler());
 }
 
 void SwSkybox::System::refreshPushConstants() {

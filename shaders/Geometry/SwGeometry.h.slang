@@ -20,6 +20,8 @@ namespace SwGeometry {
         public Sw::PerFrameData *mPerFrameBuffer;
         public Sw::Light* mSceneLightsBuffer;
         public uint mLightCount;
+        public float mMaxPrefilterMip;   // highest mip index of the specular prefilter chain
+        public float mIblIntensity;      // scales the image-based ambient term (GUI-controlled)
     };
 
     public struct VSInput {
@@ -73,14 +75,37 @@ namespace SwGeometry {
         return SwBRDF::cookTorrance(normal, view, toLightDir, albedo, metallic, roughness, radiance);
     }
 
-    // Full PBR shading: directional sun + ambient (AO-modulated) + every punctual light in the scene buffer.
+    // Image-based ambient: split-sum diffuse irradiance + specular prefilter, modulated by AO.
+    // Replaces the flat constant ambient now that the skybox drives a real environment.
+    float3 ambientIBL(
+        float3 albedo, float metallic, float roughness, float ao, float3 normal, float3 view, Sampler2D irradianceMap, Sampler2D prefilterMap,
+        Sampler2D brdfLut, float maxPrefilterMip
+    ) {
+        float NdotV = max(dot(normal, view), 1e-4f);
+        float3 R = reflect(-view, normal);
+        float3 F0 = lerp(float3(0.04f), albedo, metallic);
+        float3 F = SwBRDF::fresnelSchlickRoughness(NdotV, F0, roughness);
+        float3 kD = (1.f - F) * (1.f - metallic);
+
+        float3 irradiance = irradianceMap.SampleLevel(SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
+        float3 diffuseIBL = irradiance * albedo;
+
+        float3 prefiltered = prefilterMap.SampleLevel(SwBRDF::dirToEquirectUv(R), roughness * maxPrefilterMip).rgb;
+        float2 envBrdf = brdfLut.SampleLevel(float2(NdotV, roughness), 0.f).rg;
+        float3 specularIBL = prefiltered * (F0 * envBrdf.x + envBrdf.y);
+
+        return (kD * diffuseIBL + specularIBL) * ao;
+    }
+
+    // Full PBR shading: directional sun + image-based ambient (AO-modulated) + every punctual light in the scene buffer.
     public float3 shadeLit(
         float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::Sunlight sun, Sw::Light* lights,
-        uint lightCount, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms
+        uint lightCount, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap, Sampler2D brdfLut,
+        float maxPrefilterMip, float iblIntensity
     ) {
         float3 toSunDir = sun.getDirection();  // unit vector from the surface toward the sun
         float3 color = SwBRDF::cookTorrance(normal, view, toSunDir, albedo, metallic, roughness, sun.mColor * sun.mIntensity);
-        color += albedo * sun.mAmbient * ao;
+        color += iblIntensity * ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip);
         for (uint i = 0; i < lightCount; i++) {
             color += accumulatePunctualLight(lights[i], worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
         }

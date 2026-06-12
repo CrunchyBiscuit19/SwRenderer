@@ -4,6 +4,14 @@ import SwCommon;
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
 
+// Set 1: image-based lighting maps baked by SwIBL (irradiance, specular prefilter, BRDF LUT).
+[[vk::binding(0, 1)]]
+public uniform Sampler2D iblIrradianceMap;
+[[vk::binding(1, 1)]]
+public uniform Sampler2D iblPrefilterMap;
+[[vk::binding(2, 1)]]
+public uniform Sampler2D iblBrdfLut;
+
 [[vk::push_constant]]
 SwGeometry::WorkPC workPc;
 
@@ -32,7 +40,8 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
 
     float3 lit = SwGeometry::shadeLit(
         color.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mPerFrameBuffer->mSunlight, workPc.mSceneLightsBuffer,
-        workPc.mLightCount, workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer
+        workPc.mLightCount, workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
+        workPc.mMaxPrefilterMip, workPc.mIblIntensity
     );
     lit += materialResources[NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET)].Sample(in.mUv).rgb * mc.mEmissiveFactor.rgb;
 

@@ -246,15 +246,3 @@ Phases 1/3 still adding on top.
   skybox.
 
 ---
-
-## Note on emissive vs. lights
-
-Two unrelated concepts that both sound like "light-emitting meshes":
-
-- **Emissive material** (Phase 1) — a surface adds its own color to outgoing radiance. Cheap,
-  one add in the frag shader. Does **not** illuminate anything else.
-- **Punctual light node** (Phase 3) — an actual `Light` placed in the scene via a node. This is
-  what illuminates other surfaces.
-
-A well-authored glTF provides both independently: an emissive bulb mesh *and* a co-located point
-light node. We read each from the file separately; one is never derived from the other.

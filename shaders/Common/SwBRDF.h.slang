@@ -1,7 +1,24 @@
 module SwBRDF;
 
 namespace SwBRDF {
-    public static const float PI = 3.14159265358979323846f;
+      public static const float PI = 3.1415926535897932384626433832795028841972f;
+
+    // Equirectangular mapping, matching SwSkyboxWork.frag.slang. Shared by the geometry shaders
+    // (sampling the IBL maps) and the SwIBL bakes (convolving the environment) so both agree.
+    public float2 dirToEquirectUv(float3 dir) {
+        float3 d = normalize(dir);
+        float phi = atan2(d.z, d.x);
+        float theta = asin(clamp(d.y, -1.f, 1.f));
+        return float2(phi / (2.f * PI) + 0.5f, theta / PI + 0.5f);
+    }
+
+    // Inverse of dirToEquirectUv: an output-map texel UV -> world direction.
+    public float3 equirectUvToDir(float2 uv) {
+        float phi = (uv.x - 0.5f) * 2.f * PI;
+        float theta = (uv.y - 0.5f) * PI;
+        float cosTheta = cos(theta);
+        return float3(cos(phi) * cosTheta, sin(theta), sin(phi) * cosTheta);
+    }
 
     // GGX / Trowbridge-Reitz normal distribution.
     float distributionGGX(float NdotH, float roughness) {
@@ -26,6 +43,13 @@ namespace SwBRDF {
     // Fresnel-Schlick approximation.
     float3 fresnelSchlick(float cosTheta, float3 F0) {
         return F0 + (1.f - F0) * pow(saturate(1.f - cosTheta), 5.f);
+    }
+
+    // Roughness-aware Fresnel for the IBL ambient term: rough surfaces suppress grazing-angle
+    // reflectance so the prefiltered environment does not over-brighten silhouettes.
+    public float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness) {
+        float3 r = max(float3(1.f - roughness), F0);
+        return F0 + (r - F0) * pow(saturate(1.f - cosTheta), 5.f);
     }
 
     // Cook-Torrance contribution of one light arriving with the given (already attenuated) radiance.

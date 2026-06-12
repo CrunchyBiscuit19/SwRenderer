@@ -129,7 +129,8 @@ void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     );
 }
 
-SwScene::SwScene() : mCull(*this), mPick(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
+SwScene::SwScene()
+    : mCull(*this), mPick(*this), mIBL(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
 
 void SwScene::initialize() {
     mCamera.initialize();
@@ -140,6 +141,7 @@ void SwScene::initialize() {
 
     mCull.initialize();
     mPick.initialize();
+    mIBL.initialize();  // before the skybox: its bake-from-environment hook fires during skybox init
     mSkybox.initialize();
     mWBOIT.initialize();
     mGeometry.initialize();

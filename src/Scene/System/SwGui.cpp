@@ -141,6 +141,7 @@ void SwGui::System::initializeResources() {
             if (ImGui::Button("Toggle Skybox")) {
                 mScene.getSkyboxSystem().toggleActive();
             }
+            ImGui::SliderFloat("IBL Intensity", mScene.getIBLSystem().getIblIntensityPtr(), 0.f, 2.f, "%.2f");
         }
 
         mResources.mSelectSkyboxFileBrowser.Display();

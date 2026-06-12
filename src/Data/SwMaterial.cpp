@@ -7,6 +7,7 @@
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
 #include <Scene/System/SwGeometry.h>
+#include <Scene/System/SwIBL.h>
 #include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <magic_enum.hpp>
@@ -87,12 +88,12 @@ SwMaterial::SwMaterial(
 
 void SwMaterial::init() {
 
-    sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "GeometryOpaquePipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange()
-    );
-    sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "GeometryTransparentPipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange()
-    );
+    // Set 0: per-material bindless textures. Set 1: the IBL maps baked by SwIBL.
+    const std::array<vk::DescriptorSetLayout, 2> geometrySetLayouts{
+        SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwIBL::System::sConsumeDescriptorLayout.getRawLayout()
+    };
+    sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
+    sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryTransparentPipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
 
     sVertexShader = SwShaderFactory::createShader("GeometryVertexShaderModule", GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     sOpaqueMaskedFragmentShader =

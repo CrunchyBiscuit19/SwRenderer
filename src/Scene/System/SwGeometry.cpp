@@ -21,7 +21,11 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.bindIndexBuffer(scene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
         cmd.bindDescriptorSets(
-            pipeline.getBindPoint(), pipeline.getRawLayout(), 0, scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), nullptr
+            pipeline.getBindPoint(),
+            pipeline.getRawLayout(),
+            0,
+            {scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), scene.getIBLSystem().getConsumeDescriptorSet().getRawSet()},
+            nullptr
         );
 
         resources.mWorkPushConstants.mDrawRcsBuffer = itemsBuffer.getDeviceAddress().value();
@@ -125,4 +129,6 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneLightsBuffer = mScene.getSceneLightsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mLightCount = static_cast<std::uint32_t>(mScene.getLightingSystem().getAssetLights().size());
+    mResources.mWorkPushConstants.mMaxPrefilterMip = mScene.getIBLSystem().getMaxPrefilterMip();
+    mResources.mWorkPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity();
 }

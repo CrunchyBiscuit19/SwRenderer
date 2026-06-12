@@ -11,6 +11,7 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
+#include <Scene/System/SwIBL.h>
 #include <SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
@@ -210,6 +211,7 @@ SwRenderer::SwRenderer()
     mStats.initialize();
 
     SwMaterialResources::init();
+    SwIBL::System::init();  
     SwMaterial::init();
 
     mScene.initialize();
@@ -267,6 +269,7 @@ SwRenderer::~SwRenderer() {
     SwNode::cleanup();
     SwLight::cleanup();
     SwMaterialConstants::cleanup();
+    SwIBL::System::cleanup();
     SwMaterialResources::cleanup();
     SwImageFactory::cleanup();
     SwMaterial::cleanup();
