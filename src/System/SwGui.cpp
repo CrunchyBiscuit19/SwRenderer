@@ -117,7 +117,6 @@ void SwGui::System::initializeResources() {
         
         if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
             SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
-            ImGui::ColorEdit3("Ambient", glm::value_ptr(sunlight.mAmbient));
             ImGui::ColorEdit3("Color", glm::value_ptr(sunlight.mColor));
             glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
             if (ImGui::SliderFloat2(

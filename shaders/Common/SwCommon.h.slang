@@ -12,7 +12,6 @@ namespace Sw {
     };
 
     public struct Sunlight {
-        public float3 mAmbient;
         public float mIntensity;
         public float2 mAzimuthElevation;   
         public float3 mColor;
