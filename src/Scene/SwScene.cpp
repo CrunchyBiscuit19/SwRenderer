@@ -90,6 +90,18 @@ void SwScene::initializeResources() {
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
+
+    // Seed every bindless slot with the default texture so no slot is ever left unwritten. 
+    for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
+        mSceneMaterialResourcesDescriptorSet.writeImage(
+            0,
+            SwMaterialTexture::sDefaultWhiteTexture.getImage().getRawMainImageView(),
+            SwMaterialTexture::sDefaultWhiteTexture.getSampler().getRawSampler(),
+            vk::ImageLayout::eShaderReadOnlyOptimal,
+            i
+        );
+    }
+    mSceneMaterialResourcesDescriptorSet.pushWrites();
 }
 
 void SwScene::refreshDynamicDependencies() {

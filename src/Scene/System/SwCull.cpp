@@ -470,9 +470,14 @@ void SwCull::System::reInitializeOnResize() {
     mResources.mPrepOcclusionDescriptorSet.writeImage(
         0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
-    for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
-        mResources.mPrepOcclusionDescriptorSet.writeImage(1, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
-        mResources.mPrepOcclusionDescriptorSet.writeImage(2, mResources.mDepthPyramidImage.getRawOtherImageView(i), nullptr, vk::ImageLayout::eGeneral, i);
+    for (std::uint32_t i = 0; i < CULL_MAX_DEPTH_PYRAMID_LEVELS; i++) {
+        const std::uint32_t viewIndex = std::min(i, mResources.mDepthPyramidLevels - 1); // Write over later slots with the last level view
+        mResources.mPrepOcclusionDescriptorSet.writeImage(
+            1, mResources.mDepthPyramidImage.getRawOtherImageView(viewIndex), nullptr, vk::ImageLayout::eGeneral, i
+        );
+        mResources.mPrepOcclusionDescriptorSet.writeImage(
+            2, mResources.mDepthPyramidImage.getRawOtherImageView(viewIndex), nullptr, vk::ImageLayout::eGeneral, i
+        );
     }
     mResources.mPrepOcclusionDescriptorSet.pushWrites();
 

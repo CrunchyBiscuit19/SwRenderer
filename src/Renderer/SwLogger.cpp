@@ -298,7 +298,7 @@ SwLogger::SwLogger() {
     mBreakMessages.insert("VUID-VkBufferCopy-size-01988");
     mBreakMessages.insert("VUID-vkCmdCopyBuffer-size-00115");
     mBreakMessages.insert("VUID-vkCmdBeginRendering-pRenderingInfo-09592");
-    //mBreakMessages.insert("WARNING-Shader-OutputNotConsumed");
+    mBreakMessages.insert("VUID-vkCmdDraw-None-09600");
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(

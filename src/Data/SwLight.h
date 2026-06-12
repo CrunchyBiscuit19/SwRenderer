@@ -54,7 +54,7 @@ public:
 };
 
 struct SwSunlight {
-    glm::vec3 mAmbient{0.03f};
+    glm::vec3 mAmbient{0.4f};
     float mIntensity{1.f};
     glm::vec2 mAzimuthElevation{0.f};  
     glm::vec3 mColor{1.f};
