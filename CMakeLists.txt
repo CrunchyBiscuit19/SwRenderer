@@ -175,6 +175,12 @@ target_compile_definitions(SwRenderer PUBLIC SHADERS_PATH="${CMAKE_SHADER_DIR}/o
 
 target_compile_definitions(SwRenderer PRIVATE $<$<CONFIG:Release>:RELEASE>)
 
+# Vulkan debug object labels (VK_EXT_debug_utils naming): enabled for Debug and RelWithDebInfo,
+# compiled out of Release. NDEBUG can't distinguish RelWithDebInfo from Release, so gate it here.
+target_compile_definitions(SwRenderer PRIVATE
+    $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:SW_ENABLE_DEBUG_LABELS=1>
+)
+
 # ---------------------------------------------------------------------------
 # Post-build: copy runtime DLLs (e.g. SDL) next to the executable
 # ---------------------------------------------------------------------------

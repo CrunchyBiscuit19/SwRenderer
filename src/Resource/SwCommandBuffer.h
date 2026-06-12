@@ -32,6 +32,6 @@ private:
 public:
     static void init();
 
-    static SwCommandBuffer createCommandBuffer(SwCommandPool& pool);
-    static SwCommandBuffer createCommandBuffer(vk::CommandPool pool);
+    static SwCommandBuffer createCommandBuffer(std::string name, SwCommandPool& pool);
+    static SwCommandBuffer createCommandBuffer(std::string name, vk::CommandPool pool);
 };

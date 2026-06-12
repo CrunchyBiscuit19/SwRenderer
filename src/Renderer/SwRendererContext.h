@@ -6,6 +6,11 @@
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
+// See SW_ENABLE_DEBUG_LABELS in CMakeLists. Default to not using.
+#ifndef SW_ENABLE_DEBUG_LABELS
+#define SW_ENABLE_DEBUG_LABELS 0
+#endif
+
 template <typename T>
 struct VulkanResourceInfo;
 
@@ -83,7 +88,13 @@ struct SwRendererContext {
 
     template <typename T>
     inline void labelResourceDebug(const T& resource, const char* name) {
+#if SW_ENABLE_DEBUG_LABELS
         vk::DebugUtilsObjectNameInfoEXT nameInfo{VulkanResourceInfo<T>::resourceType, VulkanResourceInfo<T>::getHandle(resource), name};
         mDevice->setDebugUtilsObjectNameEXT(nameInfo);
+#else
+        // Only here to suppress unused parameter warnings when debug labels are disabled
+        (void)resource;
+        (void)name;
+#endif
     };
 };

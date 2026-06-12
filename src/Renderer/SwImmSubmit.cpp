@@ -9,9 +9,9 @@ SwImmSubmit::SwImmSubmit() {}
 
 
 void SwImmSubmit::initialize() {
-    mCommandPool = SwCommandPoolFactory::createCommandPool(vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
-    mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(mCommandPool);
-    mFence = SwFenceFactory::createFence(vk::FenceCreateFlagBits::eSignaled);
+    mCommandPool = SwCommandPoolFactory::createCommandPool("ImmSubmitCommandPool", vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+    mCommandBuffer = SwCommandBufferFactory::createCommandBuffer("ImmSubmitCommandBuffer", mCommandPool);
+    mFence = SwFenceFactory::createFence("ImmSubmitFence", vk::FenceCreateFlagBits::eSignaled);
 }
 
 void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& function) {

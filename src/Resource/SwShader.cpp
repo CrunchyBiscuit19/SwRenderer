@@ -12,7 +12,7 @@ void SwShader::destroy() { mModule.clear(); }
 
 
 
-SwShader SwShaderFactory::createShader(const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag) {
+SwShader SwShaderFactory::createShader(std::string name, const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
     const size_t fileSize = file.tellg();
     std::vector<std::uint32_t> buffer(fileSize / sizeof(std::uint32_t));
@@ -25,5 +25,7 @@ SwShader SwShaderFactory::createShader(const std::filesystem::path& filePath, vk
     shaderCreateInfo.codeSize = buffer.size() * sizeof(std::uint32_t);
     shaderCreateInfo.pCode = buffer.data();
 
-    return SwShader(SwRenderer::sRendererContext.mDevice->createShaderModule(shaderCreateInfo), shaderStageFlag);
+    SwShader shader(SwRenderer::sRendererContext.mDevice->createShaderModule(shaderCreateInfo), shaderStageFlag);
+    SwRenderer::sRendererContext.labelResourceDebug(shader.getRawModule(), name.c_str());
+    return shader;
 }

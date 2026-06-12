@@ -12,19 +12,21 @@ SwPick::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwPick::System::initializeResources() {
     mResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(SwPick::ReadbackData), true
+        "PickReadbackBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(SwPick::ReadbackData), true
     );
 
     mResources.mReadbackDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute
+        "PickReadbackDescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eCompute
     );
-    mResources.mReadbackDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mReadbackDescriptorLayout);
+    mResources.mReadbackDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("PickReadbackDescriptorSet", mResources.mReadbackDescriptorLayout);
 
-    mResources.mDrawPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwPick::DrawPC::getRange());
+    mResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(
+        "PickDrawPipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwPick::DrawPC::getRange()
+    );
 
-    SwShader drawVertexShader = SwShaderFactory::createShader(PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    SwShader drawFragmentShader = SwShaderFactory::createShader(PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    SwShader drawVertexShader = SwShaderFactory::createShader("PickDrawVertexShaderModule", PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    SwShader drawFragmentShader = SwShaderFactory::createShader("PickDrawFragmentShaderModule", PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.colorWriteMask =
@@ -49,18 +51,18 @@ void SwPick::System::initializeResources() {
 
     drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
     drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
-    mResources.mDrawOpaqueTransparentPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
+    mResources.mDrawOpaqueTransparentPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawOpaqueTransparentPipeline", drawPipelineOptions);
 
     drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
     drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
-    mResources.mDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(drawPipelineOptions);
+    mResources.mDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawMaskedPipeline", drawPipelineOptions);
 
     mResources.mReadbackPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(mResources.mReadbackDescriptorLayout.getRawLayout(), SwPick::ReadbackPC::getRange());
+        SwPipelineFactory::createPipelineLayout("PickReadbackPipelineLayout", mResources.mReadbackDescriptorLayout.getRawLayout(), SwPick::ReadbackPC::getRange());
 
-    SwShader workShader = SwShaderFactory::createShader(PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader workShader = SwShaderFactory::createShader("PickReadbackShaderModule", PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mReadbackPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mResources.mReadbackPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {workShader.getRawModule(), mResources.mReadbackPipelineLayout.getRawLayout()});
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const Uint8* keyState = SDL_GetKeyboardState(nullptr);

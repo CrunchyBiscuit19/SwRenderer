@@ -8,7 +8,7 @@ SwStagingBuffer SwBounds::sBoundsStaging{};
 
 SwBounds::SwBounds(glm::vec3 min, glm::vec3 max) : mMin(min), mMax(max) {}
 
-void SwBounds::init() { sBoundsStaging = SwBufferFactory::createStagingBuffer(BOUNDS_STAGING_BUFFER_SIZE); }
+void SwBounds::init() { sBoundsStaging = SwBufferFactory::createStagingBuffer("BoundsStagingBuffer", BOUNDS_STAGING_BUFFER_SIZE); }
 
 void SwBounds::cleanup() { sBoundsStaging.destroy(); }
 
@@ -37,6 +37,6 @@ SwMesh::SwMesh(
       mFirstIndexInScene(firstIndexInScene) {
 }
 
-void SwMesh::init() { sMeshStaging = SwBufferFactory::createStagingBuffer(MESH_STAGING_BUFFER_SIZE); }
+void SwMesh::init() { sMeshStaging = SwBufferFactory::createStagingBuffer("MeshStagingBuffer", MESH_STAGING_BUFFER_SIZE); }
 
 void SwMesh::cleanup() { sMeshStaging.destroy(); }

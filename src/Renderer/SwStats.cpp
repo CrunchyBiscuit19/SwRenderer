@@ -5,12 +5,12 @@ SwStats::SwStats() {}
 void SwStats::initialize() {
     // Scratch: storage (atomic accumulation) + transfer source (copied into the published buffer).
     mRisScratchCount = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(std::uint32_t),
-        true
+        "RisScratchCountBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eTransferSrc, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT,
+        sizeof(std::uint32_t), true
     );
     // Published: transfer destination, host-readable by the GUI.
     mRisPublishedCount = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eTransferDst, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(std::uint32_t)
+        "RisPublishedCountBuffer", vk::BufferUsageFlagBits::eTransferDst, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(std::uint32_t)
     );
 }
 

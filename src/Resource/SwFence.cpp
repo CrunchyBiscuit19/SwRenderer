@@ -7,9 +7,11 @@ SwFence::SwFence() : mFence(nullptr) {}
 SwFence::SwFence(vk::raii::Fence fence) : mFence(std::move(fence)) {}
 
 
-SwFence SwFenceFactory::createFence(vk::FenceCreateFlags fenceCreateFlags) {
+SwFence SwFenceFactory::createFence(std::string name, vk::FenceCreateFlags fenceCreateFlags) {
     vk::FenceCreateInfo fenceCreateInfo = {};
     fenceCreateInfo.pNext = nullptr;
     fenceCreateInfo.flags = fenceCreateFlags;
-    return SwFence(SwRenderer::sRendererContext.mDevice->createFence(fenceCreateInfo));
+    SwFence fence(SwRenderer::sRendererContext.mDevice->createFence(fenceCreateInfo));
+    SwRenderer::sRendererContext.labelResourceDebug(fence.getRawFence(), name.c_str());
+    return fence;
 }

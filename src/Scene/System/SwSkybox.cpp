@@ -9,16 +9,18 @@
 SwSkybox::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwSkybox::System::initializeResources() {
-    mResources.mWorkSampler = SwSamplerFactory::createSampler(vk::SamplerCreateInfo());
+    mResources.mWorkSampler = SwSamplerFactory::createSampler("SkyboxWorkSampler", vk::SamplerCreateInfo());
 
-    mResources.mWorkDescriptorLayout =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout({{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment);
-    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
+    mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "SkyboxWorkDescriptorSetLayout", {{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment
+    );
+    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SkyboxWorkDescriptorSet", mResources.mWorkDescriptorLayout);
 
-    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
+    mResources.mWorkPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("SkyboxWorkPipelineLayout", mResources.mWorkDescriptorLayout.getRawLayout(), SwSkybox::WorkPC::getRange());
 
-    SwShader skyboxVertexShader = SwShaderFactory::createShader(SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    SwShader skyboxFragmentShader = SwShaderFactory::createShader(SKYBOX_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    SwShader skyboxVertexShader = SwShaderFactory::createShader("SkyboxVertexShaderModule", SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    SwShader skyboxFragmentShader = SwShaderFactory::createShader("SkyboxFragmentShaderModule", SKYBOX_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 
     vk::PipelineColorBlendAttachmentState skyboxBlendAttachment{};
     skyboxBlendAttachment.colorWriteMask =
@@ -47,17 +49,18 @@ void SwSkybox::System::initializeResources() {
     skyboxPipelineOptions.mDepthTestEnabled = false;
     skyboxPipelineOptions.mDepthWriteEnabled = false;
     skyboxPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mResources.mWorkPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(skyboxPipelineOptions);
+    mResources.mWorkPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("SkyboxWorkPipeline", skyboxPipelineOptions);
 
     const std::uint32_t skyboxVertexSize = static_cast<std::uint32_t>(mResources.mWorkVertices.size() * sizeof(float));
     mResources.mWorkVertexBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SkyboxWorkVertexBuffer",
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         skyboxVertexSize,
         true
     );
 
-    SwStagingBuffer skyboxVertexStagingBuffer = SwBufferFactory::createStagingBuffer(skyboxVertexSize);
+    SwStagingBuffer skyboxVertexStagingBuffer = SwBufferFactory::createStagingBuffer("SkyboxVertexStagingBuffer", skyboxVertexSize);
 
     vk::BufferCopy skyboxVertexCopy{};
     skyboxVertexCopy.dstOffset = 0;

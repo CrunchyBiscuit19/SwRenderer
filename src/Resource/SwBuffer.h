@@ -12,6 +12,7 @@ struct SwRendererContext;
 
 class SwBuffer {
 protected:
+    std::string mName;
     std::optional<vk::DeviceAddress> mAddress;
     VmaAllocationInfo mInfo;
     VmaAllocationCreateFlags mFlags;
@@ -27,7 +28,7 @@ protected:
     SwBuffer();
 
     SwBuffer(
-        vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
+        std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
         vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
@@ -48,6 +49,7 @@ public:
     virtual void copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) = 0;
 
     void* getMappedPtr();
+    inline const std::string& getName() const { return mName; }
     inline vk::Buffer getRawBuffer() { return *mBuffer; }
     std::optional<vk::DeviceAddress> getDeviceAddress() { return mAddress; }
     inline vk::PipelineStageFlags2 getCurrentStage() { return mCurrentStage; }
@@ -74,7 +76,7 @@ public:
     SwAllocatedBuffer();
 
     SwAllocatedBuffer(
-        vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
+        std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
         vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
@@ -97,7 +99,7 @@ private:
 public:
     SwStagingBuffer();
 
-    SwStagingBuffer(vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size);
+    SwStagingBuffer(std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size);
 
     using SwBuffer::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
@@ -125,9 +127,11 @@ private:
 public:
     static void init();
 
-    static SwAllocatedBuffer createAllocatedBuffer(vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable = false, bool resizable = true);
+    static SwAllocatedBuffer createAllocatedBuffer(
+        std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable = false, bool resizable = true
+    );
 
-    static SwStagingBuffer createStagingBuffer(std::uint64_t size, bool resizable = true);
+    static SwStagingBuffer createStagingBuffer(std::string name, std::uint64_t size, bool resizable = true);
 
     // Queues a buffer for destruction after NUM_FRAME_OVERLAP frames have passed.
     // Call this instead of letting resize destroy the old handle immediately.

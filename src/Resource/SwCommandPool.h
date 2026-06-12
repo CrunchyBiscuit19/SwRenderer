@@ -22,5 +22,5 @@ private:
 public:
     static void init();
 
-    static SwCommandPool createCommandPool(vk::CommandPoolCreateFlags commandPoolCreateFlags);
+    static SwCommandPool createCommandPool(std::string name, vk::CommandPoolCreateFlags commandPoolCreateFlags);
 };

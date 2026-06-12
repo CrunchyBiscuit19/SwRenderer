@@ -18,6 +18,6 @@ SwLight::Data SwLight::toData(std::uint32_t nodeTransformIndex, std::uint32_t in
     return d;
 }
 
-void SwLight::init() { sLightsStaging = SwBufferFactory::createStagingBuffer(LIGHTS_STAGING_BUFFER_SIZE); }
+void SwLight::init() { sLightsStaging = SwBufferFactory::createStagingBuffer("LightsStagingBuffer", LIGHTS_STAGING_BUFFER_SIZE); }
 
 void SwLight::cleanup() { sLightsStaging.destroy(); }

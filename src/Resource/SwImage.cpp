@@ -588,7 +588,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
 }
 
 void SwImageFactory::init() {
-    sImageStaging = SwBufferFactory::createStagingBuffer(IMAGE_STAGING_BUFFER_SIZE);
+    sImageStaging = SwBufferFactory::createStagingBuffer("ImageStagingBuffer", IMAGE_STAGING_BUFFER_SIZE);
     constexpr std::uint32_t white = std::byteswap(0xFFFFFFFF);
     sDefaultImages.try_emplace(
         SwDefaultImageOption::White,

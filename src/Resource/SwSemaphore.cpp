@@ -17,8 +17,10 @@ vk::SemaphoreSubmitInfo SwSemaphore::generateSubmitInfo(vk::PipelineStageFlags2 
 }
 
 
-SwSemaphore SwSemaphoreFactory::createSemaphore() {
+SwSemaphore SwSemaphoreFactory::createSemaphore(std::string name) {
     vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
     semaphoreCreateInfo.pNext = nullptr;
-    return SwSemaphore(SwRenderer::sRendererContext.mDevice->createSemaphore(semaphoreCreateInfo));
+    SwSemaphore semaphore(SwRenderer::sRendererContext.mDevice->createSemaphore(semaphoreCreateInfo));
+    SwRenderer::sRendererContext.labelResourceDebug(semaphore.getRawSemaphore(), name.c_str());
+    return semaphore;
 }

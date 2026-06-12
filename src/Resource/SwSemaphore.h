@@ -24,5 +24,5 @@ private:
 public:
     static void init();
 
-    static SwSemaphore createSemaphore();
+    static SwSemaphore createSemaphore(std::string name);
 };

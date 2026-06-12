@@ -78,7 +78,9 @@ protected:
 public:
     static void init();
 
-    static SwPipelineLayout createPipelineLayout(vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges);
+    static SwPipelineLayout createPipelineLayout(
+        std::string name, vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges
+    );
 };
 
 class SwGraphicsPipelineFactory : public SwPipelineFactory {
@@ -102,7 +104,7 @@ public:
         vk::CompareOp mDepthCompareOp;
     };
 
-    static SwGraphicsPipelineBundle createGraphicsPipeline(SwGraphicsPipelineOptions options);
+    static SwGraphicsPipelineBundle createGraphicsPipeline(std::string name, SwGraphicsPipelineOptions options);
 
 private:
     static void setShaders(
@@ -136,7 +138,7 @@ public:
         std::string mComputeEntryPoint{DEFAULT_SHADER_ENTRY_POINT};
     };
 
-    static SwComputePipelineBundle createComputePipeline(SwComputePipelineOptions options);
+    static SwComputePipelineBundle createComputePipeline(std::string name, SwComputePipelineOptions options);
 
 private:
     static void setShaders(

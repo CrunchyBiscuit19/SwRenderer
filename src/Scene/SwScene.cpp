@@ -6,6 +6,7 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
+#include <fmt/core.h>
 #include <quill/LogMacros.h>
 
 #include <glm/glm.hpp>
@@ -47,39 +48,44 @@ void SwScene::initializeMiscPasses() {
 
 void SwScene::initializeResources() {
     mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_VERTEX_BUFFER_SIZE, true
+        "SceneVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_VERTEX_BUFFER_SIZE, true
     );
 
     mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_INDEX_BUFFER_SIZE
+        "SceneIndexBuffer", vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_INDEX_BUFFER_SIZE
     );
 
     mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants), true
+        "SceneMaterialConstantsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants), true
     );
 
     mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_NODES * sizeof(glm::mat4), true
+        "SceneNodeTransformsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_NODES * sizeof(glm::mat4), true
     );
 
     mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_INSTANCES * sizeof(SwInstance::Data), true
+        "SceneInstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_INSTANCES * sizeof(SwInstance::Data), true
     );
 
     mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
+        "SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
     );
 
     mSceneDrawRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t), true
+        "SceneDrawRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t), true
     );
 
     mSceneLightsBuffer = SwBufferFactory::createAllocatedBuffer(
-        vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_LIGHTS * sizeof(SwLight::Data), true
+        "SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_LIGHTS * sizeof(SwLight::Data), true
     );
 
     for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
         mSceneVisibilityRisBuffers[i] = SwBufferFactory::createAllocatedBuffer(
+            fmt::format("SceneVisibilityRisBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
@@ -88,7 +94,7 @@ void SwScene::initializeResources() {
     }
 
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
-        SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
+        "SceneMaterialResourcesDescriptorSet", SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
 
     // Seed every bindless slot with the default texture so no slot is ever left unwritten. 

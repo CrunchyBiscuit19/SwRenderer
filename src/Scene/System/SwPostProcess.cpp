@@ -12,22 +12,23 @@ SwPostProcess::System::System(SwScene& scene) : SwSystem(scene) {}
 void SwPostProcess::System::initializeResources() {
     // --- Tonemap: the HDR draw image bound as a single storage image, resolved to LDR in place. ---
     mResources.mTonemapDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eStorageImage, 1}}, vk::ShaderStageFlagBits::eCompute
+        "TonemapDescriptorSetLayout", {{0, vk::DescriptorType::eStorageImage, 1}}, vk::ShaderStageFlagBits::eCompute
     );
-    mResources.mTonemapDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mTonemapDescriptorLayout);
+    mResources.mTonemapDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("TonemapDescriptorSet", mResources.mTonemapDescriptorLayout);
 
     mResources.mTonemapPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(mResources.mTonemapDescriptorLayout.getRawLayout(), SwPostProcess::TonemapPC::getRange());
-    SwShader tonemapShader = SwShaderFactory::createShader(TONEMAP_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwPipelineFactory::createPipelineLayout("TonemapPipelineLayout", mResources.mTonemapDescriptorLayout.getRawLayout(), SwPostProcess::TonemapPC::getRange());
+    SwShader tonemapShader = SwShaderFactory::createShader("TonemapShaderModule", TONEMAP_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mTonemapPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({tonemapShader.getRawModule(), mResources.mTonemapPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("TonemapPipeline", {tonemapShader.getRawModule(), mResources.mTonemapPipelineLayout.getRawLayout()});
 
     // --- FXAA: binding 0 the draw image sampled, binding 1 a bilinear sampler, binding 2 the same image as storage (in-place resolve). ---
     mResources.mFXAADescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}, {2, vk::DescriptorType::eStorageImage, 1}},
+        "FXAADescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}, {2, vk::DescriptorType::eStorageImage, 1}},
         vk::ShaderStageFlagBits::eCompute
     );
-    mResources.mFXAADescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mFXAADescriptorLayout);
+    mResources.mFXAADescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("FXAADescriptorSet", mResources.mFXAADescriptorLayout);
 
     vk::SamplerCreateInfo samplerInfo{};
     samplerInfo.setMagFilter(vk::Filter::eLinear);
@@ -36,14 +37,14 @@ void SwPostProcess::System::initializeResources() {
     samplerInfo.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
     samplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
     samplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
-    mResources.mFXAASampler = SwSamplerFactory::createSampler(samplerInfo);
+    mResources.mFXAASampler = SwSamplerFactory::createSampler("FXAASampler", samplerInfo);
     mResources.mFXAADescriptorSet.writeSampler(1, mResources.mFXAASampler.getRawSampler());
 
     mResources.mFXAAPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(mResources.mFXAADescriptorLayout.getRawLayout(), SwPostProcess::FXAAPC::getRange());
-    SwShader fxaaShader = SwShaderFactory::createShader(FXAA_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwPipelineFactory::createPipelineLayout("FXAAPipelineLayout", mResources.mFXAADescriptorLayout.getRawLayout(), SwPostProcess::FXAAPC::getRange());
+    SwShader fxaaShader = SwShaderFactory::createShader("FXAAShaderModule", FXAA_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mFXAAPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({fxaaShader.getRawModule(), mResources.mFXAAPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("FXAAPipeline", {fxaaShader.getRawModule(), mResources.mFXAAPipelineLayout.getRawLayout()});
 
     reInitializeOnResize();
 }

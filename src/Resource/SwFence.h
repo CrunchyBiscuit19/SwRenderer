@@ -24,5 +24,5 @@ private:
 public:
     static void init();
 
-    static SwFence createFence(vk::FenceCreateFlags flags);
+    static SwFence createFence(std::string name, vk::FenceCreateFlags flags);
 };

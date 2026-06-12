@@ -21,13 +21,15 @@ SwComputePipelineBundle::SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk
 
 
 SwPipelineLayout SwPipelineFactory::createPipelineLayout(
-    vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges
+    std::string name, vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges
 ) {
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo({}, layouts.size(), layouts.data(), pushConstantRanges.size(), pushConstantRanges.data());
-    return SwPipelineLayout(vk::raii::PipelineLayout(*SwRenderer::sRendererContext.mDevice, pipelineLayoutCreateInfo));
+    SwPipelineLayout pipelineLayout(vk::raii::PipelineLayout(*SwRenderer::sRendererContext.mDevice, pipelineLayoutCreateInfo));
+    SwRenderer::sRendererContext.labelResourceDebug(pipelineLayout.getRawLayout(), name.c_str());
+    return pipelineLayout;
 }
 
-SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGraphicsPipelineOptions options) {
+SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(std::string name, SwGraphicsPipelineOptions options) {
     vk::PipelineViewportStateCreateInfo viewportState;
     viewportState.pNext = nullptr;
     viewportState.viewportCount = 1;
@@ -80,7 +82,11 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(SwGra
     graphicsPipelineInfo.layout = options.mLayout;
     graphicsPipelineInfo.pDynamicState = &dynamicInfo;
 
-    return SwGraphicsPipelineBundle(vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo)), options.mLayout);
+    SwGraphicsPipelineBundle pipelineBundle(
+        vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo)), options.mLayout
+    );
+    SwRenderer::sRendererContext.labelResourceDebug(pipelineBundle.getRawPipeline(), name.c_str());
+    return pipelineBundle;
 }
 
 void SwGraphicsPipelineFactory::setShaders(
@@ -182,7 +188,7 @@ void SwGraphicsPipelineFactory::enableDepthTest(
     pipelineDepthStencilStateCreateInfo.maxDepthBounds = 1.f;
 }
 
-SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(SwComputePipelineOptions options) {
+SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(std::string name, SwComputePipelineOptions options) {
     vk::PipelineShaderStageCreateInfo pipelineShaderStageCreateInfo;
 
     setShaders(pipelineShaderStageCreateInfo, options.mComputeShader, options.mComputeEntryPoint);
@@ -192,7 +198,11 @@ SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(SwComput
     computePipelineInfo.stage = pipelineShaderStageCreateInfo;
     computePipelineInfo.pNext = nullptr;
 
-    return SwComputePipelineBundle(vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo)), options.mLayout);
+    SwComputePipelineBundle pipelineBundle(
+        vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo)), options.mLayout
+    );
+    SwRenderer::sRendererContext.labelResourceDebug(pipelineBundle.getRawPipeline(), name.c_str());
+    return pipelineBundle;
 }
 
 void SwComputePipelineFactory::setShaders(

@@ -114,10 +114,10 @@ public:
     SwDescriptorPool createDescriptorPool(vk::ArrayProxy<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool);
 
     SwDescriptorLayout createDescriptorLayout(
-        std::vector<vk::DescriptorSetLayoutBinding> bindings, vk::ShaderStageFlags shaderStages, bool useBindless = false
+        std::string name, std::vector<vk::DescriptorSetLayoutBinding> bindings, vk::ShaderStageFlags shaderStages, bool useBindless = false
     );
 
-    SwDescriptorSet createDescriptorSet(SwDescriptorLayout& layout, std::uint32_t bindlessDescriptorCount = 0);
+    SwDescriptorSet createDescriptorSet(std::string name, SwDescriptorLayout& layout, std::uint32_t bindlessDescriptorCount = 0);
 
     void resetPools();
 

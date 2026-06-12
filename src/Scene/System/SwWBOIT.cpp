@@ -9,14 +9,14 @@ SwWBOIT::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwWBOIT::System::initializeResources() {
     mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eFragment
+        "WBOITWorkDescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eFragment
     );
-    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
+    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("WBOITWorkDescriptorSet", mResources.mWorkDescriptorLayout);
 
-    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), nullptr);
+    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITWorkPipelineLayout", mResources.mWorkDescriptorLayout.getRawLayout(), nullptr);
 
-    SwShader wboitVertexShader = SwShaderFactory::createShader(WBOIT_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    SwShader wboitFragmentShader = SwShaderFactory::createShader(WBOIT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    SwShader wboitVertexShader = SwShaderFactory::createShader("WBOITVertexShaderModule", WBOIT_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    SwShader wboitFragmentShader = SwShaderFactory::createShader("WBOITFragmentShaderModule", WBOIT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 
     vk::PipelineColorBlendAttachmentState compositeBlendAttachment{};
     compositeBlendAttachment.colorWriteMask =
@@ -45,7 +45,7 @@ void SwWBOIT::System::initializeResources() {
     wboitPipelineOptions.mDepthTestEnabled = false;
     wboitPipelineOptions.mDepthWriteEnabled = false;
     wboitPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mResources.mWorkPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline(wboitPipelineOptions);
+    mResources.mWorkPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("WBOITWorkPipeline", wboitPipelineOptions);
 
     reInitializeOnResize();
 }

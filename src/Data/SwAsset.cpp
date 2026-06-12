@@ -97,21 +97,25 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
 
 void SwAsset::constructBuffers() {
     mMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
+        fmt::format("{}MaterialConstantsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         NUM_ASSET_MATERIALS * sizeof(SwMaterialConstants)
     );
     mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
+        fmt::format("{}BoundsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         NUM_ASSET_BOUNDS * sizeof(SwBounds)
     );
     mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
+        fmt::format("{}NodeTransformsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         NUM_ASSET_NODES * sizeof(glm::mat4)
     );
     mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
+        fmt::format("{}InstancesBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         NUM_ASSET_INSTANCES * sizeof(SwInstance::Data)
@@ -121,10 +125,11 @@ void SwAsset::constructBuffers() {
 void SwAsset::constructSamplerAndSamplerOptions() {
     vk::SamplerCreateInfo defaultSamplerCreateInfo;
     SwSamplerOptions defaultSamplerOptions(defaultSamplerCreateInfo);
-    sSamplers.emplace(defaultSamplerOptions, SwSamplerFactory::createSampler(defaultSamplerCreateInfo));
+    sSamplers.emplace(defaultSamplerOptions, SwSamplerFactory::createSampler(fmt::format("{}DefaultSampler", mName), defaultSamplerCreateInfo));
 
     sSamplers.reserve(mRawAsset.samplers.size());
-    for (fastgltf::Sampler& sampler : mRawAsset.samplers) {
+    for (std::uint32_t i = 0; i < mRawAsset.samplers.size(); i++) {
+        fastgltf::Sampler& sampler = mRawAsset.samplers[i];
         vk::SamplerCreateInfo samplerCreateInfo;
         samplerCreateInfo.pNext = nullptr;
         samplerCreateInfo.maxLod = vk::LodClampNone;
@@ -136,7 +141,7 @@ void SwAsset::constructSamplerAndSamplerOptions() {
         samplerCreateInfo.addressModeV = extractAddressMode(sampler.wrapT);
         samplerCreateInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
         SwSamplerOptions samplerOptions(samplerCreateInfo);
-        sSamplers.emplace(samplerOptions, SwSamplerFactory::createSampler(samplerCreateInfo));
+        sSamplers.emplace(samplerOptions, SwSamplerFactory::createSampler(fmt::format("{}Sampler{:0>2}", mName, i), samplerCreateInfo));
         mSamplerOptions.emplace_back(samplerOptions);
     }
 }
@@ -373,11 +378,13 @@ void SwAsset::constructMeshes() {
         const vk::DeviceSize srcVertexVectorSize = vertices.size() * sizeof(SwVertex);
         const vk::DeviceSize srcIndexVectorSize = indices.size() * sizeof(std::uint32_t);
         SwAllocatedBuffer vertexBuffer = SwBufferFactory::createAllocatedBuffer(
+            fmt::format("{}VertexBuffer", name),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             srcVertexVectorSize
         );
         SwAllocatedBuffer indexBuffer = SwBufferFactory::createAllocatedBuffer(
+            fmt::format("{}IndexBuffer", name),
             vk::BufferUsageFlagBits::eIndexBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             srcIndexVectorSize

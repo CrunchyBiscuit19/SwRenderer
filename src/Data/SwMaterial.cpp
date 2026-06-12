@@ -8,6 +8,8 @@
 #include <Resource/SwShader.h>
 #include <Scene/System/SwGeometry.h>
 #include <Scene/SwScene.h>
+#include <fmt/core.h>
+#include <magic_enum.hpp>
 #include <quill/LogMacros.h>
 
 SwMaterialTexture SwMaterialTexture::sDefaultWhiteTexture{nullptr, nullptr};
@@ -21,7 +23,7 @@ SwMaterialTexture SwMaterialTexture::retrieveDefaultErrorTexture() { return SwMa
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStaging{};
 
-void SwMaterialConstants::init() { sMaterialConstantsStaging = SwBufferFactory::createStagingBuffer(MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }
+void SwMaterialConstants::init() { sMaterialConstantsStaging = SwBufferFactory::createStagingBuffer("MaterialConstantsStagingBuffer", MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }
 
 void SwMaterialConstants::cleanup() { sMaterialConstantsStaging.destroy(); }
 
@@ -38,6 +40,7 @@ SwMaterialResources::SwMaterialResources(
 
 void SwMaterialResources::init() {
     sMaterialResourcesDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "MaterialResourcesDescriptorSetLayout",
         {{0, vk::DescriptorType::eCombinedImageSampler, SwScene::SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         true
@@ -84,14 +87,18 @@ SwMaterial::SwMaterial(
 
 void SwMaterial::init() {
 
-    sOpaquePipelineLayout =
-        SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange());
-    sTransparentPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange());
+    sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout(
+        "GeometryOpaquePipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange()
+    );
+    sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout(
+        "GeometryTransparentPipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwGeometry::WorkPC::getRange()
+    );
 
-    sVertexShader = SwShaderFactory::createShader(GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    sOpaqueMaskedFragmentShader = SwShaderFactory::createShader(GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
-    sTransparentFragmentShader = SwShaderFactory::createShader(GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    sVertexShader = SwShaderFactory::createShader("GeometryVertexShaderModule", GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    sOpaqueMaskedFragmentShader =
+        SwShaderFactory::createShader("GeometryOpaqueMaskedFragmentShaderModule", GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    sTransparentFragmentShader =
+        SwShaderFactory::createShader("GeometryTransparentFragmentShaderModule", GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
 
 void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
@@ -161,8 +168,12 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             break;
     }
 
-    auto [it, _] =
-        sMaterialPipelineBundles.try_emplace(materialPipelineOptions, std::move(SwGraphicsPipelineFactory::createGraphicsPipeline(graphicsPipelineOptions)));
+    const std::string pipelineName = fmt::format(
+        "Geometry{}{}Pipeline", magic_enum::enum_name(materialPipelineOptions.alphaMode), materialPipelineOptions.doubleSided ? "DoubleSided" : "SingleSided"
+    );
+    auto [it, _] = sMaterialPipelineBundles.try_emplace(
+        materialPipelineOptions, std::move(SwGraphicsPipelineFactory::createGraphicsPipeline(pipelineName, graphicsPipelineOptions))
+    );
 }
 
 void SwMaterial::cleanup() {

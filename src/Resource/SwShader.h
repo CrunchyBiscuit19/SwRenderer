@@ -28,5 +28,5 @@ private:
 public:
     static void init();
 
-    static SwShader createShader(const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag);
+    static SwShader createShader(std::string name, const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag);
 };

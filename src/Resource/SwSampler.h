@@ -84,5 +84,5 @@ public:
 
     static void cleanup();
 
-    static SwSampler createSampler(vk::SamplerCreateInfo);
+    static SwSampler createSampler(std::string name, vk::SamplerCreateInfo);
 };

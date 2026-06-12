@@ -25,24 +25,18 @@ vk::CommandBufferSubmitInfo SwCommandBuffer::generateSubmitInfo() {
 }
 
 
-SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(SwCommandPool& pool) {
-    vk::CommandBufferAllocateInfo info = {};
-    vk::CommandBufferAllocateInfo commandBufferAllocateInfo = {};
-    commandBufferAllocateInfo.pNext = nullptr;
-    commandBufferAllocateInfo.commandPool = pool.getRawCommandPool();
-    commandBufferAllocateInfo.commandBufferCount = 1;
-    commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
-
-    return SwCommandBuffer(std::move(SwRenderer::sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
+SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(std::string name, SwCommandPool& pool) {
+    return createCommandBuffer(std::move(name), pool.getRawCommandPool());
 }
 
-SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(vk::CommandPool pool) {
-    vk::CommandBufferAllocateInfo info = {};
+SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(std::string name, vk::CommandPool pool) {
     vk::CommandBufferAllocateInfo commandBufferAllocateInfo = {};
     commandBufferAllocateInfo.pNext = nullptr;
     commandBufferAllocateInfo.commandPool = pool;
     commandBufferAllocateInfo.commandBufferCount = 1;
     commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
 
-    return SwCommandBuffer(std::move(SwRenderer::sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
+    SwCommandBuffer commandBuffer(std::move(SwRenderer::sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
+    SwRenderer::sRendererContext.labelResourceDebug(commandBuffer.getRawCommandBuffer(), name.c_str());
+    return commandBuffer;
 }

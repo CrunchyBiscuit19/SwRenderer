@@ -40,7 +40,7 @@ public:
 
     static void init();
 
-    void initialize();
+    void initialize(std::uint32_t frameIndex);
 
     void update();
 

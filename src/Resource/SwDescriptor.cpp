@@ -85,7 +85,7 @@ SwDescriptorPool SwDescriptorAllocator::createDescriptorPool(vk::ArrayProxy<SwPo
 }
 
 SwDescriptorLayout SwDescriptorAllocator::createDescriptorLayout(
-    std::vector<vk::DescriptorSetLayoutBinding> bindings, vk::ShaderStageFlags shaderStages, bool useBindless
+    std::string name, std::vector<vk::DescriptorSetLayoutBinding> bindings, vk::ShaderStageFlags shaderStages, bool useBindless
 ) {
     for (auto& b : bindings) {
         b.stageFlags |= shaderStages;
@@ -106,10 +106,14 @@ SwDescriptorLayout SwDescriptorAllocator::createDescriptorLayout(
         descriptorLayoutCreateInfo.pNext = &descriptorLayoutBindingFlagsCreateInfo;
     }
 
-    return SwDescriptorLayout(SwRenderer::sRendererContext.mDevice->createDescriptorSetLayout(descriptorLayoutCreateInfo, nullptr), std::move(bindings), useBindless);
+    SwDescriptorLayout descriptorLayout(
+        SwRenderer::sRendererContext.mDevice->createDescriptorSetLayout(descriptorLayoutCreateInfo, nullptr), std::move(bindings), useBindless
+    );
+    SwRenderer::sRendererContext.labelResourceDebug(descriptorLayout.getRawLayout(), name.c_str());
+    return descriptorLayout;
 }
 
-SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& layout, std::uint32_t bindlessDescriptorCount) {
+SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(std::string name, SwDescriptorLayout& layout, std::uint32_t bindlessDescriptorCount) {
     if (mReadyPools.empty()) {
         mReadyPools.emplace_back(std::move(createPool(mSetsPerPool)));
     }
@@ -127,7 +131,9 @@ SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& l
 
     try {
         auto sets = SwRenderer::sRendererContext.mDevice->allocateDescriptorSets(descriptorSetAllocateInfo);
-        return SwDescriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
+        SwDescriptorSet descriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
+        SwRenderer::sRendererContext.labelResourceDebug(descriptorSet.getRawSet(), name.c_str());
+        return descriptorSet;
     } catch (const vk::OutOfPoolMemoryError&) {
         /* grow below */
     } catch (const vk::FragmentedPoolError&) {
@@ -141,7 +147,9 @@ SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(SwDescriptorLayout& l
     descriptorSetAllocateInfo.descriptorPool = mReadyPools.back().getRawPool();
 
     auto sets = SwRenderer::sRendererContext.mDevice->allocateDescriptorSets(descriptorSetAllocateInfo);
-    return SwDescriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
+    SwDescriptorSet descriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
+    SwRenderer::sRendererContext.labelResourceDebug(descriptorSet.getRawSet(), name.c_str());
+    return descriptorSet;
 }
 
 void SwDescriptorAllocator::resetPools() {

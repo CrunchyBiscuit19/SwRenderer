@@ -62,6 +62,13 @@ void SwCull::System::initializeEarlyPasses() {
     SwDependency staticDeps;
 
     // EarlyWork
+    // The shared Work pipeline statically samples the depth pyramid (occlusionCull is in the entry
+    // point's call graph even though it only runs in the Late phase), so the descriptor requires the
+    // pyramid in eShaderReadOnlyOptimal here too. Declaring the read makes the graph transition it
+    // (this frame it holds frame N-1's pyramid) and orders EarlyWork before CullPrepOcclusion rebuilds
+    // it (WAR). Without it the layout is only correct by luck from the previous frame's LateWork, which
+    // breaks on the first frame and after every resize (the pyramid is left in eGeneral).
+    staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -268,19 +275,20 @@ void SwCull::System::initializeLatePasses() {
 
 void SwCull::System::initializeResources() {
     // Reset*
-    mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::ResetPC::getRange());
-    SwShader resetShader = SwShaderFactory::createShader(CULL_RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("CullResetPipelineLayout", nullptr, SwCull::ResetPC::getRange());
+    SwShader resetShader = SwShaderFactory::createShader("CullResetShaderModule", CULL_RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mResetPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({resetShader.getRawModule(), mResources.mResetPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("CullResetPipeline", {resetShader.getRawModule(), mResources.mResetPipelineLayout.getRawLayout()});
 
     // Compact*
-    mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout(nullptr, SwCull::CompactPC::getRange());
-    SwShader compactShader = SwShaderFactory::createShader(CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout("CullCompactPipelineLayout", nullptr, SwCull::CompactPC::getRange());
+    SwShader compactShader = SwShaderFactory::createShader("CullCompactShaderModule", CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mCompactPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({compactShader.getRawModule(), mResources.mCompactPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("CullCompactPipeline", {compactShader.getRawModule(), mResources.mCompactPipelineLayout.getRawLayout()});
 
     // PrepOcclusion
     mResources.mPrepOcclusionDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "CullPrepOcclusionDescriptorSetLayout",
         {{0, vk::DescriptorType::eSampledImage, 1},
          {1, vk::DescriptorType::eSampledImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
          {2, vk::DescriptorType::eStorageImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
@@ -297,22 +305,25 @@ void SwCull::System::initializeResources() {
     minSamplerInfo.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
     minSamplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
     minSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
-    mResources.mDepthPyramidMinSampler = SwSamplerFactory::createSampler(minSamplerInfo);
+    mResources.mDepthPyramidMinSampler = SwSamplerFactory::createSampler("CullDepthPyramidMinSampler", minSamplerInfo);
 
-    mResources.mPrepOcclusionDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mPrepOcclusionDescriptorLayout);
+    mResources.mPrepOcclusionDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("CullPrepOcclusionDescriptorSet", mResources.mPrepOcclusionDescriptorLayout);
     mResources.mPrepOcclusionDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getRawSampler());
 
-    mResources.mPrepOcclusionPipelineLayout =
-        SwPipelineFactory::createPipelineLayout(mResources.mPrepOcclusionDescriptorLayout.getRawLayout(), SwCull::PrepOcclusionPC::getRange());
-    SwShader depthPyramidShader = SwShaderFactory::createShader(CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mResources.mPrepOcclusionPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({depthPyramidShader.getRawModule(), mResources.mPrepOcclusionPipelineLayout.getRawLayout()});
+    mResources.mPrepOcclusionPipelineLayout = SwPipelineFactory::createPipelineLayout(
+        "CullPrepOcclusionPipelineLayout", mResources.mPrepOcclusionDescriptorLayout.getRawLayout(), SwCull::PrepOcclusionPC::getRange()
+    );
+    SwShader depthPyramidShader = SwShaderFactory::createShader("CullPrepOcclusionShaderModule", CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mPrepOcclusionPipelineBundle = SwComputePipelineFactory::createComputePipeline(
+        "CullPrepOcclusionPipeline", {depthPyramidShader.getRawModule(), mResources.mPrepOcclusionPipelineLayout.getRawLayout()}
+    );
 
     // Work*
     mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}}, vk::ShaderStageFlagBits::eCompute
+        "CullWorkDescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}}, vk::ShaderStageFlagBits::eCompute
     );
-    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(mResources.mWorkDescriptorLayout);
+    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("CullWorkDescriptorSet", mResources.mWorkDescriptorLayout);
 
     vk::SamplerReductionModeCreateInfo workReductionInfo{vk::SamplerReductionMode::eMin};
     vk::SamplerCreateInfo workSamplerInfo{};
@@ -324,13 +335,14 @@ void SwCull::System::initializeResources() {
     workSamplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
     workSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
     workSamplerInfo.setMaxLod(VK_LOD_CLAMP_NONE);
-    mResources.mWorkDepthPyramidSampler = SwSamplerFactory::createSampler(workSamplerInfo);
+    mResources.mWorkDepthPyramidSampler = SwSamplerFactory::createSampler("CullWorkDepthPyramidSampler", workSamplerInfo);
     mResources.mWorkDescriptorSet.writeSampler(1, mResources.mWorkDepthPyramidSampler.getRawSampler());
 
-    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout(mResources.mWorkDescriptorLayout.getRawLayout(), SwCull::WorkPC::getRange());
-    SwShader workShader = SwShaderFactory::createShader(CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mWorkPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("CullWorkPipelineLayout", mResources.mWorkDescriptorLayout.getRawLayout(), SwCull::WorkPC::getRange());
+    SwShader workShader = SwShaderFactory::createShader("CullWorkShaderModule", CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mWorkPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline({workShader.getRawModule(), mResources.mWorkPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("CullWorkPipeline", {workShader.getRawModule(), mResources.mWorkPipelineLayout.getRawLayout()});
 
     reInitializeOnResize();
 }

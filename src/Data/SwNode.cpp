@@ -27,7 +27,7 @@ void SwNode::addChild(std::shared_ptr<SwNode> child) {
 }
 
 void SwNode::init() {
-    sNodeTransformsStaging = SwBufferFactory::createStagingBuffer(NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
+    sNodeTransformsStaging = SwBufferFactory::createStagingBuffer("NodeTransformsStagingBuffer", NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
 }
 
 void SwNode::cleanup() { sNodeTransformsStaging.destroy(); }
