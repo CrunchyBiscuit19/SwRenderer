@@ -85,4 +85,6 @@ public:
     static void cleanup();
 
     static SwSampler createSampler(std::string name, vk::SamplerCreateInfo);
+
+    static float getMaxSamplerAnisotropy();
 };

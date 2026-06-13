@@ -123,7 +123,15 @@ void SwAsset::constructBuffers() {
 };
 
 void SwAsset::constructSamplerAndSamplerOptions() {
+    const float maxAnisotropy = SwSamplerFactory::getMaxSamplerAnisotropy();
     vk::SamplerCreateInfo defaultSamplerCreateInfo;
+    defaultSamplerCreateInfo.magFilter = vk::Filter::eLinear;
+    defaultSamplerCreateInfo.minFilter = vk::Filter::eLinear;
+    defaultSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    defaultSamplerCreateInfo.minLod = 0;
+    defaultSamplerCreateInfo.maxLod = vk::LodClampNone;
+    defaultSamplerCreateInfo.anisotropyEnable = vk::True;
+    defaultSamplerCreateInfo.maxAnisotropy = maxAnisotropy;
     SwSamplerOptions defaultSamplerOptions(defaultSamplerCreateInfo);
     sSamplers.emplace(defaultSamplerOptions, SwSamplerFactory::createSampler(fmt::format("{}DefaultSampler", mName), defaultSamplerCreateInfo));
 
@@ -140,6 +148,8 @@ void SwAsset::constructSamplerAndSamplerOptions() {
         samplerCreateInfo.addressModeU = extractAddressMode(sampler.wrapS);
         samplerCreateInfo.addressModeV = extractAddressMode(sampler.wrapT);
         samplerCreateInfo.addressModeW = vk::SamplerAddressMode::eRepeat;
+        samplerCreateInfo.anisotropyEnable = vk::True;
+        samplerCreateInfo.maxAnisotropy = maxAnisotropy;
         SwSamplerOptions samplerOptions(samplerCreateInfo);
         sSamplers.emplace(samplerOptions, SwSamplerFactory::createSampler(fmt::format("{}Sampler{:0>2}", mName, i), samplerCreateInfo));
         mSamplerOptions.emplace_back(samplerOptions);

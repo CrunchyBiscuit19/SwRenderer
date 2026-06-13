@@ -90,7 +90,8 @@ namespace SwGeometry {
         float3 irradiance = irradianceMap.SampleLevel(SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
         float3 diffuseIBL = irradiance * albedo;
 
-        float3 prefiltered = prefilterMap.SampleLevel(SwBRDF::dirToEquirectUv(R), roughness * maxPrefilterMip).rgb;
+        float prefilterLod = roughness * maxPrefilterMip;
+        float3 prefiltered = prefilterMap.SampleLevel(SwBRDF::dirToEquirectUv(R), prefilterLod).rgb;
         float2 envBrdf = brdfLut.SampleLevel(float2(NdotV, roughness), 0.f).rg;
         float3 specularIBL = prefiltered * (F0 * envBrdf.x + envBrdf.y);
 
