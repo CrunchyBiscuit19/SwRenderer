@@ -194,9 +194,6 @@ void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampl
                 SwHelper::fastDivCeil(mipWidth, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(mipHeight, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1
             );
         }
-
-        mResources.mIrradianceImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
-        mResources.mPrefilterImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
     });
 
     // The image views are unchanged, but re-point the consume set so the equirect sampler stays attached.

@@ -93,6 +93,7 @@ public:
     inline float getMaxPrefilterMip() const { return mPrefilterMipLevels > 0 ? static_cast<float>(mPrefilterMipLevels - 1) : 0.f; }
     inline float getIblIntensity() const { return mIblIntensity; }
     inline float* getIblIntensityPtr() { return &mIblIntensity; }
+    inline Resources& getResources() { return mResources; }
 };
 
 }  // namespace SwIBL

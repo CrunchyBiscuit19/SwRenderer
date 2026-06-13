@@ -317,48 +317,52 @@ void SwAsset::constructMaterials() {
 }
 
 void SwAsset::constructMeshes() {
-    mMeshes.reserve(mRawAsset.meshes.size());
-    std::vector<std::uint32_t> indices;
-    std::vector<SwVertex> vertices;
-    std::vector<SwPrimitive> primitives;
-    std::uint32_t boundsOffset = 0;
+    struct MeshData {
+        std::string mName;
+        std::vector<SwPrimitive> mPrimitives;
+        std::vector<SwVertex> mVertices;
+        std::vector<std::uint32_t> mIndices;
+        SwBounds mBounds;
+    };
+    std::vector<MeshData> meshData(mRawAsset.meshes.size());
 
-    for (fastgltf::Mesh& mesh : mRawAsset.meshes) {
-        indices.clear();
-        vertices.clear();
-        primitives.clear();
+    std::vector<std::uint32_t> meshIndices(mRawAsset.meshes.size());
+    for (std::uint32_t i = 0; i < meshIndices.size(); i++) meshIndices[i] = i;
 
-        std::string name = fmt::format("{}{}", mName, mesh.name);
+    std::for_each(std::execution::par, meshIndices.begin(), meshIndices.end(), [&](std::uint32_t meshIndex) {
+        fastgltf::Mesh& mesh = mRawAsset.meshes[meshIndex];
+        MeshData& data = meshData[meshIndex];
+        data.mName = fmt::format("{}{}", mName, mesh.name);
 
         for (auto&& p : mesh.primitives) {
-            primitives.emplace_back(
-                static_cast<std::uint32_t>(indices.size()),
+            data.mPrimitives.emplace_back(
+                static_cast<std::uint32_t>(data.mIndices.size()),
                 static_cast<std::uint32_t>(mRawAsset.accessors[p.indicesAccessor.value()].count),
-                static_cast<std::uint32_t>(vertices.size()),
+                static_cast<std::uint32_t>(data.mVertices.size()),
                 p.materialIndex.has_value() ? mMaterials[p.materialIndex.value()] : mMaterials[0]
             );
 
-            size_t vertexStartOffset = vertices.size();
+            size_t vertexStartOffset = data.mVertices.size();
 
             // Load indexes
             fastgltf::Accessor& indexAccessor = mRawAsset.accessors[p.indicesAccessor.value()];
-            indices.reserve(indices.size() + indexAccessor.count);
-            fastgltf::iterateAccessor<std::uint32_t>(mRawAsset, indexAccessor, [&](std::uint32_t index) { indices.emplace_back(index); });
+            data.mIndices.reserve(data.mIndices.size() + indexAccessor.count);
+            fastgltf::iterateAccessor<std::uint32_t>(mRawAsset, indexAccessor, [&](std::uint32_t index) { data.mIndices.emplace_back(index); });
 
             // Load vertex positions
             fastgltf::Accessor& posAccessor = mRawAsset.accessors[p.findAttribute("POSITION")->second];
-            vertices.resize(vertices.size() + posAccessor.count);
+            data.mVertices.resize(data.mVertices.size() + posAccessor.count);
             fastgltf::iterateAccessorWithIndex<glm::vec3>(mRawAsset, posAccessor, [&](glm::vec3 v, size_t pos) {
                 SwVertex vertex;
                 vertex.mPosition = v;
-                vertices[vertexStartOffset + pos] = vertex;
+                data.mVertices[vertexStartOffset + pos] = vertex;
             });
 
             // Load vertex normals
             auto normals = p.findAttribute("NORMAL");
             if (normals != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(mRawAsset, mRawAsset.accessors[normals->second], [&](glm::vec3 n, size_t pos) {
-                    vertices[vertexStartOffset + pos].mNormal = n;
+                    data.mVertices[vertexStartOffset + pos].mNormal = n;
                 });
             }
 
@@ -366,7 +370,7 @@ void SwAsset::constructMeshes() {
             auto uv = p.findAttribute("TEXCOORD_0");
             if (uv != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec2>(mRawAsset, mRawAsset.accessors[uv->second], [&](glm::vec2 uv, size_t pos) {
-                    vertices[vertexStartOffset + pos].mUv = glm::vec2(uv.x, uv.y);
+                    data.mVertices[vertexStartOffset + pos].mUv = glm::vec2(uv.x, uv.y);
                 });
             }
 
@@ -374,7 +378,7 @@ void SwAsset::constructMeshes() {
             auto colors = p.findAttribute("COLOR_0");
             if (colors != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec4>(mRawAsset, mRawAsset.accessors[colors->second], [&](glm::vec4 c, size_t pos) {
-                    vertices[vertexStartOffset + pos].mColor = c;
+                    data.mVertices[vertexStartOffset + pos].mColor = c;
                 });
             }
 
@@ -382,32 +386,35 @@ void SwAsset::constructMeshes() {
             auto tangents = p.findAttribute("TANGENT");
             if (tangents != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec4>(mRawAsset, mRawAsset.accessors[tangents->second], [&](glm::vec4 t, size_t pos) {
-                    vertices[vertexStartOffset + pos].mTangent = t;
+                    data.mVertices[vertexStartOffset + pos].mTangent = t;
                 });
             }
         }
 
-        std::uint32_t numVertices = vertices.size();
-        std::uint32_t numIndices = indices.size();
-        std::uint32_t relativeFirstBounds = boundsOffset;
-        boundsOffset++;
-
-        SwBounds bounds(glm::vec4(vertices[0].mPosition, 0.f), glm::vec4(vertices[0].mPosition, 0.f));
-        for (auto& vertex : vertices) {
-            bounds.mMin = glm::min(bounds.mMin, vertex.mPosition);
-            bounds.mMax = glm::max(bounds.mMax, vertex.mPosition);
+        data.mBounds = SwBounds(data.mVertices[0].mPosition, data.mVertices[0].mPosition);
+        for (auto& vertex : data.mVertices) {
+            data.mBounds.mMin = glm::min(data.mBounds.mMin, vertex.mPosition);
+            data.mBounds.mMax = glm::max(data.mBounds.mMax, vertex.mPosition);
         }
+    });
 
-        const vk::DeviceSize srcVertexVectorSize = vertices.size() * sizeof(SwVertex);
-        const vk::DeviceSize srcIndexVectorSize = indices.size() * sizeof(std::uint32_t);
+    mMeshes.reserve(mRawAsset.meshes.size());
+    for (std::uint32_t meshIndex = 0; meshIndex < meshData.size(); meshIndex++) {
+        MeshData& data = meshData[meshIndex];
+
+        std::uint32_t numVertices = data.mVertices.size();
+        std::uint32_t numIndices = data.mIndices.size();
+
+        const vk::DeviceSize srcVertexVectorSize = data.mVertices.size() * sizeof(SwVertex);
+        const vk::DeviceSize srcIndexVectorSize = data.mIndices.size() * sizeof(std::uint32_t);
         SwAllocatedBuffer vertexBuffer = SwBufferFactory::createAllocatedBuffer(
-            fmt::format("{}VertexBuffer", name),
+            fmt::format("{}VertexBuffer", data.mName),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             srcVertexVectorSize
         );
         SwAllocatedBuffer indexBuffer = SwBufferFactory::createAllocatedBuffer(
-            fmt::format("{}IndexBuffer", name),
+            fmt::format("{}IndexBuffer", data.mName),
             vk::BufferUsageFlagBits::eIndexBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             srcIndexVectorSize
@@ -423,13 +430,13 @@ void SwAsset::constructMeshes() {
         indexCopy.size = srcIndexVectorSize;
 
         mMeshes.emplace_back(
-            mId, name, primitives, bounds, relativeFirstBounds, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0
+            mId, data.mName, data.mPrimitives, data.mBounds, meshIndex, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0
         );
 
         SwMesh& createdMesh = mMeshes.back();
-        SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&createdMesh, &vertices, &indices, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
-            SwMesh::sMeshStaging.copyFrom(cmd, vertices.data(), vertexCopy.size, 0);
-            SwMesh::sMeshStaging.copyFrom(cmd, indices.data(), indexCopy.size, indexCopy.srcOffset);
+        SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&createdMesh, &data, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
+            SwMesh::sMeshStaging.copyFrom(cmd, data.mVertices.data(), vertexCopy.size, 0);
+            SwMesh::sMeshStaging.copyFrom(cmd, data.mIndices.data(), indexCopy.size, indexCopy.srcOffset);
             createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStaging, vertexCopy);
             createdMesh.getIndexBuffer().copyFrom(cmd, SwMesh::sMeshStaging, indexCopy);
             createdMesh.getVertexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
