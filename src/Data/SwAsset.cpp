@@ -13,6 +13,8 @@
 #include <glm/gtx/quaternion.hpp>
 #include <magic_enum.hpp>
 
+#include <execution>
+
 std::uint32_t SwAsset::sLatestAssetId{0};
 std::unordered_map<SwSamplerOptions, SwSampler> SwAsset::sSamplers{};
 
@@ -156,15 +158,11 @@ void SwAsset::constructSamplerAndSamplerOptions() {
     }
 }
 
-void SwAsset::constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type texType) {
+SwAsset::DecodedImage SwAsset::decodeImage(std::uint32_t imageIndex) {
     fastgltf::Image& rawImage = mRawAsset.images[imageIndex];
 
-    SwColorImage2D newImage;
-    std::int32_t width, height, nrChannels;
+    std::int32_t width = 0, height = 0, nrChannels = 0;
     unsigned char* data = nullptr;
-    vk::Extent3D imageSize{};
-
-    stbi_set_flip_vertically_on_load(false);
     std::visit(
         fastgltf::visitor{
             // Image stored outside of GLTF / GLB file.
@@ -200,35 +198,57 @@ void SwAsset::constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type t
         rawImage.data
     );
 
-    vk::Format imageFormat;
-    switch (texType) {
-        case SwMaterialTexture::Type::Base:
-        case SwMaterialTexture::Type::Emissive:
-            imageFormat = SwMaterialTexture::SRGB_IMAGE_FORMAT;
-            break;
-        case SwMaterialTexture::Type::MetallicRoughness:
-        case SwMaterialTexture::Type::Normal:
-        case SwMaterialTexture::Type::Occlusion:
-        default:
-            imageFormat = SwMaterialTexture::UNORM_IMAGE_FORMAT;
-            break;
-    }
-
+    DecodedImage decoded;
     if (data) {
-        imageSize.width = static_cast<std::uint32_t>(width);
-        imageSize.height = static_cast<std::uint32_t>(height);
-        imageSize.depth = 1;
-        newImage = SwImageFactory::createColorImage2D(fmt::format("{}_Image{:0>4}", mName, imageIndex), data, imageFormat, imageSize, vk::ImageUsageFlagBits::eSampled, true);
-        stbi_image_free(data);
+        decoded.mData = data;
+        decoded.mWidth = width;
+        decoded.mHeight = height;
     } else {
-        throw std::runtime_error(fmt::format("{} failed to read image {}: {}", mName, imageIndex, stbi_failure_reason() ? stbi_failure_reason() : "Unknown"));
+        const char* reason = stbi_failure_reason();
+        decoded.mError = reason ? reason : "Unknown";
+    }
+    return decoded;
+}
+
+void SwAsset::constructImages() {
+    mImages.resize(mRawAsset.images.size());
+
+    std::vector<std::optional<vk::Format>> formats(mRawAsset.images.size());
+    auto assignFormat = [&](const auto& texInfo, vk::Format format) {
+        if (!texInfo.has_value()) return;
+        const auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
+        if (tex.imageIndex.has_value() && !formats[tex.imageIndex.value()].has_value()) formats[tex.imageIndex.value()] = format;
+    };
+    for (const fastgltf::Material& material : mRawAsset.materials) {
+        assignFormat(material.pbrData.baseColorTexture, SwMaterialTexture::SRGB_IMAGE_FORMAT);
+        assignFormat(material.pbrData.metallicRoughnessTexture, SwMaterialTexture::UNORM_IMAGE_FORMAT);
+        assignFormat(material.emissiveTexture, SwMaterialTexture::SRGB_IMAGE_FORMAT);
+        assignFormat(material.normalTexture, SwMaterialTexture::UNORM_IMAGE_FORMAT);
+        assignFormat(material.occlusionTexture, SwMaterialTexture::UNORM_IMAGE_FORMAT);
+    }
+    std::vector<std::uint32_t> indices;
+    for (std::uint32_t i = 0; i < formats.size(); i++) {
+        if (formats[i].has_value()) indices.emplace_back(i);
     }
 
-    mImages[imageIndex] = std::move(newImage);
+    std::vector<DecodedImage> decoded(mRawAsset.images.size());
+    stbi_set_flip_vertically_on_load(false);
+    std::for_each(std::execution::par, indices.begin(), indices.end(), [&](std::uint32_t i) { decoded[i] = decodeImage(i); });
+
+    for (std::uint32_t i : indices) {
+        DecodedImage& decodedImage = decoded[i];
+        if (!decodedImage.mData) {
+            throw std::runtime_error(fmt::format("{} failed to read image {}: {}", mName, i, decodedImage.mError.empty() ? "Unknown" : decodedImage.mError));
+        }
+        const vk::Extent3D extent{static_cast<std::uint32_t>(decodedImage.mWidth), static_cast<std::uint32_t>(decodedImage.mHeight), 1};
+        mImages[i] = SwImageFactory::createColorImage2D(
+            fmt::format("{}_Image{:0>4}", mName, i), decodedImage.mData, formats[i].value(), extent, vk::ImageUsageFlagBits::eSampled, true
+        );
+        stbi_image_free(decodedImage.mData);
+    }
 }
 
 void SwAsset::constructMaterials() {
-    mImages.resize(mRawAsset.images.size());  // resize is not a typo
     mMaterials.reserve(mRawAsset.materials.size());
     std::vector<SwMaterialConstants> materialConstants;
     materialConstants.reserve(mRawAsset.materials.size());
@@ -259,18 +279,11 @@ void SwAsset::constructMaterials() {
         constants.mAlphaCutoff = material.alphaMode == fastgltf::AlphaMode::Mask ? material.alphaCutoff : -1.f;
         materialConstants.emplace_back(constants);
 
-        auto retrieveImage = [&](std::uint32_t imageIndex, SwMaterialTexture::Type texType) -> SwColorImage2D& {
-            if (!mImages[imageIndex].has_value()) {
-                constructImage(imageIndex, texType);
-            }
-            return mImages[imageIndex].value();
-        };
-
-        auto resolveTexture = [&](auto& texInfo, SwMaterialTexture::Type texType) -> SwMaterialTexture {
+        auto resolveTexture = [&](auto& texInfo) -> SwMaterialTexture {
             if (texInfo.has_value()) {
                 auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
-                SwColorImage2D& image = tex.imageIndex.has_value() ? retrieveImage(static_cast<std::uint32_t>(tex.imageIndex.value()), texType)
-                                                                   : SwMaterialTexture::sDefaultWhiteTexture.getImage();
+                SwColorImage2D& image =
+                    tex.imageIndex.has_value() ? mImages[tex.imageIndex.value()].value() : SwMaterialTexture::sDefaultWhiteTexture.getImage();
                 SwSampler& sampler =
                     tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : SwMaterialTexture::sDefaultWhiteTexture.getSampler();
                 return SwMaterialTexture(&image, &sampler);
@@ -278,11 +291,11 @@ void SwAsset::constructMaterials() {
             return SwMaterialTexture::retrieveDefaultWhiteTexture();
         };
 
-        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture, SwMaterialTexture::Type::Base);
-        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture, SwMaterialTexture::Type::MetallicRoughness);
-        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture, SwMaterialTexture::Type::Emissive);
-        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture, SwMaterialTexture::Type::Normal);
-        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture, SwMaterialTexture::Type::Occlusion);
+        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture);
+        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture);
+        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture);
+        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture);
+        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture);
 
         SwMaterialResources resources(
             std::move(baseTexture), std::move(metallicRoughnessTexture), std::move(normalTexture), std::move(occlusionTexture), std::move(emissiveTexture)
@@ -528,6 +541,7 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     loadRawAsset(assetPath);
     constructBuffers();
     constructSamplerAndSamplerOptions();
+    constructImages();
     constructMaterials();
     constructMeshes();
     constructLights();

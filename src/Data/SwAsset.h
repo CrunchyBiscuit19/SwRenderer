@@ -24,6 +24,13 @@ private:
 
     fastgltf::Asset mRawAsset;
 
+    struct DecodedImage {
+        unsigned char* mData{nullptr};
+        std::int32_t mWidth{0};
+        std::int32_t mHeight{0};
+        std::string mError;  
+    };
+
     std::vector<SwMesh> mMeshes;
 
     std::vector<SwLight> mLights;
@@ -32,8 +39,7 @@ private:
     std::vector<SwSamplerOptions> mSamplerOptions;
     
     std::vector<std::optional<SwColorImage2D>> mImages;
-    std::vector<bool> mImageCreated;
-    
+
     std::vector<SwMaterial> mMaterials;
     SwAllocatedBuffer mMaterialConstantsBuffer;
     
@@ -55,7 +61,8 @@ private:
     void loadRawAsset(std::filesystem::path& assetPath);
     void constructBuffers();
     void constructSamplerAndSamplerOptions();
-    void constructImage(std::uint32_t imageIndex, SwMaterialTexture::Type texType);
+    DecodedImage decodeImage(std::uint32_t imageIndex);
+    void constructImages();
     void constructMaterials();
     void constructMeshes();
     void constructLights();

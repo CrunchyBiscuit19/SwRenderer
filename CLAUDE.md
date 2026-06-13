@@ -83,3 +83,4 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 - **Slang struct layout is relaxed — do NOT hand-pad for std140/std430.** Slang uses scalar/natural layout, so a `float3` is 12 bytes (not rounded up to 16) and members sit at their natural offsets. This matches GLM's default (non-force-aligned) layout 1:1, so a struct shared between Slang and C++ can be a plain field-for-field mirror with no `mPadN` filler or 16-byte-boundary tricks. Keep the field order/types identical on both sides and (optionally) guard with a `static_assert(sizeof(...))`.
 - clang-format: Google base, 4-space indent, 160-column limit, left-aligned pointers, attached braces.
 - No unit test framework is used; validation is done via Vulkan validation layers (enabled in debug builds).
+- Avoid leaving excessive comments.
