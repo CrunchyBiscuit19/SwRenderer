@@ -35,10 +35,7 @@ class SwRenderer {
     static constexpr std::uint32_t VK_MAJOR_VERSION{1};
     static constexpr std::uint32_t VK_MINOR_VERSION{4};
     static constexpr std::uint32_t VK_PATCH_VERSION{0};
-    static constexpr bool FULLSCREEN_ON_STARTUP{false};
-
-public:
-    static SwRendererContext sRendererContext;
+    static constexpr bool FULLSCREEN_ON_STARTUP{true};
 
 private:
     SwLogger mLogger;
@@ -65,8 +62,13 @@ private:
     SwScene mScene;
 
 public:
-    static constexpr ValidationMode VALIDATION_MODE{ValidationMode::Basic};
+    static SwRendererContext sRendererContext;
 
+#if SW_ENABLE_DEBUG_LABELS
+    static constexpr ValidationMode VALIDATION_MODE{ValidationMode::Basic};
+#else
+    static constexpr ValidationMode VALIDATION_MODE{ValidationMode::None};
+#endif
     static constexpr std::uint32_t ONE_SECOND_IN_MS{1000};
     static constexpr std::uint32_t EXPECTED_FRAME_RATE{60};
     static constexpr std::uint32_t MAX_1D_WORKGROUP_THREADS{1 << 10};
