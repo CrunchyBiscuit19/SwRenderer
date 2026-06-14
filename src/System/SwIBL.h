@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Resource/SwBuffer.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
@@ -8,6 +9,7 @@
 #include <Scene/SwSystem.h>
 
 #include <filesystem>
+#include <optional>
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
@@ -17,6 +19,12 @@ namespace SwIBL {
 static const std::filesystem::path IRRADIANCE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLIrradiance.comp.spv"};
 static const std::filesystem::path PREFILTER_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLPrefilter.comp.spv"};
 static const std::filesystem::path BRDF_LUT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLBrdfLut.comp.spv"};
+
+// Skybox draw: rasterizes the environment equirect behind the scene geometry.
+constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
+static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.vert.spv"};
+static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.frag.spv"};
+static const std::filesystem::path SKYBOX_DEFAULT_HDR_PATH{std::filesystem::path(SKYBOXES_PATH) / "AutumnHillView2k.hdr"};
 
 // HDR float maps so the prefilter/irradiance integrals stay meaningful (the environment is HDR).
 constexpr vk::Format IBL_FORMAT{vk::Format::eR16G16B16A16Sfloat};
@@ -35,6 +43,13 @@ struct PrefilterPC : SwPC<PrefilterPC> {
     float mRoughness;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct DrawPC : SwPC<DrawPC> {
+    vk::DeviceAddress mDrawVertexBuffer;
+    vk::DeviceAddress mPerFrameBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
 struct Resources {
@@ -65,6 +80,40 @@ struct Resources {
 
     // The set-1 descriptor set bound during the geometry passes.
     SwDescriptorSet mConsumeDescriptorSet;
+
+    // Skybox draw: the loaded environment equirect plus the cube it is rasterized onto.
+    SwColorImage2D mDrawImage;
+
+    SwSampler mDrawSampler;
+
+    const std::vector<float> mDrawVertices = {
+        -1.0f, 1.0f,  -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+        1.0f,  -1.0f, -1.0f, 1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,
+
+        -1.0f, -1.0f, 1.0f,  1.0f, -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,
+        -1.0f, 1.0f,  -1.0f, 1.0f, -1.0f, 1.0f,  1.0f,  1.0f, -1.0f, -1.0f, 1.0f,  1.0f,
+
+        1.0f,  -1.0f, -1.0f, 1.0f, 1.0f,  -1.0f, 1.0f,  1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,  1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+
+        -1.0f, -1.0f, 1.0f,  1.0f, -1.0f, 1.0f,  1.0f,  1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,  1.0f, 1.0f,  -1.0f, 1.0f,  1.0f, -1.0f, -1.0f, 1.0f,  1.0f,
+
+        -1.0f, 1.0f,  -1.0f, 1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, 1.0f,  1.0f,  1.0f,  1.0f,
+        1.0f,  1.0f,  1.0f,  1.0f, -1.0f, 1.0f,  1.0f,  1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,
+
+        -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
+        1.0f,  -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,
+    };
+    SwAllocatedBuffer mDrawVertexBuffer;
+
+    SwGraphicsPipelineBundle mDrawPipelineBundle;
+    SwPipelineLayout mDrawPipelineLayout;
+
+    SwDescriptorSet mDrawDescriptorSet;
+    SwDescriptorLayout mDrawDescriptorLayout;
+
+    DrawPC mDrawPushConstants;
 };
 
 class System : public SwSystem {
@@ -72,9 +121,16 @@ private:
     Resources mResources;
     std::uint32_t mPrefilterMipLevels{0};
     float mIblIntensity{1.f};
+    std::optional<std::filesystem::path> mLoadFromFile{std::nullopt};
+    bool mActive{true};
 
     void initializeResources() override;
-    void initializePasses() override;  // no per-frame pass; bakes run as one-shot immediate submits
+    void initializePasses() override;  // skybox draw pass; the bakes run as one-shot immediate submits
+    void initializePushConstants() override;
+
+    // Reconvolve the irradiance + specular-prefilter maps from a freshly-loaded environment equirect.
+    // Called whenever the environment changes.
+    void bakeFromEnvironment(vk::ImageView environmentView, vk::Sampler environmentSampler);
 
 public:
     // Set-1 layout, referenced by SwMaterial's geometry pipeline layouts. Created before SwMaterial::init,
@@ -85,9 +141,14 @@ public:
 
     System(SwScene& scene);
 
-    // Reconvolve the irradiance + specular-prefilter maps from a freshly-loaded environment equirect.
-    // Called whenever the skybox changes.
-    void bakeFromEnvironment(vk::ImageView environmentView, vk::Sampler environmentSampler);
+    // Load a new environment equirect, repoint the skybox draw, and rebake the IBL maps.
+    void reinitializeOnUpdate(std::optional<std::filesystem::path>);
+
+    void refreshPushConstants() override;
+
+    inline void toggleActive() { mActive = !mActive; }
+    inline bool isActive() const { return mActive; }
+    inline bool isFileSelected() const { return mLoadFromFile.has_value(); }
 
     inline SwDescriptorSet& getConsumeDescriptorSet() { return mResources.mConsumeDescriptorSet; }
     inline float getMaxPrefilterMip() const { return mPrefilterMipLevels > 0 ? static_cast<float>(mPrefilterMipLevels - 1) : 0.f; }

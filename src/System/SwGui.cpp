@@ -138,7 +138,7 @@ void SwGui::System::initializeResources() {
             }
             ImGui::SameLine();
             if (ImGui::Button("Toggle Skybox")) {
-                mScene.getSkyboxSystem().toggleActive();
+                mScene.getIBLSystem().toggleActive();
             }
             ImGui::SliderFloat("IBL Intensity", mScene.getIBLSystem().getIblIntensityPtr(), 0.f, 2.f, "%.2f");
         }
@@ -146,7 +146,7 @@ void SwGui::System::initializeResources() {
         mResources.mSelectSkyboxFileBrowser.Display();
         if (mResources.mSelectSkyboxFileBrowser.HasSelected()) {
             std::filesystem::path selectedSkyboxFile = mResources.mSelectSkyboxFileBrowser.GetSelected();
-            mScene.getSkyboxSystem().reinitializeOnUpdate(selectedSkyboxFile);
+            mScene.getIBLSystem().reinitializeOnUpdate(selectedSkyboxFile);
             mResources.mSelectSkyboxFileBrowser.ClearSelected();
         }
 

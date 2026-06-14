@@ -130,7 +130,7 @@ void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
 }
 
 SwScene::SwScene()
-    : mCull(*this), mPick(*this), mIBL(*this), mSkybox(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
+    : mCull(*this), mPick(*this), mIBL(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
 
 void SwScene::initialize() {
     mCamera.initialize();
@@ -141,8 +141,7 @@ void SwScene::initialize() {
 
     mCull.initialize();
     mPick.initialize();
-    mIBL.initialize();  // before the skybox: its bake-from-environment hook fires during skybox init
-    mSkybox.initialize();
+    mIBL.initialize();
     mWBOIT.initialize();
     mGeometry.initialize();
     mPostProcess.initialize();
@@ -530,7 +529,7 @@ void SwScene::perFrameUpdate() {
 
     mCull.refresh();
     mPick.refresh();
-    mSkybox.refresh();
+    mIBL.refresh();
     mWBOIT.refresh();
     mGeometry.refresh();
     mPostProcess.refresh();
@@ -559,8 +558,8 @@ void SwScene::draw() {
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
-    if (mSkybox.isActive() && mSkybox.isFileSelected()) {
-        mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxWork]);
+    if (mIBL.isActive() && mIBL.isFileSelected()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxDraw]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyWork]);

@@ -35,6 +35,22 @@ source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/shaders"
              FILES ${SLANG_SOURCES})
 
 # ---------------------------------------------------------------------------
+# Documentation (.md files)
+# ---------------------------------------------------------------------------
+# Root-level .md only (non-recursive) so thirdParty READMEs are not swept in,
+# plus everything under docs/.
+file(GLOB MARKDOWN_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/*.md"
+)
+file(GLOB_RECURSE MARKDOWN_DOCS CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/docs/*.md"
+)
+list(APPEND MARKDOWN_SOURCES ${MARKDOWN_DOCS})
+
+# These are attached to the SwRenderer target below (not a standalone custom
+# target) so Visual Studio's CMake Targets View actually surfaces them.
+
+# ---------------------------------------------------------------------------
 # Main executable sources
 # ---------------------------------------------------------------------------
 file(GLOB_RECURSE CPP_SOURCES CONFIGURE_DEPENDS
@@ -45,14 +61,22 @@ file(GLOB_RECURSE HEADER_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/src/**/*.h"
 )
 
-add_executable(SwRenderer ${CPP_SOURCES} ${HEADER_SOURCES})
+add_executable(SwRenderer ${CPP_SOURCES} ${HEADER_SOURCES} ${MARKDOWN_SOURCES})
 set_property(TARGET SwRenderer PROPERTY CXX_STANDARD 23)
+
+# .md files are documentation only - never hand them to the compiler.
+set_source_files_properties(${MARKDOWN_SOURCES} PROPERTIES HEADER_FILE_ONLY TRUE)
 
 # Mirror on-disk folder structure in IDE solution explorer,
 # with headers and sources mixed together by folder, all under "Source Files"
 source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/src"
              PREFIX "Source Files"
              FILES ${CPP_SOURCES} ${HEADER_SOURCES})
+
+# Documentation files grouped under their own "Docs" filter.
+source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}"
+             PREFIX "Docs"
+             FILES ${MARKDOWN_SOURCES})
 
 # Set SwRenderer as the default startup project in Visual Studio
 set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT SwRenderer)

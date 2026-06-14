@@ -1,9 +1,11 @@
 #include <Renderer/SwHelper.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
+#include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <System/SwIBL.h>
 #include <Scene/SwScene.h>
+#include <stb_image.h>
 
 SwDescriptorLayout SwIBL::System::sConsumeDescriptorLayout{};
 
@@ -148,9 +150,105 @@ void SwIBL::System::initializeResources() {
         CONSUME_BRDF_LUT_BINDING, mResources.mBrdfLutImage.getRawMainImageView(), mResources.mLutSampler.getRawSampler(), vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.pushWrites();
+
+    // --- Skybox draw: cube + equirect sampler that rasterizes the environment behind the geometry. ---
+    mResources.mDrawSampler = SwSamplerFactory::createSampler("SkyboxDrawSampler", vk::SamplerCreateInfo());
+
+    mResources.mDrawDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "SkyboxDrawDescriptorSetLayout", {{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment
+    );
+    mResources.mDrawDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SkyboxDrawDescriptorSet", mResources.mDrawDescriptorLayout);
+
+    mResources.mDrawPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("SkyboxDrawPipelineLayout", mResources.mDrawDescriptorLayout.getRawLayout(), SwIBL::DrawPC::getRange());
+
+    SwShader skyboxVertexShader = SwShaderFactory::createShader("SkyboxVertexShaderModule", SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    SwShader skyboxFragmentShader = SwShaderFactory::createShader("SkyboxFragmentShaderModule", SKYBOX_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+
+    vk::PipelineColorBlendAttachmentState skyboxBlendAttachment{};
+    skyboxBlendAttachment.colorWriteMask =
+        vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    skyboxBlendAttachment.blendEnable = VK_TRUE;
+    skyboxBlendAttachment.srcColorBlendFactor = vk::BlendFactor::eOneMinusDstAlpha;
+    skyboxBlendAttachment.dstColorBlendFactor = vk::BlendFactor::eDstAlpha;
+    skyboxBlendAttachment.colorBlendOp = vk::BlendOp::eAdd;
+    skyboxBlendAttachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    skyboxBlendAttachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    skyboxBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
+
+    SwGraphicsPipelineFactory::SwGraphicsPipelineOptions skyboxPipelineOptions;
+    skyboxPipelineOptions.mVertexShader = skyboxVertexShader.getRawModule();
+    skyboxPipelineOptions.mFragmentShader = skyboxFragmentShader.getRawModule();
+    skyboxPipelineOptions.mLayout = mResources.mDrawPipelineLayout.getRawLayout();
+    skyboxPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
+    skyboxPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
+    skyboxPipelineOptions.mCullMode = vk::CullModeFlagBits::eBack;
+    skyboxPipelineOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
+    skyboxPipelineOptions.mMultisamplingEnabled = false;
+    skyboxPipelineOptions.mSampleShadingEnabled = false;
+    skyboxPipelineOptions.mColorAttachments =
+        std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, skyboxBlendAttachment}};
+    skyboxPipelineOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;
+    skyboxPipelineOptions.mDepthTestEnabled = false;
+    skyboxPipelineOptions.mDepthWriteEnabled = false;
+    skyboxPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+    mResources.mDrawPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("SkyboxDrawPipeline", skyboxPipelineOptions);
+
+    const std::uint32_t skyboxVertexSize = static_cast<std::uint32_t>(mResources.mDrawVertices.size() * sizeof(float));
+    mResources.mDrawVertexBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SkyboxDrawVertexBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        skyboxVertexSize,
+        true
+    );
+
+    SwStagingBuffer skyboxVertexStagingBuffer = SwBufferFactory::createStagingBuffer("SkyboxDrawVertexStagingBuffer", skyboxVertexSize);
+
+    vk::BufferCopy skyboxVertexCopy{};
+    skyboxVertexCopy.dstOffset = 0;
+    skyboxVertexCopy.srcOffset = 0;
+    skyboxVertexCopy.size = skyboxVertexSize;
+
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
+        skyboxVertexStagingBuffer.copyFromUnchecked(mResources.mDrawVertices.data(), skyboxVertexCopy.size);
+        mResources.mDrawVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy);
+    });
+
+    reinitializeOnUpdate(SKYBOX_DEFAULT_HDR_PATH);
 }
 
-void SwIBL::System::initializePasses() {}
+void SwIBL::System::initializePasses() {
+    SwDependency deps;
+
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    deps.mReadImages.emplace_back(&mResources.mDrawImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+    deps.mReadBuffers.emplace_back(&mResources.mDrawVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+
+    mScene.insertPass(SwPass::Type::SkyboxDraw, std::move(deps), [&](vk::CommandBuffer cmd) {
+        const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
+        const vk::RenderingAttachmentInfo depthAttachment = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
+        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, depthAttachment);
+
+        cmd.beginRendering(renderInfo);
+
+        cmd.bindPipeline(mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getRawPipeline());
+        cmd.bindDescriptorSets(
+            mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getRawLayout(), 0, mResources.mDrawDescriptorSet.getRawSet(), nullptr
+        );
+        SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
+        cmd.pushConstants<SwIBL::DrawPC>(mResources.mDrawPipelineBundle.getRawLayout(), SwIBL::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.draw(SwIBL::NUM_SKYBOX_VERTICES, 1, 0, 0);
+        SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+
+        cmd.endRendering();
+    });
+    deps.clear();
+}
+
+void SwIBL::System::initializePushConstants() { mResources.mDrawPushConstants.mDrawVertexBuffer = mResources.mDrawVertexBuffer.getDeviceAddress().value(); }
 
 void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampler environmentSampler) {
     // Bind the freshly-loaded environment as the input (binding 0) of every bake set.
@@ -204,4 +302,45 @@ void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampl
         CONSUME_PREFILTER_BINDING, mResources.mPrefilterImage.getRawMainImageView(), mResources.mEnvSampler.getRawSampler(), vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.pushWrites();
+}
+
+void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> newLoadFile) {
+    mLoadFromFile = newLoadFile;
+    if (!mLoadFromFile.has_value()) {
+        return;
+    }
+
+    std::int32_t width = 0;
+    std::int32_t height = 0;
+    std::int32_t numChannels = 0;
+    stbi_set_flip_vertically_on_load(true);
+    float* data = stbi_loadf(mLoadFromFile.value().string().c_str(), &width, &height, &numChannels, 4);
+    if (!data || width == 0 || height == 0) {
+        return;
+    }
+
+    mResources.mDrawImage = SwImageFactory::createColorImage2D(
+        "SkyboxDrawImage",
+        data,
+        vk::Format::eR32G32B32A32Sfloat,
+        vk::Extent3D{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height), 1},
+        vk::ImageUsageFlagBits::eSampled,
+        true
+    );
+
+    stbi_image_free(data);
+
+    mResources.mDrawDescriptorSet.writeImage(
+        0,
+        mResources.mDrawImage.getRawMainImageView(),
+        mResources.mDrawSampler.getRawSampler(),
+        vk::ImageLayout::eShaderReadOnlyOptimal
+    );
+    mResources.mDrawDescriptorSet.pushWrites();
+
+    bakeFromEnvironment(mResources.mDrawImage.getRawMainImageView(), mResources.mDrawSampler.getRawSampler());
+}
+
+void SwIBL::System::refreshPushConstants() {
+    mResources.mDrawPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
 }

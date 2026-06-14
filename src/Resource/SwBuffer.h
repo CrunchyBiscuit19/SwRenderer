@@ -18,7 +18,7 @@ protected:
     VmaAllocationCreateFlags mFlags;
     vk::BufferUsageFlags mUsage;
     std::uint64_t mSize;
-    std::uint32_t mGeneration{0};  // Incremented on every resize; callers use this to detect stale descriptor set bindings.
+    std::uint32_t mGeneration{0}; 
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
     VmaAllocator mAllocator;

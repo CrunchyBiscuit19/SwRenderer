@@ -7,7 +7,6 @@
 #include <Resource/SwDescriptor.h>
 #include <System/SwCull.h>
 #include <System/SwIBL.h>
-#include <System/SwSkybox.h>
 #include <Scene/SwPass.h>
 #include <System/SwPick.h>
 #include <System/SwGeometry.h>
@@ -36,7 +35,6 @@ private:
     friend class SwCull::System;
     friend class SwPick::System;
     friend class SwIBL::System;
-    friend class SwSkybox::System;
     friend class SwWBOIT::System;
     friend class SwGeometry::System;
     friend class SwPostProcess::System;
@@ -54,7 +52,6 @@ private:
     SwCull::System mCull;
     SwPick::System mPick;
     SwIBL::System mIBL;
-    SwSkybox::System mSkybox;
     SwWBOIT::System mWBOIT;
     SwGeometry::System mGeometry;
     SwPostProcess::System mPostProcess;
@@ -134,7 +131,6 @@ public:
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
     inline SwIBL::System& getIBLSystem() { return mIBL; }
-    inline SwSkybox::System& getSkyboxSystem() { return mSkybox; }
     inline SwPostProcess::System& getPostProcessSystem() { return mPostProcess; }
     inline SwLighting::System& getLightingSystem() { return mLighting; }
     inline SwRenderGraph& getRenderGraph() { return mRenderGraph; }
