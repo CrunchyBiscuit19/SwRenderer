@@ -36,16 +36,21 @@ Compiled `.spv` files land next to their `.slang` sources in `shaders/`.
 
 This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "software"). It uses RAII Vulkan C++ bindings (`vulkan_raii.hpp`) and VMA for memory.
 
+> **`README.md` is the authoritative, up-to-date architecture reference.** It documents every abstraction
+> layer, data type, and system in detail (Vulkan Handle Abstractions, Data Representation, Scene and
+> Systems, Renderer Architecture, Scene Data Model, Rendering Loop). Consult it first; the summary below
+> is just an orientation. Keep README.md in sync when the architecture changes.
+
 ### Layer Breakdown
 
 | Directory       | Responsibility                                                                                                |
 | --------------- | ------------------------------------------------------------------------------------------------------------- |
-| `src/Renderer/` | Core: device, swapchain, context, logger, stats, events, immediate submission                                 |
-| `src/Resource/` | Vulkan resource RAII wrappers: buffers, images, pipelines, descriptors, samplers, fences, semaphores, shaders |
-| `src/Scene/`    | Render graph, passes, systems, and per-system logic                                                           |
-| `src/Data/`     | CPU-side data: assets, meshes, nodes, instances, batches, cameras, materials                                  |
-| `src/Gui/`      | Dear ImGui integration and file browser                                                                       |
-| `shaders/`      | Slang shaders organised by system (Cull, Geometry, Pick, Skybox, WBOIT, Common)                               |
+| `src/Renderer/` | Core: device, swapchain + per-frame state, renderer context, immediate submission, logger, stats, events      |
+| `src/Resource/` | Vulkan resource RAII wrappers: buffers, images, samplers, pipelines, descriptors, push constants, shaders, fences, semaphores, command buffers/pools |
+| `src/Scene/`    | Scene orchestration (`SwScene`), render graph (`SwRenderGraph`), passes/dependencies (`SwPass`/`SwDependency`), and the `SwSystem` base class |
+| `src/System/`   | Self-contained rendering systems: `SwCull`, `SwGeometry`, `SwIBL`, `SwLighting`, `SwWBOIT`, `SwPick`, `SwPostProcess`, `SwGui` |
+| `src/Data/`     | CPU-side data: assets, meshes, nodes, instances, batches, cameras, materials, lights                          |
+| `shaders/`      | Slang shaders organised by system (Common, Cull, Geometry, IBL, Pick, PostProcess, Skybox, WBOIT)             |
 | `docs/`         | Graphviz diagrams of the render graph and pass dependencies                                                   |
 | `thirdParty/`   | Vendored dependencies                                                                                         |
 
@@ -55,13 +60,11 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 
 **Resource factories**: `SwBufferFactory<T>` and `SwImageFactory` are template-based factories that track a "generation" counter to detect when a resource has been resized/recreated, so dependent descriptors can be invalidated cheaply.
 
-**Batch/instance pipeline**: Scene geometry is streamed into GPU-resident buffers per material type (opaque, mask, transparent). A compute-shader cull pass (`SwCull`) populates indirect draw commands; `SwGeometry` issues the indirect draws.
+**Batch/instance pipeline**: Scene geometry is streamed into GPU-resident buffers per material type (opaque, mask, transparent). A compute-shader cull pass (`SwCull`) populates indirect draw commands; `SwGeometry` issues the indirect draws. The instance / render-command / render-item flattening is documented in README.md's *Scene Data Model*.
 
-**Instances/Render Commands/Render Items**: Instances refer to instances of loaded assets. Render commands are generated for every mesh node created from a loaded GLTF file, which hold data for each indirect draw command in VkDrawIndexedIndirectCount. Render items refer to the instances belonging to a specific render command's mesh node. There are as many render items of a mesh node as there are instances of a loaded asset from which the mesh node is created from. 
+**Systems** (`src/System/`): Each rendering feature is a self-contained system in its own `SwX` namespace, registered with the scene and owning its pipelines, descriptors, push constants, and pass definitions — `SwCull`, `SwGeometry`, `SwIBL` (which now owns the skybox draw), `SwLighting`, `SwWBOIT`, `SwPick`, `SwPostProcess`, `SwGui`. They derive from `SwSystem` (and `SwSystem::Resizable` if size-dependent).
 
-**Systems** (`src/Scene/Sw*.cpp`): Each rendering feature is a self-contained system registered with the scene — `SwCull`, `SwGeometry`, `SwPick`, `SwSkybox`, `SwWBOIT`. They each own their pipelines, descriptors, and pass definitions.
-
-**Frame overlap**: 2 frames in flight; 3-image swapchain (triple-buffered). Per-frame state is indexed via the current frame index.
+**Frame loop**: `SwRenderer::run()` drives a CPU update (`SwScene::perFrameUpdate()`) then a GPU draw (`SwScene::draw()`) per frame. 2 frames in flight; 3-image swapchain (triple-buffered). Per-frame state is indexed via the current frame index. See README.md's *Rendering Loop* for the full per-frame pass order.
 
 ### Third-party Libraries
 

@@ -6,7 +6,6 @@
 #include <Resource/SwCommandPool.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwFence.h>
-#include <Resource/SwIResizable.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwSemaphore.h>
 #define SDL_MAIN_HANDLED
