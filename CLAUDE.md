@@ -89,3 +89,4 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 - clang-format: Google base, 4-space indent, 160-column limit, left-aligned pointers, attached braces.
 - No unit test framework is used; validation is done via Vulkan validation layers (enabled in debug builds).
 - Avoid leaving excessive comments.
+- No emdashes or semicolons are to be used in comments or documentation. 

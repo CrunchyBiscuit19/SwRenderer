@@ -148,17 +148,10 @@ void main(SwCull::CSInput in) {
             draw = true;
         }
     } else {
-        // Frustum + same-frame occlusion on all items. Write the result (0 OR 1) so occluded objects leave the visible set next frame, otherwise
-        // anything once visible would be redrawn forever.
-        // A disabled cull is treated as "passes" (visible). The static consts fold at compile time,
-        // and short-circuiting keeps occlusion from running when the frustum test already failed.
         bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&
                            (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents));
         workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible;
 
-        // Draw only the newly-visible delta — anything that was visible last frame (read == 1)
-        // was already drawn by the early pass. This only holds for batches that actually have an
-        // early geometry pass (opaque), others (masked / transparent) must draw all visible here.
         bool drawnEarly = workPc.mHasEarlyDraw && workPc.mSceneVisibilityRisReadBuffer[riVisIndex];
         if (currVisible && !drawnEarly) {
             markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);

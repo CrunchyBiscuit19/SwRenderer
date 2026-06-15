@@ -40,27 +40,28 @@ void main(SwPostProcess::CSInput in) {
     float lumaMax = max(lumaM, max(max(lumaNW, lumaNE), max(lumaSW, lumaSE)));
     float lumaRange = lumaMax - lumaMin;
 
-    // Flat regions carry no edge to smooth, so leave the original color untouched.
     if (lumaRange < max(SwPostProcess::EDGE_THRESHOLD_MIN, lumaMax * SwPostProcess::EDGE_THRESHOLD)) {
         outputImage.Store(pixel, center);
         return;
     }
 
-    // Edge direction is perpendicular to the local SwPostProcess::LUMA gradient, scaled into UV space.
+    // Edge directions.
     float2 dir;
     dir.x = -((lumaNW + lumaNE) - (lumaSW + lumaSE));
     dir.y = ((lumaNW + lumaSW) - (lumaNE + lumaSE));
 
+    // Normalize and clamp directions
     float dirReduce = max((lumaNW + lumaNE + lumaSW + lumaSE) * 0.25f * SwPostProcess::REDUCE_MUL, SwPostProcess::REDUCE_MIN);
     float rcpDirMin = 1.0f / (min(abs(dir.x), abs(dir.y)) + dirReduce);
     dir = clamp(dir * rcpDirMin, -SwPostProcess::SPAN_MAX, SwPostProcess::SPAN_MAX) * texel;
 
-    // Narrow blend (rgbA) plus a wider pair (rgbB); the wide blend is dropped when it overshoots the local SwPostProcess::LUMA envelope, which keeps high-contrast edges from smearing.
-    float3 rgbA = 0.5f * (inputImage.SampleLevel(linearSampler, uv + dir * (1.0f / 3.0f - 0.5f), 0.0f).rgb + inputImage.SampleLevel(linearSampler, uv + dir * (2.0f / 3.0f - 0.5f), 0.0f).rgb);
-    float3 rgbB = rgbA * 0.5f + 0.25f * (inputImage.SampleLevel(linearSampler, uv + dir * -0.5f, 0.0f).rgb + inputImage.SampleLevel(linearSampler, uv + dir * 0.5f, 0.0f).rgb);
+    // Calculate 2 blends, narrow and wide.
+    float3 rgbNarrow = 0.5f * (inputImage.SampleLevel(linearSampler, uv + dir * (1.0f / 3.0f - 0.5f), 0.0f).rgb + inputImage.SampleLevel(linearSampler, uv + dir * (2.0f / 3.0f - 0.5f), 0.0f).rgb);
+    float3 rgbWide = rgbNarrow * 0.5f + 0.25f * (inputImage.SampleLevel(linearSampler, uv + dir * -0.5f, 0.0f).rgb + inputImage.SampleLevel(linearSampler, uv + dir * 0.5f, 0.0f).rgb);
 
-    float lumaB = dot(rgbB, SwPostProcess::LUMA);
-    float3 result = (lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB;
+    // Take wide blend unless it exceeds the range of the neighborhood.
+    float lumaWide = dot(rgbWide, SwPostProcess::LUMA);
+    float3 result = (lumaWide < lumaMin || lumaWide > lumaMax) ? rgbNarrow : rgbWide;
 
     outputImage.Store(pixel, float4(result, center.a));
 }
