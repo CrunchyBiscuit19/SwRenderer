@@ -338,7 +338,9 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
     );
     mResources.mDrawDescriptorSet.pushWrites();
 
-    bakeFromEnvironment(mResources.mDrawImage.getRawMainImageView(), mResources.mDrawSampler.getRawSampler());
+    // Bake with the equirect sampler (full LOD range) so the prefilter can read the environment's mip
+    // chain for PDF-based mip selection; mDrawSampler clamps maxLod to 0 and would defeat that.
+    bakeFromEnvironment(mResources.mDrawImage.getRawMainImageView(), mResources.mEnvSampler.getRawSampler());
 }
 
 void SwIBL::System::refreshPushConstants() {

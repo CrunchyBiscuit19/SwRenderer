@@ -8,6 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > code changes, hand back to the user to compile; do not run `cmake`/`msbuild`/Ninja yourself. (You
 > are still responsible for compiling shaders — see Shader Compilation below.)
 
+> Do not attempt to build the shaders either. The user will run the shader compiler themselves  after shader files are modified.
+
 Build presets are defined in `CMakePresets.json` (configure presets only; there are no build
 presets). Generator: Ninja. Compiler: MSVC with C++23. Binaries output to `C:\Projects\SwRenderer\bin`.
 

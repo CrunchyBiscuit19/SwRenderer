@@ -27,6 +27,11 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     float3 N = normalize(SwBRDF::equirectUvToDir(uv));
     float3 V = N;
 
+    // Solid angle covered by one texel of the source environment (equirect spans 4*PI steradians).
+    uint2 envExtent;
+    environmentMap.GetDimensions(envExtent.x, envExtent.y);
+    float saTexel = 4.f * SwBRDF::PI / float(envExtent.x * envExtent.y);
+
     float3 prefiltered = float3(0.f);
     float totalWeight = 0.f;
     for (uint i = 0u; i < SAMPLE_COUNT; i++) {
@@ -35,7 +40,14 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
         float3 L = normalize(2.f * dot(V, H) * H - V);
         float NdotL = dot(N, L);
         if (NdotL > 0.f) {
-            prefiltered += environmentMap.SampleLevel(SwBRDF::dirToEquirectUv(L), 0.f).rgb * NdotL;
+            // Sample the environment from the mip whose texel solid angle matches this sample's, so
+            // concentrated bright sources are pre-averaged instead of producing fireflies on rough mips.
+            float NdotH = max(dot(N, H), 0.f);
+            float VdotH = max(dot(V, H), 1e-4f);
+            float pdf = SwBRDF::distributionGGX(NdotH, pc.mRoughness) * NdotH / (4.f * VdotH) + 1e-4f;
+            float saSample = 1.f / (float(SAMPLE_COUNT) * pdf);
+            float mip = pc.mRoughness <= 0.f ? 0.f : 0.5f * log2(saSample / saTexel);
+            prefiltered += environmentMap.SampleLevel(SwBRDF::dirToEquirectUv(L), max(mip, 0.f)).rgb * NdotL;
             totalWeight += NdotL;
         }
     }

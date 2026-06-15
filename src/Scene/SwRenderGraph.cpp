@@ -44,14 +44,12 @@ void SwRenderGraph::pruneUnreachablePasses() {
         if (visited.insert(p).second) work.push(p);
     };
 
-    // BFS starts by enqueuing any pass that writes to the outputs.
     for (SwImage* out : mOutputs) {
         if (auto it = imageWriters.find(out); it != imageWriters.end()) {
             for (SwPass* writer : it->second) visit(writer);
         }
     }
 
-    // BFS starts by enqueuing any pass which must run regardless.
     for (auto& p : mPasses) {
         if (p->isMustRun()) visit(p);
     }
@@ -97,7 +95,6 @@ void SwRenderGraph::pruneUnreachablePasses() {
         }
     }
 
-    // Populate mSortedPasses in registration order (topological sort will reorder later).
     mSortedPasses.clear();
     mSortedPasses.reserve(visited.size());
     for (auto& p : mPasses) {
@@ -226,8 +223,6 @@ void SwRenderGraph::requestRenderGraph(std::filesystem::path path) {
 }
 
 void SwRenderGraph::exportRenderGraph() {
-    // Collect every resource referenced by any pass (pruned or not), so the
-    // graph shows the full picture and you can see what got culled.
     std::unordered_set<SwImage*> allImages;
     std::unordered_set<SwBuffer*> allBuffers;
     for (auto& p : mPasses) {
@@ -239,14 +234,11 @@ void SwRenderGraph::exportRenderGraph() {
         }
     }
 
-    // Topological position of each surviving pass, for labels.
     std::unordered_map<SwPass*, size_t> sortIndex;
     for (size_t i = 0; i < mSortedPasses.size(); ++i) {
         sortIndex[mSortedPasses[i]] = i;
     }
 
-    // Identifier helpers — Graphviz node IDs can't contain arbitrary chars,
-    // so we use pointer values to guarantee uniqueness.
     auto passId = [](const SwPass* p) { return fmt::format("pass_{}", reinterpret_cast<uintptr_t>(p)); };
     auto imageId = [](const SwImage* i) { return fmt::format("img_{}", reinterpret_cast<uintptr_t>(i)); };
     auto bufferId = [](const SwBuffer* b) { return fmt::format("buf_{}", reinterpret_cast<uintptr_t>(b)); };
@@ -256,7 +248,6 @@ void SwRenderGraph::exportRenderGraph() {
     fmt::print(mExportStream.value(), "  node [fontname=\"Helvetica\"];\n");
     fmt::print(mExportStream.value(), "  edge [fontname=\"Helvetica\", fontsize=10];\n\n");
 
-    // Passes — box nodes, colored by status.
     fmt::print(mExportStream.value(), "  // Passes\n");
     fmt::print(mExportStream.value(), "  node [shape=box, style=\"rounded,filled\"];\n");
     for (auto& p : mPasses) {
@@ -283,7 +274,6 @@ void SwRenderGraph::exportRenderGraph() {
         );
     }
 
-    // Resources — ellipses for images, cylinders for buffers, marked if output.
     fmt::print(mExportStream.value(), "\n  // Resources\n");
     std::unordered_set<SwImage*> outputSet(mOutputs.begin(), mOutputs.end());
     for (SwImage* img : allImages) {
@@ -297,7 +287,6 @@ void SwRenderGraph::exportRenderGraph() {
         fmt::print(mExportStream.value(), "  {} [shape=cylinder, style=filled, fillcolor=\"#f4f4f4\", label=\"buffer\"];\n", bufferId(buf));
     }
 
-    // Edges — pass → resource (writes), resource → pass (reads).
     fmt::print(mExportStream.value(), "\n  // Reads and writes\n");
     for (auto& p : mPasses) {
         for (const SwDependency* deps : {&p->getStaticDeps(), &p->getDynamicDeps()}) {
@@ -316,8 +305,6 @@ void SwRenderGraph::exportRenderGraph() {
         }
     }
 
-    // Execution order — dashed edges between consecutive sorted passes, so
-    // the topological order is visually obvious independent of the DAG layout.
     if (mSortedPasses.size() >= 2) {
         fmt::print(mExportStream.value(), "\n  // Execution order\n");
         for (size_t i = 0; i + 1 < mSortedPasses.size(); ++i) {
@@ -327,9 +314,6 @@ void SwRenderGraph::exportRenderGraph() {
         }
     }
 
-    // Executed passes, in topological order — emitted both as a Graphviz comment
-    // (greppable in the raw .dot) and as a visible graph label, so the actual
-    // execution sequence is readable without having to trace the dashed edges.
     std::string executionOrder;
     executionOrder.reserve(1 << 9);
     for (SwPass* pass : mSortedPasses) {
