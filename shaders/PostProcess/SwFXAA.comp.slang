@@ -9,11 +9,7 @@ public uniform SamplerState linearSampler;
 public uniform RWTexture2D<float4> outputImage;
 
 [[vk::push_constant]]
-SwPostProcess::FxaaPC fxaaPc;
-
-float3 sampleRgb(float2 uv) {
-    return inputImage.SampleLevel(linearSampler, uv, 0.0f).rgb;
-}
+SwPostProcess::Fxaa::WorkPC fxaaPc;
 
 [numthreads(Sw::MAX_2D_WORKGROUP_THREADS, Sw::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(SwPostProcess::CSInput in) {
@@ -29,10 +25,10 @@ void main(SwPostProcess::CSInput in) {
 
     float4 center = inputImage.SampleLevel(linearSampler, uv, 0.0f);
     float3 rgbM = center.rgb;
-    float3 rgbNW = sampleRgb(uv + float2(-1.0f, -1.0f) * texel);
-    float3 rgbNE = sampleRgb(uv + float2(1.0f, -1.0f) * texel);
-    float3 rgbSW = sampleRgb(uv + float2(-1.0f, 1.0f) * texel);
-    float3 rgbSE = sampleRgb(uv + float2(1.0f, 1.0f) * texel);
+    float3 rgbNW = inputImage.SampleLevel(linearSampler, uv + float2(-1.0f, -1.0f) * texel, 0.0f).rgb;
+    float3 rgbNE = inputImage.SampleLevel(linearSampler, uv + float2(1.0f, -1.0f) * texel, 0.0f).rgb;
+    float3 rgbSW = inputImage.SampleLevel(linearSampler, uv + float2(-1.0f, 1.0f) * texel, 0.0f).rgb;
+    float3 rgbSE = inputImage.SampleLevel(linearSampler, uv + float2(1.0f, 1.0f) * texel, 0.0f).rgb;
 
     float lumaM = dot(rgbM, SwPostProcess::LUMA);
     float lumaNW = dot(rgbNW, SwPostProcess::LUMA);
@@ -60,8 +56,8 @@ void main(SwPostProcess::CSInput in) {
     dir = clamp(dir * rcpDirMin, -SwPostProcess::SPAN_MAX, SwPostProcess::SPAN_MAX) * texel;
 
     // Narrow blend (rgbA) plus a wider pair (rgbB); the wide blend is dropped when it overshoots the local SwPostProcess::LUMA envelope, which keeps high-contrast edges from smearing.
-    float3 rgbA = 0.5f * (sampleRgb(uv + dir * (1.0f / 3.0f - 0.5f)) + sampleRgb(uv + dir * (2.0f / 3.0f - 0.5f)));
-    float3 rgbB = rgbA * 0.5f + 0.25f * (sampleRgb(uv + dir * -0.5f) + sampleRgb(uv + dir * 0.5f));
+    float3 rgbA = 0.5f * (inputImage.SampleLevel(linearSampler, uv + dir * (1.0f / 3.0f - 0.5f), 0.0f).rgb + inputImage.SampleLevel(linearSampler, uv + dir * (2.0f / 3.0f - 0.5f), 0.0f).rgb);
+    float3 rgbB = rgbA * 0.5f + 0.25f * (inputImage.SampleLevel(linearSampler, uv + dir * -0.5f, 0.0f).rgb + inputImage.SampleLevel(linearSampler, uv + dir * 0.5f, 0.0f).rgb);
 
     float lumaB = dot(rgbB, SwPostProcess::LUMA);
     float3 result = (lumaB < lumaMin || lumaB > lumaMax) ? rgbA : rgbB;

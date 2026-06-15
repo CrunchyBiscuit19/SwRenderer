@@ -5,16 +5,7 @@ import SwPostProcess;
 public uniform RWTexture2D<float4> drawImage;
 
 [[vk::push_constant]]
-SwPostProcess::TonemapPC tonemapPc;
-
-float3 acesFilmic(float3 x) {
-    const float a = 2.51f;
-    const float b = 0.03f;
-    const float c = 2.43f;
-    const float d = 0.59f;
-    const float e = 0.14f;
-    return saturate((x * (a * x + b)) / (x * (c * x + d) + e));
-}
+SwPostProcess::Tonemap::WorkPC tonemapPc;
 
 [numthreads(Sw::MAX_2D_WORKGROUP_THREADS, Sw::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
@@ -26,6 +17,6 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
         return;
 
     float4 hdr = drawImage[pixel];
-    float3 mapped = acesFilmic(hdr.rgb * tonemapPc.mExposure);
+    float3 mapped = SwPostProcess::Tonemap::acesTonemap(hdr.rgb * tonemapPc.mExposure);
     drawImage[pixel] = float4(mapped, hdr.a);
 }
