@@ -121,6 +121,10 @@ private:
     Resources mResources;
     std::uint32_t mPrefilterMipLevels{0};
     float mIblIntensity{1.f};
+    // Cosine-weighted average luminance of the loaded environment. The IBL ambient is divided by this so a
+    // bright HDR does not flood surfaces: IBL Intensity then scales a unit-mean fill, independent of the
+    // environment's absolute radiance. Defaults to 1 (no normalization) until an environment is loaded.
+    float mEnvAvgLuminance{1.f};
     std::optional<std::filesystem::path> mLoadFromFile{std::nullopt};
     bool mActive{true};
 
@@ -154,6 +158,7 @@ public:
     inline float getMaxPrefilterMip() const { return mPrefilterMipLevels > 0 ? static_cast<float>(mPrefilterMipLevels - 1) : 0.f; }
     inline float getIblIntensity() const { return mIblIntensity; }
     inline float* getIblIntensityPtr() { return &mIblIntensity; }
+    inline float getEnvAvgLuminance() const { return mEnvAvgLuminance; }
     inline Resources& getResources() { return mResources; }
 };
 

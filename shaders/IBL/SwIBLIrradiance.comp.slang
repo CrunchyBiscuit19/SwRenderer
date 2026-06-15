@@ -25,6 +25,11 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     float3 right = normalize(cross(up, N));
     up = normalize(cross(N, right));
 
+    // Solid angle covered by one texel of the source environment (equirect spans 4*PI steradians).
+    uint2 envExtent;
+    environmentMap.GetDimensions(envExtent.x, envExtent.y);
+    float saTexel = 4.f * SwIBL::PI / float(envExtent.x * envExtent.y);
+
     float3 irradiance = float3(0.f);
     float numSamples = 0.f;
     const float sampleDelta = 0.025f;
@@ -32,8 +37,13 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
         for (float theta = 0.f; theta < 0.5f * SwIBL::PI; theta += sampleDelta) {
             float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
             float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
+            // Each sample stands in for a sin(theta)*dTheta*dPhi patch of the hemisphere. Read the env from the
+            // mip whose texel solid angle matches that patch so a sub-texel-sized sun is pre-averaged instead of
+            // being point-sampled and aliasing into an over-bright diffuse term.
+            float saSample = sin(theta) * sampleDelta * sampleDelta;
+            float mip = 0.5f * log2(max(saSample, 1e-12f) / saTexel);
             // cos(theta) weights by incident angle, sin(theta) accounts for the hemisphere area element.
-            irradiance += environmentMap.SampleLevel(SwBRDF::dirToEquirectUv(sampleVec), 0.f).rgb * cos(theta) * sin(theta);
+            irradiance += environmentMap.SampleLevel(SwBRDF::dirToEquirectUv(sampleVec), max(mip, 0.f)).rgb * cos(theta) * sin(theta);
             numSamples += 1.f;
         }
     }

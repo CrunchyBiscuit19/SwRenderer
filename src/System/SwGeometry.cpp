@@ -131,5 +131,5 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneLightsBuffer = mScene.getSceneLightsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mLightCount = static_cast<std::uint32_t>(mScene.getLightingSystem().getAssetLights().size());
     mResources.mWorkPushConstants.mMaxPrefilterMip = mScene.getIBLSystem().getMaxPrefilterMip();
-    mResources.mWorkPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity();
+    mResources.mWorkPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
 }
