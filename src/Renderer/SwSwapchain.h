@@ -9,7 +9,7 @@
 #include <Resource/SwImage.h>
 #include <Resource/SwSemaphore.h>
 #define SDL_MAIN_HANDLED
-#include <SDL.h>
+#include <SDL3/SDL.h>
 #include <vk_mem_alloc.h>
 
 #include <vector>

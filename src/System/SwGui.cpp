@@ -4,7 +4,7 @@
 #include <Scene/SwScene.h>
 #include <System/SwGui.h>
 #include <fmt/core.h>
-#include <imgui_impl_sdl2.h>
+#include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #include <imgui_internal.h>
 
@@ -17,7 +17,7 @@ SwGui::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwGui::System::initializeResources() {
     ImGui::CreateContext();
-    ImGui_ImplSDL2_InitForVulkan(SwRenderer::sRendererContext.mSwapchain->getWindowPtr());
+    ImGui_ImplSDL3_InitForVulkan(SwRenderer::sRendererContext.mSwapchain->getWindowPtr());
 
     vk::PipelineRenderingCreateInfo pipelineRenderingCreateInfo;
     pipelineRenderingCreateInfo.colorAttachmentCount = 1;
@@ -184,19 +184,19 @@ void SwGui::System::initializeResources() {
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
-        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
+        const bool* keyState = SDL_GetKeyboardState(nullptr);
 
-        if (keyState[SDL_SCANCODE_G] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+        if (keyState[SDL_SCANCODE_G] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
             mCollapsed = !mCollapsed;
         }
 
-        if (keyState[SDL_SCANCODE_T] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+        if (keyState[SDL_SCANCODE_T] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
             mScene.getPickSystem().changePickOperation();
         }
 
-        if ((modState & KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+        if ((modState & SDL_KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
             mResources.mSelectAssetsFileBrowser.Open();
-            mScene.getCamera().setRelativeMode(SDL_FALSE);
+            mScene.getCamera().setRelativeMode(false);
         }
     });
 }
@@ -221,7 +221,7 @@ void SwGui::System::initializePasses() {
 
 void SwGui::System::refresh() {
     ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL2_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();
 
     createDockSpace();
@@ -290,5 +290,5 @@ void SwGui::System::createOptionsWindow() const {
 
 SwGui::System::~System() {
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
+    ImGui_ImplSDL3_Shutdown();
 }

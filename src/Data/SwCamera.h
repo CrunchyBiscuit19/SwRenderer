@@ -4,7 +4,7 @@
 #include <System/SwCull.h>
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwBuffer.h>
-#include <SDL_events.h>
+#include <SDL3/SDL_events.h>
 
 #include <functional>
 #include <glm/gtx/quaternion.hpp>
@@ -50,7 +50,7 @@ private:
     float mPitch{0.f};
     float mYaw{0.f};
     float mSpeed{1.f};
-    SDL_bool mRelativeMode{SDL_FALSE};
+    bool mRelativeMode{false};
     SwMovementMode mMovementMode;
     std::unordered_map<SwMovementMode, std::function<void()>> mMovementFunctions;
     SwAllocatedBuffer mFrustumBuffer;
@@ -75,7 +75,7 @@ public:
 
     inline std::array<SwCull::Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
     inline SwAllocatedBuffer& getFrustumBuffer() { return mFrustumBuffer; }
-    inline SDL_bool getRelativeMode() const { return mRelativeMode; }   
+    inline bool getRelativeMode() const { return mRelativeMode; }
     inline SwMovementMode getMovementMode() const { return mMovementMode; }
     inline glm::vec3 getPosition() const { return mPosition; }
     inline float getPitch() const { return mPitch; }
@@ -84,5 +84,5 @@ public:
 
     SwPerspective getPerspective() const;
 
-    void setRelativeMode(SDL_bool relativeMode);
+    void setRelativeMode(bool relativeMode);
 };

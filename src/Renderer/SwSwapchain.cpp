@@ -41,11 +41,11 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const SDL_Keymod modState = SDL_GetModState();
-        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
-        if ((modState & KMOD_ALT) && keyState[SDL_SCANCODE_RETURN] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+        const bool* keyState = SDL_GetKeyboardState(nullptr);
+        if ((modState & SDL_KMOD_ALT) && keyState[SDL_SCANCODE_RETURN] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
             mWindowFullScreen = !mWindowFullScreen;
-            SDL_SetWindowFullscreen(mWindow, mWindowFullScreen ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0);
-            SDL_SetWindowBordered(mWindow, mWindowFullScreen ? SDL_FALSE : SDL_TRUE);
+            SDL_SetWindowFullscreen(mWindow, mWindowFullScreen);
+            SDL_SetWindowBordered(mWindow, !mWindowFullScreen);
         }
     });
 

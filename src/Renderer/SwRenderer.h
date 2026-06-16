@@ -8,8 +8,8 @@
 #include <Renderer/SwStats.h>
 #include <Renderer/SwSwapchain.h>
 #define SDL_MAIN_HANDLED
-#include <SDL.h>
-#include <SDL_events.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_events.h>
 #include <vk_mem_alloc.h>
 
 #include <functional>

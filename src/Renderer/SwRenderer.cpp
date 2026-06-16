@@ -12,10 +12,10 @@
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
 #include <System/SwIBL.h>
-#include <SDL_vulkan.h>
+#include <SDL3/SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
-#include <imgui_impl_sdl2.h>
+#include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #define VMA_IMPLEMENTATION
 #include <vk_mem_alloc.h>
@@ -44,11 +44,9 @@ SwRenderer::SwRenderer()
     SDL_Init(SDL_INIT_VIDEO);
     SDL_Window* window = SDL_CreateWindow(
         "SwRenderer",
-        SDL_WINDOWPOS_UNDEFINED,
-        SDL_WINDOWPOS_UNDEFINED,
-        static_cast<std::uint32_t>(windowExtent.width),
-        static_cast<std::uint32_t>(windowExtent.height),
-        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI | (FULLSCREEN_ON_STARTUP ? SDL_WINDOW_FULLSCREEN_DESKTOP : 0)
+        static_cast<int>(windowExtent.width),
+        static_cast<int>(windowExtent.height),
+        SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY | (FULLSCREEN_ON_STARTUP ? SDL_WINDOW_FULLSCREEN : 0)
     );
     float aspectRatio = static_cast<float>(windowExtent.width) / static_cast<float>(windowExtent.height);
 
@@ -88,7 +86,7 @@ SwRenderer::SwRenderer()
     mDebugMessenger = std::move(debugMessenger);
 
     VkSurfaceKHR tempSurface = nullptr;
-    SDL_Vulkan_CreateSurface(window, *mInstance, &tempSurface);
+    SDL_Vulkan_CreateSurface(window, *mInstance, nullptr, &tempSurface);
     vk::raii::SurfaceKHR surface(mInstance, tempSurface);
 
     vk::PhysicalDeviceVulkan14Features features14{};
@@ -168,15 +166,13 @@ SwRenderer::SwRenderer()
     vmaCreateAllocator(&allocatorInfo, &mAllocator.mAllocator);
 
     mEvents.addEventCallback([this](SDL_Event& e) -> void {
-        if (e.type == SDL_QUIT) {
+        if (e.type == SDL_EVENT_QUIT) {
             mScene.markAllAssetsDelete();
             mSwapchain.setProgramEndFrameNumber(mSwapchain.getFrameNumber() + SwSwapchain::NUM_FRAME_OVERLAP + 1);
         }
-        if (e.type == SDL_WINDOWEVENT) {
-            if (e.window.event == SDL_WINDOWEVENT_MINIMIZED) mStopRendering = true;
-            if (e.window.event == SDL_WINDOWEVENT_RESTORED) mStopRendering = false;
-        }
-        ImGui_ImplSDL2_ProcessEvent(&e);
+        if (e.type == SDL_EVENT_WINDOW_MINIMIZED) mStopRendering = true;
+        if (e.type == SDL_EVENT_WINDOW_RESTORED) mStopRendering = false;
+        ImGui_ImplSDL3_ProcessEvent(&e);
     });
 
     sRendererContext = SwRendererContext(
@@ -238,7 +234,7 @@ void SwRenderer::run() {
             continue;
         }
 
-        SDL_SetRelativeMouseMode(mScene.getCamera().getRelativeMode());
+        SDL_SetWindowRelativeMouseMode(mSwapchain.getWindowPtr(), mScene.getCamera().getRelativeMode());
         if (mSwapchain.getResizeRequested()) {
             mDevice.waitIdle();
 

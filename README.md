@@ -410,7 +410,7 @@ All dependencies are vendored under `thirdParty/`:
 | Library          | Purpose                 |
 | ---------------- | ----------------------- |
 | Vulkan SDK       | GPU API                 |
-| SDL2             | Window and input        |
+| SDL3             | Window and input        |
 | glm              | Math                    |
 | fastgltf         | glTF 2.0 loading        |
 | vk-bootstrap     | Vulkan init boilerplate |

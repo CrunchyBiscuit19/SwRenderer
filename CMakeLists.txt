@@ -91,7 +91,16 @@ find_package(Vulkan REQUIRED)
 # ---------------------------------------------------------------------------
 add_subdirectory(thirdParty/fastgltf)
 add_subdirectory(thirdParty/fmt)
-add_subdirectory(thirdParty/SDL)
+
+# Build SDL3 as a DLL (+ import lib) only: skip the static lib, test lib, tests,
+# examples and install rules. Must be set before add_subdirectory.
+set(SDL_SHARED       ON  CACHE BOOL "" FORCE)
+set(SDL_STATIC       OFF CACHE BOOL "" FORCE)
+set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
+set(SDL_TESTS        OFF CACHE BOOL "" FORCE)
+set(SDL_EXAMPLES     OFF CACHE BOOL "" FORCE)
+set(SDL_INSTALL      OFF CACHE BOOL "" FORCE)
+add_subdirectory(thirdParty/SDL3-3.4.10)
 
 # ---------------------------------------------------------------------------
 # Third-party libraries built from source here
@@ -108,14 +117,14 @@ target_sources(imgui PRIVATE
     "${CMAKE_THIRD_PARTY_DIR}/imgui/imgui_widgets.cpp"
     "${CMAKE_THIRD_PARTY_DIR}/imgui/imgui_tables.cpp"
     "${CMAKE_THIRD_PARTY_DIR}/imgui/imgui_impl_vulkan.cpp"
-    "${CMAKE_THIRD_PARTY_DIR}/imgui/imgui_impl_sdl2.cpp"
+    "${CMAKE_THIRD_PARTY_DIR}/imgui/imgui_impl_sdl3.cpp"
     "${CMAKE_THIRD_PARTY_DIR}/imgui/ImGuizmo.cpp"
     #"${CMAKE_THIRD_PARTY_DIR}/imgui/GraphEditor.cpp"
     #"${CMAKE_THIRD_PARTY_DIR}/imgui/ImCurveEdit.cpp"
     #"${CMAKE_THIRD_PARTY_DIR}/imgui/ImGradient.cpp"
     #"${CMAKE_THIRD_PARTY_DIR}/imgui/ImSequencer.cpp"
 )
-target_link_libraries(imgui PUBLIC Vulkan::Vulkan SDL2::SDL2)
+target_link_libraries(imgui PUBLIC Vulkan::Vulkan SDL3::SDL3)
 
 # vk-bootstrap
 add_library(vkbootstrap STATIC)
@@ -155,7 +164,7 @@ set_target_properties(imgui vkbootstrap PROPERTIES FOLDER "ThirdParty")
 # Includes, links, dependencies
 # ---------------------------------------------------------------------------
 target_include_directories(SwRenderer PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/src/")
-target_include_directories(SwRenderer PUBLIC "${CMAKE_THIRD_PARTY_DIR}/SDL/include")
+target_include_directories(SwRenderer PUBLIC "${CMAKE_THIRD_PARTY_DIR}/SDL3-3.4.10/include")
 target_link_libraries(SwRenderer PUBLIC
     vkbootstrap
     imgui
@@ -167,7 +176,7 @@ target_link_libraries(SwRenderer PUBLIC
     quill
     fmt
     Vulkan::Vulkan
-    SDL2::SDL2
+    SDL3::SDL3
     fastgltf::fastgltf
 )
 add_dependencies(SwRenderer Shaders)

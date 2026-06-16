@@ -70,7 +70,7 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 
 ### Third-party Libraries
 
-- **SDL2** — windowing and events
+- **SDL3** — windowing and events
 - **glm** — math (pre-included in PCH)
 - **fastgltf** — glTF 2.0 loading
 - **vk-bootstrap** — Vulkan instance/device setup

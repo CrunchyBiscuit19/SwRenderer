@@ -21,15 +21,15 @@ SwCamera::SwCamera() {
 
     mMovementFunctions[FREEFLY] = [this]() -> void {
         const SDL_Keymod modState = SDL_GetModState();
-        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
+        const bool* keyState = SDL_GetKeyboardState(nullptr);
         if (keyState[SDL_SCANCODE_W]) {
-            if (modState & KMOD_LSHIFT)
+            if (modState & SDL_KMOD_LSHIFT)
                 mVelocity.y = 1;
             else
                 mVelocity.z = -1;
         }
         if (keyState[SDL_SCANCODE_S]) {
-            if (modState & KMOD_LSHIFT)
+            if (modState & SDL_KMOD_LSHIFT)
                 mVelocity.y = -1;
             else
                 mVelocity.z = 1;
@@ -40,7 +40,7 @@ SwCamera::SwCamera() {
     };
 
     mMovementFunctions[DRONE] = [this]() -> void {
-        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
+        const bool* keyState = SDL_GetKeyboardState(nullptr);
         if (keyState[SDL_SCANCODE_W]) mVelocity.z = -1;
         if (keyState[SDL_SCANCODE_S]) mVelocity.z = 1;
         if (keyState[SDL_SCANCODE_A]) mVelocity.x = -1;
@@ -51,10 +51,10 @@ SwCamera::SwCamera() {
 
 void SwCamera::initialize() {
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
-        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
+        const bool* keyState = SDL_GetKeyboardState(nullptr);
         mVelocity = glm::vec3(0.f);
         mMovementFunctions[mMovementMode]();
-        if (keyState[SDL_SCANCODE_C] && e.type == SDL_KEYDOWN && !e.key.repeat) {
+        if (keyState[SDL_SCANCODE_C] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
             switch (mMovementMode) {
                 case FREEFLY:
                     mMovementMode = DRONE;
@@ -64,12 +64,12 @@ void SwCamera::initialize() {
                     break;
             }
         }
-        if (e.button.button == SDL_BUTTON_RIGHT && e.type == SDL_MOUSEBUTTONDOWN) mRelativeMode = static_cast<SDL_bool>(!mRelativeMode);
-        if (e.type == SDL_MOUSEMOTION && mRelativeMode) {
+        if (e.button.button == SDL_BUTTON_RIGHT && e.type == SDL_EVENT_MOUSE_BUTTON_DOWN) mRelativeMode = !mRelativeMode;
+        if (e.type == SDL_EVENT_MOUSE_MOTION && mRelativeMode) {
             mYaw += static_cast<float>(e.motion.xrel) / 200.f;
             mPitch -= static_cast<float>(e.motion.yrel) / 200.f;
         }
-        if (e.type == SDL_MOUSEWHEEL) {
+        if (e.type == SDL_EVENT_MOUSE_WHEEL) {
             mSpeed += static_cast<float>(e.wheel.y) * 0.2f;
             mSpeed = std::clamp(mSpeed, 0.f, MAX_CAMERA_SPEED);
         }
@@ -114,7 +114,7 @@ glm::mat4 SwCamera::getSpawnTransform(float distance, float scale, bool rotated)
 }
 
 void SwCamera::update(float deltaTime, float expectedDeltaTime) {
-    SDL_SetRelativeMouseMode(mRelativeMode);
+    SDL_SetWindowRelativeMouseMode(SwRenderer::sRendererContext.mSwapchain->getWindowPtr(), mRelativeMode);
 
     switch (mMovementMode) {
         case FREEFLY:
@@ -150,4 +150,4 @@ SwPerspective SwCamera::getPerspective() const {
     return {view, proj};
 }
 
-void SwCamera::setRelativeMode(SDL_bool relativeMode) { mRelativeMode = relativeMode; }
+void SwCamera::setRelativeMode(bool relativeMode) { mRelativeMode = relativeMode; }

@@ -65,8 +65,8 @@ void SwPick::System::initializeResources() {
         SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {workShader.getRawModule(), mResources.mReadbackPipelineLayout.getRawLayout()});
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
-        const Uint8* keyState = SDL_GetKeyboardState(nullptr);
-        if (keyState[SDL_SCANCODE_DELETE] && mSelectedInstance != nullptr && e.type == SDL_KEYDOWN && !e.key.repeat) {
+        const bool* keyState = SDL_GetKeyboardState(nullptr);
+        if (keyState[SDL_SCANCODE_DELETE] && mSelectedInstance != nullptr && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
             mSelectedInstance->markDelete();
         }
     });
@@ -148,8 +148,9 @@ void SwPick::System::initializePasses() {
         SwPass::Type::PickReadback,
         std::move(staticDeps),
         [&](vk::CommandBuffer cmd) {
-            glm::ivec2 mousePos;
-            SDL_GetMouseState(&mousePos.x, &mousePos.y);
+            glm::vec2 mousePosF;
+            SDL_GetMouseState(&mousePosF.x, &mousePosF.y);
+            glm::ivec2 mousePos = glm::ivec2(mousePosF);
             mResources.mReadbackBuffer.copyFromUnchecked(glm::value_ptr(mousePos), sizeof(SwPick::ReadbackData::mCoords));
 
             cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getRawPipeline());

@@ -16,3 +16,4 @@ src/includes*
 .conv/
 conv/
 thirdParty/fmt/support/.gradle/
+docs/.obsidian/
