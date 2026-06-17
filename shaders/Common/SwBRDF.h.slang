@@ -1,7 +1,8 @@
 module SwBRDF;
 
 namespace SwBRDF {
-      public static const float PI = 3.1415926535897932384626433832795028841972f;
+    public static const float PI = 3.1415926535897932384626433832795028841972f;
+    public static const float DIELECTRICS_REFLECTANCE = 0.04f;
 
     // Equirectangular mapping
     public float2 dirToEquirectUv(float3 dir) {
@@ -21,8 +22,19 @@ namespace SwBRDF {
     public float distributionGGX(float NdotH, float roughness) {
         float a = roughness * roughness;
         float a2 = a * a;
-        float d = NdotH * NdotH * (a2 - 1.f) + 1.f;
+        float NdotH2 = NdotH * NdotH;
+
+        float d = NdotH2 * (a2 - 1.f) + 1.f;
         return a2 / max(PI * d * d, 1e-7f);
+    }
+
+    float3 fresnelSchlick(float cosTheta, float3 F0) {
+        return F0 + (1.f - F0) * pow(saturate(1.f - cosTheta), 5.f);
+    }
+
+    public float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness) {
+        float3 r = max(float3(1.f - roughness), F0);
+        return F0 + (r - F0) * pow(saturate(1.f - cosTheta), 5.f);
     }
 
     float geometrySchlickGGX(float NdotX, float k) {
@@ -35,15 +47,6 @@ namespace SwBRDF {
         return geometrySchlickGGX(NdotV, k) * geometrySchlickGGX(NdotL, k);
     }
 
-    float3 fresnelSchlick(float cosTheta, float3 F0) {
-        return F0 + (1.f - F0) * pow(saturate(1.f - cosTheta), 5.f);
-    }
-
-    public float3 fresnelSchlickRoughness(float cosTheta, float3 F0, float roughness) {
-        float3 r = max(float3(1.f - roughness), F0);
-        return F0 + (r - F0) * pow(saturate(1.f - cosTheta), 5.f);
-    }
-
     public float3 cookTorrance(float3 N, float3 V, float3 L, float3 albedo, float metallic, float roughness, float3 radiance) {
         float NdotL = max(dot(N, L), 0.f);
         if (NdotL <= 0.f)
@@ -54,17 +57,18 @@ namespace SwBRDF {
         float NdotH = max(dot(N, H), 0.f);
         float VdotH = max(dot(V, H), 0.f);
 
-        float3 F0 = lerp(float3(0.04f), albedo, metallic);
+        float3 F0 = lerp(DIELECTRICS_REFLECTANCE, albedo, metallic);
         float D = distributionGGX(NdotH, roughness);
         float G = geometrySmith(NdotV, NdotL, roughness);
         float3 F = fresnelSchlick(VdotH, F0);
 
+        float3 kS = F;
         float3 specular = (D * G * F) / max(4.f * NdotV * NdotL, 1e-4f);
+        float3 kD = (float3(1.f) - kS) * (1.f - metallic);
+        float3 diffuse = albedo / PI;
 
-        // Metals have no diffuse
-        float3 kD = (float3(1.f) - F) * (1.f - metallic);
-        float3 diffuse = kD * albedo / PI;
-
-        return (diffuse + specular) * radiance * NdotL;
+        return (kD * diffuse + specular) * radiance * NdotL;
+        // Radiance for how bright the light is
+        // NdotL for scaling the strength of the light by its incidence angle
     }
 }
