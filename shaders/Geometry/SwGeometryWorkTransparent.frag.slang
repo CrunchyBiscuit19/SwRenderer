@@ -38,7 +38,7 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float3 litColor = SwGeometry::shadeLit(
         baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mPerFrameBuffer->mSunlight, workPc.mSceneLightsBuffer,
         workPc.mLightCount, workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
-        workPc.mMaxPrefilterMip, workPc.mIblIntensity
+        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents
     );
     litColor += materialResources[NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET)].Sample(in.mUv).rgb * mc.mEmissiveFactor.rgb;
     float4 finalColor = float4(litColor, baseColor.a);

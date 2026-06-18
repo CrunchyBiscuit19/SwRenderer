@@ -1,165 +1,186 @@
-# Image-Based Lighting: Normalization and Sun Aliasing
+# Image-Based Lighting
 
-This note explains two corrections made to the `SwIBL` bake so that surfaces lit
-purely by the environment (a cobblestone road, say) read as matte stone instead of
-wet asphalt. Both bugs lived in the **diffuse** ambient term, not in the metallic or
-specular math.
+The renderer turns a single equirectangular HDR environment into the three baked maps the geometry shaders sample, and how those maps reconstruct ambient lighting at runtime. 
 
-## Symptom
+$N$ normal, $V$ view (surface to camera), $L$ light (surface to source), $H$ half-vector, $R$ reflection, and $a = r^2$  as the GGX roughness remap of the material roughness $r$. 
+Accumulation in a sampling loop is written $x \leftarrow x + \dots$.
 
-With the sun off and only image-based lighting active, every surface looked too
-shiny. Forcing a surface more metallic made it *less* shiny, which is the opposite of
-normal intuition. Isolating the diffuse ambient term from the specular one confirmed
-the shine came entirely from the diffuse irradiance.
+## What is IBL
 
-The metallic relationship is the giveaway. Metallic enters the ambient in two places:
+The reflectance equation gives outgoing radiance toward the camera as an integral over the hemisphere $\Omega$ of incoming directions.
 
-```slang
-float3 F0 = lerp(float3(0.04f), albedo, metallic);  // specular tint
-float3 kD = (1.f - F) * (1.f - metallic);            // diffuse gate
-```
+$L_o(V) = \displaystyle\int_{\Omega} f_r(L, V)\, L_i(L)\, (N \cdot L)\, \mathrm{d}L$,      where $L_i(L)$ is the environment radiance arriving from every direction for a point lit by the environment. 
 
-The diffuse term scales with `(1 - metallic)`, so it grows as metallic drops. The
-specular term scales with `F0`, which grows as metallic rises. Since the shine grew
-as metallic fell, the shine had to be the diffuse term. That term was behaving
-exactly as physically-based shading prescribes, so the real problem was that the
-diffuse ambient was simply too strong and slightly biased. Two separate fixes
-address those two issues.
+Evaluating this integral per pixel per frame is too expensive, so IBL pre-integrates everything that does not depend on the runtime surface and stores the result in textures. 
 
-## Fix 1: Environment Normalization
+The Cook-Torrance BRDF $f_r$ splits into a diffuse and a specular lobe, and each lobe gets its own precomputation.
 
-### Why it is needed
+The environment is stored as an equirectangular map, so every direction $d$ to texture lookup goes through `dirToEquirectUv`. 
+With $\phi = \operatorname{atan2}(d_z, d_x)$ and $\theta = \arcsin(d_y)$.
 
-The scene mixes two light sources measured in unrelated units.
+$\mathbf{uv} = \left(\dfrac{\phi}{2\pi} + \dfrac{1}{2},\ \ \dfrac{\theta}{\pi} + \dfrac{1}{2}\right)$
 
-- The **sun** intensity is an artist slider (`Sw::Sunlight::mIntensity`, roughly 0 to
-  5). It is an arbitrary value with no physical anchor.
-- The **environment** intensity comes straight from the `.hdr` file. An HDR captured
-  outdoors stores real physical radiance, so an average sky pixel might carry a
-  luminance of 4, 10, or more.
+`equirectUvToDir` is the exact inverse. $\phi$ is longitude (wraps, so the sampler repeats in U) and $\theta$ is latitude (clamps at the poles, so the sampler clamps in V). 
 
-Nothing forced those two scales to agree. If the sun slider sits at 1.0 but the HDR
-averages 4.0, the omnidirectional ambient fill silently outweighs the sun by four
-times. A uniformly bright, flat surface reads to the eye as glossy or wet, so the
-problem looked like a shininess bug when it was really a brightness mismatch.
+### Texel Coverage
 
-### The fix
+Every texel of the environment map corresponds to a direction the shaded point could look toward, and together all $W \times H$ texels cover every possible direction. 
+The full set of directions around a point forms a sphere. 
 
-When an environment loads, `SwIBL::System::reinitializeOnUpdate` measures the average
-brightness of the HDR into `mEnvAvgLuminance`, and the IBL contribution is divided by
-that average in `SwGeometry::System::refreshPushConstants`:
+The size of "all directions combined" is measured in **steradians**, the 3D analogue of the radian. 
+Just as a full circle is $2\pi$ radians, a full sphere of directions is $4\pi$ steradians. 
+The amount of that surrounding view a patch (an area on the sphere) takes up is its **solid angle**, and saying a patch *subtends* a solid angle just means "as seen from the center, it fills up that much of your view."
 
-```cpp
-mResources.mWorkPushConstants.mIblIntensity =
-    mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
-```
+To find how much of the view one texel takes up, split the whole sphere evenly across all the texels.
+$\Omega_\text{texel} = \dfrac{4\pi}{W \cdot H} = \dfrac{\text{all directions}}{\text{texel count}}$
 
-This re-bases the environment to an average brightness of 1.0. After it,
-`IBL Intensity = 1` means a unit-mean fill regardless of whether the source HDR was a
-dim interior or a blazing desert. The slider becomes a predictable, art-directable
-knob whose meaning does not change every time the skybox is swapped.
+An equirectangular map stretches its top and bottom rows the way a flat world map balloons the polar regions, so a texel near the poles actually covers a thinner sliver of directions than one near the equator. 
+The exact per-texel value varies with latitude, but $\dfrac{4\pi}{W \cdot H}$ is the mean over the whole image and is accurate enough while avoiding per-texel trigonometry.
 
-### Why it is mathematically free
+Every bake needs $\Omega_\text{texel}$ for **mip selection**. 
+Each Monte-Carlo sample $\Omega_\text{sample}$ stands in for a small patch of directions, and the shader reads from the environment at the mip level where the texel covers the same patch the sample represents. 
+(So the light level inside the patch is pre-averaged over that texel.)
+So $\Omega_\text{texel}$ is the yardstick the mip math in sections 2 and 3 measures against.
 
-The irradiance map and the prefilter map are both **linear** functions of the
-environment pixel values. Double every pixel and both maps double. Scaling the final
-IBL result by `1 / avg` therefore produces the identical image to dividing every
-environment pixel by `avg` before baking. That lets the correction live as a single
-divide in the push-constant feed, with no change to the bake shaders, and it leaves
-the visible skybox at full brightness. Only the light the objects receive is
-normalized, not the backdrop.
+## Diffuse Irradiance Map
 
-### Cosine weighting
+> Radiance $L_{i}(L)$ — The light traveling along a single ray/direction (a brightness-per-direction).
+> Irradiance $E(N)$ — The total light landing on a surface, summed over every incoming direction in the hemisphere, with each direction weighted by its grazing angle ($N \cdot L$).
 
-The average is weighted by `cos(latitude)`, computed per row:
+`SwIBLIrradiance.comp.slang` bakes a small (64x32) map where each texel stores the **irradiance** arriving at a surface whose normal points in that texel's direction.
 
-```cpp
-const float latitude = (((y + 0.5f) / height) - 0.5f) * glm::pi<float>();
-const double rowWeight = std::cos(latitude);
-```
+For a Lambertian surface the diffuse BRDF is constant, $f_r = \dfrac{C_{\text{diffuse}}}{\pi}$, so it pulls out of the integral and what remains is the cosine-weighted integral of incoming radiance.
 
-An equirectangular image stores the same number of pixels for the pinched poles as
-for the wide equator, so a naive pixel average over-counts the poles. Weighting each
-row by the cosine of its latitude turns it into a true average over the sphere
-(solid angle) rather than over the image.
+$E(N) = \displaystyle\int_{\Omega} L_i(L)\, (N \cdot L)\, \mathrm{d}L$
 
-## Fix 2: Sun Aliasing in the Irradiance Bake
+The shader evaluates this by Riemann-summing over the hemisphere in spherical coordinates around $N$. 
+With a tangent basis $(\text{right}, \text{up}, N)$,  it walks $\phi$ in $[0, 2\pi)$ and $\theta$ in $[0, \pi/2)$ at a fixed step $\delta = 0.025$, taking the tangent-space sample.
 
-### What the irradiance bake computes
+$\hat{s} = (\sin\theta\cos\phi,\ \sin\theta\sin\phi,\ \cos\theta)$,  then rotated into world space as `sampleVec`, and accumulating as $E \leftarrow E + L_i(\text{sampleVec})\,\cos\theta\,\sin\theta.$
 
-For each direction, the irradiance map answers a single question: if a surface faces
-this way, how much total light does it gather from the entire hemisphere above it?
-`SwIBLIrradiance.comp.slang` answers it numerically by sampling the environment in
-roughly 15,000 directions across the hemisphere and summing them.
+The $\cos\theta$ is the $N \cdot L$ cosine term, and the extra $\sin\theta$ is the spherical-area element $\mathrm{d}L = \sin\theta\,\mathrm{d}\theta\,\mathrm{d}\phi$ that converts the uniform grid in $(\theta, \phi)$ into a correct solid-angle measure. 
 
-### The trap
+After summing $n$ samples the result is normalized:
 
-Those samples are spaced about 0.025 radians apart (close to 1.4 degrees). The sun in
-an HDR is tiny, around 0.0087 radians (close to 0.5 degrees), which is smaller than
-the gap between samples. It is also enormously bright, often thousands of times
-brighter than the surrounding sky.
+$E(N) = \dfrac{\pi}{n} \displaystyle\sum_{i=1}^{n} L_i\,\cos\theta_i\,\sin\theta_i$
 
-So whether any sample ray lands on the sun is essentially luck.
+The $\pi$ factor folds the BRDF's $\dfrac{1}{\pi}$ and the hemisphere's solid angle into the stored value so that at runtime the diffuse term is simply $\text{albedo}\cdot E(N)$ with no further $\pi$ (see section 5). 
+This is the standard convention where the $\pi$ in the bake and the $\dfrac{1}{\pi}$ in the BRDF cancel.
 
-- Miss it and the sun is under-counted, so the diffuse comes out too dark.
-- Hit it dead center and that one sample is treated as representing its whole
-  `0.025 x 0.025` patch, smearing the sun across an area roughly ten times its true
-  size. The diffuse then comes out far too bright, and only on the hemisphere facing
-  the sun.
+**Mip selection.** Each sample stands in for a patch of solid angle $\Omega_\text{sample} = \sin\theta\,\delta^2$. 
+A sub-texel-sized bright source (the sun) would alias badly if point-sampled at full resolution, so the shader reads the environment from the mip whose texel covers a matching solid angle:
 
-This is **aliasing**, the result of point-sampling a signal (the sun) more finely than
-the sample rate can represent. It produces an unstable, over-bright, direction-biased
-diffuse term.
+$\text{mip} = \dfrac{1}{2} \log_2\!\left(\dfrac{\Omega_\text{sample}}{\Omega_\text{texel}}\right)$
 
-### The fix: sample a pre-blurred mip
+The factor of $\dfrac{1}{2}$ is because solid angle scales with the **square** of linear texel size, and each mip halves linear size (quarters solid angle), so $\log_2$ of an area ratio is twice the mip step. 
+This pre-averages the sun into its surrounding sky so the diffuse term is stable.
 
-A mip chain stores the same image at halving resolutions (full, half, quarter, and so
-on), where each level is a pre-averaged, blurred version of the level above. Rather
-than always reading the sharp full-resolution environment, each sample now reads from
-the mip level whose single texel covers about the same solid angle as the sample's
-hemisphere patch:
+## Specular Pre-Filter Map
 
-```slang
-float saSample = sin(theta) * sampleDelta * sampleDelta; // solid angle this sample represents
-float mip = 0.5f * log2(max(saSample, 1e-12f) / saTexel);
-irradiance += environmentMap.SampleLevel(SwBRDF::dirToEquirectUv(sampleVec), max(mip, 0.f)).rgb
-              * cos(theta) * sin(theta);
-```
+The specular lobe cannot be reduced to a single environment integral because it depends on both view and roughness. 
+Epic's **split-sum approximation** factors it into two independent pieces.
 
-At that mip the sun has already been averaged together with the sky around it into a
-single texel. It no longer matters whether a ray lands exactly on the sun's center,
-because the value read already contains the sun's energy spread over the correct area.
-The total energy is unchanged, but the result is stable and unbiased instead of a coin
-flip between too dark and too bright.
+$\text{specular}_\text{IBL} \approx \underbrace{\text{prefiltered}(R, r)}_{\text{Prefilter}} \cdot \underbrace{(F_0\,\text{scale} + \text{bias})}_{\text{Integration LUT}}$
 
-`saTexel` is the solid angle of one environment texel, taking the equirect to span the
-full sphere of `4 * PI` steradians:
+`SwIBLPrefilter.comp.slang` bakes the first factor. The map (128x64) is **mip-chained**, and the mip index encodes roughness. 
+Mip level $m$ is baked with $r = \dfrac{m}{m_\text{max}}$ where $m_\text{max} = \text{mipCount} - 1$. 
+The sharpest mip is a mirror reflection and each coarser mip is blurred by a wider GGX lobe.
 
-```slang
-float saTexel = 4.f * SwBRDF::PI / float(envExtent.x * envExtent.y);
-```
+The split-sum's first simplification is to assume the normal, view and reflection all coincide, $N = V = R$. With that, the prefiltered color is the GGX-weighted average of the environment around $R$:
 
-The specular prefilter pass (`SwIBLPrefilter.comp.slang`) already used this same
-solid-angle mip selection to avoid fireflies. The irradiance pass had not received the
-same treatment, so this change brings it in line.
+$\text{prefiltered}(R) = \dfrac{\displaystyle\sum_i L_i(L_i)\,(N \cdot L_i)}{\displaystyle\sum_i (N \cdot L_i)}$
 
-## How the Two Fixes Divide the Work
+Samples are drawn by **GGX importance sampling** so they concentrate where the lobe has weight. 
+The low-discrepancy Hammersley sequence supplies the 2D sample points, where $\Phi_2(i)$ is the Van der Corput radical inverse (bit-reversal) of $i$:
 
-- **Normalization** corrects the overall magnitude. The ambient was globally too
-  strong relative to the sun.
-- **Mip sampling** corrects a directional bias and an instability. The sun was being
-  double-counted into the diffuse on its side of the hemisphere.
+$\xi_i = \left(\dfrac{i}{N_s},\ \Phi_2(i)\right)$
 
-Together they produce a correctly scaled, well-behaved ambient, so a rough dielectric
-surface looks like matte stone instead of a glossy reflective slab.
+`importanceSampleGGX` maps a Hammersley point to a half-vector $H$ distributed by the GGX normal distribution, via the inverse CDF.
+
+$\phi = 2\pi\,\xi_x \qquad \cos\theta_h = \sqrt{\dfrac{1 - \xi_y}{1 + (a^2 - 1)\,\xi_y}}, \qquad a = r^2.$
+
+The light direction follows by reflecting the view about $H$, namely $L = 2(V \cdot H)\,H - V$. Only samples with $N \cdot L > 0$ contribute, weighted by $N \cdot L$, which both filters back-facing samples and biases toward grazing-correct energy.
+
+**Mip selection by PDF.** Because samples are importance-sampled, the local sample density varies, so the per-sample solid angle comes from the GGX PDF rather than a fixed grid:
+
+$\text{pdf} = \dfrac{D(N \cdot H)\,(N \cdot H)}{4\,(V \cdot H)}, \qquad \Omega_\text{sample} = \dfrac{1}{N_s\,\text{pdf}}, \qquad \text{mip} = \dfrac{1}{2}\log_2\!\left(\dfrac{\Omega_\text{sample}}{\Omega_\text{texel}}\right)$
+
+with $\text{mip} = 0$ forced at $r = 0$. This is the same solid-angle-matching trick as the diffuse bake, here preventing fireflies from concentrated bright sources on the rougher (blurrier) mips. The GGX distribution itself is the shared one in `SwBRDF.h.slang`:
+
+$D(N \cdot H) = \dfrac{a^2}{\pi\big((N \cdot H)^2 (a^2 - 1) + 1\big)^2}, \qquad a = r^2.$
+
+## BRDF Integration LUT
+
+`SwIBLBrdfLut.comp.slang` bakes the second split-sum factor, the $(\text{scale}, \text{bias})$ pair. 
+
+This term is **environment-independent**: it only depends on $N \cdot V$ and roughness, so it is a 512x512 two-channel LUT baked once at startup (parameterized as $u = N \cdot V$, $v = r$).
+
+Starting from the Cook-Torrance specular BRDF and the Fresnel-Schlick term $F = F_0 + (1 - F_0)(1 - V \cdot H)^5$, the $F_0$ factors out of the integral linearly, leaving two scalar integrals. 
+The shader fixes $N = (0, 0, 1)$, builds $V$ from $N \cdot V$, importance-samples GGX exactly as the prefilter does, and accumulates with
+$f_c = (1 - V \cdot H)^5$, then divides both sums by the sample count.
+
+$g_\text{vis} = \dfrac{G\,(V \cdot H)}{(N \cdot H)(N \cdot V)}, \qquad \text{scale} \leftarrow \text{scale} + (1 - f_c)\,g_\text{vis}, \qquad \text{bias} \leftarrow \text{bias} + f_c\,g_\text{vis}$
+
+$g_\text{vis}$ is the Smith geometry term divided by the importance-sampling PDF and BRDF denominator, all of which collapse to this compact expression. 
+The geometry function uses the **IBL** remap of $k$ (distinct from the direct-lighting remap in `SwBRDF.h.slang`):
+
+$k = \dfrac{r^2}{2}, \qquad G = G_1(N \cdot V, k)\,G_1(N \cdot L, k), \qquad G_1(x, k) = \dfrac{x}{x(1 - k) + k}.$
+
+$\text{scale}$ multiplies $F_0$ and $\text{bias}$ is added, so at runtime $F_0\,\text{scale} + \text{bias}$ reconstitutes the full Fresnel-weighted, geometry-attenuated specular integral for any $F_0$.
+
+## At Runtime
+
+`ambientIBL` in `shaders/Geometry/SwGeometry.h.slang` samples the three maps and combines them. With $F_0 = \operatorname{lerp}(0.04,\ \text{albedo},\ \text{metallic})$:
+
+**Diffuse.** Sampling the irradiance map along $N$ gives $E(N)$, and
+
+$k_D = (1 - F_0)(1 - \text{metallic}), \qquad \text{ambient} \leftarrow \text{ambient} + k_D \cdot E(N) \cdot \text{albedo}.$
+
+$k_D$ is the energy left over after specular reflection: $(1 - F_0)$ removes the reflected fraction and $(1 - \text{metallic})$ kills diffuse on metals (which have no diffuse lobe).
+Note the diffuse Fresnel uses the normal-incidence $F_0$ rather than the view-dependent $F$, keeping the diffuse fill camera-invariant. 
+
+**Specular.** With $R = \operatorname{reflect}(-V, N)$, the prefilter is sampled at LOD $r \cdot m_\text{max}$ and the LUT at $(N \cdot V,\ r)$:
+
+$\text{ambient} \leftarrow \text{ambient} + \text{prefiltered}(R) \cdot \big(F_0\,\text{envBrdf}_x + \text{envBrdf}_y\big).$
+
+The prefilter LOD $r \cdot m_\text{max}$ is the inverse of the bake's $r = \dfrac{m}{m_\text{max}}$, so a surface's roughness selects the matching pre-blurred mip (trilinear filtering interpolates between adjacent roughness levels). 
+The LUT lookup supplies $(\text{scale}, \text{bias})$, completing the split sum.
+
+**AO and intensity.** The combined ambient is modulated by the material's ambient occlusion and a global scalar.
+
+$\text{result} = \text{iblIntensity} \cdot \text{ambientIBL}(\dots) \cdot \text{ao}$
+
+$\text{iblIntensity}$ is fed as $\dfrac{\text{getIblIntensity}()}{\text{getEnvAvgLuminance}()}$ , where $\text{mEnvAvgLuminance}$ is the cosine-weighted average luminance of the HDR. 
+Both baked maps are **linear** in the environment pixels, so dividing the final result by that average is identical to having normalized the environment to unit mean brightness before baking.
+
+## Skybox draw
+
+`SwIBLSkybox.vert/frag.slang` rasterize the same equirect HDR as the visible backdrop. 
+A unit cube is drawn with the camera's **translation stripped from the view matrix** $V_0$, so the cube stays centered on the camera.
+
+$\text{clip} = P \cdot V_0 \cdot \text{position}$
+
+The interpolated cube-local position is used directly as a world direction and mapped to the equirect with the same $\operatorname{atan2} / \arcsin$ formula from section 1. 
+Depth test is disabled and the draw blends behind already-rendered geometry (source factor $1 - \alpha_\text{dst}$), so the sky only fills pixels the scene did not cover. 
+Crucially the skybox is shown at the HDR's **full** brightness. 
+Only the light the surfaces *receive* is normalized, not the backdrop itself.
+
+## Map Summary
+
+| Map        | Shader                 | Size          | Format  | Encodes                                                        |
+| ---------- | ---------------------- | ------------- | ------- | -------------------------------------------------------------- |
+| Irradiance | `SwIBLIrradiance.comp` | 64x32         | RGBA16F | cosine-convolved diffuse irradiance per normal                 |
+| Prefilter  | `SwIBLPrefilter.comp`  | 128x64 + mips | RGBA16F | GGX-prefiltered specular, roughness per mip                    |
+| BRDF LUT   | `SwIBLBrdfLut.comp`    | 512x512       | RG16F   | split-sum $(\text{scale}, \text{bias})$ over $(N \cdot V,\ r)$ |
 
 ## Related Files
 
-| File | Role |
-|------|------|
-| `src/System/SwIBL.cpp` | Loads the HDR and computes `mEnvAvgLuminance`. |
-| `src/System/SwIBL.h` | Stores `mEnvAvgLuminance` and exposes `getEnvAvgLuminance`. |
-| `src/System/SwGeometry.cpp` | Divides IBL intensity by the average luminance. |
-| `shaders/IBL/SwIBLIrradiance.comp.slang` | Solid-angle mip selection in the diffuse bake. |
-| `shaders/IBL/SwIBLPrefilter.comp.slang` | The specular bake that already used this trick. |
-| `shaders/Geometry/SwGeometry.h.slang` | `ambientIBL` and `shadeLit`, which consume the IBL maps. |
+| File                                     | Role                                                          |
+| ---------------------------------------- | ------------------------------------------------------------- |
+| `shaders/IBL/SwIBLIrradiance.comp.slang` | Diffuse irradiance convolution                                |
+| `shaders/IBL/SwIBLPrefilter.comp.slang`  | GGX specular prefilter (one dispatch per mip)                 |
+| `shaders/IBL/SwIBLBrdfLut.comp.slang`    | Environment-BRDF pre-integration                              |
+| `shaders/IBL/SwIBL.h.slang`              | Hammersley, Van der Corput, `importanceSampleGGX`             |
+| `shaders/BRDF/SwBRDF.h.slang`            | Equirect mapping, `distributionGGX`, Fresnel/geometry         |
+| `shaders/Geometry/SwGeometry.h.slang`    | `ambientIBL` / `shadeLit` runtime application                 |
+| `src/System/SwIBL.cpp`                   | Bake orchestration, HDR load, average-luminance normalization |

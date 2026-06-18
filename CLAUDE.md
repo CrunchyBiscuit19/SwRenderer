@@ -45,16 +45,16 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 
 ### Layer Breakdown
 
-| Directory       | Responsibility                                                                                                |
-| --------------- | ------------------------------------------------------------------------------------------------------------- |
-| `src/Renderer/` | Core: device, swapchain + per-frame state, renderer context, immediate submission, logger, stats, events      |
+| Directory       | Responsibility                                                                                                                                       |
+| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/Renderer/` | Core: device, swapchain + per-frame state, renderer context, immediate submission, logger, stats, events                                             |
 | `src/Resource/` | Vulkan resource RAII wrappers: buffers, images, samplers, pipelines, descriptors, push constants, shaders, fences, semaphores, command buffers/pools |
-| `src/Scene/`    | Scene orchestration (`SwScene`), render graph (`SwRenderGraph`), passes/dependencies (`SwPass`/`SwDependency`), and the `SwSystem` base class |
-| `src/System/`   | Self-contained rendering systems: `SwCull`, `SwGeometry`, `SwIBL`, `SwLighting`, `SwWBOIT`, `SwPick`, `SwPostProcess`, `SwGui` |
-| `src/Data/`     | CPU-side data: assets, meshes, nodes, instances, batches, cameras, materials, lights                          |
-| `shaders/`      | Slang shaders organised by system (Common, Cull, Geometry, IBL, Pick, PostProcess, Skybox, WBOIT)             |
-| `docs/`         | Graphviz diagrams of the render graph and pass dependencies                                                   |
-| `thirdParty/`   | Vendored dependencies                                                                                         |
+| `src/Scene/`    | Scene orchestration (`SwScene`), render graph (`SwRenderGraph`), passes/dependencies (`SwPass`/`SwDependency`), and the `SwSystem` base class        |
+| `src/System/`   | Self-contained rendering systems: `SwCull`, `SwGeometry`, `SwIBL`, `SwLighting`, `SwWBOIT`, `SwPick`, `SwPostProcess`, `SwGui`                       |
+| `src/Data/`     | CPU-side data: assets, meshes, nodes, instances, batches, cameras, materials, lights                                                                 |
+| `shaders/`      | Slang shaders organised by system (Common, Cull, Geometry, IBL, Pick, PostProcess, Skybox, WBOIT)                                                    |
+| `docs/`         | Graphviz diagrams of the render graph and pass dependencies                                                                                          |
+| `thirdParty/`   | Vendored dependencies                                                                                                                                |
 
 ### Key Architectural Patterns
 
@@ -90,3 +90,7 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 - No unit test framework is used; validation is done via Vulkan validation layers (enabled in debug builds).
 - Avoid leaving excessive comments.
 - No emdashes or semicolons are to be used in comments or documentation. 
+- Documentation with LaTeX must follow a few rules:
+  - Inline formulas only (the single `$`, not `$$`)
+  - Use `\displaystyle` before summation sigma, the integral sign, etc.
+  - Use `\dfrac` for fractions

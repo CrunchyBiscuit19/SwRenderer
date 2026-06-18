@@ -41,11 +41,14 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     float3 lit = SwGeometry::shadeLit(
         color.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mPerFrameBuffer->mSunlight, workPc.mSceneLightsBuffer,
         workPc.mLightCount, workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
-        workPc.mMaxPrefilterMip, workPc.mIblIntensity
+        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents
     );
     lit += materialResources[NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET)].Sample(in.mUv).rgb * mc.mEmissiveFactor.rgb;
 
-    return float4(lit, color.a);
+    // Opaque and masked surfaces fully cover their pixel. Write coverage 1 so the skybox composite
+    // (which blends by 1 - draw-image alpha) does not bleed through opaque geometry whose material
+    // base alpha happens to be below 1. color.a above is still used only for the masked discard test.
+    return float4(lit, 1.f);
 }
 
 // Opaque geometry: no discard, so early depth test/write is safe.

@@ -34,6 +34,10 @@ constexpr vk::Extent3D IRRADIANCE_EXTENT{64, 32, 1};
 constexpr vk::Extent3D PREFILTER_EXTENT{128, 64, 1};  // mip-chained; mip level encodes roughness
 constexpr vk::Extent3D BRDF_LUT_EXTENT{512, 512, 1};
 
+// IBL ambient component mask passed to the geometry shaders (mirrors SwGeometry's IBL_DIFFUSE / IBL_SPECULAR).
+constexpr std::uint32_t IBL_DIFFUSE{1u};
+constexpr std::uint32_t IBL_SPECULAR{2u};
+
 // Set-1 bindings consumed by the geometry/transparent fragment shaders.
 constexpr std::uint32_t CONSUME_IRRADIANCE_BINDING{0};
 constexpr std::uint32_t CONSUME_PREFILTER_BINDING{1};
@@ -126,6 +130,7 @@ private:
     Resources mResources;
     std::uint32_t mPrefilterMipLevels{0};
     float mIblIntensity{1.f};
+    std::uint32_t mIblComponents{IBL_DIFFUSE | IBL_SPECULAR};  // which ambient terms to apply (GUI-controlled)
     // Cosine-weighted average luminance of the loaded environment. The IBL ambient is divided by this so a
     // bright HDR does not flood surfaces: IBL Intensity then scales a unit-mean fill, independent of the
     // environment's absolute radiance. Defaults to 1 (no normalization) until an environment is loaded.
@@ -157,6 +162,8 @@ public:
     inline float getMaxPrefilterMip() const { return mPrefilterMipLevels > 0 ? static_cast<float>(mPrefilterMipLevels - 1) : 0.f; }
     inline float getIblIntensity() const { return mIblIntensity; }
     inline float* getIblIntensityPtr() { return &mIblIntensity; }
+    inline std::uint32_t getIblComponents() const { return mIblComponents; }
+    inline std::uint32_t* getIblComponentsPtr() { return &mIblComponents; }
     inline float getEnvAvgLuminance() const { return mEnvAvgLuminance; }
     inline Resources& getResources() { return mResources; }
 };

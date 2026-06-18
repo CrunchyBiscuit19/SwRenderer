@@ -141,6 +141,20 @@ void SwGui::System::initializeResources() {
                 mScene.getIBLSystem().toggleActive();
             }
             ImGui::SliderFloat("IBL Intensity", mScene.getIBLSystem().getIblIntensityPtr(), 0.f, 2.f, "%.2f");
+
+            std::uint32_t* iblComponents = mScene.getIBLSystem().getIblComponentsPtr();
+            ImGui::TextUnformatted("IBL Components");
+            if (ImGui::RadioButton("Diffuse", *iblComponents == SwIBL::IBL_DIFFUSE)) {
+                *iblComponents = SwIBL::IBL_DIFFUSE;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Specular", *iblComponents == SwIBL::IBL_SPECULAR)) {
+                *iblComponents = SwIBL::IBL_SPECULAR;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Both", *iblComponents == (SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR))) {
+                *iblComponents = SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR;
+            }
         }
 
         mResources.mSelectSkyboxFileBrowser.Display();

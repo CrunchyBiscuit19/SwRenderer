@@ -2,9 +2,6 @@ module SwIBL;
 
 import SwCommon;
 
-// Bake-only helpers (Monte-Carlo sampling) for the IBL compute shaders. The equirect direction<->uv
-// mapping lives in SwBRDF so the geometry shaders can share it without a SwGeometry->SwIBL module
-// dependency (the shader compiler resolves modules by directory order, and Geometry precedes IBL).
 namespace SwIBL {
     // Van der Corput radical inverse (bit-reversal) and the Hammersley low-discrepancy sequence.
     public float radicalInverseVdC(uint bits) {
