@@ -12,7 +12,7 @@ class SwPass {
 public:
     enum class Type {
         ClearImages,
-        SkyboxDraw,
+        IBLSkybox,
         CullReset,
         CullEarlyWork,
         CullEarlyCompact,

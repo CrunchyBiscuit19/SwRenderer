@@ -28,13 +28,13 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     // Solid angle covered by one texel of the source environment (equirect spans 4*PI steradians).
     uint2 envExtent;
     environmentMap.GetDimensions(envExtent.x, envExtent.y);
-    float saTexel = 4.f * SwIBL::PI / float(envExtent.x * envExtent.y);
+    float saTexel = 4.f * Sw::PI / float(envExtent.x * envExtent.y);
 
     float3 irradiance = float3(0.f);
     float numSamples = 0.f;
     const float sampleDelta = 0.025f;
-    for (float phi = 0.f; phi < 2.f * SwIBL::PI; phi += sampleDelta) {
-        for (float theta = 0.f; theta < 0.5f * SwIBL::PI; theta += sampleDelta) {
+    for (float phi = 0.f; phi < 2.f * Sw::PI; phi += sampleDelta) {
+        for (float theta = 0.f; theta < 0.5f * Sw::PI; theta += sampleDelta) {
             float3 tangentSample = float3(sin(theta) * cos(phi), sin(theta) * sin(phi), cos(theta));
             float3 sampleVec = tangentSample.x * right + tangentSample.y * up + tangentSample.z * N;
             // Each sample stands in for a sin(theta)*dTheta*dPhi patch of the hemisphere. Read the env from the
@@ -47,6 +47,6 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
             numSamples += 1.f;
         }
     }
-    irradiance = SwIBL::PI * irradiance / max(numSamples, 1.f);
+    irradiance = Sw::PI * irradiance / max(numSamples, 1.f);
     irradianceMap[pixel] = float4(irradiance, 1.f);
 }

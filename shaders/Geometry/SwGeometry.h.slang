@@ -104,7 +104,7 @@ namespace SwGeometry {
         uint lightCount, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap, Sampler2D brdfLut,
         float maxPrefilterMip, float iblIntensity
     ) {
-        float3 toSunDir = sun.getDirection();  // unit vector from the surface toward the sun
+        float3 toSunDir = sun.getDirection(); 
         float3 color = SwBRDF::cookTorrance(normal, view, toSunDir, albedo, metallic, roughness, sun.mColor * sun.mIntensity);
         color += iblIntensity * ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip);
         for (uint i = 0; i < lightCount; i++) {
@@ -113,12 +113,12 @@ namespace SwGeometry {
         return color;
     }
 
-    // Build a world-space TBN and perturb the geometric normal by a tangent-space normal-map sample.
+    // Build a world-space TBN
     public float3 applyNormalMap(float3 normalWS, float4 tangentWS, float3 sampledNormal, float normalScale) {
         float3 n = normalize(normalWS);
-        float3 t = normalize(tangentWS.xyz - n * dot(n, tangentWS.xyz));  // Gram-Schmidt re-orthonormalise
-        float3 b = cross(n, t) * tangentWS.w;                            // handedness from glTF tangent.w
-        float3 ts = sampledNormal * 2.f - 1.f;                           // unpack [0,1] -> [-1,1]
+        float3 t = normalize(tangentWS.xyz - n * dot(n, tangentWS.xyz));  
+        float3 b = cross(n, t) * tangentWS.w;                            
+        float3 ts = sampledNormal * 2.f - 1.f;
         ts.xy *= normalScale;
         return normalize(t * ts.x + b * ts.y + n * ts.z);
     }

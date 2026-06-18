@@ -1,11 +1,11 @@
 module SwIBL;
 
+import SwCommon;
+
 // Bake-only helpers (Monte-Carlo sampling) for the IBL compute shaders. The equirect direction<->uv
 // mapping lives in SwBRDF so the geometry shaders can share it without a SwGeometry->SwIBL module
 // dependency (the shader compiler resolves modules by directory order, and Geometry precedes IBL).
 namespace SwIBL {
-    public static const float PI = 3.14159265358979323846f;
-
     // Van der Corput radical inverse (bit-reversal) and the Hammersley low-discrepancy sequence.
     public float radicalInverseVdC(uint bits) {
         bits = (bits << 16u) | (bits >> 16u);
@@ -21,7 +21,7 @@ namespace SwIBL {
     // GGX importance sample: a world-space half-vector distributed around normal N for roughness.
     public float3 importanceSampleGGX(float2 xi, float3 N, float roughness) {
         float a = roughness * roughness;
-        float phi = 2.f * PI * xi.x;
+        float phi = 2.f * Sw::PI * xi.x;
         float cosTheta = sqrt((1.f - xi.y) / (1.f + (a * a - 1.f) * xi.y));
         float sinTheta = sqrt(max(1.f - cosTheta * cosTheta, 0.f));
 
@@ -37,4 +37,24 @@ namespace SwIBL {
     public struct PrefilterPC {
         public float mRoughness;
     };
+
+    public struct SkyboxPC {
+        public SwIBL::Vertex* mWorkVertexBuffer;
+        public Sw::PerFrameData* mPerFrameBuffer;
+    };
+
+    public struct Vertex {
+        public float4 mPosition;
+    };
+
+    public struct VSInput {
+        public uint mVertexIndex : SV_VulkanVertexID;
+    };
+
+    public struct VSOutput {
+        public float4 mPosition : SV_Position;
+        public float3 mUvw : TEXCOORD0;
+    };
+
+    public typedef VSOutput FSInput;
 }

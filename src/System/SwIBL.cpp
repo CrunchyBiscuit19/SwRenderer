@@ -7,10 +7,10 @@
 #include <System/SwIBL.h>
 #include <stb_image.h>
 
-SwDescriptorLayout SwIBL::System::sConsumeDescriptorLayout{};
+SwDescriptorLayout SwIBL::Resources::sConsumeDescriptorLayout{};
 
-void SwIBL::System::init() {
-    sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+void SwIBL::Resources::init() {
+    SwIBL::Resources::sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLConsumeDescriptorSetLayout",
         {
             {CONSUME_IRRADIANCE_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
@@ -21,12 +21,12 @@ void SwIBL::System::init() {
     );
 }
 
-void SwIBL::System::cleanup() { sConsumeDescriptorLayout.destroy(); }
+void SwIBL::Resources::cleanup() { SwIBL::Resources::sConsumeDescriptorLayout.destroy(); }
 
 SwIBL::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwIBL::System::initializeResources() {
-    sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    SwIBL::Resources::sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLConsumeDescriptorSetLayout",
         {
             {CONSUME_IRRADIANCE_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
@@ -59,7 +59,7 @@ void SwIBL::System::initializeResources() {
 
     // --- The set-1 descriptor set the geometry shaders bind ---
     mResources.mConsumeDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLConsumeDescriptorSet", sConsumeDescriptorLayout);
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLConsumeDescriptorSet", SwIBL::Resources::sConsumeDescriptorLayout);
 
     // --- Baked maps (storage for the compute bakes, sampled by the geometry shaders) ---
     const vk::ImageUsageFlags iblUsage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
@@ -252,7 +252,7 @@ void SwIBL::System::initializePasses() {
     deps.mReadImages.emplace_back(&mResources.mDrawImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
     deps.mReadBuffers.emplace_back(&mResources.mDrawVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
 
-    mScene.insertPass(SwPass::Type::SkyboxDraw, std::move(deps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::IBLSkybox, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingAttachmentInfo depthAttachment = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo =

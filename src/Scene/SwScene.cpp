@@ -559,7 +559,7 @@ void SwScene::draw() {
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
     if (mIBL.isActive() && mIBL.isFileSelected()) {
-        mRenderGraph.addPass(&mPasses[SwPass::Type::SkyboxDraw]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::IBLSkybox]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullReset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyWork]);

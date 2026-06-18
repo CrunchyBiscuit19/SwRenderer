@@ -22,8 +22,8 @@ static const std::filesystem::path BRDF_LUT_SHADER_PATH{std::filesystem::path(SH
 
 // Skybox draw: rasterizes the environment equirect behind the scene geometry.
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
-static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.vert.spv"};
-static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSkyboxWork.frag.spv"};
+static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLSkybox.vert.spv"};
+static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLSkybox.frag.spv"};
 static const std::filesystem::path SKYBOX_DEFAULT_HDR_PATH{std::filesystem::path(SKYBOXES_PATH) / "AutumnHillView2k.hdr"};
 
 // HDR float maps so the prefilter/irradiance integrals stay meaningful (the environment is HDR).
@@ -53,6 +53,8 @@ struct DrawPC : SwPC<DrawPC> {
 };
 
 struct Resources {
+    static SwDescriptorLayout sConsumeDescriptorLayout;
+
     // Baked maps. Irradiance + BRDF LUT are single-level; prefilter is mip-chained (roughness per mip).
     SwColorImage2D mIrradianceImage;
     SwColorImage2D mPrefilterImage;
@@ -114,6 +116,9 @@ struct Resources {
     SwDescriptorLayout mDrawDescriptorLayout;
 
     DrawPC mDrawPushConstants;
+
+    static void init();
+    static void cleanup();
 };
 
 class System : public SwSystem {
@@ -137,12 +142,6 @@ private:
     void bakeFromEnvironment(vk::ImageView environmentView, vk::Sampler environmentSampler);
 
 public:
-    // Set-1 layout, referenced by SwMaterial's geometry pipeline layouts. Created before SwMaterial::init,
-    // independently of any System instance (mirrors SwMaterialResources::sMaterialResourcesDescriptorLayout).
-    static SwDescriptorLayout sConsumeDescriptorLayout;
-    static void init();
-    static void cleanup();
-
     System(SwScene& scene);
 
     // Load a new environment equirect, repoint the skybox draw, and rebake the IBL maps.

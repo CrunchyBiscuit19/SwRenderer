@@ -30,7 +30,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     // Solid angle covered by one texel of the source environment (equirect spans 4*PI steradians).
     uint2 envExtent;
     environmentMap.GetDimensions(envExtent.x, envExtent.y);
-    float saTexel = 4.f * SwBRDF::PI / float(envExtent.x * envExtent.y);
+    float saTexel = 4.f * Sw::PI / float(envExtent.x * envExtent.y);
 
     float3 prefiltered = float3(0.f);
     float totalWeight = 0.f;
