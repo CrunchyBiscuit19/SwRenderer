@@ -148,6 +148,14 @@ target_include_directories(magic_enum INTERFACE "${CMAKE_THIRD_PARTY_DIR}/magic_
 add_library(stb_image INTERFACE)
 target_include_directories(stb_image INTERFACE "${CMAKE_THIRD_PARTY_DIR}/stb_image")
 
+# tinyexr (+ bundled miniz) for OpenEXR loading. miniz.c is a real TU and tinyexr_impl.cpp pulls in
+# the tinyexr implementation, so this is a compiled static library rather than header-only.
+add_library(tinyexr STATIC
+    "${CMAKE_THIRD_PARTY_DIR}/tinyexr/miniz.c"
+    "${CMAKE_THIRD_PARTY_DIR}/tinyexr/tinyexr_impl.cpp"
+)
+target_include_directories(tinyexr PUBLIC "${CMAKE_THIRD_PARTY_DIR}/tinyexr")
+
 add_library(imgui-filebrowser INTERFACE)
 target_include_directories(imgui-filebrowser INTERFACE "${CMAKE_THIRD_PARTY_DIR}/imgui-filebrowser")
 
@@ -158,7 +166,7 @@ add_library(quill INTERFACE)
 target_include_directories(quill INTERFACE "${CMAKE_THIRD_PARTY_DIR}")
 
 # Group all third-party targets under a single "ThirdParty" folder in the IDE
-set_target_properties(imgui vkbootstrap PROPERTIES FOLDER "ThirdParty")
+set_target_properties(imgui vkbootstrap tinyexr PROPERTIES FOLDER "ThirdParty")
 
 # ---------------------------------------------------------------------------
 # Includes, links, dependencies
@@ -171,6 +179,7 @@ target_link_libraries(SwRenderer PUBLIC
     glm
     magic_enum
     stb_image
+    tinyexr
     imgui-filebrowser
     vma
     quill

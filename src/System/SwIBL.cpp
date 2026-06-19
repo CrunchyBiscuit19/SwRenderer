@@ -6,6 +6,12 @@
 #include <Scene/SwScene.h>
 #include <System/SwIBL.h>
 #include <stb_image.h>
+#include <tinyexr.h>
+
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
+#include <cstring>
 
 SwDescriptorLayout SwIBL::Resources::sConsumeDescriptorLayout{};
 
@@ -352,11 +358,38 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
         return;
     }
 
+    const std::string pathString = mLoadFromFile.value().string();
     std::int32_t width = 0;
     std::int32_t height = 0;
-    std::int32_t numChannels = 0;
-    stbi_set_flip_vertically_on_load(true);
-    float* data = stbi_loadf(mLoadFromFile.value().string().c_str(), &width, &height, &numChannels, 4);
+
+    std::string extension = mLoadFromFile.value().extension().string();
+    std::transform(extension.begin(), extension.end(), extension.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+    const bool isExr = extension == ".exr";
+    float* data = nullptr;
+
+    if (isExr) {
+        const char* exrError = nullptr;
+        if (LoadEXR(&data, &width, &height, pathString.c_str(), &exrError) != TINYEXR_SUCCESS) {
+            if (exrError) {
+                FreeEXRErrorMessage(exrError);
+            }
+            return;
+        }
+        const std::size_t rowFloats = static_cast<std::size_t>(width) * 4;
+        std::vector<float> rowScratch(rowFloats);
+        for (std::int32_t y = 0; y < height / 2; y++) {
+            float* topRow = data + static_cast<std::size_t>(y) * rowFloats;
+            float* bottomRow = data + static_cast<std::size_t>(height - 1 - y) * rowFloats;
+            std::memcpy(rowScratch.data(), topRow, rowFloats * sizeof(float));
+            std::memcpy(topRow, bottomRow, rowFloats * sizeof(float));
+            std::memcpy(bottomRow, rowScratch.data(), rowFloats * sizeof(float));
+        }
+    } else {
+        std::int32_t numChannels = 0;
+        stbi_set_flip_vertically_on_load(true);
+        data = stbi_loadf(pathString.c_str(), &width, &height, &numChannels, 4);
+    }
+
     if (!data || width == 0 || height == 0) {
         return;
     }
@@ -388,7 +421,11 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
         true
     );
 
-    stbi_image_free(data);
+    if (isExr) {
+        std::free(data);  // tinyexr allocates the RGBA buffer with malloc
+    } else {
+        stbi_image_free(data);
+    }
 
     mResources.mDrawDescriptorSet.writeImage(
         0, mResources.mDrawImage.getRawMainImageView(), mResources.mDrawSampler.getRawSampler(), vk::ImageLayout::eShaderReadOnlyOptimal

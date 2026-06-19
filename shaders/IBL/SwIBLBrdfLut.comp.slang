@@ -2,7 +2,7 @@ import SwCommon;
 import SwIBL;
 
 // Pre-integrates the environment-BRDF scale/bias for the split-sum specular term. 
-[[vk::binding(0, 0)]]w
+[[vk::binding(0, 0)]]
 public uniform RWTexture2D<float2> brdfLut;
 
 static const uint SAMPLE_COUNT = 1024u;
