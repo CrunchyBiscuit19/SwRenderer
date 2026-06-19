@@ -41,7 +41,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
         float NdotL = dot(N, L);
         if (NdotL > 0.f) {
             // Sample the environment from the mip whose texel solid angle matches this sample's, so
-            // concentrated bright sources are pre-averaged instead of producing fireflies on rough mips.
+            // concentrated bright sources are pre-averaged on rough mips.
             float NdotH = max(dot(N, H), 0.f);
             float VdotH = max(dot(V, H), 1e-4f);
             float pdf = SwBRDF::distributionGGX(NdotH, pc.mRoughness) * NdotH / (4.f * VdotH) + 1e-4f;

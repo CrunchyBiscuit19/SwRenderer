@@ -63,9 +63,9 @@ void SwIBL::System::initializeResources() {
 
     // --- Baked maps (storage for the compute bakes, sampled by the geometry shaders) ---
     const vk::ImageUsageFlags iblUsage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-    mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradiance", nullptr, IBL_FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
-    mResources.mPrefilterImage = SwImageFactory::createColorImage2D("IBLPrefilter", nullptr, IBL_FORMAT, PREFILTER_EXTENT, iblUsage, true);
-    mResources.mBrdfLutImage = SwImageFactory::createColorImage2D("IBLBrdfLut", nullptr, BRDF_LUT_FORMAT, BRDF_LUT_EXTENT, iblUsage, false);
+    mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradianceImage", nullptr, IBL_FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
+    mResources.mPrefilterImage = SwImageFactory::createColorImage2D("IBLPrefilterImage", nullptr, IBL_FORMAT, PREFILTER_EXTENT, iblUsage, true);
+    mResources.mBrdfLutImage = SwImageFactory::createColorImage2D("IBLBrdfLutImage", nullptr, BRDF_LUT_FORMAT, BRDF_LUT_EXTENT, iblUsage, false);
 
     mPrefilterMipLevels = SwHelper::calculateMipMapLevels(PREFILTER_EXTENT);
     // One single-mip storage view per prefilter mip level (the main view spans all mips and is used for sampling).

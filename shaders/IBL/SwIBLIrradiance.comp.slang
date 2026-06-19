@@ -3,7 +3,6 @@ import SwBRDF;
 import SwIBL;
 
 // Convolves the environment equirect into a small cosine-weighted diffuse irradiance map.
-// Binding 0: the source environment (combined image sampler). Binding 1: the irradiance output.
 [[vk::binding(0, 0)]]
 public uniform Sampler2D environmentMap;
 [[vk::binding(1, 0)]]

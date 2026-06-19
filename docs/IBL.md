@@ -86,7 +86,7 @@ $\text{specular}_\text{IBL} \approx \underbrace{\text{prefiltered}(R, r)}_{\text
 Mip level $m$ is baked with $r = \dfrac{m}{m_\text{max}}$ where $m_\text{max} = \text{mipCount} - 1$. 
 The sharpest mip is a mirror reflection and each coarser mip is blurred by a wider GGX lobe.
 
-The split-sum's first simplification is to assume the normal, view and reflection all coincide, $N = V = R$. With that, the prefiltered color is the GGX-weighted average of the environment around $R$:
+The split-sum's first simplification is to assume the normal, view and reflection all coincide, $N = V = R$. With that, the prefiltered color is the GGX-weighted average of the environment around $R$
 
 $\text{prefiltered}(R) = \dfrac{\displaystyle\sum_i L_i(L_i)\,(N \cdot L_i)}{\displaystyle\sum_i (N \cdot L_i)}$
 

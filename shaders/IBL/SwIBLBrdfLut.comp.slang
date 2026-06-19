@@ -1,14 +1,12 @@
 import SwCommon;
 import SwIBL;
 
-// Pre-integrates the environment-BRDF scale/bias for the split-sum specular term. Output is a
-// 2D LUT over (NdotV = u, roughness = v); environment-independent, so baked once at startup.
-[[vk::binding(0, 0)]]
+// Pre-integrates the environment-BRDF scale/bias for the split-sum specular term. 
+[[vk::binding(0, 0)]]w
 public uniform RWTexture2D<float2> brdfLut;
 
 static const uint SAMPLE_COUNT = 1024u;
 
-// Schlick-GGX geometry with the IBL k = roughness^2 / 2 (distinct from the direct-lighting k).
 float geometrySchlickGGX(float NdotX, float roughness) {
     float a = roughness;
     float k = (a * a) / 2.f;

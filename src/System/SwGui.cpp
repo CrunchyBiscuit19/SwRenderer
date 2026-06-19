@@ -65,8 +65,8 @@ void SwGui::System::initializeResources() {
     mResources.mSelectAssetsFileBrowser.SetTypeFilters({".glb", ".gltf"});
 
     mResources.mSelectSkyboxFileBrowser = ImGui::FileBrowser::FileBrowser(0, SKYBOXES_PATH);
-    mResources.mSelectSkyboxFileBrowser.SetTitle("Select HDR Skybox Image");
-    mResources.mSelectSkyboxFileBrowser.SetTypeFilters({".hdr"});
+    mResources.mSelectSkyboxFileBrowser.SetTitle("Select HDR / EXR Skybox Image");
+    mResources.mSelectSkyboxFileBrowser.SetTypeFilters({".hdr", ".exr"});
 
     mResources.mGuiComponents[SwGuiComponent::Camera] = [this]() {
         ImGui::Text("Camera Mode: %s", magic_enum::enum_name(mScene.getCamera().getMovementMode()).data());

@@ -3,7 +3,6 @@ module SwIBL;
 import SwCommon;
 
 namespace SwIBL {
-    // Van der Corput radical inverse (bit-reversal) and the Hammersley low-discrepancy sequence.
     public float radicalInverseVdC(uint bits) {
         bits = (bits << 16u) | (bits >> 16u);
         bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -15,7 +14,6 @@ namespace SwIBL {
 
     public float2 hammersley(uint i, uint n) { return float2(float(i) / float(n), radicalInverseVdC(i)); }
 
-    // GGX importance sample: a world-space half-vector distributed around normal N for roughness.
     public float3 importanceSampleGGX(float2 xi, float3 N, float roughness) {
         float a = roughness * roughness;
         float phi = 2.f * Sw::PI * xi.x;
@@ -30,7 +28,6 @@ namespace SwIBL {
         return normalize(tangent * h.x + bitangent * h.y + N * h.z);
     }
 
-    // Per-mip roughness for the specular prefilter pass.
     public struct PrefilterPC {
         public float mRoughness;
     };
