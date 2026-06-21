@@ -5,6 +5,7 @@ namespace Sw {
     public static const uint MAX_2D_WORKGROUP_THREADS = 32;
     public static const float PI = 3.1415926535897932384626433832795028841972f;
     public static const uint NUM_PBR_IMAGES = 5;
+    public static const uint MAX_SHADOW_LIGHTS = 16;   // punctual lights selected per frame for shading + shadow casting
 
     public struct Perspective {
         public float4x4 mView;
@@ -44,6 +45,8 @@ namespace Sw {
         public Perspective mPerspective;
         public Sunlight mSunlight;
         public float3 mCameraWorldPos;
+        public uint mActiveLightCount;                     // number of valid entries in mActiveLightIndices
+        public uint mActiveLightIndices[MAX_SHADOW_LIGHTS]; // indices into the scene lights buffer, sorted by brightness at the camera
     };
 
     public struct Vertex {

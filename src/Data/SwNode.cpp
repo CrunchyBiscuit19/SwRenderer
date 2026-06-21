@@ -78,9 +78,13 @@ void SwLightNode::generateRcsAndRis() {
     SwAsset& asset = scene.getAsset(mAssetId);
 
     const std::uint32_t nodeTransformIndex = asset.mFirstNodeTransformInScene + mRelativeNodeIndex;
-    for (std::uint32_t i = 0; i < asset.getInstances().size(); i++) {
+    const glm::vec3 nodeWorldPos = glm::vec3(getWorldTransform()[3]);
+    auto& instances = asset.getInstances();
+    for (std::uint32_t i = 0; i < instances.size(); i++) {
         scene.getLightingSystem().getAssetLights().emplace_back(mLight.toData(nodeTransformIndex, asset.mFirstInstanceInScene + i));
+        const glm::vec3 worldPos = glm::vec3(instances[i].getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));
+        scene.getLightingSystem().getLightWorldPositions().emplace_back(worldPos);
     }
 
-    SwNode::generateRcsAndRis();  // recurse to children
+    SwNode::generateRcsAndRis();  
 }

@@ -4,8 +4,6 @@ import SwPick;
 [[vk::push_constant]]
 SwPick::DrawPC pickDrawPc;
 
-// Shared transform work for both pick draw vertex entry points. The opaque entry only consumes the
-// IDs, so the material-constant fetch below is dead-code-eliminated for it.
 SwPick::VSOutput computeVertex(SwPick::VSInput in) {
     SwPick::VSOutput out;
 

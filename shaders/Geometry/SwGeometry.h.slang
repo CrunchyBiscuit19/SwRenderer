@@ -20,10 +20,9 @@ namespace SwGeometry {
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;
         public Sw::Instance* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
-        public Sw::RenderCommand *mDrawRcsBuffer;
-        public Sw::PerFrameData *mPerFrameBuffer;
+        public Sw::RenderCommand* mDrawRcsBuffer;
+        public Sw::PerFrameData* mPerFrameBuffer;
         public Sw::Light* mSceneLightsBuffer;
-        public uint mLightCount;
         public float mMaxPrefilterMip;   // highest mip index of the specular prefilter chain
         public float mIblIntensity;      // scales the image-based ambient term (GUI-controlled)
         public uint mIblComponents;      // IBL_DIFFUSE / IBL_SPECULAR bit mask (GUI-controlled)
@@ -108,17 +107,18 @@ namespace SwGeometry {
         return ambient * ao;
     }
 
-    // Full PBR shading: directional sun + image-based ambient (AO-modulated) + every punctual light in the scene buffer.
+    // Full PBR shading: directional sun + image-based ambient (AO-modulated) + the per-frame selected punctual lights.
     public float3 shadeLit(
-        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::Sunlight sun, Sw::Light* lights,
-        uint lightCount, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap, Sampler2D brdfLut,
-        float maxPrefilterMip, float iblIntensity, uint iblComponents
+        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::PerFrameData* perFrame,
+        Sw::Light* lights, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap,
+        Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents
     ) {
+        Sw::Sunlight sun = perFrame->mSunlight;
         float3 toSunDir = sun.getDirection();
         float3 color = SwBRDF::cookTorrance(normal, view, toSunDir, albedo, metallic, roughness, sun.mColor * sun.mIntensity);
         color += iblIntensity * ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
-        for (uint i = 0; i < lightCount; i++) {
-            color += accumulatePunctualLight(lights[i], worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
+        for (uint i = 0; i < perFrame->mActiveLightCount; i++) {
+            color += accumulatePunctualLight(lights[perFrame->mActiveLightIndices[i]], worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
         }
         return color;
     }

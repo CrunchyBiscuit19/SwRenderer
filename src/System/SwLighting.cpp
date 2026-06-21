@@ -4,9 +4,48 @@
 #include <Scene/SwScene.h>
 #include <System/SwLighting.h>
 
+#include <algorithm>
+#include <cmath>
 #include <format>
+#include <limits>
+#include <utility>
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
+
+void SwLighting::System::selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount) const {
+    const std::vector<SwLight::Data>& lights = mResources.mAssetLights;
+    const std::vector<glm::vec3>& positions = mResources.mLightWorldPositions;
+
+    // Score every light by its perceived brightness at the camera, then keep the brightest MAX_ACTIVE_LIGHTS.
+    std::vector<std::pair<float, std::uint32_t>> scored;
+    scored.reserve(lights.size());
+    for (std::uint32_t i = 0; i < lights.size(); i++) {
+        const SwLight::Data& light = lights[i];
+
+        float score;
+        if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Directional)) {
+            score = std::numeric_limits<float>::max();  // no attenuation, always relevant
+        } else {
+            const glm::vec3 toLight = positions[i] - cameraPos;
+            const float dist2 = std::max(glm::dot(toLight, toLight), 1e-4f);
+            float attenuation = 1.f / dist2;  
+            if (light.mRange > 0.f) {
+                const float dist = std::sqrt(dist2);
+                const float rangeFactor = std::clamp(1.f - std::pow(dist / light.mRange, 4.f), 0.f, 1.f);
+                attenuation *= rangeFactor * rangeFactor;
+            }
+            const float luminance = glm::dot(light.mColor, glm::vec3(0.2126f, 0.7152f, 0.0722f));
+            score = light.mIntensity * luminance * attenuation;
+        }
+        scored.emplace_back(score, i);
+    }
+
+    outCount = std::min<std::uint32_t>(static_cast<std::uint32_t>(scored.size()), SwLight::MAX_ACTIVE_LIGHTS);
+    std::partial_sort(scored.begin(), scored.begin() + outCount, scored.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+    for (std::uint32_t i = 0; i < outCount; i++) {
+        outIndices[i] = scored[i].second;
+    }
+}
 
 void SwLighting::System::initializeResources() {
     for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
@@ -38,7 +77,7 @@ void SwLighting::System::initializeResources() {
         "ShadowMapsDescriptorLayout",
         {
             {0, vk::DescriptorType::eSampledImage, NUM_LIGHT_CAST_SHADOWS},
-            {0, vk::DescriptorType::eSampler, 1},
+            {1, vk::DescriptorType::eSampler, 1},
         },
         vk::ShaderStageFlagBits::eFragment 
     );
@@ -66,7 +105,7 @@ void SwLighting::System::initializeResources() {
     noBlendState.blendEnable = VK_FALSE;
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
     drawPipelineOptions.mVertexShader = drawVertexShader.getRawModule();
-    drawPipelineOptions.mFragmentShader = nullptr;
+    drawPipelineOptions.mFragmentShader = std::nullopt;
     drawPipelineOptions.mLayout = mResources.mShadowDrawPipelineLayout.getRawLayout();
     drawPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     drawPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
@@ -79,6 +118,7 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+    drawPipelineOptions.mVertexEntryPoint = SHADOW_DRAW_OPAQUE_ENTRY_POINT;
     mResources.mShadowDrawPipelineBundle =
         SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowDrawPipeline", drawPipelineOptions);
 
@@ -94,8 +134,8 @@ void SwLighting::System::initializePasses() {
     SwDependency staticDeps;
 
     for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
-        staticDeps.mWriteBuffers.emplace_back(mResources.mLightDrawRisIndicesBuffer[i], SwDependency::BufferDepType::TransferWrite);
-        staticDeps.mWriteBuffers.emplace_back(mResources.mLightRcsBuffer[i], SwDependency::BufferDepType::TransferWrite);
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mLightDrawRisIndicesBuffer[i], SwDependency::BufferDepType::TransferWrite);
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mLightRcsBuffer[i], SwDependency::BufferDepType::TransferWrite);
     }
     mScene.insertPass(SwPass::Type::LightingShadowReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
@@ -129,4 +169,5 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mShadowDrawPc.mSceneVertexBuffer = SwRenderer::sRendererContext.mScene->getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mShadowDrawPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mShadowDrawPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mShadowDrawPc.mSceneMaterialConstantsBuffer = SwRenderer::sRendererContext.mScene->getSceneMaterialConstantsBuffer().getDeviceAddress().value();
 }

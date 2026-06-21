@@ -6,8 +6,11 @@
 #include <glm/gtc/constants.hpp>
 #include <cstdint>
 
+
 class SwLight {
 public:
+    static constexpr std::uint32_t MAX_ACTIVE_LIGHTS{16};
+    
     enum class Type : std::uint32_t { Directional = 0, Point = 1, Spot = 2 };
 
     struct Data {

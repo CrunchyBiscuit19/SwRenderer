@@ -24,6 +24,7 @@ void SwFrame::update() {
         .mSunlight = scene.getLightingSystem().getSunlight(),
         .mCameraWorldPos = scene.getCamera().getPosition(),
     };
+    scene.getLightingSystem().selectActiveLights(perFrameData.mCameraWorldPos, perFrameData.mActiveLightIndices, perFrameData.mActiveLightCount);
     mPerFrameBuffer.copyFromUnchecked(&perFrameData, sizeof(Data));
 }
 

@@ -209,6 +209,7 @@ void SwScene::markAllAssetsDelete() {
 void SwScene::regenerateRcsAndRis() {
     SwBatch::sFirstRiOffset = 0;
     mLighting.getAssetLights().clear();
+    mLighting.getLightWorldPositions().clear();
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
@@ -218,7 +219,7 @@ void SwScene::regenerateRcsAndRis() {
     }
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getInstances().size() == 0) continue;
-        asset.generateRcsAndRis();  // SwLightNodes append their per-instance light records into the lighting system
+        asset.generateRcsAndRis();  
     }
 
     reloadSceneLightsBuffer();

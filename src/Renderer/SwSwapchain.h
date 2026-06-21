@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Data/SwCamera.h>
+#include <Data/SwLight.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwCommandBuffer.h>
 #include <Resource/SwCommandPool.h>
@@ -12,6 +13,7 @@
 #include <SDL3/SDL.h>
 #include <vk_mem_alloc.h>
 
+#include <array>
 #include <vector>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -23,6 +25,8 @@ public:
         SwPerspective mPerspective;
         SwSunlight mSunlight;
         glm::vec3 mCameraWorldPos;
+        std::uint32_t mActiveLightCount{0};
+        std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
     };
 
 private:

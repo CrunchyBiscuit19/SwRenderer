@@ -6,12 +6,15 @@
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
 
+#include <array>
 #include <vector>
 
 namespace SwLighting {
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowDraw.vert.spv"};
-constexpr std::uint32_t NUM_LIGHT_CAST_SHADOWS{1 << 4};
+static constexpr std::string_view SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
+static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
+constexpr std::uint32_t NUM_LIGHT_CAST_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
 
@@ -36,14 +39,16 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
+    vk::DeviceAddress mSceneMaterialConstantsBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
 struct Resources {
-    SwSunlight mSunlight;                     
-    std::vector<SwLight::Data> mAssetLights;  
-    std::vector<SwLight> mGlobalLights;       
+    SwSunlight mSunlight;
+    std::vector<SwLight::Data> mAssetLights;
+    std::vector<glm::vec3> mLightWorldPositions;  // parallel to mAssetLights, cached for per-frame brightness scoring
+    std::vector<SwLight> mGlobalLights;
 
     std::array<SwDepthImage2D, NUM_LIGHT_CAST_SHADOWS> mShadowMaps;
     SwSampler mShadowMapsSampler;
@@ -76,9 +81,15 @@ public:
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
 
+    // Pick the up-to-MAX_ACTIVE_LIGHTS punctual lights that are brightest at cameraPos (intensity x attenuation),
+    // writing their scene-light-buffer indices into outIndices and the count into outCount. Directional lights have
+    // no attenuation and are always selected. Spot-cone falloff is intentionally omitted from the score.
+    void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount) const;
+
     inline Resources& getResources() { return mResources; }
     inline SwSunlight& getSunlight() { return mResources.mSunlight; }
     inline std::vector<SwLight::Data>& getAssetLights() { return mResources.mAssetLights; }
+    inline std::vector<glm::vec3>& getLightWorldPositions() { return mResources.mLightWorldPositions; }
     inline std::vector<SwLight>& getGlobalLights() { return mResources.mGlobalLights; }
 };
 
