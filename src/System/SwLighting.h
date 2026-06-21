@@ -12,7 +12,7 @@
 namespace SwLighting {
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowDraw.vert.spv"};
-static constexpr std::string_view SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
+static constexpr std::string_view SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 constexpr std::uint32_t NUM_LIGHT_CAST_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
@@ -65,7 +65,8 @@ struct Resources {
     
     ShadowDrawPC mShadowDrawPc;
     SwPipelineLayout mShadowDrawPipelineLayout;
-    SwGraphicsPipelineBundle mShadowDrawPipelineBundle;
+    SwGraphicsPipelineBundle mShadowDrawOpaqueTransparentPipelineBundle;
+    SwGraphicsPipelineBundle mShadowDrawMaskedPipelineBundle;
 };
 
 class System : public SwSystem {
