@@ -458,6 +458,7 @@ std::uint32_t SwImageFactory::getFormatTexelSize(vk::Format format) {
     switch (format) {
         case vk::Format::eR8G8B8A8Srgb:
         case vk::Format::eR8G8B8A8Unorm:
+        case vk::Format::eR8G8B8A8Snorm:
             bytesPerTexel = 4;
             break;
         case vk::Format::eR16G16B16A16Sfloat:
@@ -608,6 +609,14 @@ void SwImageFactory::init() {
     sDefaultImages.try_emplace(
         SwDefaultImageOption::Blue,
         SwImageFactory::createColorImage2D("DefaultBlueImage", &blue, vk::Format::eR8G8B8A8Srgb, vk::Extent3D{1, 1, 1}, vk::ImageUsageFlagBits::eSampled, false)
+    );
+    // Neutral tangent-space normal (0.5, 0.5, 1.0) -> decodes to (0, 0, 1) so unmapped surfaces keep their geometric normal.
+    constexpr std::uint32_t flatNormal = std::byteswap(0x8080FFFF);
+    sDefaultImages.try_emplace(
+        SwDefaultImageOption::FlatNormal,
+        SwImageFactory::createColorImage2D(
+            "DefaultFlatNormalImage", &flatNormal, vk::Format::eR8G8B8A8Unorm, vk::Extent3D{1, 1, 1}, vk::ImageUsageFlagBits::eSampled, false
+        )
     );
     std::array<std::uint32_t, 16 * 16> pixels;
     for (std::uint32_t x = 0; x < 16; x++) {

@@ -15,12 +15,17 @@
 
 SwMaterialTexture SwMaterialTexture::sDefaultWhiteTexture{nullptr, nullptr};
 SwMaterialTexture SwMaterialTexture::sDefaultErrorTexture{nullptr, nullptr};
+SwMaterialTexture SwMaterialTexture::sDefaultFlatNormalTexture{nullptr, nullptr};
 
 SwMaterialTexture::SwMaterialTexture(SwColorImage2D* image, SwSampler* sampler) : mImage(image), mSampler(sampler) {}
 
 SwMaterialTexture SwMaterialTexture::retrieveDefaultWhiteTexture() { return SwMaterialTexture(sDefaultWhiteTexture.mImage, sDefaultWhiteTexture.mSampler); }
 
 SwMaterialTexture SwMaterialTexture::retrieveDefaultErrorTexture() { return SwMaterialTexture(sDefaultErrorTexture.mImage, sDefaultErrorTexture.mSampler); }
+
+SwMaterialTexture SwMaterialTexture::retrieveDefaultFlatNormalTexture() {
+    return SwMaterialTexture(sDefaultFlatNormalTexture.mImage, sDefaultFlatNormalTexture.mSampler);
+}
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStaging{};
 
@@ -50,6 +55,8 @@ void SwMaterialResources::init() {
         SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::White], &SwSampler::sDefaultSampler);
     SwMaterialTexture::sDefaultErrorTexture =
         SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::Checkerboard], &SwSampler::sDefaultSampler);
+    SwMaterialTexture::sDefaultFlatNormalTexture =
+        SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::FlatNormal], &SwSampler::sDefaultSampler);
 };
 
 void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }

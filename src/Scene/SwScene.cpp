@@ -97,12 +97,15 @@ void SwScene::initializeResources() {
         "SceneMaterialResourcesDescriptorSet", SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
 
-    // Seed every bindless slot with the default texture so no slot is ever left unwritten. 
+    // The normal slot of each material gets a flat (0,0,1) normal instead of white so unmapped surfaces keep their geometric normal.
+    constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
+        SwMaterialTexture& seed = (i % SwMaterial::NUM_PBR_IMAGES == normalSlot) ? SwMaterialTexture::sDefaultFlatNormalTexture
+                                                                                : SwMaterialTexture::sDefaultWhiteTexture;
         mSceneMaterialResourcesDescriptorSet.writeImage(
             0,
-            SwMaterialTexture::sDefaultWhiteTexture.getImage().getRawMainImageView(),
-            SwMaterialTexture::sDefaultWhiteTexture.getSampler().getRawSampler(),
+            seed.getImage().getRawMainImageView(),
+            seed.getSampler().getRawSampler(),
             vk::ImageLayout::eShaderReadOnlyOptimal,
             i
         );

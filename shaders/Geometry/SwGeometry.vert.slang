@@ -30,7 +30,7 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     out.mPosition = mul(mul(workPc.mPerFrameBuffer->mPerspective.mProj, workPc.mPerFrameBuffer->mPerspective.mView), worldPosition);
     out.mWorldPos = worldPosition.xyz;
     out.mNormal = normalize(mul((float3x3)modelMatrix, v.mNormal));  // world-space normal; uniform scale only, so normalize absorbs the scale
-    out.mTangent = float4(normalize(mul((float3x3)modelMatrix, v.mTangent.xyz)), v.mTangent.w);  // world-space tangent, keep handedness
+    out.mTangent = float4(mul((float3x3)modelMatrix, v.mTangent.xyz), v.mTangent.w);
     out.mUv = v.mUv;
     out.mColor = v.mColor * materialConstant.mBaseFactor;
     out.mMaterialIndex = sceneMaterialIndex;

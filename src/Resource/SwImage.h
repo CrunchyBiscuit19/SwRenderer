@@ -255,7 +255,7 @@ private:
     static void fillImageData(SwImageType swImageType, const void* data, SwAllocatedImage& image);
 
 public:
-    enum class SwDefaultImageOption { White, Grey, Black, Blue, Checkerboard };
+    enum class SwDefaultImageOption { White, Grey, Black, Blue, Checkerboard, FlatNormal };
 
     static std::unordered_map<SwDefaultImageOption, SwColorImage2D> sDefaultImages;
 

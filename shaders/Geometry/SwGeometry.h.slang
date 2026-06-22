@@ -123,11 +123,24 @@ namespace SwGeometry {
         return color;
     }
 
-    // Build a world-space TBN
+    // Build a world-space TBN, robust to missing / degenerate vertex tangents.
     public float3 applyNormalMap(float3 normalWS, float4 tangentWS, float3 sampledNormal, float normalScale) {
         float3 n = normalize(normalWS);
-        float3 t = normalize(tangentWS.xyz - n * dot(n, tangentWS.xyz));  // Gram-Schmidt re-orthonormalise
-        float3 b = cross(n, t) * tangentWS.w; // handedness from glTF tangent.w                           
+
+        // Gram-Schmidt re-orthonormalise the tangent against the normal. 
+        // If the supplied tangent is zero, NaN, or (nearly) parallel to the normal, the residual collapses toward zero. Normalising this is bad (the "acne"). 
+        // Detect that and derive a stable basis from the normal instead. The !(len > eps) test also treats a NaN residual as degenerate.
+        float3 t = tangentWS.xyz - n * dot(n, tangentWS.xyz);
+        float tLen = length(t);
+        float handedness = tangentWS.w;
+        if (!(tLen > 1e-4f)) {
+            float3 up = abs(n.y) < 0.999f ? float3(0.f, 1.f, 0.f) : float3(1.f, 0.f, 0.f);
+            t = normalize(cross(up, n));
+            handedness = 1.f;
+        } else {
+            t = t / tLen;
+        }
+        float3 b = cross(n, t) * handedness; // handedness from glTF tangent.w
         float3 ts = sampledNormal * 2.f - 1.f; // unpack [0,1] -> [-1,1]
         ts.xy *= normalScale;
         return normalize(t * ts.x + b * ts.y + n * ts.z);

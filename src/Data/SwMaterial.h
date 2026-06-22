@@ -27,6 +27,7 @@ public:
 
     static SwMaterialTexture sDefaultWhiteTexture;
     static SwMaterialTexture sDefaultErrorTexture;
+    static SwMaterialTexture sDefaultFlatNormalTexture;
 
     static constexpr vk::Format SRGB_IMAGE_FORMAT{vk::Format::eR8G8B8A8Srgb};
     static constexpr vk::Format UNORM_IMAGE_FORMAT{vk::Format::eR8G8B8A8Unorm};
@@ -44,6 +45,7 @@ public:
 
     static SwMaterialTexture retrieveDefaultWhiteTexture();
     static SwMaterialTexture retrieveDefaultErrorTexture();
+    static SwMaterialTexture retrieveDefaultFlatNormalTexture();
 };
 
 struct SwMaterialConstants {
@@ -56,8 +58,8 @@ public:
     glm::vec4 mBaseFactor;
     glm::vec4 mEmissiveFactor;
     glm::vec2 mMetallicRoughnessFactor;
-    float mNormalScale;
-    float mOcclusionStrength;
+    float mNormalScale{1.f};
+    float mOcclusionStrength{1.f};
     float mAlphaCutoff;
 
     static void init();

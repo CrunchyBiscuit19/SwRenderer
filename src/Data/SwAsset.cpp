@@ -279,23 +279,22 @@ void SwAsset::constructMaterials() {
         constants.mAlphaCutoff = material.alphaMode == fastgltf::AlphaMode::Mask ? material.alphaCutoff : -1.f;
         materialConstants.emplace_back(constants);
 
-        auto resolveTexture = [&](auto& texInfo) -> SwMaterialTexture {
+        auto resolveTexture = [&](auto& texInfo, SwMaterialTexture& fallback) -> SwMaterialTexture {
             if (texInfo.has_value()) {
                 auto& tex = mRawAsset.textures[texInfo.value().textureIndex];
-                SwColorImage2D& image =
-                    tex.imageIndex.has_value() ? mImages[tex.imageIndex.value()].value() : SwMaterialTexture::sDefaultWhiteTexture.getImage();
-                SwSampler& sampler =
-                    tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : SwMaterialTexture::sDefaultWhiteTexture.getSampler();
+                SwColorImage2D& image = tex.imageIndex.has_value() ? mImages[tex.imageIndex.value()].value() : fallback.getImage();
+                SwSampler& sampler = tex.samplerIndex.has_value() ? sSamplers[mSamplerOptions[tex.samplerIndex.value()]] : fallback.getSampler();
                 return SwMaterialTexture(&image, &sampler);
             }
-            return SwMaterialTexture::retrieveDefaultWhiteTexture();
+            return SwMaterialTexture(&fallback.getImage(), &fallback.getSampler());
         };
 
-        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture);
-        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture);
-        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture);
-        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture);
-        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture);
+        // The normal slot falls back to a flat (0,0,1) normal, never white, so unmapped surfaces keep their geometric normal.
+        SwMaterialTexture baseTexture = resolveTexture(material.pbrData.baseColorTexture, SwMaterialTexture::sDefaultWhiteTexture);
+        SwMaterialTexture metallicRoughnessTexture = resolveTexture(material.pbrData.metallicRoughnessTexture, SwMaterialTexture::sDefaultWhiteTexture);
+        SwMaterialTexture emissiveTexture = resolveTexture(material.emissiveTexture, SwMaterialTexture::sDefaultWhiteTexture);
+        SwMaterialTexture normalTexture = resolveTexture(material.normalTexture, SwMaterialTexture::sDefaultFlatNormalTexture);
+        SwMaterialTexture occlusionTexture = resolveTexture(material.occlusionTexture, SwMaterialTexture::sDefaultWhiteTexture);
 
         SwMaterialResources resources(
             std::move(baseTexture), std::move(metallicRoughnessTexture), std::move(normalTexture), std::move(occlusionTexture), std::move(emissiveTexture)
