@@ -45,8 +45,9 @@ namespace Sw {
         public Perspective mPerspective;
         public Sunlight mSunlight;
         public float3 mCameraWorldPos;
-        public uint mActiveLightCount;                     // number of valid entries in mActiveLightIndices
-        public uint mActiveLightIndices[MAX_SHADOW_LIGHTS]; // indices into the scene lights buffer, sorted by brightness at the camera
+        public uint mActiveLightCount;                     
+        public uint mActiveLightIndices[MAX_SHADOW_LIGHTS]; 
+        public float4x4 mLightViewProj[MAX_SHADOW_LIGHTS];  
     };
 
     public struct Vertex {

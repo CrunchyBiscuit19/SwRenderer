@@ -67,13 +67,11 @@ struct Resources {
     SwSampler mEnvSampler;  // equirect maps: repeat longitude (U), clamp latitude (V), trilinear for the prefilter mips
     SwSampler mLutSampler;  // BRDF LUT: clamp both axes
 
-    // BRDF LUT bake (one storage-image output, no environment input).
     SwComputePipelineBundle mBrdfLutPipelineBundle;
     SwPipelineLayout mBrdfLutPipelineLayout;
     SwDescriptorLayout mBrdfLutDescriptorLayout;
     SwDescriptorSet mBrdfLutDescriptorSet;
 
-    // Irradiance + prefilter share the same bake-input layout: binding 0 = environment sampler, binding 1 = storage output.
     SwDescriptorLayout mBakeInputDescriptorLayout;
 
     SwComputePipelineBundle mIrradiancePipelineBundle;
@@ -82,12 +80,10 @@ struct Resources {
 
     SwComputePipelineBundle mPrefilterPipelineBundle;
     SwPipelineLayout mPrefilterPipelineLayout;
-    std::vector<SwDescriptorSet> mPrefilterMipDescriptorSets;  // one per prefilter mip level
+    std::vector<SwDescriptorSet> mPrefilterMipDescriptorSets;  
 
-    // The set-1 descriptor set bound during the geometry passes.
     SwDescriptorSet mConsumeDescriptorSet;
 
-    // Skybox draw: the loaded environment equirect plus the cube it is rasterized onto.
     SwColorImage2D mDrawImage;
 
     SwSampler mDrawSampler;

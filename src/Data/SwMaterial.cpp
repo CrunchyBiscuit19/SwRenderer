@@ -94,8 +94,6 @@ SwMaterial::SwMaterial(
 }
 
 void SwMaterial::init() {
-
-    // Set 0: per-material bindless textures. Set 1: the IBL maps baked by SwIBL.
     const std::array<vk::DescriptorSetLayout, 2> geometrySetLayouts{
         SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwIBL::Resources::sConsumeDescriptorLayout.getRawLayout()
     };

@@ -38,6 +38,7 @@ private:
     friend class SwWBOIT::System;
     friend class SwGeometry::System;
     friend class SwPostProcess::System;
+    friend class SwLighting::System;
     friend class SwGui::System;
 
     SwCamera mCamera;

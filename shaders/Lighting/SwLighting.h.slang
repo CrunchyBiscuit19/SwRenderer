@@ -24,6 +24,7 @@ namespace SwLighting {
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;
         public Sw::Instance* mSceneInstancesBuffer;
         public Sw::MaterialConstant* mSceneMaterialConstantsBuffer;
+        public uint mLightIndex;  
     };
 
     public struct VSInput {

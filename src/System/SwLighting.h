@@ -18,6 +18,16 @@ constexpr std::uint32_t NUM_LIGHT_CAST_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
 
+// Light-space projection bounds. The directional extents are a fixed world-space box centred on the
+// origin until a CPU scene AABB is available to tighten them. Near and far are passed to glm swapped
+// to produce the reversed-Z mapping the rest of the renderer uses.
+constexpr float SHADOW_DIRECTIONAL_HALF_EXTENT{20.f};
+constexpr float SHADOW_DIRECTIONAL_DISTANCE{60.f};
+constexpr float SHADOW_DIRECTIONAL_NEAR{0.1f};
+constexpr float SHADOW_DIRECTIONAL_FAR{160.f};
+constexpr float SHADOW_SPOT_NEAR{0.05f};
+constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
+
 struct ShadowCullPC : SwPC<ShadowCullPC> {
     vk::DeviceAddress mLightRcsBuffer;
     vk::DeviceAddress mRisBuffer;
@@ -40,6 +50,7 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
+    std::uint32_t mLightIndex;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
@@ -47,8 +58,15 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
 struct Resources {
     SwSunlight mSunlight;
     std::vector<SwLight::Data> mAssetLights;
-    std::vector<glm::vec3> mLightWorldPositions;  // parallel to mAssetLights, cached for per-frame brightness scoring
+    std::vector<glm::vec3> mLightWorldPositions;   // parallel to mAssetLights, cached for per-frame brightness scoring
+    std::vector<glm::vec3> mLightWorldDirections;  // parallel to mAssetLights, light forward (glTF local -Z) in world space
     std::vector<SwLight> mGlobalLights;
+
+    // Per-frame active-light selection, cached on the CPU so the shadow draw pass can iterate it. Mirrors what
+    // gets uploaded into the per-frame buffer each frame.
+    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
+    std::uint32_t mActiveLightCount{0};
+    std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS> mLightViewProj{};
 
     std::array<SwDepthImage2D, NUM_LIGHT_CAST_SHADOWS> mShadowMaps;
     SwSampler mShadowMapsSampler;
@@ -76,6 +94,8 @@ private:
     void initializeResources() override;
     void initializePasses() override;
 
+    static glm::mat4 computeLightMatrix(const SwLight::Data& light, const glm::vec3& worldPos, const glm::vec3& worldDir);
+
 public:
     System(SwScene& scene);
 
@@ -87,10 +107,17 @@ public:
     // no attenuation and are always selected. Spot-cone falloff is intentionally omitted from the score.
     void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount) const;
 
+    void refreshActiveLights(const glm::vec3& cameraPos);
+
+    inline std::uint32_t getActiveLightCount() const { return mResources.mActiveLightCount; }
+    inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getActiveLightIndices() const { return mResources.mActiveLightIndices; }
+    inline const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& getLightViewProj() const { return mResources.mLightViewProj; }
+
     inline Resources& getResources() { return mResources; }
     inline SwSunlight& getSunlight() { return mResources.mSunlight; }
     inline std::vector<SwLight::Data>& getAssetLights() { return mResources.mAssetLights; }
     inline std::vector<glm::vec3>& getLightWorldPositions() { return mResources.mLightWorldPositions; }
+    inline std::vector<glm::vec3>& getLightWorldDirections() { return mResources.mLightWorldDirections; }
     inline std::vector<SwLight>& getGlobalLights() { return mResources.mGlobalLights; }
 };
 

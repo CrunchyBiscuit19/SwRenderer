@@ -82,8 +82,12 @@ void SwLightNode::generateRcsAndRis() {
     auto& instances = asset.getInstances();
     for (std::uint32_t i = 0; i < instances.size(); i++) {
         scene.getLightingSystem().getAssetLights().emplace_back(mLight.toData(nodeTransformIndex, asset.mFirstInstanceInScene + i));
+        const glm::mat4 model = instances[i].getData().mTransformMatrix * getWorldTransform();
         const glm::vec3 worldPos = glm::vec3(instances[i].getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));
         scene.getLightingSystem().getLightWorldPositions().emplace_back(worldPos);
+        // glTF lights shine down local -Z. Match SwGeometry's accumulatePunctualLight forward computation.
+        const glm::vec3 worldDir = glm::normalize(glm::vec3(model * glm::vec4(0.f, 0.f, -1.f, 0.f)));
+        scene.getLightingSystem().getLightWorldDirections().emplace_back(worldDir);
     }
 
     SwNode::generateRcsAndRis();  

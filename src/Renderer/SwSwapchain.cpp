@@ -24,7 +24,11 @@ void SwFrame::update() {
         .mSunlight = scene.getLightingSystem().getSunlight(),
         .mCameraWorldPos = scene.getCamera().getPosition(),
     };
-    scene.getLightingSystem().selectActiveLights(perFrameData.mCameraWorldPos, perFrameData.mActiveLightIndices, perFrameData.mActiveLightCount);
+    SwLighting::System& lighting = scene.getLightingSystem();
+    lighting.refreshActiveLights(perFrameData.mCameraWorldPos);
+    perFrameData.mActiveLightCount = lighting.getActiveLightCount();
+    perFrameData.mActiveLightIndices = lighting.getActiveLightIndices();
+    perFrameData.mLightViewProj = lighting.getLightViewProj();
     mPerFrameBuffer.copyFromUnchecked(&perFrameData, sizeof(Data));
 }
 
