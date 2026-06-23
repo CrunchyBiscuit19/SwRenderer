@@ -8,13 +8,14 @@
 #include <Resource/SwDescriptor.h>
 #include <Scene/SwSystem.h>
 #include <imfilebrowser.h>
+
 #include <functional>
 
 class SwScene;
 
 namespace SwGui {
 
-enum class SwGuiComponent { Camera, Scene, Options, Stats, Controls };
+enum class SwGuiComponent { Camera, Assets, Lighting, Effects, Stats, Controls };
 
 constexpr ImVec4 IMGUI_HEADER_GREEN{0.22f, 0.69f, 0.502f, 1.0f};
 constexpr ImVec4 IMGUI_BUTTON_RED{0.66f, 0.16f, 0.16f, 1.0f};

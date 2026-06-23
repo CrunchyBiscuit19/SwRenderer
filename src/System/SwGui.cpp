@@ -76,7 +76,7 @@ void SwGui::System::initializeResources() {
         ImGui::Text("Pitch & Yaw: [%.1f, %.1f]", mScene.getCamera().getPitch(), mScene.getCamera().getYaw());
         ImGui::Text("Speed: %.2f / %.2f", mScene.getCamera().getSpeed(), SwCamera::MAX_CAMERA_SPEED);
     };
-    mResources.mGuiComponents[SwGuiComponent::Scene] = [this]() {
+    mResources.mGuiComponents[SwGuiComponent::Assets] = [this]() {
         ImGui::Indent();
 
         for (auto& asset : mScene.getAssets() | std::views::values) {
@@ -114,22 +114,10 @@ void SwGui::System::initializeResources() {
             }
             ImGui::PopStyleColor();
         }
-        
-        if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
-            SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
-            ImGui::ColorEdit3("Color", glm::value_ptr(sunlight.mColor));
-            glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
-            if (ImGui::SliderFloat2(
-                    "Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
-                )) {
-                sunlight.mAzimuthElevation = glm::radians(azimuthElevationDeg);
-            }
-            ImGui::SliderFloat("Intensity", &sunlight.mIntensity, 0.f, 5.f, "%.2f");
-        }
 
         ImGui::Unindent();
     };
-    mResources.mGuiComponents[SwGuiComponent::Options] = [this]() {
+    mResources.mGuiComponents[SwGuiComponent::Lighting] = [this]() {
         ImGui::Indent();
 
         if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -164,13 +152,25 @@ void SwGui::System::initializeResources() {
             mResources.mSelectSkyboxFileBrowser.ClearSelected();
         }
 
-        if (ImGui::CollapsingHeader("Post-process", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
+            SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
+            ImGui::ColorEdit3("Color", glm::value_ptr(sunlight.mColor));
+            glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
+            if (ImGui::SliderFloat2(
+                    "Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
+                )) {
+                sunlight.mAzimuthElevation = glm::radians(azimuthElevationDeg);
+            }
+            ImGui::SliderFloat("Intensity", &sunlight.mIntensity, 0.f, 5.f, "%.2f");
+        }
+
+        if (ImGui::CollapsingHeader("Tone-Mapping", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::SliderFloat("Exposure", mScene.getPostProcessSystem().getExposurePtr(), 0.f, 8.f, "%.2f");
-            ImGui::Checkbox("Toggle FXAA", mScene.getPostProcessSystem().getFXAAActivePtr());
         }
 
         ImGui::Unindent();
     };
+    mResources.mGuiComponents[SwGuiComponent::Effects] = [this]() { ImGui::Checkbox("Toggle FXAA", mScene.getPostProcessSystem().getFXAAActivePtr()); };
     mResources.mGuiComponents[SwGuiComponent::Stats] = [this]() {
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());
         ImGui::Text("FPS:  %.2f", 1000.f / SwRenderer::sRendererContext.mStats->mFrameTime);

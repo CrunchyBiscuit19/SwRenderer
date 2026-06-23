@@ -1,4 +1,4 @@
-module SwPicker;
+module SwPick;
 
 import SwCommon;
 

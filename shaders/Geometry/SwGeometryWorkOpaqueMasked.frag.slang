@@ -1,5 +1,6 @@
 import SwGeometry;
 import SwCommon;
+import SwLighting;
 
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
@@ -42,7 +43,7 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
 
     float3 view = normalize(workPc.mPerFrameBuffer->mCameraWorldPos - in.mWorldPos);
 
-    float3 lit = SwGeometry::shadeLit( 
+    float3 lit = SwLighting::shadeLit( 
         color.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mPerFrameBuffer, workPc.mSceneLightsBuffer,
         workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
         workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadowMaps, shadowSampler

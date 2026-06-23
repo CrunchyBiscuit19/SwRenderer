@@ -1,8 +1,12 @@
 module SwIBL;
 
 import SwCommon;
+import SwBRDF;
 
 namespace SwIBL {
+    public static const uint IBL_DIFFUSE = 1u;
+    public static const uint IBL_SPECULAR = 2u;
+
     public float radicalInverseVdC(uint bits) {
         bits = (bits << 16u) | (bits >> 16u);
         bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -26,6 +30,34 @@ namespace SwIBL {
         float3 tangent = normalize(cross(up, N));
         float3 bitangent = cross(N, tangent);
         return normalize(tangent * h.x + bitangent * h.y + N * h.z);
+    }
+    
+    // Image-based ambient: split-sum diffuse irradiance + specular prefilter, modulated by AO.
+    // Replaces the flat constant ambient now that the skybox drives a real environment.
+    public float3 ambientIBL(
+        float3 albedo, float metallic, float roughness, float ao, float3 normal, float3 view, Sampler2D irradianceMap, Sampler2D prefilterMap,
+        Sampler2D brdfLut, float maxPrefilterMip, uint components
+    ) {
+        float NdotV = max(dot(normal, view), 1e-4f);
+        float3 F0 = lerp(float3(0.04f), albedo, metallic);
+
+        float3 ambient = float3(0.f);
+        if ((components & IBL_DIFFUSE) != 0u) {
+            // Weight by the normal-incidence Fresnel F0 (not the view-dependent F) so the diffuse fill
+            // stays camera-invariant while keeping a sensible diffuse/specular energy split.
+            float3 kD = (1.f - F0) * (1.f - metallic);
+            float3 irradiance = irradianceMap.SampleLevel(SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
+            ambient += kD * irradiance * albedo;
+        }
+        if ((components & IBL_SPECULAR) != 0u) {
+            float3 R = reflect(-view, normal);
+            float prefilterLod = roughness * maxPrefilterMip;
+            float3 prefiltered = prefilterMap.SampleLevel(SwBRDF::dirToEquirectUv(R), prefilterLod).rgb;
+            float2 envBrdf = brdfLut.SampleLevel(float2(NdotV, roughness), 0.f).rg;
+            ambient += prefiltered * (F0 * envBrdf.x + envBrdf.y);
+        }
+
+        return ambient * ao;
     }
 
     public struct PrefilterPC {
