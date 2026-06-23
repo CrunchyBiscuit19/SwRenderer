@@ -46,9 +46,7 @@ namespace SwGeometry {
     public float3 applyNormalMap(float3 normalWS, float4 tangentWS, float3 sampledNormal, float normalScale) {
         float3 n = normalize(normalWS);
 
-        // Gram-Schmidt re-orthonormalise the tangent against the normal. 
         // If the supplied tangent is zero, NaN, or (nearly) parallel to the normal, the residual collapses toward zero. Normalising this is bad (the "acne"). 
-        // Detect that and derive a stable basis from the normal instead. The !(len > eps) test also treats a NaN residual as degenerate.
         float3 t = tangentWS.xyz - n * dot(n, tangentWS.xyz);
         float tLen = length(t);
         float handedness = tangentWS.w;
