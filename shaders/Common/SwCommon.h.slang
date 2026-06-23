@@ -6,6 +6,7 @@ namespace Sw {
     public static const float PI = 3.1415926535897932384626433832795028841972f;
     public static const uint NUM_PBR_IMAGES = 5;
     public static const uint MAX_SHADOW_LIGHTS = 16;   // punctual lights selected per frame for shading + shadow casting
+    public static const uint SHADOW_MAP_SIZE = 1024;   // mirrors C++ SwLighting::SHADOW_MAP_WIDTH_HEIGHT for PCF texel offsets
 
     public struct Perspective {
         public float4x4 mView;

@@ -2,6 +2,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwShader.h>
 #include <System/SwGeometry.h>
+#include <System/SwLighting.h>
 #include <Scene/SwScene.h>
 
 // Issues one indirect draw per non-empty batch. `early` pulls commands from the batch's
@@ -24,7 +25,8 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
             pipeline.getBindPoint(),
             pipeline.getRawLayout(),
             0,
-            {scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), scene.getIBLSystem().getConsumeDescriptorSet().getRawSet()},
+            {scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), scene.getIBLSystem().getConsumeDescriptorSet().getRawSet(),
+             scene.getLightingSystem().getShadowMapsDescriptorSet().getRawSet()},
             nullptr
         );
 
@@ -53,6 +55,9 @@ void SwGeometry::System::initializePasses() {
         deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
         deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowMaps) {
+            deps.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        }
         deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);

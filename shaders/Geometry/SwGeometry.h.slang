@@ -79,6 +79,32 @@ namespace SwGeometry {
         return SwBRDF::cookTorrance(normal, view, toLightDir, albedo, metallic, roughness, radiance);
     }
 
+    // Spotlight shadow factor for the light occupying shadow slot 1.0 fully lit, 0.0 fully shadowed.
+    // Reversed-Z so the bias is added (not subtracted) to push receivers toward lit and kill acne.
+    public float spotShadowFactor(
+        uint slot, float3 worldPos, Sw::PerFrameData* perFrame, Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS], SamplerComparisonState shadowSampler
+    ) {
+        float4 clip = mul(perFrame->mLightViewProj[slot], float4(worldPos, 1.f));
+        if (clip.w <= 0.f) {
+            return 1.f;
+        }
+        float3 ndc = clip.xyz / clip.w;
+        float2 uv = ndc.xy * 0.5f + 0.5f;
+        if (any(uv < 0.f) || any(uv > 1.f)) {
+            return 1.f;
+        }
+
+        const float bias = 0.0015f;
+        const float2 texel = 1.f / float2(Sw::SHADOW_MAP_SIZE, Sw::SHADOW_MAP_SIZE);
+        float lit = 0.f;
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                lit += shadowMaps[slot].SampleCmpLevelZero(shadowSampler, uv + float2(x, y) * texel, ndc.z + bias);
+            }
+        }
+        return lit / 9.f;
+    }
+
     // Image-based ambient: split-sum diffuse irradiance + specular prefilter, modulated by AO.
     // Replaces the flat constant ambient now that the skybox drives a real environment.
     float3 ambientIBL(
@@ -111,14 +137,21 @@ namespace SwGeometry {
     public float3 shadeLit(
         float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::PerFrameData* perFrame,
         Sw::Light* lights, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap,
-        Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents
+        Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents, Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS],
+        SamplerComparisonState shadowSampler
     ) {
         Sw::Sunlight sun = perFrame->mSunlight;
         float3 toSunDir = sun.getDirection();
         float3 color = SwBRDF::cookTorrance(normal, view, toSunDir, albedo, metallic, roughness, sun.mColor * sun.mIntensity);
         color += iblIntensity * ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
         for (uint i = 0; i < perFrame->mActiveLightCount; i++) {
-            color += accumulatePunctualLight(lights[perFrame->mActiveLightIndices[i]], worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
+            Sw::Light light = lights[perFrame->mActiveLightIndices[i]];
+            float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
+            // Only spotlights cast shadows for now; their map lives in slot i, parallel to the active-light records.
+            if (light.mType == Sw::LightType::Spot) {
+                contribution *= spotShadowFactor(i, worldPos, perFrame, shadowMaps, shadowSampler);
+            }
+            color += contribution;
         }
         return color;
     }

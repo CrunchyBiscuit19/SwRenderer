@@ -12,6 +12,7 @@
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
 #include <System/SwIBL.h>
+#include <System/SwLighting.h>
 #include <SDL3/SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
@@ -207,7 +208,8 @@ SwRenderer::SwRenderer()
     mStats.initialize();
 
     SwMaterialResources::init();
-    SwIBL::Resources::init();  
+    SwIBL::Resources::init();
+    SwLighting::Resources::init();
     SwMaterial::init();
 
     mScene.initialize();
@@ -266,6 +268,7 @@ SwRenderer::~SwRenderer() {
     SwLight::cleanup();
     SwMaterialConstants::cleanup();
     SwIBL::Resources::cleanup();
+    SwLighting::Resources::cleanup();
     SwMaterialResources::cleanup();
     SwImageFactory::cleanup();
     SwMaterial::cleanup();

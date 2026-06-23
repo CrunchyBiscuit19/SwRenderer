@@ -18,9 +18,6 @@ constexpr std::uint32_t NUM_LIGHT_CAST_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
 
-// Light-space projection bounds. The directional extents are a fixed world-space box centred on the
-// origin until a CPU scene AABB is available to tighten them. Near and far are passed to glm swapped
-// to produce the reversed-Z mapping the rest of the renderer uses.
 constexpr float SHADOW_DIRECTIONAL_HALF_EXTENT{20.f};
 constexpr float SHADOW_DIRECTIONAL_DISTANCE{60.f};
 constexpr float SHADOW_DIRECTIONAL_NEAR{0.1f};
@@ -56,6 +53,13 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
 };
 
 struct Resources {
+    // Set-2 layout the geometry/transparent fragment shaders bind to sample the spotlight shadow maps. Static so
+    // SwMaterial can bake it into the geometry pipeline layout, mirroring SwIBL::Resources::sConsumeDescriptorLayout.
+    static SwDescriptorLayout sShadowConsumeDescriptorLayout;
+
+    static void init();
+    static void cleanup();
+
     SwSunlight mSunlight;
     std::vector<SwLight::Data> mAssetLights;
     std::vector<glm::vec3> mLightWorldPositions;   // parallel to mAssetLights, cached for per-frame brightness scoring
@@ -70,8 +74,7 @@ struct Resources {
 
     std::array<SwDepthImage2D, NUM_LIGHT_CAST_SHADOWS> mShadowMaps;
     SwSampler mShadowMapsSampler;
-    
-    SwDescriptorLayout mShadowMapsDescriptorLayout;
+
     SwDescriptorSet mShadowMapsDescriptorSet;
 
     std::array<SwAllocatedBuffer, NUM_LIGHT_CAST_SHADOWS> mLightDrawRisIndicesBuffer;
@@ -109,6 +112,7 @@ public:
 
     void refreshActiveLights(const glm::vec3& cameraPos);
 
+    inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
     inline std::uint32_t getActiveLightCount() const { return mResources.mActiveLightCount; }
     inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getActiveLightIndices() const { return mResources.mActiveLightIndices; }
     inline const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& getLightViewProj() const { return mResources.mLightViewProj; }

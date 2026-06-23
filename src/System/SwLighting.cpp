@@ -10,6 +10,21 @@
 #include <limits>
 #include <utility>
 
+SwDescriptorLayout SwLighting::Resources::sShadowConsumeDescriptorLayout{};
+
+void SwLighting::Resources::init() {
+    sShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "ShadowConsumeDescriptorLayout",
+        {
+            {0, vk::DescriptorType::eSampledImage, NUM_LIGHT_CAST_SHADOWS},
+            {1, vk::DescriptorType::eSampler, 1},
+        },
+        vk::ShaderStageFlagBits::eFragment
+    );
+}
+
+void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy(); }
+
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwLighting::System::selectActiveLights(
@@ -80,8 +95,6 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
     for (std::uint32_t i = 0; i < mResources.mActiveLightCount; i++) {
         const std::uint32_t lightIndex = mResources.mActiveLightIndices[i];
         const SwLight::Data& light = mResources.mAssetLights[lightIndex];
-        // Point lights are skipped until cube shadow maps land. Their slot keeps the identity matrix and the
-        // draw pass renders nothing into it.
         if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Point)) {
             continue;
         }
@@ -100,32 +113,31 @@ void SwLighting::System::initializeResources() {
             true
         );
     }
+    // Comparison sampler: linear filtering gives hardware 2x2 PCF per SampleCmp tap, and eGreaterOrEqual matches the
+    // reversed-Z stored depth (a receiver is lit when its depth is at least the nearest occluder's). The border is
+    // opaque black (depth 0, the far plane) so taps that spill outside a spot frustum read as lit rather than shadowed.
     vk::SamplerCreateInfo shadowMapSamplerCreateInfo{};
-    shadowMapSamplerCreateInfo.magFilter = vk::Filter::eNearest;
-    shadowMapSamplerCreateInfo.minFilter = vk::Filter::eNearest;
-    shadowMapSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    shadowMapSamplerCreateInfo.magFilter = vk::Filter::eLinear;
+    shadowMapSamplerCreateInfo.minFilter = vk::Filter::eLinear;
+    shadowMapSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eNearest;
     shadowMapSamplerCreateInfo.addressModeU = vk::SamplerAddressMode::eClampToBorder;
     shadowMapSamplerCreateInfo.addressModeV = vk::SamplerAddressMode::eClampToBorder;
     shadowMapSamplerCreateInfo.addressModeW = vk::SamplerAddressMode::eClampToBorder;
     shadowMapSamplerCreateInfo.minLod = 0.0f;
     shadowMapSamplerCreateInfo.maxLod = vk::LodClampNone;
-    shadowMapSamplerCreateInfo.anisotropyEnable = vk::True;
-    shadowMapSamplerCreateInfo.maxAnisotropy = SwSamplerFactory::getMaxSamplerAnisotropy();
-    shadowMapSamplerCreateInfo.borderColor = vk::BorderColor::eFloatOpaqueWhite;
-    shadowMapSamplerCreateInfo.compareEnable = vk::False;
+    shadowMapSamplerCreateInfo.anisotropyEnable = vk::False;
+    shadowMapSamplerCreateInfo.borderColor = vk::BorderColor::eFloatOpaqueBlack;
+    shadowMapSamplerCreateInfo.compareEnable = vk::True;
+    shadowMapSamplerCreateInfo.compareOp = vk::CompareOp::eGreaterOrEqual;
     mResources.mShadowMapsSampler = SwSamplerFactory::createSampler("ShadowMapsSampler", shadowMapSamplerCreateInfo);
 
-    mResources.mShadowMapsDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "ShadowMapsDescriptorLayout",
-        {
-            {0, vk::DescriptorType::eSampledImage, NUM_LIGHT_CAST_SHADOWS},
-            {1, vk::DescriptorType::eSampler, 1},
-        },
-        vk::ShaderStageFlagBits::eFragment
-    );
-    mResources.mShadowMapsDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
-        "ShadowMapsDescriptorSet", mResources.mShadowMapsDescriptorLayout, NUM_LIGHT_CAST_SHADOWS
-    );
+    mResources.mShadowMapsDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("ShadowMapsDescriptorSet", Resources::sShadowConsumeDescriptorLayout);
+    for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
+        mResources.mShadowMapsDescriptorSet.writeImage(0, mResources.mShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
+    }
+    mResources.mShadowMapsDescriptorSet.writeSampler(1, mResources.mShadowMapsSampler.getRawSampler());
+    mResources.mShadowMapsDescriptorSet.pushWrites();
 
     for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
         mResources.mLightDrawRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(

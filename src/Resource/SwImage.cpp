@@ -450,6 +450,26 @@ void SwColorImageCubemap::resize(vk::Extent3D newExtent) {
     *this = SwImageFactory::createColorImageCubemap(mName, nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
 }
 
+SwDepthImageCubemap::SwDepthImageCubemap() {}
+
+SwDepthImageCubemap::SwDepthImageCubemap(
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
+    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::deque<vk::raii::ImageView> otherImageViews
+)
+    : SwAllocatedImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
+          std::move(otherFormats), std::move(otherImageViews)
+      ) {
+    mClearValue.depthStencil.depth = 0.f;
+}
+
+void SwDepthImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
+
+void SwDepthImageCubemap::resize(vk::Extent3D newExtent) {
+    *this = SwImageFactory::createDepthImageCubemap(mName, nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
+}
+
 SwStagingBuffer SwImageFactory::sImageStaging;
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
@@ -500,6 +520,11 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
             imageCreateInfo.arrayLayers = NUM_CUBEMAP_FACES;
             imageCreateInfo.flags = vk::ImageCreateFlagBits::eCubeCompatible;
             break;
+        case SwImageType::SwDepthImageCubemap:
+            assert(mainFormat == vk::Format::eD32Sfloat || mainFormat == vk::Format::eD24UnormS8Uint);
+            imageCreateInfo.arrayLayers = NUM_CUBEMAP_FACES;
+            imageCreateInfo.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+            break;
     };
     VkImageCreateInfo imageCreateInfo1 = imageCreateInfo;
 
@@ -531,6 +556,11 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
             imageViewCreateInfo.viewType = vk::ImageViewType::eCube;
             imageViewCreateInfo.subresourceRange.layerCount = NUM_CUBEMAP_FACES;
             break;
+        case SwImageType::SwDepthImageCubemap:
+            imageViewCreateInfo.viewType = vk::ImageViewType::eCube;
+            imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+            imageViewCreateInfo.subresourceRange.layerCount = NUM_CUBEMAP_FACES;
+            break;
     }
 
     return SwImageConstructionInfo{
@@ -553,6 +583,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
         case SwImageType::SwDepthImage2D:
             break;
         case SwImageType::SwColorImageCubemap:
+        case SwImageType::SwDepthImageCubemap:
             numFaces = NUM_CUBEMAP_FACES;
             break;
     }
@@ -723,6 +754,32 @@ SwColorImageCubemap SwImageFactory::createColorImageCubemap(
     SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawMainImageView(), (name.append("MainView")).c_str());
 
     if (data != nullptr) fillImageData(SwImageType::SwColorImageCubemap, data, newImage);
+    return newImage;
+}
+
+SwDepthImageCubemap SwImageFactory::createDepthImageCubemap(
+    std::string name, const void* data, vk::Format format, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
+) {
+    if (data != nullptr) usage |= vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc;
+    SwImageConstructionInfo imageConstructionInfo =
+        prepareImageConstructionInfo(SwImageType::SwDepthImageCubemap, data, format, extent, usage, mipmapped, clearValue);
+    SwDepthImageCubemap newImage = SwDepthImageCubemap(
+        name,
+        std::move(imageConstructionInfo.mImage),
+        imageConstructionInfo.mMainFormat,
+        imageConstructionInfo.mExtent,
+        std::move(imageConstructionInfo.mMainImageView),
+        imageConstructionInfo.mUsage,
+        imageConstructionInfo.mClearValue,
+        imageConstructionInfo.mAllocator,
+        std::move(imageConstructionInfo.mAllocation),
+        imageConstructionInfo.mMipmapped
+    );
+
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawImage(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawMainImageView(), (name.append("MainView")).c_str());
+
+    if (data != nullptr) fillImageData(SwImageType::SwDepthImageCubemap, data, newImage);
     return newImage;
 }
 

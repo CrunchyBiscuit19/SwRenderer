@@ -8,6 +8,7 @@
 #include <Resource/SwShader.h>
 #include <System/SwGeometry.h>
 #include <System/SwIBL.h>
+#include <System/SwLighting.h>
 #include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <magic_enum.hpp>
@@ -94,8 +95,9 @@ SwMaterial::SwMaterial(
 }
 
 void SwMaterial::init() {
-    const std::array<vk::DescriptorSetLayout, 2> geometrySetLayouts{
-        SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwIBL::Resources::sConsumeDescriptorLayout.getRawLayout()
+    const std::array<vk::DescriptorSetLayout, 3> geometrySetLayouts{
+        SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwIBL::Resources::sConsumeDescriptorLayout.getRawLayout(),
+        SwLighting::Resources::sShadowConsumeDescriptorLayout.getRawLayout()
     };
     sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
     sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryTransparentPipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());

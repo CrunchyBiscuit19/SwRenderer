@@ -226,9 +226,30 @@ public:
     SwColorImageCubemap& operator=(const SwColorImageCubemap&) = delete;
 };
 
+class SwDepthImageCubemap : public SwAllocatedImage {
+public:
+    SwDepthImageCubemap();
+
+    SwDepthImageCubemap(
+        std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
+    );
+
+    void generateMipmaps(vk::CommandBuffer cmd) override;
+
+    void resize(vk::Extent3D newExtent) override;
+
+    SwDepthImageCubemap(SwDepthImageCubemap&&) noexcept = default;
+    SwDepthImageCubemap& operator=(SwDepthImageCubemap&&) noexcept = default;
+
+    SwDepthImageCubemap(const SwDepthImageCubemap&) = delete;
+    SwDepthImageCubemap& operator=(const SwDepthImageCubemap&) = delete;
+};
+
 class SwImageFactory {
 private:
-    enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap };
+    enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap, SwDepthImageCubemap };
     struct SwImageConstructionInfo {
         vk::raii::Image mImage;
         vk::raii::ImageView mMainImageView;
@@ -282,6 +303,11 @@ public:
     static SwColorImageCubemap createColorImageCubemap(
         std::string name, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
         vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f)
+    );
+
+    static SwDepthImageCubemap createDepthImageCubemap(
+        std::string name, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
+        vk::ClearValue clearValue = vk::ClearValue()
     );
 
     static void cleanup();
