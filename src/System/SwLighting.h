@@ -14,8 +14,11 @@ static const std::filesystem::path SHADOW_CULL_SHADER_PATH{std::filesystem::path
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowDraw.vert.spv"};
 static constexpr std::string_view SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
-constexpr std::uint32_t NUM_LIGHT_CAST_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
+constexpr std::uint32_t NUM_SPOT_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
+constexpr std::uint32_t NUM_POINT_SHADOWS{8};
+constexpr std::uint32_t NUM_DIR_SHADOWS{4};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
+constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};  
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
 
 constexpr float SHADOW_DIRECTIONAL_HALF_EXTENT{20.f};
@@ -53,9 +56,9 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
 };
 
 struct Resources {
-    // Set-2 layout the geometry/transparent fragment shaders bind to sample the spotlight shadow maps. Static so
-    // SwMaterial can bake it into the geometry pipeline layout, mirroring SwIBL::Resources::sConsumeDescriptorLayout.
-    static SwDescriptorLayout sShadowConsumeDescriptorLayout;
+    static SwDescriptorLayout sSpotShadowConsumeDescriptorLayout;
+    static SwDescriptorLayout sPointShadowConsumeDescriptorLayout;
+    static SwDescriptorLayout sDirShadowConsumeDescriptorLayout;
 
     static void init();
     static void cleanup();
@@ -66,19 +69,31 @@ struct Resources {
     std::vector<glm::vec3> mLightWorldDirections;  // parallel to mAssetLights, light forward (glTF local -Z) in world space
     std::vector<SwLight> mGlobalLights;
 
-    // Per-frame active-light selection, cached on the CPU so the shadow draw pass can iterate it. Mirrors what
-    // gets uploaded into the per-frame buffer each frame.
     std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
     std::uint32_t mActiveLightCount{0};
     std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS> mLightViewProj{};
 
-    std::array<SwDepthImage2D, NUM_LIGHT_CAST_SHADOWS> mShadowMaps;
-    SwSampler mShadowMapsSampler;
+    std::array<std::uint32_t, NUM_SPOT_SHADOWS> mSpotShadowLightIndices{};
+    std::uint32_t mSpotShadowCount{0};
+    std::array<std::uint32_t, NUM_POINT_SHADOWS> mPointShadowLightIndices{};
+    std::uint32_t mPointShadowCount{0};
+    std::array<std::uint32_t, NUM_DIR_SHADOWS> mDirShadowLightIndices{};
+    std::uint32_t mDirShadowCount{0};
 
-    SwDescriptorSet mShadowMapsDescriptorSet;
+    std::array<SwDepthImage2D, NUM_SPOT_SHADOWS> mSpotShadowMaps;
+    SwSampler mSpotShadowMapsSampler;
+    SwDescriptorSet mSpotShadowMapsDescriptorSet;
 
-    std::array<SwAllocatedBuffer, NUM_LIGHT_CAST_SHADOWS> mLightDrawRisIndicesBuffer;
-    std::array<SwAllocatedBuffer, NUM_LIGHT_CAST_SHADOWS> mLightRcsBuffer;
+    std::array<SwDepthImageCubemap, NUM_POINT_SHADOWS> mPointShadowMaps;
+    SwSampler mPointShadowMapsSampler;
+    SwDescriptorSet mPointShadowMapsDescriptorSet;
+
+    std::array<SwDepthImage2D, NUM_DIR_SHADOWS> mDirShadowMaps;
+    SwSampler mDirShadowMapsSampler;
+    SwDescriptorSet mDirShadowMapsDescriptorSet;
+
+    std::array<SwAllocatedBuffer, NUM_SPOT_SHADOWS> mSpotLightDrawRisIndicesBuffer;
+    std::array<SwAllocatedBuffer, NUM_SPOT_SHADOWS> mSpotLightRcsBuffer;
 
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
@@ -105,14 +120,13 @@ public:
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
 
-    // Pick the up-to-MAX_ACTIVE_LIGHTS punctual lights that are brightest at cameraPos (intensity x attenuation),
-    // writing their scene-light-buffer indices into outIndices and the count into outCount. Directional lights have
-    // no attenuation and are always selected. Spot-cone falloff is intentionally omitted from the score.
     void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount) const;
 
     void refreshActiveLights(const glm::vec3& cameraPos);
 
-    inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
+    inline SwDescriptorSet& getSpotShadowMapsDescriptorSet() { return mResources.mSpotShadowMapsDescriptorSet; }
+    inline SwDescriptorSet& getPointShadowMapsDescriptorSet() { return mResources.mPointShadowMapsDescriptorSet; }
+    inline SwDescriptorSet& getDirShadowMapsDescriptorSet() { return mResources.mDirShadowMapsDescriptorSet; }
     inline std::uint32_t getActiveLightCount() const { return mResources.mActiveLightCount; }
     inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getActiveLightIndices() const { return mResources.mActiveLightIndices; }
     inline const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& getLightViewProj() const { return mResources.mLightViewProj; }

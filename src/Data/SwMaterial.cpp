@@ -97,7 +97,7 @@ SwMaterial::SwMaterial(
 void SwMaterial::init() {
     const std::array<vk::DescriptorSetLayout, 3> geometrySetLayouts{
         SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwIBL::Resources::sConsumeDescriptorLayout.getRawLayout(),
-        SwLighting::Resources::sShadowConsumeDescriptorLayout.getRawLayout()
+        SwLighting::Resources::sSpotShadowConsumeDescriptorLayout.getRawLayout()
     };
     sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
     sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryTransparentPipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());

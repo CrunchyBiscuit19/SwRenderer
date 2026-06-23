@@ -26,7 +26,7 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
             pipeline.getRawLayout(),
             0,
             {scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), scene.getIBLSystem().getConsumeDescriptorSet().getRawSet(),
-             scene.getLightingSystem().getShadowMapsDescriptorSet().getRawSet()},
+             scene.getLightingSystem().getSpotShadowMapsDescriptorSet().getRawSet()},
             nullptr
         );
 
@@ -55,7 +55,7 @@ void SwGeometry::System::initializePasses() {
         deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
         deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowMaps) {
+        for (auto& shadowMap : mScene.getLightingSystem().getResources().mSpotShadowMaps) {
             deps.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
         }
         deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);

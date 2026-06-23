@@ -10,20 +10,42 @@
 #include <limits>
 #include <utility>
 
-SwDescriptorLayout SwLighting::Resources::sShadowConsumeDescriptorLayout{};
+SwDescriptorLayout SwLighting::Resources::sSpotShadowConsumeDescriptorLayout{};
+SwDescriptorLayout SwLighting::Resources::sPointShadowConsumeDescriptorLayout{};
+SwDescriptorLayout SwLighting::Resources::sDirShadowConsumeDescriptorLayout{};
 
 void SwLighting::Resources::init() {
-    sShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "ShadowConsumeDescriptorLayout",
+    sSpotShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "SpotShadowConsumeDescriptorLayout",
         {
-            {0, vk::DescriptorType::eSampledImage, NUM_LIGHT_CAST_SHADOWS},
+            {0, vk::DescriptorType::eSampledImage, NUM_SPOT_SHADOWS},
+            {1, vk::DescriptorType::eSampler, 1},
+        },
+        vk::ShaderStageFlagBits::eFragment
+    );
+    sPointShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "PointShadowConsumeDescriptorLayout",
+        {
+            {0, vk::DescriptorType::eSampledImage, NUM_POINT_SHADOWS},
+            {1, vk::DescriptorType::eSampler, 1},
+        },
+        vk::ShaderStageFlagBits::eFragment
+    );
+    sDirShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "DirShadowConsumeDescriptorLayout",
+        {
+            {0, vk::DescriptorType::eSampledImage, NUM_DIR_SHADOWS},
             {1, vk::DescriptorType::eSampler, 1},
         },
         vk::ShaderStageFlagBits::eFragment
     );
 }
 
-void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy(); }
+void SwLighting::Resources::cleanup() {
+    sSpotShadowConsumeDescriptorLayout.destroy();
+    sPointShadowConsumeDescriptorLayout.destroy();
+    sDirShadowConsumeDescriptorLayout.destroy();
+}
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -92,63 +114,113 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
     selectActiveLights(cameraPos, mResources.mActiveLightIndices, mResources.mActiveLightCount);
 
     mResources.mLightViewProj.fill(glm::mat4(1.f));
+    mResources.mSpotShadowCount = 0;
+    mResources.mPointShadowCount = 0;
+    mResources.mDirShadowCount = 0;
     for (std::uint32_t i = 0; i < mResources.mActiveLightCount; i++) {
         const std::uint32_t lightIndex = mResources.mActiveLightIndices[i];
         const SwLight::Data& light = mResources.mAssetLights[lightIndex];
+
+        if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Spot)) {
+            if (mResources.mSpotShadowCount < NUM_SPOT_SHADOWS) {
+                mResources.mSpotShadowLightIndices[mResources.mSpotShadowCount++] = i;
+            }
+        } else if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Point)) {
+            if (mResources.mPointShadowCount < NUM_POINT_SHADOWS) {
+                mResources.mPointShadowLightIndices[mResources.mPointShadowCount++] = i;
+            }
+        } else if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Directional)) {
+            if (mResources.mDirShadowCount < NUM_DIR_SHADOWS) {
+                mResources.mDirShadowLightIndices[mResources.mDirShadowCount++] = i;
+            }
+        }
+
+        // Point lights need a cube map (6 matrices)
         if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Point)) {
-            continue;
+            continue; // TODO 6 matrices
         }
         mResources.mLightViewProj[i] = computeLightMatrix(light, mResources.mLightWorldPositions[lightIndex], mResources.mLightWorldDirections[lightIndex]);
     }
 }
 
 void SwLighting::System::initializeResources() {
-    for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
-        mResources.mShadowMaps[i] = SwImageFactory::createDepthImage2D(
-            std::format("ShadowMap{}", i),
-            nullptr,
-            SHADOW_MAP_FORMAT,
-            vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1},
-            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
-            true
+    constexpr vk::ImageUsageFlags shadowMapUsage =
+        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled;
+
+    // Linear filtering gives hardware 2x2 PCF per SampleCmp tap. 
+    // The 2D pools use opaque-black border so taps outside a frustum read as lit, while cube clamp to edge.
+    auto makeComparisonSampler = [](const char* name, vk::SamplerAddressMode addressMode) {
+        vk::SamplerCreateInfo info{};
+        info.magFilter = vk::Filter::eLinear;
+        info.minFilter = vk::Filter::eLinear;
+        info.mipmapMode = vk::SamplerMipmapMode::eNearest;
+        info.addressModeU = addressMode;
+        info.addressModeV = addressMode;
+        info.addressModeW = addressMode;
+        info.minLod = 0.0f;
+        info.maxLod = vk::LodClampNone;
+        info.anisotropyEnable = vk::False;
+        info.borderColor = vk::BorderColor::eFloatOpaqueBlack;
+        info.compareEnable = vk::True;
+        info.compareOp = vk::CompareOp::eGreaterOrEqual;
+        return SwSamplerFactory::createSampler(name, info);
+    };
+
+    // --- Spotlight 2D pool (drawn and sampled) ---
+    for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
+        mResources.mSpotShadowMaps[i] = SwImageFactory::createDepthImage2D(
+            std::format("SpotShadowMap{}", i), nullptr, SHADOW_MAP_FORMAT, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1}, shadowMapUsage, true
         );
     }
-    // Comparison sampler: linear filtering gives hardware 2x2 PCF per SampleCmp tap, and eGreaterOrEqual matches the
-    // reversed-Z stored depth (a receiver is lit when its depth is at least the nearest occluder's). The border is
-    // opaque black (depth 0, the far plane) so taps that spill outside a spot frustum read as lit rather than shadowed.
-    vk::SamplerCreateInfo shadowMapSamplerCreateInfo{};
-    shadowMapSamplerCreateInfo.magFilter = vk::Filter::eLinear;
-    shadowMapSamplerCreateInfo.minFilter = vk::Filter::eLinear;
-    shadowMapSamplerCreateInfo.mipmapMode = vk::SamplerMipmapMode::eNearest;
-    shadowMapSamplerCreateInfo.addressModeU = vk::SamplerAddressMode::eClampToBorder;
-    shadowMapSamplerCreateInfo.addressModeV = vk::SamplerAddressMode::eClampToBorder;
-    shadowMapSamplerCreateInfo.addressModeW = vk::SamplerAddressMode::eClampToBorder;
-    shadowMapSamplerCreateInfo.minLod = 0.0f;
-    shadowMapSamplerCreateInfo.maxLod = vk::LodClampNone;
-    shadowMapSamplerCreateInfo.anisotropyEnable = vk::False;
-    shadowMapSamplerCreateInfo.borderColor = vk::BorderColor::eFloatOpaqueBlack;
-    shadowMapSamplerCreateInfo.compareEnable = vk::True;
-    shadowMapSamplerCreateInfo.compareOp = vk::CompareOp::eGreaterOrEqual;
-    mResources.mShadowMapsSampler = SwSamplerFactory::createSampler("ShadowMapsSampler", shadowMapSamplerCreateInfo);
-
-    mResources.mShadowMapsDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("ShadowMapsDescriptorSet", Resources::sShadowConsumeDescriptorLayout);
-    for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
-        mResources.mShadowMapsDescriptorSet.writeImage(0, mResources.mShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
+    mResources.mSpotShadowMapsSampler = makeComparisonSampler("SpotShadowMapsSampler", vk::SamplerAddressMode::eClampToBorder);
+    mResources.mSpotShadowMapsDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SpotShadowMapsDescriptorSet", Resources::sSpotShadowConsumeDescriptorLayout);
+    for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
+        mResources.mSpotShadowMapsDescriptorSet.writeImage(0, mResources.mSpotShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
     }
-    mResources.mShadowMapsDescriptorSet.writeSampler(1, mResources.mShadowMapsSampler.getRawSampler());
-    mResources.mShadowMapsDescriptorSet.pushWrites();
+    mResources.mSpotShadowMapsDescriptorSet.writeSampler(1, mResources.mSpotShadowMapsSampler.getRawSampler());
+    mResources.mSpotShadowMapsDescriptorSet.pushWrites();
 
-    for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
-        mResources.mLightDrawRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(
-            std::format("LightDrawRisIndicesBuffer{}", i),
+    // --- Point-light cube pool (allocated and descriptor-ready; draw and sampling are a follow-up) ---
+    for (std::uint32_t i = 0; i < NUM_POINT_SHADOWS; i++) {
+        mResources.mPointShadowMaps[i] = SwImageFactory::createDepthImageCubemap(
+            std::format("PointShadowMap{}", i), nullptr, SHADOW_MAP_FORMAT, vk::Extent3D{SHADOW_CUBE_MAP_WIDTH_HEIGHT, SHADOW_CUBE_MAP_WIDTH_HEIGHT, 1}, shadowMapUsage, false
+        );
+    }
+    mResources.mPointShadowMapsSampler = makeComparisonSampler("PointShadowMapsSampler", vk::SamplerAddressMode::eClampToEdge);
+    mResources.mPointShadowMapsDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("PointShadowMapsDescriptorSet", Resources::sPointShadowConsumeDescriptorLayout);
+    for (std::uint32_t i = 0; i < NUM_POINT_SHADOWS; i++) {
+        mResources.mPointShadowMapsDescriptorSet.writeImage(0, mResources.mPointShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
+    }
+    mResources.mPointShadowMapsDescriptorSet.writeSampler(1, mResources.mPointShadowMapsSampler.getRawSampler());
+    mResources.mPointShadowMapsDescriptorSet.pushWrites();
+
+    // --- Directional 2D pool (allocated and descriptor-ready; draw and sampling are a follow-up) ---
+    for (std::uint32_t i = 0; i < NUM_DIR_SHADOWS; i++) {
+        mResources.mDirShadowMaps[i] = SwImageFactory::createDepthImage2D(
+            std::format("DirShadowMap{}", i), nullptr, SHADOW_MAP_FORMAT, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1}, shadowMapUsage, true
+        );
+    }
+    mResources.mDirShadowMapsSampler = makeComparisonSampler("DirShadowMapsSampler", vk::SamplerAddressMode::eClampToBorder);
+    mResources.mDirShadowMapsDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("DirShadowMapsDescriptorSet", Resources::sDirShadowConsumeDescriptorLayout);
+    for (std::uint32_t i = 0; i < NUM_DIR_SHADOWS; i++) {
+        mResources.mDirShadowMapsDescriptorSet.writeImage(0, mResources.mDirShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
+    }
+    mResources.mDirShadowMapsDescriptorSet.writeSampler(1, mResources.mDirShadowMapsSampler.getRawSampler());
+    mResources.mDirShadowMapsDescriptorSet.pushWrites();
+
+    for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
+        mResources.mSpotLightDrawRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(
+            std::format("SpotLightDrawRisIndicesBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             SwScene::SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
             true
         );
-        mResources.mLightRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
-            "LightRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, SwBatch::RENDER_COMMANDS_INITIAL_BUFFER_SIZE, true
+        mResources.mSpotLightRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
+            "SpotLightRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, SwBatch::RENDER_COMMANDS_INITIAL_BUFFER_SIZE, true
         );
     }
 
@@ -188,14 +260,14 @@ void SwLighting::System::initializeResources() {
 void SwLighting::System::initializePasses() {
     SwDependency staticDeps;
 
-    for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
-        staticDeps.mWriteBuffers.emplace_back(&mResources.mLightDrawRisIndicesBuffer[i], SwDependency::BufferDepType::TransferWrite);
-        staticDeps.mWriteBuffers.emplace_back(&mResources.mLightRcsBuffer[i], SwDependency::BufferDepType::TransferWrite);
+    for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mSpotLightDrawRisIndicesBuffer[i], SwDependency::BufferDepType::TransferWrite);
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mSpotLightRcsBuffer[i], SwDependency::BufferDepType::TransferWrite);
     }
     mScene.insertPass(SwPass::Type::LightingShadowReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
-            cmd.fillBuffer(mResources.mLightDrawRisIndicesBuffer[i].getRawBuffer(), 0, VK_WHOLE_SIZE, 0);
-            cmd.fillBuffer(mResources.mLightRcsBuffer[i].getRawBuffer(), 0, VK_WHOLE_SIZE, 0);
+        for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
+            cmd.fillBuffer(mResources.mSpotLightDrawRisIndicesBuffer[i].getRawBuffer(), 0, VK_WHOLE_SIZE, 0);
+            cmd.fillBuffer(mResources.mSpotLightRcsBuffer[i].getRawBuffer(), 0, VK_WHOLE_SIZE, 0);
         }
     });
     staticDeps.clear();
@@ -205,8 +277,8 @@ void SwLighting::System::initializePasses() {
     });
     staticDeps.clear();
 
-    for (std::uint32_t i = 0; i < NUM_LIGHT_CAST_SHADOWS; i++) {
-        staticDeps.mWriteImages.emplace_back(&mResources.mShadowMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
+        staticDeps.mWriteImages.emplace_back(&mResources.mSpotShadowMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
     }
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
@@ -217,19 +289,15 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(
         SwPass::Type::LightingShadowDraw, std::move(staticDeps),
         [&](vk::CommandBuffer cmd) {
-            const std::uint32_t count = std::min(mResources.mActiveLightCount, NUM_LIGHT_CAST_SHADOWS);
             auto& pipeline = mResources.mShadowDrawOpaqueTransparentPipelineBundle;
 
             mResources.mShadowDrawPc.mLightDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
 
-            for (std::uint32_t slot = 0; slot < count; slot++) {
-                const std::uint32_t lightIndex = mResources.mActiveLightIndices[slot];
-                // Point lights have no 2D shadow map yet (cube maps are a follow-up), so skip drawing into their slot.
-                if (mResources.mAssetLights[lightIndex].mType == static_cast<std::uint32_t>(SwLight::Type::Point)) {
-                    continue;
-                }
+            // The spot selection list holds active-light slots, each of which is also its spot-map slot.
+            for (std::uint32_t s = 0; s < mResources.mSpotShadowCount; s++) {
+                const std::uint32_t slot = mResources.mSpotShadowLightIndices[s];
 
-                vk::RenderingAttachmentInfo depth = mResources.mShadowMaps[slot].generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
+                vk::RenderingAttachmentInfo depth = mResources.mSpotShadowMaps[slot].generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
                 cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT}, {}, depth));
                 SwPass::setViewportScissors(cmd, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1});
 
