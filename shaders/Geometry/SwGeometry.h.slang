@@ -46,9 +46,19 @@ namespace SwGeometry {
     public float3 applyNormalMap(float3 worldNormal, float4 worldTangent, float3 sampledNormal, float normalScale) {
         float3 N = normalize(worldNormal);    
         float3 T = normalize(worldTangent.xyz);
-        T = normalize(T - mul(N, dot(T, N)));
-        float3 B = mul(worldTangent.w, cross(N, T)); // w for handedness
+
+        float3 t = T - N * dot(T, N);
+        if (!(length(t) > 1e-4f)) {                                   
+            float3 up = abs(N.y) < 0.999f ? float3(0,1,0) : float3(1,0,0);
+            T = normalize(cross(up, N));                          
+            worldTangent.w = 1.f;
+        } else {
+            T = normalize(t);
+        }
+        
+        float3 B = worldTangent.w * cross(N, T); // w for handedness
         float3x3 TBN = float3x3(T, B, N);
+
         sampledNormal = sampledNormal * 2.f - 1.f;
         sampledNormal.xy *= normalScale;
         return normalize(mul(sampledNormal, TBN)); 
