@@ -70,12 +70,11 @@ namespace SwLighting {
         if (light.mType == Sw::LightType::Directional) {
             toLightDir = -lightForward;
         } else {
-            float3 toLight = lightWorldPos - worldPos;
-            float dist = length(toLight);
-            toLightDir = toLight / max(dist, 1e-4f);
-            attenuation = 1.f / max(dist * dist, 1e-4f);
+            toLightDir = lightWorldPos - worldPos;
+            toLightDir /= max(length(toLightDir), 1e-4f);
+            attenuation = 1.f / max(length(toLightDir) * length(toLightDir), 1e-4f);
             if (light.mRange > 0.f) {
-                float rangeFactor = saturate(1.f - pow(dist / light.mRange, 4.f));
+                float rangeFactor = saturate(1.f - pow(length(toLightDir) / light.mRange, 4.f));
                 attenuation *= rangeFactor * rangeFactor;
             }
             if (light.mType == Sw::LightType::Spot) {
@@ -148,7 +147,7 @@ namespace SwLighting {
 	    return projCoords.xy + POISSON_DISK[index] / radius;
     }
 
-    // Reversed-Z so the bias is added (not subtracted) to push receivers toward lit and kill acne.
+    // Reversed-Z so the bias is added (not subtracted) to kill acne.
     public float shadowFactor(
         uint slot, float3 worldPos, Sw::PerFrameData* perFrame, Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS], SamplerComparisonState shadowSampler
     ) {
