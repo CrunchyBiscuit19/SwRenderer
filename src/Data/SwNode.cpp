@@ -79,15 +79,17 @@ void SwLightNode::generateRcsAndRis() {
 
     const std::uint32_t nodeTransformIndex = asset.mFirstNodeTransformInScene + mRelativeNodeIndex;
     const glm::vec3 nodeWorldPos = glm::vec3(getWorldTransform()[3]);
+    auto& assetLights = scene.getLightingSystem().getAssetLights();
     auto& instances = asset.getInstances();
     for (std::uint32_t i = 0; i < instances.size(); i++) {
-        scene.getLightingSystem().getAssetLights().emplace_back(mLight.toData(nodeTransformIndex, asset.mFirstInstanceInScene + i));
         const glm::mat4 model = instances[i].getData().mTransformMatrix * getWorldTransform();
-        const glm::vec3 worldPos = glm::vec3(instances[i].getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));
-        scene.getLightingSystem().getLightWorldPositions().emplace_back(worldPos);
+        SwLighting::AssetLight& record = assetLights.emplace_back();
+        record.mLight = &mLight;
+        record.mNodeTransformIndex = nodeTransformIndex;
+        record.mInstanceIndex = asset.mFirstInstanceInScene + i;
+        record.mWorldPosition = glm::vec3(instances[i].getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));
         // glTF lights shine down local -Z. Match SwGeometry's accumulatePunctualLight forward computation.
-        const glm::vec3 worldDir = glm::normalize(glm::vec3(model * glm::vec4(0.f, 0.f, -1.f, 0.f)));
-        scene.getLightingSystem().getLightWorldDirections().emplace_back(worldDir);
+        record.mWorldDirection = glm::normalize(glm::vec3(model * glm::vec4(0.f, 0.f, -1.f, 0.f)));
     }
 
     SwNode::generateRcsAndRis();  

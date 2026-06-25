@@ -55,6 +55,16 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
+// A per-instance binding to an asset-owned light. The system references the SwLight object rather than copying its data,
+// so edits to the asset light are picked up without re-flattening. The world position and direction are cached at regen.
+struct AssetLight {
+    SwLight* mLight{nullptr};               // non-owning reference to the asset-owned light object
+    std::uint32_t mNodeTransformIndex{0};   // into mSceneNodeTransformsBuffer
+    std::uint32_t mInstanceIndex{0};        // into mSceneInstancesBuffer
+    glm::vec3 mWorldPosition{0.f};          // cached for per-frame brightness scoring
+    glm::vec3 mWorldDirection{0.f};         // light forward (glTF local -Z) in world space
+};
+
 struct Resources {
     static SwDescriptorLayout sSpotShadowConsumeDescriptorLayout;
     static SwDescriptorLayout sPointShadowConsumeDescriptorLayout;
@@ -64,9 +74,7 @@ struct Resources {
     static void cleanup();
 
     SwSunlight mSunlight;
-    std::vector<SwLight::Data> mAssetLights;
-    std::vector<glm::vec3> mLightWorldPositions;   // parallel to mAssetLights, cached for per-frame brightness scoring
-    std::vector<glm::vec3> mLightWorldDirections;  // parallel to mAssetLights, light forward (glTF local -Z) in world space
+    std::vector<AssetLight> mAssetLights;
     std::vector<SwLight> mGlobalLights;
 
     std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
@@ -112,7 +120,7 @@ private:
     void initializeResources() override;
     void initializePasses() override;
 
-    static glm::mat4 computeLightMatrix(const SwLight::Data& light, const glm::vec3& worldPos, const glm::vec3& worldDir);
+    static glm::mat4 computeLightMatrix(const SwLight::Params& params, const glm::vec3& worldPos, const glm::vec3& worldDir);
 
 public:
     System(SwScene& scene);
@@ -120,9 +128,13 @@ public:
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
 
+    void spawnTestLight(SwLight::Type type, const glm::vec3& worldPos);
+
     void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount) const;
 
     void refreshActiveLights(const glm::vec3& cameraPos);
+
+    std::vector<SwLight::Data> collectLightData() const;
 
     inline SwDescriptorSet& getSpotShadowMapsDescriptorSet() { return mResources.mSpotShadowMapsDescriptorSet; }
     inline SwDescriptorSet& getPointShadowMapsDescriptorSet() { return mResources.mPointShadowMapsDescriptorSet; }
@@ -133,9 +145,7 @@ public:
 
     inline Resources& getResources() { return mResources; }
     inline SwSunlight& getSunlight() { return mResources.mSunlight; }
-    inline std::vector<SwLight::Data>& getAssetLights() { return mResources.mAssetLights; }
-    inline std::vector<glm::vec3>& getLightWorldPositions() { return mResources.mLightWorldPositions; }
-    inline std::vector<glm::vec3>& getLightWorldDirections() { return mResources.mLightWorldDirections; }
+    inline std::vector<AssetLight>& getAssetLights() { return mResources.mAssetLights; }
     inline std::vector<SwLight>& getGlobalLights() { return mResources.mGlobalLights; }
 };
 

@@ -49,32 +49,49 @@ void SwLighting::Resources::cleanup() {
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
+void SwLighting::System::spawnTestLight(SwLight::Type type, const glm::vec3& worldPos) {
+    SwLight light;
+    switch (type) {
+        case SwLight::Type::Directional:
+            light = SwTestDirectionalLight();
+            break;
+        case SwLight::Type::Spot:
+            light = SwTestSpotLight();
+            break;
+        case SwLight::Type::Point:
+        default:
+            light = SwTestPointLight();
+            break;
+    }
+    light.getPosition() = worldPos;
+    mResources.mGlobalLights.emplace_back(light);
+}
+
 void SwLighting::System::selectActiveLights(
     const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount
 ) const {
-    const std::vector<SwLight::Data>& lights = mResources.mAssetLights;
-    const std::vector<glm::vec3>& positions = mResources.mLightWorldPositions;
+    const std::vector<AssetLight>& lights = mResources.mAssetLights;
 
     // Score every light by its perceived brightness at the camera, then keep the brightest MAX_ACTIVE_LIGHTS.
     std::vector<std::pair<float, std::uint32_t>> scored;
     scored.reserve(lights.size());
     for (std::uint32_t i = 0; i < lights.size(); i++) {
-        const SwLight::Data& light = lights[i];
+        const SwLight::Params& params = lights[i].mLight->getParams();
 
         float score;
-        if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Directional)) {
+        if (params.mType == SwLight::Type::Directional) {
             score = std::numeric_limits<float>::max();  // no attenuation, always relevant
         } else {
-            const glm::vec3 toLight = positions[i] - cameraPos;
+            const glm::vec3 toLight = lights[i].mWorldPosition - cameraPos;
             const float dist2 = std::max(glm::dot(toLight, toLight), 1e-4f);
             float attenuation = 1.f / dist2;
-            if (light.mRange > 0.f) {
+            if (params.mRange > 0.f) {
                 const float dist = std::sqrt(dist2);
-                const float rangeFactor = std::clamp(1.f - std::pow(dist / light.mRange, 4.f), 0.f, 1.f);
+                const float rangeFactor = std::clamp(1.f - std::pow(dist / params.mRange, 4.f), 0.f, 1.f);
                 attenuation *= rangeFactor * rangeFactor;
             }
-            const float luminance = glm::dot(light.mColor, glm::vec3(0.2126f, 0.7152f, 0.0722f));
-            score = light.mIntensity * luminance * attenuation;
+            const float luminance = glm::dot(params.mColor, glm::vec3(0.2126f, 0.7152f, 0.0722f));
+            score = params.mIntensity * luminance * attenuation;
         }
         scored.emplace_back(score, i);
     }
@@ -87,16 +104,15 @@ void SwLighting::System::selectActiveLights(
 }
 
 
-glm::mat4 SwLighting::System::computeLightMatrix(const SwLight::Data& light, const glm::vec3& worldPos, const glm::vec3& worldDir) {
+glm::mat4 SwLighting::System::computeLightMatrix(const SwLight::Params& params, const glm::vec3& worldPos, const glm::vec3& worldDir) {
     const glm::vec3 forward = glm::normalize(worldDir);
     const glm::vec3 up = std::abs(forward.y) < 0.999f ? glm::vec3(0.f, 1.f, 0.f) : glm::vec3(1.f, 0.f, 0.f);
 
     glm::mat4 view;
     glm::mat4 proj;
-    if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Spot)) {
-        const float range = light.mRange > 0.f ? light.mRange : SwLighting::SHADOW_SPOT_DEFAULT_RANGE;
-        const float halfAngle = std::acos(std::clamp(light.mOuterCos, -1.f, 1.f));
-        const float fovy = std::clamp(2.f * halfAngle, glm::radians(1.f), glm::radians(179.f));
+    if (params.mType == SwLight::Type::Spot) {
+        const float range = params.mRange > 0.f ? params.mRange : SwLighting::SHADOW_SPOT_DEFAULT_RANGE;
+        const float fovy = std::clamp(2.f * params.mOuterConeAngle, glm::radians(1.f), glm::radians(179.f));
         view = glm::lookAt(worldPos, worldPos + forward, up);
         proj = glm::perspective(fovy, 1.f, range, SwLighting::SHADOW_SPOT_NEAR);
     } else {
@@ -119,28 +135,38 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
     mResources.mDirShadowCount = 0;
     for (std::uint32_t i = 0; i < mResources.mActiveLightCount; i++) {
         const std::uint32_t lightIndex = mResources.mActiveLightIndices[i];
-        const SwLight::Data& light = mResources.mAssetLights[lightIndex];
+        const AssetLight& light = mResources.mAssetLights[lightIndex];
+        const SwLight::Type type = light.mLight->getParams().mType;
 
-        if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Spot)) {
+        if (type == SwLight::Type::Spot) {
             if (mResources.mSpotShadowCount < NUM_SPOT_SHADOWS) {
                 mResources.mSpotShadowLightIndices[mResources.mSpotShadowCount++] = i;
             }
-        } else if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Point)) {
+        } else if (type == SwLight::Type::Point) {
             if (mResources.mPointShadowCount < NUM_POINT_SHADOWS) {
                 mResources.mPointShadowLightIndices[mResources.mPointShadowCount++] = i;
             }
-        } else if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Directional)) {
+        } else if (type == SwLight::Type::Directional) {
             if (mResources.mDirShadowCount < NUM_DIR_SHADOWS) {
                 mResources.mDirShadowLightIndices[mResources.mDirShadowCount++] = i;
             }
         }
 
         // Point lights need a cube map (6 matrices)
-        if (light.mType == static_cast<std::uint32_t>(SwLight::Type::Point)) {
+        if (type == SwLight::Type::Point) {
             continue; // TODO 6 matrices
         }
-        mResources.mLightViewProj[i] = computeLightMatrix(light, mResources.mLightWorldPositions[lightIndex], mResources.mLightWorldDirections[lightIndex]);
+        mResources.mLightViewProj[i] = computeLightMatrix(light.mLight->getParams(), light.mWorldPosition, light.mWorldDirection);
     }
+}
+
+std::vector<SwLight::Data> SwLighting::System::collectLightData() const {
+    std::vector<SwLight::Data> out;
+    out.reserve(mResources.mAssetLights.size());
+    for (const AssetLight& light : mResources.mAssetLights) {
+        out.emplace_back(light.mLight->toData(light.mNodeTransformIndex, light.mInstanceIndex));
+    }
+    return out;
 }
 
 void SwLighting::System::initializeResources() {

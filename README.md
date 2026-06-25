@@ -190,8 +190,9 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Lighting `SwLighting`
 
-* **`Resources`** — the scene's lights: a single global `SwSunlight`, the per-instance `SwLight::Data` records emitted by asset `SwLightNode`s during regen, and a (currently stub) list of editor `SwLight`s.
-* **`System`** — collects these light records; the scene packs them into `mSceneLightsBuffer` (`reloadSceneLightsBuffer`).
+* **`AssetLight`** — a per-instance binding emitted by asset `SwLightNode`s during regen: a non-owning pointer to the asset-owned `SwLight`, its node-transform and instance indices, and the cached world position and direction. The system references the light object rather than copying its `SwLight::Data`.
+* **`Resources`** — the scene's lights: a single global `SwSunlight`, the `AssetLight` references, and a (currently stub) list of editor `SwLight`s.
+* **`System`** — flattens its `AssetLight` references into `SwLight::Data` via `collectLightData()`; the scene packs that into `mSceneLightsBuffer` (`reloadSceneLightsBuffer`).
 * **Relations** — feeds the light buffer that `SwGeometry`'s shaders consume; the sunlight is uploaded per frame via the per-frame buffer.
 
 ### Image-Based Lighting `SwIBL`
@@ -373,10 +374,10 @@ ClearImages → [SkyboxDraw] → CullReset → CullEarlyWork → CullEarlyCompac
 → GeometryEarlyOpaque → CullPrepOcclusion → CullLateReset → CullLateWork
 → CullLateCompact → CullPublishCount → GeometryLateOpaque → GeometryMasked
 → GeometryTransparent → [PickDraw → PickReadback → PickWork] → WBOITComposite
-→ Tonemap → [FXAA] → CopyToSwapchain → Gui
+→ [LightingBillboard] → Tonemap → [FXAA] → CopyToSwapchain → Gui
 ```
 
-This realises the two-pass cull (early draw of last frame's visible set, build the HZ pyramid, late occlusion pass) feeding the indirect geometry draws, then transparency composite and post-process, ending in the swapchain copy and GUI overlay.
+This realises the two-pass cull (early draw of last frame's visible set, build the HZ pyramid, late occlusion pass) feeding the indirect geometry draws, then transparency composite and post-process, ending in the swapchain copy and GUI overlay. `LightingBillboard` is an optional pass that draws a camera-facing emissive quad for each spawned test light (see the GUI Objects panel) so otherwise-invisible punctual lights are locatable; it only runs when at least one test light exists.
 
 ---
 

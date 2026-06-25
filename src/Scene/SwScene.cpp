@@ -212,8 +212,6 @@ void SwScene::markAllAssetsDelete() {
 void SwScene::regenerateRcsAndRis() {
     SwBatch::sFirstRiOffset = 0;
     mLighting.getAssetLights().clear();
-    mLighting.getLightWorldPositions().clear();
-    mLighting.getLightWorldDirections().clear();
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
@@ -443,9 +441,10 @@ void SwScene::reloadSceneLightsBuffer() {
         return;
     }
 
-    const vk::DeviceSize lightsSize = mLighting.getAssetLights().size() * sizeof(SwLight::Data);
+    std::vector<SwLight::Data> lightData = mLighting.collectLightData();
+    const vk::DeviceSize lightsSize = lightData.size() * sizeof(SwLight::Data);
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, lightsSize](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, lightData = std::move(lightData), lightsSize](vk::CommandBuffer cmd) {
         mSceneLightsBuffer.ensureCapacity(cmd, lightsSize);
 
         vk::BufferCopy lightsCopy{};
@@ -453,7 +452,7 @@ void SwScene::reloadSceneLightsBuffer() {
         lightsCopy.srcOffset = 0;
         lightsCopy.size = lightsSize;
 
-        SwLight::sLightsStaging.copyFrom(cmd, mLighting.getAssetLights().data(), lightsSize);
+        SwLight::sLightsStaging.copyFrom(cmd, lightData.data(), lightsSize);
         mSceneLightsBuffer.copyFrom(cmd, SwLight::sLightsStaging, lightsCopy);
         mSceneLightsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });

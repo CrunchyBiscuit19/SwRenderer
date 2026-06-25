@@ -39,9 +39,10 @@ private:
 
     std::uint32_t mId{0};
     Params mParams;
+    glm::vec3 mPosition{0.f};  
 
 public:
-    static constexpr std::uint32_t LIGHTS_STAGING_BUFFER_SIZE{1 << 16};  
+    static constexpr std::uint32_t LIGHTS_STAGING_BUFFER_SIZE{1 << 16};
     static SwStagingBuffer sLightsStaging;
 
     SwLight() = default;
@@ -49,6 +50,7 @@ public:
 
     inline Params& getParams() { return mParams; }
     inline std::uint32_t getId() const { return mId; }
+    inline glm::vec3& getPosition() { return mPosition; }
 
     Data toData(std::uint32_t nodeTransformIndex, std::uint32_t instanceIndex) const;
 
@@ -60,4 +62,16 @@ struct SwSunlight {
     float mIntensity{0.f};
     glm::vec2 mAzimuthElevation{0.f};  
     glm::vec3 mColor{1.f};
+};
+
+struct SwTestDirectionalLight : public SwLight {
+    SwTestDirectionalLight();
+};
+
+struct SwTestSpotLight : public SwLight {
+    SwTestSpotLight();
+};
+
+struct SwTestPointLight : public SwLight {
+    SwTestPointLight();
 };
