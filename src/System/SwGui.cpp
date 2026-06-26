@@ -120,111 +120,110 @@ void SwGui::System::initializeResources() {
     mResources.mGuiComponents[SwGuiComponent::Lighting] = [this]() {
         ImGui::Indent();
 
-        if (ImGui::CollapsingHeader("Surround", ImGuiTreeNodeFlags_DefaultOpen)) {
-            if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen)) {
-                if (ImGui::Button("Change Skybox")) {
-                    mResources.mSelectSkyboxFileBrowser.Open();
-                }
-                ImGui::SameLine();
-                if (ImGui::Button("Toggle Skybox")) {
-                    mScene.getIBLSystem().toggleActive();
-                }
-                ImGui::SliderFloat("IBL Intensity", mScene.getIBLSystem().getIblIntensityPtr(), 0.f, 2.f, "%.2f");
-
-                std::uint32_t* iblComponents = mScene.getIBLSystem().getIblComponentsPtr();
-                ImGui::TextUnformatted("IBL Components");
-                if (ImGui::RadioButton("Diffuse", *iblComponents == SwIBL::IBL_DIFFUSE)) {
-                    *iblComponents = SwIBL::IBL_DIFFUSE;
-                }
-                ImGui::SameLine();
-                if (ImGui::RadioButton("Specular", *iblComponents == SwIBL::IBL_SPECULAR)) {
-                    *iblComponents = SwIBL::IBL_SPECULAR;
-                }
-                ImGui::SameLine();
-                if (ImGui::RadioButton("Both", *iblComponents == (SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR))) {
-                    *iblComponents = SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR;
-                }
+        if (ImGui::CollapsingHeader("Skybox", ImGuiTreeNodeFlags_DefaultOpen)) {
+            if (ImGui::Button("Change Skybox")) {
+                mResources.mSelectSkyboxFileBrowser.Open();
             }
-
-            mResources.mSelectSkyboxFileBrowser.Display();
-            if (mResources.mSelectSkyboxFileBrowser.HasSelected()) {
-                std::filesystem::path selectedSkyboxFile = mResources.mSelectSkyboxFileBrowser.GetSelected();
-                mScene.getIBLSystem().reinitializeOnUpdate(selectedSkyboxFile);
-                mResources.mSelectSkyboxFileBrowser.ClearSelected();
+            ImGui::SameLine();
+            if (ImGui::Button("Toggle Skybox")) {
+                mScene.getIBLSystem().toggleActive();
             }
+            ImGui::SliderFloat("IBL Intensity", mScene.getIBLSystem().getIblIntensityPtr(), 0.f, 2.f, "%.2f");
 
-            if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
-                SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
-                ImGui::ColorEdit3("Color", glm::value_ptr(sunlight.mColor));
-                glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
-                if (ImGui::SliderFloat2(
-                        "Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
-                    )) {
-                    sunlight.mAzimuthElevation = glm::radians(azimuthElevationDeg);
-                }
-                ImGui::SliderFloat("Intensity", &sunlight.mIntensity, 0.f, 5.f, "%.2f");
+            std::uint32_t* iblComponents = mScene.getIBLSystem().getIblComponentsPtr();
+            ImGui::TextUnformatted("IBL Components");
+            if (ImGui::RadioButton("Diffuse", *iblComponents == SwIBL::IBL_DIFFUSE)) {
+                *iblComponents = SwIBL::IBL_DIFFUSE;
             }
-
-            if (ImGui::CollapsingHeader("Tone-Mapping", ImGuiTreeNodeFlags_DefaultOpen)) {
-                ImGui::SliderFloat("Exposure", mScene.getPostProcessSystem().getExposurePtr(), 0.f, 8.f, "%.2f");
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Specular", *iblComponents == SwIBL::IBL_SPECULAR)) {
+                *iblComponents = SwIBL::IBL_SPECULAR;
+            }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Both", *iblComponents == (SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR))) {
+                *iblComponents = SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR;
             }
         }
 
-        if (ImGui::CollapsingHeader("Objects", ImGuiTreeNodeFlags_DefaultOpen)) {
-            SwLighting::System& lighting = mScene.getLightingSystem();
-
-            const glm::vec3 spawnDir = mScene.getCamera().getDirectionVector();
-            const glm::vec3 spawnPos = mScene.getCamera().getPosition() + spawnDir * 5.f;
-            ImGui::TextUnformatted("Spawn Test Light:");
-            ImGui::SameLine();
-            if (ImGui::Button("Point")) {
-                lighting.spawnTestLight(SwLight::Type::Point, spawnPos, spawnDir);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Spot")) {
-                lighting.spawnTestLight(SwLight::Type::Spot, spawnPos, spawnDir);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Directional")) {
-                lighting.spawnTestLight(SwLight::Type::Directional, spawnPos, spawnDir);
-            }
-
-            auto& globalLights = lighting.getGlobalLights();
-            std::size_t removeIndex = globalLights.size();
-            for (std::size_t i = 0; i < globalLights.size(); i++) {
-                SwLight& light = globalLights[i];
-                SwLight::Params& params = light.getParams();
-                ImGui::PushID(static_cast<int>(light.getId()));
-                const std::string label = fmt::format("{} Light {}", magic_enum::enum_name(params.mType), light.getId());
-                if (ImGui::TreeNode(label.c_str())) {
-                    ImGui::ColorEdit3("Color", glm::value_ptr(params.mColor));
-                    ImGui::DragFloat3("Position", glm::value_ptr(light.getPosition()), 0.1f);
-                    if (params.mType != SwLight::Type::Point) {
-                        if (ImGui::DragFloat3("Direction", glm::value_ptr(light.getDirection()), 0.01f, -1.f, 1.f)) {
-                            const float dirLength = glm::length(light.getDirection());
-                            if (dirLength > 1e-4f) {
-                                light.getDirection() /= dirLength;
-                            }
-                        }
-                    }
-                    ImGui::SliderFloat("Intensity", &params.mIntensity, 0.f, 100.f, "%.1f");
-                    if (params.mType != SwLight::Type::Directional) {
-                        ImGui::SliderFloat("Range", &params.mRange, 0.f, 100.f, "%.1f");
-                    }
-                    if (ImGui::Button("Remove")) {
-                        removeIndex = i;
-                    }
-                    ImGui::TreePop();
-                }
-                ImGui::PopID();
-            }
-            if (removeIndex < globalLights.size()) {
-                globalLights.erase(globalLights.begin() + removeIndex);
-            }
+        mResources.mSelectSkyboxFileBrowser.Display();
+        if (mResources.mSelectSkyboxFileBrowser.HasSelected()) {
+            std::filesystem::path selectedSkyboxFile = mResources.mSelectSkyboxFileBrowser.GetSelected();
+            mScene.getIBLSystem().reinitializeOnUpdate(selectedSkyboxFile);
+            mResources.mSelectSkyboxFileBrowser.ClearSelected();
         }
+
+        if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
+            SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
+            ImGui::ColorEdit3("Color", glm::value_ptr(sunlight.mColor));
+            glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
+            if (ImGui::SliderFloat2(
+                    "Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
+                )) {
+                sunlight.mAzimuthElevation = glm::radians(azimuthElevationDeg);
+            }
+            ImGui::SliderFloat("Intensity", &sunlight.mIntensity, 0.f, 5.f, "%.2f");
+        }
+
+        if (ImGui::CollapsingHeader("Tone-Mapping", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::SliderFloat("Exposure", mScene.getPostProcessSystem().getExposurePtr(), 0.f, 8.f, "%.2f");
+        }
+
+        // if (ImGui::CollapsingHeader("Objects", ImGuiTreeNodeFlags_DefaultOpen)) {
+        //     SwLighting::System& lighting = mScene.getLightingSystem();
+        //
+        //     const glm::vec3 spawnDir = mScene.getCamera().getDirectionVector();
+        //     const glm::vec3 spawnPos = mScene.getCamera().getPosition() + spawnDir * 5.f;
+        //     ImGui::TextUnformatted("Spawn Test Light:");
+        //     ImGui::SameLine();
+        //     if (ImGui::Button("Point")) {
+        //         lighting.spawnTestLight(SwLight::Type::Point, spawnPos, spawnDir);
+        //     }
+        //     ImGui::SameLine();
+        //     if (ImGui::Button("Spot")) {
+        //         lighting.spawnTestLight(SwLight::Type::Spot, spawnPos, spawnDir);
+        //     }
+        //     ImGui::SameLine();
+        //     if (ImGui::Button("Directional")) {
+        //         lighting.spawnTestLight(SwLight::Type::Directional, spawnPos, spawnDir);
+        //     }
+        //
+        //     auto& globalLights = lighting.getGlobalLights();
+        //     std::size_t removeIndex = globalLights.size();
+        //     for (std::size_t i = 0; i < globalLights.size(); i++) {
+        //         SwLight& light = globalLights[i];
+        //         SwLight::Params& params = light.getParams();
+        //         ImGui::PushID(static_cast<int>(light.getId()));
+        //         const std::string label = fmt::format("{} Light {}", magic_enum::enum_name(params.mType), light.getId());
+        //         if (ImGui::TreeNode(label.c_str())) {
+        //             ImGui::ColorEdit3("Color", glm::value_ptr(params.mColor));
+        //             ImGui::DragFloat3("Position", glm::value_ptr(light.getPosition()), 0.1f);
+        //             if (params.mType != SwLight::Type::Point) {
+        //                 if (ImGui::DragFloat3("Direction", glm::value_ptr(light.getDirection()), 0.01f, -1.f, 1.f)) {
+        //                     const float dirLength = glm::length(light.getDirection());
+        //                     if (dirLength > 1e-4f) {
+        //                         light.getDirection() /= dirLength;
+        //                     }
+        //                 }
+        //             }
+        //             ImGui::SliderFloat("Intensity", &params.mIntensity, 0.f, 100.f, "%.1f");
+        //             if (params.mType != SwLight::Type::Directional) {
+        //                 ImGui::SliderFloat("Range", &params.mRange, 0.f, 100.f, "%.1f");
+        //             }
+        //             if (ImGui::Button("Remove")) {
+        //                 removeIndex = i;
+        //             }
+        //             ImGui::TreePop();
+        //         }
+        //         ImGui::PopID();
+        //     }
+        //     if (removeIndex < globalLights.size()) {
+        //         globalLights.erase(globalLights.begin() + removeIndex);
+        //     }
+        // }
 
         ImGui::Unindent();
     };
+
     mResources.mGuiComponents[SwGuiComponent::Effects] = [this]() { ImGui::Checkbox("Toggle FXAA", mScene.getPostProcessSystem().getFXAAActivePtr()); };
     mResources.mGuiComponents[SwGuiComponent::Stats] = [this]() {
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());

@@ -329,6 +329,7 @@ void SwScene::reloadSceneVertexBuffer() {
             maxPos = dstOffset;
 
             SwRenderer::sRendererContext.mImmSubmit->addCallback([&mesh, this, meshVertexCopy, maxPos](vk::CommandBuffer cmd) {
+                if (meshVertexCopy.size == 0) return;
                 mSceneVertexBuffer.copyFrom(cmd, mesh.getVertexBuffer(), meshVertexCopy);
             });
         }
@@ -350,6 +351,7 @@ void SwScene::reloadSceneIndexBuffer() {
             maxPos = dstOffset;
 
             SwRenderer::sRendererContext.mImmSubmit->addCallback([&mesh, this, meshIndexCopy, maxPos](vk::CommandBuffer cmd) {
+                if (meshIndexCopy.size == 0) return;
                 mSceneIndexBuffer.copyFrom(cmd, mesh.getIndexBuffer(), meshIndexCopy);
             });
         }
@@ -370,6 +372,7 @@ void SwScene::reloadSceneMaterialConstantsBuffer() {
         maxPos = dstOffset;
 
         SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, materialConstantCopy, maxPos](vk::CommandBuffer cmd) {
+            if (materialConstantCopy.size == 0) return;
             mSceneMaterialConstantsBuffer.copyFrom(cmd, asset.getMaterialConstantsBuffer(), materialConstantCopy);
         });
     }
@@ -389,6 +392,7 @@ void SwScene::reloadSceneNodeTransformsBuffer() {
         maxPos = dstOffset;
 
         SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, nodeTransformsCopy, maxPos](vk::CommandBuffer cmd) {
+            if (nodeTransformsCopy.size == 0) return;
             mSceneNodeTransformsBuffer.copyFrom(cmd, asset.getNodeTransformsBuffer(), nodeTransformsCopy);
         });
     }
@@ -408,6 +412,7 @@ void SwScene::reloadSceneBoundsBuffer() {
         maxPos = dstOffset;
 
         SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, boundsCopy, maxPos](vk::CommandBuffer cmd) {
+            if (boundsCopy.size == 0) return;
             mSceneBoundsBuffer.copyFrom(cmd, asset.getBoundsBuffer(), boundsCopy);
         });
     }
@@ -431,6 +436,7 @@ void SwScene::reloadSceneInstancesBuffer() {
         maxPos = dstOffset;
 
         SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, instancesCopy, maxPos](vk::CommandBuffer cmd) {
+            if (instancesCopy.size == 0) return;
             mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy);
         });
     }
@@ -442,19 +448,15 @@ void SwScene::reloadSceneLightsBuffer() {
     }
 
     std::vector<SwLight::Data> lightData = mLighting.collectLightData();
-    const vk::DeviceSize lightsSize = lightData.size() * sizeof(SwLight::Data);
+    vk::BufferCopy lightsCopy{};
+    lightsCopy.dstOffset = 0;
+    lightsCopy.srcOffset = 0;
+    lightsCopy.size = lightData.size() * sizeof(SwLight::Data);
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, lightData = std::move(lightData), lightsSize](vk::CommandBuffer cmd) {
-        mSceneLightsBuffer.ensureCapacity(cmd, lightsSize);
-
-        vk::BufferCopy lightsCopy{};
-        lightsCopy.dstOffset = 0;
-        lightsCopy.srcOffset = 0;
-        lightsCopy.size = lightsSize;
-
-        SwLight::sLightsStaging.copyFrom(cmd, lightData.data(), lightsSize);
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, lightData = std::move(lightData), lightsCopy](vk::CommandBuffer cmd) {
+        if (lightsCopy.size == 0) return;
+        SwLight::sLightsStaging.copyFrom(cmd, lightData.data(), lightsCopy.size);
         mSceneLightsBuffer.copyFrom(cmd, SwLight::sLightsStaging, lightsCopy);
-        mSceneLightsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
     });
 }
 

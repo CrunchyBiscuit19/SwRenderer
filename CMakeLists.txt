@@ -208,6 +208,7 @@ target_precompile_headers(SwRenderer PUBLIC
 target_compile_definitions(SwRenderer PUBLIC GLM_FORCE_DEPTH_ZERO_TO_ONE)
 target_compile_definitions(SwRenderer PUBLIC LOGS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/logs/")
 target_compile_definitions(SwRenderer PUBLIC ASSETS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/assets/")
+target_compile_definitions(SwRenderer PUBLIC LIGHTS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/lights/")
 target_compile_definitions(SwRenderer PUBLIC SKYBOXES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/skyboxes/")
 target_compile_definitions(SwRenderer PUBLIC DOCS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/docs")
 

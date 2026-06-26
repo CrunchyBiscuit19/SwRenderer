@@ -75,7 +75,6 @@ struct Resources {
 
     SwSunlight mSunlight;
     std::vector<AssetLight> mAssetLights;
-    std::vector<SwLight> mGlobalLights;
 
     std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
     std::uint32_t mActiveLightCount{0};
@@ -128,8 +127,6 @@ public:
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
 
-    void spawnTestLight(SwLight::Type type, const glm::vec3& worldPos, const glm::vec3& worldDir = glm::vec3(0.f, 0.f, -1.f));
-
     void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount) const;
 
     void refreshActiveLights(const glm::vec3& cameraPos);
@@ -146,7 +143,6 @@ public:
     inline Resources& getResources() { return mResources; }
     inline SwSunlight& getSunlight() { return mResources.mSunlight; }
     inline std::vector<AssetLight>& getAssetLights() { return mResources.mAssetLights; }
-    inline std::vector<SwLight>& getGlobalLights() { return mResources.mGlobalLights; }
 };
 
 }  // namespace SwLighting

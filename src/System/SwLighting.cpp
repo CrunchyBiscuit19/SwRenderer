@@ -49,35 +49,14 @@ void SwLighting::Resources::cleanup() {
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
-void SwLighting::System::spawnTestLight(SwLight::Type type, const glm::vec3& worldPos, const glm::vec3& worldDir) {
-    SwLight light;
-    switch (type) {
-        case SwLight::Type::Directional:
-            light = SwTestDirectionalLight();
-            break;
-        case SwLight::Type::Spot:
-            light = SwTestSpotLight();
-            break;
-        case SwLight::Type::Point:
-        default:
-            light = SwTestPointLight();
-            break;
-    }
-    light.getPosition() = worldPos;
-    const float dirLength = glm::length(worldDir);
-    light.getDirection() = dirLength > 1e-4f ? worldDir / dirLength : glm::vec3(0.f, 0.f, -1.f);
-    mResources.mGlobalLights.emplace_back(light);
-}
-
 void SwLighting::System::selectActiveLights(
     const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount
 ) const {
     const std::vector<AssetLight>& assetLights = mResources.mAssetLights;
-    const std::vector<SwLight>& globalLights = mResources.mGlobalLights;
 
     // Score every light by its perceived brightness at the camera, then keep the brightest MAX_ACTIVE_LIGHTS.
     std::vector<std::pair<float, std::uint32_t>> scored;
-    scored.reserve(assetLights.size() + globalLights.size());
+    scored.reserve(assetLights.size());
 
     auto scoreLight = [&](const SwLight::Params& params, const glm::vec3& worldPos, std::uint32_t index) {
         float score;
@@ -101,9 +80,6 @@ void SwLighting::System::selectActiveLights(
     const std::uint32_t assetCount = static_cast<std::uint32_t>(assetLights.size());
     for (std::uint32_t i = 0; i < assetCount; i++) {
         scoreLight(assetLights[i].mLight->getParams(), assetLights[i].mWorldPosition, i);
-    }
-    for (std::uint32_t i = 0; i < globalLights.size(); i++) {
-        scoreLight(globalLights[i].getParams(), globalLights[i].getPosition(), assetCount + i);
     }
 
     outCount = std::min<std::uint32_t>(static_cast<std::uint32_t>(scored.size()), SwLight::MAX_ACTIVE_LIGHTS);
@@ -139,7 +115,6 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
     selectActiveLights(cameraPos, mResources.mActiveLightIndices, mResources.mActiveLightCount);
 
     const std::vector<AssetLight>& assetLights = mResources.mAssetLights;
-    const std::vector<SwLight>& globalLights = mResources.mGlobalLights;
 
     mResources.mLightViewProj.fill(glm::mat4(1.f));
     mResources.mSpotShadowCount = 0;
@@ -170,22 +145,16 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
         mResources.mLightViewProj[slot] = computeLightMatrix(params, worldPos, worldDir);
     };
 
-    const std::uint32_t assetCount = static_cast<std::uint32_t>(assetLights.size());
     for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
         const std::uint32_t lightIndex = mResources.mActiveLightIndices[slot];
-        if (lightIndex < assetCount) {
-            const AssetLight& light = assetLights[lightIndex];
-            processLight(slot, light.mLight->getParams(), light.mWorldPosition, light.mWorldDirection);
-        } else {
-            const SwLight& light = globalLights[lightIndex - assetCount];
-            processLight(slot, light.getParams(), light.getPosition(), light.getDirection());
-        }
+        const AssetLight& light = assetLights[lightIndex];
+        processLight(slot, light.mLight->getParams(), light.mWorldPosition, light.mWorldDirection);
     }
 }
 
 std::vector<SwLight::Data> SwLighting::System::collectLightData() const {
     std::vector<SwLight::Data> out;
-    out.reserve(mResources.mAssetLights.size() + mResources.mGlobalLights.size());
+    out.reserve(mResources.mAssetLights.size());
     for (const AssetLight& light : mResources.mAssetLights) {
         out.emplace_back(light.mLight->toData(light.mNodeTransformIndex, light.mInstanceIndex));
     }
