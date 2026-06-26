@@ -73,7 +73,7 @@ public:
 
     SwSampler(vk::raii::Sampler);
 
-    inline vk::Sampler getRawSampler() { return *mSampler; }
+    inline vk::Sampler getHandle() { return *mSampler; }
 };
 
 class SwSamplerFactory {

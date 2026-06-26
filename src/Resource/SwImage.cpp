@@ -24,13 +24,13 @@ void SwImage::emitTransition(vk::CommandBuffer cmd, SwDependency::ImageDepType i
 }
 
 void SwImage::copyFrom(vk::CommandBuffer cmd, SwImage& source) {
-    copyFrom(cmd, source.getRawImage(), SwHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
+    copyFrom(cmd, source.getHandle(), SwHelper::extent3dTo2d(source.getExtent()), vk::ImageAspectFlagBits::eColor);
 }
 
 vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(vk::AttachmentLoadOp loadOp, vk::AttachmentStoreOp storeOp) {
     vk::RenderingAttachmentInfo renderingAttachment{};
     renderingAttachment.pNext = nullptr;
-    renderingAttachment.imageView = this->getRawMainImageView();
+    renderingAttachment.imageView = this->getMainImageViewHandle();
     renderingAttachment.imageLayout = mCurrentLayout;
     renderingAttachment.loadOp = loadOp;
     renderingAttachment.storeOp = storeOp;
@@ -43,7 +43,7 @@ vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(
 ) {
     vk::RenderingAttachmentInfo renderingAttachment{};
     renderingAttachment.pNext = nullptr;
-    renderingAttachment.imageView = this->getRawOtherImageView(otherImageViewIndex);
+    renderingAttachment.imageView = this->getOtherImageViewHandle(otherImageViewIndex);
     renderingAttachment.imageLayout = mCurrentLayout;
     renderingAttachment.loadOp = loadOp;
     renderingAttachment.storeOp = storeOp;
@@ -611,7 +611,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
             copyRegions.emplace_back(copyRegion);
         }
 
-        cmd.copyBufferToImage(sImageStaging.getRawBuffer(), image.getRawImage(), vk::ImageLayout::eTransferDstOptimal, copyRegions);
+        cmd.copyBufferToImage(sImageStaging.getHandle(), image.getHandle(), vk::ImageLayout::eTransferDstOptimal, copyRegions);
 
         if (image.isMipmapped()) image.generateMipmaps(cmd);
 
@@ -698,8 +698,8 @@ SwColorImage2D SwImageFactory::createColorImage2D(
         imageConstructionInfo.mMipmapped
     );
 
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawImage(), name.c_str());
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawMainImageView(), (name.append("MainView")).c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getHandle(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getMainImageViewHandle(), (name.append("MainView")).c_str());
 
     if (data != nullptr) fillImageData(SwImageType::SwColorImage2D, data, newImage);
     return newImage;
@@ -724,8 +724,8 @@ SwDepthImage2D SwImageFactory::createDepthImage2D(
         imageConstructionInfo.mMipmapped
     );
 
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawImage(), name.c_str());
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawMainImageView(), (name.append("MainView")).c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getHandle(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getMainImageViewHandle(), (name.append("MainView")).c_str());
 
     if (data != nullptr) fillImageData(SwImageType::SwDepthImage2D, data, newImage);
     return newImage;
@@ -750,8 +750,8 @@ SwColorImageCubemap SwImageFactory::createColorImageCubemap(
         imageConstructionInfo.mMipmapped
     );
 
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawImage(), name.c_str());
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawMainImageView(), (name.append("MainView")).c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getHandle(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getMainImageViewHandle(), (name.append("MainView")).c_str());
 
     if (data != nullptr) fillImageData(SwImageType::SwColorImageCubemap, data, newImage);
     return newImage;
@@ -776,8 +776,8 @@ SwDepthImageCubemap SwImageFactory::createDepthImageCubemap(
         imageConstructionInfo.mMipmapped
     );
 
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawImage(), name.c_str());
-    SwRenderer::sRendererContext.labelResourceDebug(newImage.getRawMainImageView(), (name.append("MainView")).c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getHandle(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getMainImageViewHandle(), (name.append("MainView")).c_str());
 
     if (data != nullptr) fillImageData(SwImageType::SwDepthImageCubemap, data, newImage);
     return newImage;

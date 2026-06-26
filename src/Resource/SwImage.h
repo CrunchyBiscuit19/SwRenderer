@@ -57,9 +57,9 @@ public:
     inline vk::AccessFlags2 getCurrentAccess() { return mCurrentAccess; }
     inline void setCurrentAccess(vk::AccessFlags2 access) { mCurrentAccess = access; }
 
-    virtual vk::Image getRawImage() = 0;
-    virtual vk::ImageView getRawMainImageView() = 0;
-    virtual vk::ImageView getRawOtherImageView(std::uint32_t i) = 0;
+    virtual vk::Image getHandle() = 0;
+    virtual vk::ImageView getMainImageViewHandle() = 0;
+    virtual vk::ImageView getOtherImageViewHandle(std::uint32_t i) = 0;
     virtual vk::ClearValue getClearValue() = 0;
 
     SwImage(SwImage&&) noexcept = default;
@@ -85,9 +85,9 @@ public:
         std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
-    inline vk::Image getRawImage() override { return mImage; }
-    inline vk::ImageView getRawMainImageView() override { return *mMainImageView; }
-    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return *mOtherImageViews[i]; }
+    inline vk::Image getHandle() override { return mImage; }
+    inline vk::ImageView getMainImageViewHandle() override { return *mMainImageView; }
+    inline vk::ImageView getOtherImageViewHandle(std::uint32_t i) override { return *mOtherImageViews[i]; }
     inline vk::ClearValue getClearValue() override { return vk::ClearColorValue(); };
     inline SwSemaphore& getRenderedSemaphore() { return mRenderedSemaphore; }
 
@@ -138,9 +138,9 @@ public:
 
     virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
 
-    inline vk::Image getRawImage() override { return *mImage; }
-    inline vk::ImageView getRawMainImageView() override { return *mMainImageView; }
-    inline vk::ImageView getRawOtherImageView(std::uint32_t i) override { return *mOtherImageViews[i]; }
+    inline vk::Image getHandle() override { return *mImage; }
+    inline vk::ImageView getMainImageViewHandle() override { return *mMainImageView; }
+    inline vk::ImageView getOtherImageViewHandle(std::uint32_t i) override { return *mOtherImageViews[i]; }
     inline vk::ClearValue getClearValue() override { return mClearValue; };
     inline bool isMipmapped() const { return mMipmapped; }
     inline bool isReady() const { return mAllocation != nullptr; }

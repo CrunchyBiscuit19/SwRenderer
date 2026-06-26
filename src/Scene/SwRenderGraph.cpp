@@ -338,19 +338,19 @@ void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
     for (SwPass* pass : mSortedPasses) {
         for (const SwDependency* deps : {&pass->getStaticDeps(), &pass->getDynamicDeps()}) {
             for (auto& dep : deps->mReadImages) {
-                dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);
+                dep.mImage->emitTransition(commandBuffer.getHandle(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);
             }
             for (auto& dep : deps->mWriteImages) {
-                dep.mImage->emitTransition(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);
+                dep.mImage->emitTransition(commandBuffer.getHandle(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);
             }
             for (auto& dep : deps->mReadBuffers) {
-                dep.mBuffer->emitBarrier(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess);
+                dep.mBuffer->emitBarrier(commandBuffer.getHandle(), dep.mDesc.mStage, dep.mDesc.mAccess);
             }
             for (auto& dep : deps->mWriteBuffers) {
-                dep.mBuffer->emitBarrier(commandBuffer.getRawCommandBuffer(), dep.mDesc.mStage, dep.mDesc.mAccess);
+                dep.mBuffer->emitBarrier(commandBuffer.getHandle(), dep.mDesc.mStage, dep.mDesc.mAccess);
             }
         }
-        pass->execute(commandBuffer.getRawCommandBuffer());
+        pass->execute(commandBuffer.getHandle());
     }
     
     if (mExportStream.has_value()) {

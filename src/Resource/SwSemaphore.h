@@ -13,7 +13,7 @@ public:
 
     SwSemaphore(vk::raii::Semaphore);
 
-    inline vk::Semaphore getRawSemaphore() { return *mSemaphore; }
+    inline vk::Semaphore getHandle() { return *mSemaphore; }
 
     vk::SemaphoreSubmitInfo generateSubmitInfo(vk::PipelineStageFlags2 stageMask) const;
 };

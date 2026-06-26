@@ -20,13 +20,13 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
 
         cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getRawPipeline());
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
-        cmd.bindIndexBuffer(scene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
+        cmd.bindIndexBuffer(scene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
         cmd.bindDescriptorSets(
             pipeline.getBindPoint(),
             pipeline.getRawLayout(),
             0,
-            {scene.getSceneMaterialResourcesDescriptorSet().getRawSet(), scene.getIBLSystem().getConsumeDescriptorSet().getRawSet(),
-             scene.getLightingSystem().getSpotShadowMapsDescriptorSet().getRawSet()},
+            {scene.getSceneMaterialResourcesDescriptorSet().getHandle(), scene.getIBLSystem().getConsumeDescriptorSet().getHandle(),
+             scene.getLightingSystem().getSpotShadowMapsDescriptorSet().getHandle()},
             nullptr
         );
 

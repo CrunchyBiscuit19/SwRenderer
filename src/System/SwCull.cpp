@@ -18,27 +18,27 @@ void SwCull::System::initializeOtherPasses() {
     staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
 
     mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
 
-        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getRawBuffer(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneDrawRisIndicesBuffer().getRawBuffer(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneDrawRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
         mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
-        cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getHandle(), 0, vk::WholeSize, 0);
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
             if (batch.getRcs().empty()) {
                 continue;
             }
 
-            cmd.fillBuffer(batch.getEarlyRcsCount().getRawBuffer(), 0, vk::WholeSize, 0);
-            cmd.fillBuffer(batch.getEarlyRcsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
-            cmd.fillBuffer(batch.getLateRcsCount().getRawBuffer(), 0, vk::WholeSize, 0);
-            cmd.fillBuffer(batch.getLateRcsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getEarlyRcsCount().getHandle(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getEarlyRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getLateRcsCount().getHandle(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(batch.getLateRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
 
             const std::uint32_t rcsCount = static_cast<std::uint32_t>(batch.getRcs().size());
             mResources.mResetPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
             mResources.mResetPushConstants.mRcsLimit = rcsCount;
-            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayouthandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
@@ -52,7 +52,7 @@ void SwCull::System::initializeOtherPasses() {
     mScene.insertPass(SwPass::Type::CullPublishCount, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         const vk::BufferCopy region{0, 0, sizeof(std::uint32_t)};
         cmd.copyBuffer(
-            SwRenderer::sRendererContext.mStats->mRisScratchCount.getRawBuffer(), SwRenderer::sRendererContext.mStats->mRisPublishedCount.getRawBuffer(), region
+            SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), SwRenderer::sRendererContext.mStats->mRisPublishedCount.getHandle(), region
         );
     });
     staticDeps.clear();
@@ -77,7 +77,7 @@ void SwCull::System::initializeEarlyPasses() {
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
     mScene.insertPass(SwPass::Type::CullEarlyWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
 
         // Only opaque has an early geometry pass; masked/transparent are handled entirely in the late pass.
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
@@ -87,9 +87,9 @@ void SwCull::System::initializeEarlyPasses() {
 
             cmd.bindDescriptorSets(
                 mResources.mWorkPipelineBundle.getBindPoint(),
-                mResources.mWorkPipelineBundle.getRawLayout(),
+                mResources.mWorkPipelineBundle.getLayouthandle(),
                 0,
-                mResources.mWorkDescriptorSet.getRawSet(),
+                mResources.mWorkDescriptorSet.getHandle(),
                 nullptr
             );
 
@@ -97,7 +97,7 @@ void SwCull::System::initializeEarlyPasses() {
             mResources.mWorkPushConstants.mRisBuffer = batch.getRisBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
             mResources.mWorkPushConstants.mPhase = SwCull::Phase::Early;
-            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayouthandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
@@ -106,7 +106,7 @@ void SwCull::System::initializeEarlyPasses() {
 
     // EarlyCompact
     mScene.insertPass(SwPass::Type::CullEarlyCompact, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getPipelineHandle());
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
             if (batch.getRcs().empty()) {
@@ -118,7 +118,7 @@ void SwCull::System::initializeEarlyPasses() {
             mResources.mCompactPushConstants.mPostRcsCount = batch.getEarlyRcsCount().getDeviceAddress().value();
             mResources.mCompactPushConstants.mPreRcsLimit = batch.getRcs().size();
             cmd.pushConstants<SwCull::CompactPC>(
-                mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
+                mResources.mCompactPipelineBundle.getLayouthandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
             );
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRcs().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
@@ -135,7 +135,7 @@ void SwCull::System::initializeLatePasses() {
     // restarts its per-rc fill at 0. This keeps the late draw list to just the newly-visible delta
     // (rather than re-emitting everything the early pass already drew).
     mScene.insertPass(SwPass::Type::CullLateReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
             if (batch.getRcs().empty()) {
@@ -145,7 +145,7 @@ void SwCull::System::initializeLatePasses() {
             const std::uint32_t rcsCount = static_cast<std::uint32_t>(batch.getRcs().size());
             mResources.mResetPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
             mResources.mResetPushConstants.mRcsLimit = rcsCount;
-            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getRawLayout(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayouthandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
@@ -158,19 +158,19 @@ void SwCull::System::initializeLatePasses() {
     staticDeps.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
 
     mScene.insertPass(SwPass::Type::CullPrepOcclusion, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mPrepOcclusionPipelineBundle.getBindPoint(), mResources.mPrepOcclusionPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mPrepOcclusionPipelineBundle.getBindPoint(), mResources.mPrepOcclusionPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
             mResources.mPrepOcclusionPipelineBundle.getBindPoint(),
-            mResources.mPrepOcclusionPipelineBundle.getRawLayout(),
+            mResources.mPrepOcclusionPipelineBundle.getLayouthandle(),
             0,
-            mResources.mPrepOcclusionDescriptorSet.getRawSet(),
+            mResources.mPrepOcclusionDescriptorSet.getHandle(),
             nullptr
         );
 
         mResources.mPrepOcclusionPushConstants.mLevel = -1;
         cmd.pushConstants<SwCull::PrepOcclusionPC>(
-            mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+            mResources.mPrepOcclusionPipelineBundle.getLayouthandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
         );
 
         cmd.dispatch(
@@ -186,7 +186,7 @@ void SwCull::System::initializeLatePasses() {
         for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
             mResources.mPrepOcclusionPushConstants.mLevel = i;
             cmd.pushConstants<SwCull::PrepOcclusionPC>(
-                mResources.mPrepOcclusionPipelineBundle.getRawLayout(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+                mResources.mPrepOcclusionPipelineBundle.getLayouthandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
             );
 
             const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidImage.getExtent().width >> (i + 1));
@@ -214,7 +214,7 @@ void SwCull::System::initializeLatePasses() {
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
     mScene.insertPass(SwPass::Type::CullLateWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
 
         // Opaque batches are partially drawn by the early geometry pass, so the late pass only emits
         // the newly-visible delta (mHasEarlyDraw = 1). Masked/transparent have no early geometry pass
@@ -228,9 +228,9 @@ void SwCull::System::initializeLatePasses() {
 
                 cmd.bindDescriptorSets(
                     mResources.mWorkPipelineBundle.getBindPoint(),
-                    mResources.mWorkPipelineBundle.getRawLayout(),
+                    mResources.mWorkPipelineBundle.getLayouthandle(),
                     0,
-                    mResources.mWorkDescriptorSet.getRawSet(),
+                    mResources.mWorkDescriptorSet.getHandle(),
                     nullptr
                 );
 
@@ -239,7 +239,7 @@ void SwCull::System::initializeLatePasses() {
                 mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
                 mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
                 mResources.mWorkPushConstants.mHasEarlyDraw = hasEarlyDraw;
-                cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getRawLayout(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+                cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayouthandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
                 cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
             }
@@ -252,7 +252,7 @@ void SwCull::System::initializeLatePasses() {
 
     // LateCompact
     mScene.insertPass(SwPass::Type::CullLateCompact, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getPipelineHandle());
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
             if (batch.getRcs().empty()) {
@@ -264,7 +264,7 @@ void SwCull::System::initializeLatePasses() {
             mResources.mCompactPushConstants.mPostRcsCount = batch.getLateRcsCount().getDeviceAddress().value();
             mResources.mCompactPushConstants.mPreRcsLimit = batch.getRcs().size();
             cmd.pushConstants<SwCull::CompactPC>(
-                mResources.mCompactPipelineBundle.getRawLayout(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
+                mResources.mCompactPipelineBundle.getLayouthandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
             );
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRcs().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
@@ -278,13 +278,13 @@ void SwCull::System::initializeResources() {
     mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("CullResetPipelineLayout", nullptr, SwCull::ResetPC::getRange());
     SwShader resetShader = SwShaderFactory::createShader("CullResetShaderModule", CULL_RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mResetPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("CullResetPipeline", {resetShader.getRawModule(), mResources.mResetPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("CullResetPipeline", {resetShader.getHandle(), mResources.mResetPipelineLayout.getHandle()});
 
     // Compact*
     mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout("CullCompactPipelineLayout", nullptr, SwCull::CompactPC::getRange());
     SwShader compactShader = SwShaderFactory::createShader("CullCompactShaderModule", CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mCompactPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("CullCompactPipeline", {compactShader.getRawModule(), mResources.mCompactPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("CullCompactPipeline", {compactShader.getHandle(), mResources.mCompactPipelineLayout.getHandle()});
 
     // PrepOcclusion
     mResources.mPrepOcclusionDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -309,14 +309,14 @@ void SwCull::System::initializeResources() {
 
     mResources.mPrepOcclusionDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("CullPrepOcclusionDescriptorSet", mResources.mPrepOcclusionDescriptorLayout);
-    mResources.mPrepOcclusionDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getRawSampler());
+    mResources.mPrepOcclusionDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getHandle());
 
     mResources.mPrepOcclusionPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "CullPrepOcclusionPipelineLayout", mResources.mPrepOcclusionDescriptorLayout.getRawLayout(), SwCull::PrepOcclusionPC::getRange()
+        "CullPrepOcclusionPipelineLayout", mResources.mPrepOcclusionDescriptorLayout.getHandle(), SwCull::PrepOcclusionPC::getRange()
     );
     SwShader depthPyramidShader = SwShaderFactory::createShader("CullPrepOcclusionShaderModule", CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mPrepOcclusionPipelineBundle = SwComputePipelineFactory::createComputePipeline(
-        "CullPrepOcclusionPipeline", {depthPyramidShader.getRawModule(), mResources.mPrepOcclusionPipelineLayout.getRawLayout()}
+        "CullPrepOcclusionPipeline", {depthPyramidShader.getHandle(), mResources.mPrepOcclusionPipelineLayout.getHandle()}
     );
 
     // Work*
@@ -336,13 +336,13 @@ void SwCull::System::initializeResources() {
     workSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
     workSamplerInfo.setMaxLod(VK_LOD_CLAMP_NONE);
     mResources.mWorkDepthPyramidSampler = SwSamplerFactory::createSampler("CullWorkDepthPyramidSampler", workSamplerInfo);
-    mResources.mWorkDescriptorSet.writeSampler(1, mResources.mWorkDepthPyramidSampler.getRawSampler());
+    mResources.mWorkDescriptorSet.writeSampler(1, mResources.mWorkDepthPyramidSampler.getHandle());
 
     mResources.mWorkPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("CullWorkPipelineLayout", mResources.mWorkDescriptorLayout.getRawLayout(), SwCull::WorkPC::getRange());
+        SwPipelineFactory::createPipelineLayout("CullWorkPipelineLayout", mResources.mWorkDescriptorLayout.getHandle(), SwCull::WorkPC::getRange());
     SwShader workShader = SwShaderFactory::createShader("CullWorkShaderModule", CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mWorkPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("CullWorkPipeline", {workShader.getRawModule(), mResources.mWorkPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("CullWorkPipeline", {workShader.getHandle(), mResources.mWorkPipelineLayout.getHandle()});
 
     reInitializeOnResize();
 }
@@ -483,15 +483,15 @@ void SwCull::System::reInitializeOnResize() {
     });
 
     mResources.mPrepOcclusionDescriptorSet.writeImage(
-        0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
+        0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     for (std::uint32_t i = 0; i < CULL_MAX_DEPTH_PYRAMID_LEVELS; i++) {
         const std::uint32_t viewIndex = std::min(i, mResources.mDepthPyramidLevels - 1); // Write over later slots with the last level view
         mResources.mPrepOcclusionDescriptorSet.writeImage(
-            1, mResources.mDepthPyramidImage.getRawOtherImageView(viewIndex), nullptr, vk::ImageLayout::eGeneral, i
+            1, mResources.mDepthPyramidImage.getOtherImageViewHandle(viewIndex), nullptr, vk::ImageLayout::eGeneral, i
         );
         mResources.mPrepOcclusionDescriptorSet.writeImage(
-            2, mResources.mDepthPyramidImage.getRawOtherImageView(viewIndex), nullptr, vk::ImageLayout::eGeneral, i
+            2, mResources.mDepthPyramidImage.getOtherImageViewHandle(viewIndex), nullptr, vk::ImageLayout::eGeneral, i
         );
     }
     mResources.mPrepOcclusionDescriptorSet.pushWrites();
@@ -502,7 +502,7 @@ void SwCull::System::reInitializeOnResize() {
         glm::vec2(depthPyramidExtent.width / static_cast<float>(depthImageExtent.width), depthPyramidExtent.height / static_cast<float>(depthImageExtent.height));
 
     // Work*
-    mResources.mWorkDescriptorSet.writeImage(0, mResources.mDepthPyramidImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mWorkDescriptorSet.writeImage(0, mResources.mDepthPyramidImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mWorkDescriptorSet.pushWrites();
     vk::Extent2D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D();
     mResources.mWorkPushConstants.mDrawExtents = glm::vec2(drawExtent.width, drawExtent.height);

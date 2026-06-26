@@ -26,6 +26,6 @@ SwShader SwShaderFactory::createShader(std::string name, const std::filesystem::
     shaderCreateInfo.pCode = buffer.data();
 
     SwShader shader(SwRenderer::sRendererContext.mDevice->createShaderModule(shaderCreateInfo), shaderStageFlag);
-    SwRenderer::sRendererContext.labelResourceDebug(shader.getRawModule(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(shader.getHandle(), name.c_str());
     return shader;
 }

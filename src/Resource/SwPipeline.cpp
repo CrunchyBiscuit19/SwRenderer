@@ -25,7 +25,7 @@ SwPipelineLayout SwPipelineFactory::createPipelineLayout(
 ) {
     vk::PipelineLayoutCreateInfo pipelineLayoutCreateInfo({}, layouts.size(), layouts.data(), pushConstantRanges.size(), pushConstantRanges.data());
     SwPipelineLayout pipelineLayout(vk::raii::PipelineLayout(*SwRenderer::sRendererContext.mDevice, pipelineLayoutCreateInfo));
-    SwRenderer::sRendererContext.labelResourceDebug(pipelineLayout.getRawLayout(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(pipelineLayout.getHandle(), name.c_str());
     return pipelineLayout;
 }
 
@@ -85,7 +85,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(std::
     SwGraphicsPipelineBundle pipelineBundle(
         vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createGraphicsPipeline(nullptr, graphicsPipelineInfo)), options.mLayout
     );
-    SwRenderer::sRendererContext.labelResourceDebug(pipelineBundle.getRawPipeline(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(pipelineBundle.getPipelineHandle(), name.c_str());
     return pipelineBundle;
 }
 
@@ -201,7 +201,7 @@ SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(std::str
     SwComputePipelineBundle pipelineBundle(
         vk::raii::Pipeline(SwRenderer::sRendererContext.mDevice->createComputePipeline(nullptr, computePipelineInfo)), options.mLayout
     );
-    SwRenderer::sRendererContext.labelResourceDebug(pipelineBundle.getRawPipeline(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(pipelineBundle.getPipelineHandle(), name.c_str());
     return pipelineBundle;
 }
 

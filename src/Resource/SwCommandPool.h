@@ -13,7 +13,7 @@ public:
 
     SwCommandPool(vk::raii::CommandPool);
 
-    inline vk::CommandPool getRawCommandPool() { return *mCommandPool; }
+    inline vk::CommandPool getHandle() { return *mCommandPool; }
 };
 
 class SwCommandPoolFactory {

@@ -39,7 +39,8 @@ private:
 
     std::uint32_t mId{0};
     Params mParams;
-    glm::vec3 mPosition{0.f};  
+    glm::vec3 mPosition{0.f};
+    glm::vec3 mDirection{0.f, 0.f, -1.f};  // light forward (glTF local -Z convention) in world space
 
 public:
     static constexpr std::uint32_t LIGHTS_STAGING_BUFFER_SIZE{1 << 16};
@@ -49,8 +50,12 @@ public:
     explicit SwLight(Params params);
 
     inline Params& getParams() { return mParams; }
+    inline const Params& getParams() const { return mParams; }
     inline std::uint32_t getId() const { return mId; }
     inline glm::vec3& getPosition() { return mPosition; }
+    inline const glm::vec3& getPosition() const { return mPosition; }
+    inline glm::vec3& getDirection() { return mDirection; }
+    inline const glm::vec3& getDirection() const { return mDirection; }
 
     Data toData(std::uint32_t nodeTransformIndex, std::uint32_t instanceIndex) const;
 

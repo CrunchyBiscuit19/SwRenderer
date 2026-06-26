@@ -18,10 +18,10 @@ void SwPostProcess::System::initializeResources() {
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("TonemapDescriptorSet", mResources.mTonemapDescriptorLayout);
 
     mResources.mTonemapPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("TonemapPipelineLayout", mResources.mTonemapDescriptorLayout.getRawLayout(), SwPostProcess::TonemapPC::getRange());
+        SwPipelineFactory::createPipelineLayout("TonemapPipelineLayout", mResources.mTonemapDescriptorLayout.getHandle(), SwPostProcess::TonemapPC::getRange());
     SwShader tonemapShader = SwShaderFactory::createShader("TonemapShaderModule", TONEMAP_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mTonemapPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("TonemapPipeline", {tonemapShader.getRawModule(), mResources.mTonemapPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("TonemapPipeline", {tonemapShader.getHandle(), mResources.mTonemapPipelineLayout.getHandle()});
 
     // --- FXAA: binding 0 the draw image sampled, binding 1 a bilinear sampler, binding 2 the same image as storage (in-place resolve). ---
     mResources.mFXAADescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -38,13 +38,13 @@ void SwPostProcess::System::initializeResources() {
     samplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
     samplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
     mResources.mFXAASampler = SwSamplerFactory::createSampler("FXAASampler", samplerInfo);
-    mResources.mFXAADescriptorSet.writeSampler(1, mResources.mFXAASampler.getRawSampler());
+    mResources.mFXAADescriptorSet.writeSampler(1, mResources.mFXAASampler.getHandle());
 
     mResources.mFXAAPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("FXAAPipelineLayout", mResources.mFXAADescriptorLayout.getRawLayout(), SwPostProcess::FXAAPC::getRange());
+        SwPipelineFactory::createPipelineLayout("FXAAPipelineLayout", mResources.mFXAADescriptorLayout.getHandle(), SwPostProcess::FXAAPC::getRange());
     SwShader fxaaShader = SwShaderFactory::createShader("FXAAShaderModule", FXAA_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mFXAAPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("FXAAPipeline", {fxaaShader.getRawModule(), mResources.mFXAAPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("FXAAPipeline", {fxaaShader.getHandle(), mResources.mFXAAPipelineLayout.getHandle()});
 
     reInitializeOnResize();
 }
@@ -54,15 +54,15 @@ void SwPostProcess::System::initializePasses() {
 
     staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ComputeStorageReadWrite);
     mScene.insertPass(SwPass::Type::Tonemap, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getRawLayout(), 0, mResources.mTonemapDescriptorSet.getRawSet(),
+            mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getLayouthandle(), 0, mResources.mTonemapDescriptorSet.getHandle(),
             nullptr
         );
 
         cmd.pushConstants<SwPostProcess::TonemapPC>(
-            mResources.mTonemapPipelineBundle.getRawLayout(), SwPostProcess::TonemapPC::sStages, 0, mResources.mTonemapPushConstants
+            mResources.mTonemapPipelineBundle.getLayouthandle(), SwPostProcess::TonemapPC::sStages, 0, mResources.mTonemapPushConstants
         );
 
         vk::Extent3D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
@@ -76,14 +76,14 @@ void SwPostProcess::System::initializePasses() {
 
     staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ComputeStorageReadWrite);
     mScene.insertPass(SwPass::Type::FXAA, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getRawLayout(), 0, mResources.mFXAADescriptorSet.getRawSet(), nullptr
+            mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getLayouthandle(), 0, mResources.mFXAADescriptorSet.getHandle(), nullptr
         );
 
         cmd.pushConstants<SwPostProcess::FXAAPC>(
-            mResources.mFXAAPipelineBundle.getRawLayout(), SwPostProcess::FXAAPC::sStages, 0, mResources.mFXAAPushConstants
+            mResources.mFXAAPipelineBundle.getLayouthandle(), SwPostProcess::FXAAPC::sStages, 0, mResources.mFXAAPushConstants
         );
 
         vk::Extent3D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
@@ -98,7 +98,7 @@ void SwPostProcess::System::initializePasses() {
 
 void SwPostProcess::System::reInitializeOnResize() {
     // The draw image is recreated on resize, so rebind every view onto it and refresh the texel size FXAA samples with.
-    vk::ImageView drawImageView = SwRenderer::sRendererContext.mSwapchain->getDrawImage().getRawMainImageView();
+    vk::ImageView drawImageView = SwRenderer::sRendererContext.mSwapchain->getDrawImage().getMainImageViewHandle();
 
     mResources.mTonemapDescriptorSet.writeImage(0, drawImageView, nullptr, vk::ImageLayout::eGeneral);
     mResources.mTonemapDescriptorSet.pushWrites();

@@ -12,6 +12,6 @@ SwCommandPool SwCommandPoolFactory::createCommandPool(std::string name, vk::Comm
     commandPoolCreateInfo.pNext = nullptr;
     commandPoolCreateInfo.flags = commandPoolCreateFlags;
     SwCommandPool commandPool(SwRenderer::sRendererContext.mDevice->createCommandPool(commandPoolCreateInfo));
-    SwRenderer::sRendererContext.labelResourceDebug(commandPool.getRawCommandPool(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(commandPool.getHandle(), name.c_str());
     return commandPool;
 }

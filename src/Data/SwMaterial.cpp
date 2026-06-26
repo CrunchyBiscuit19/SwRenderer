@@ -96,8 +96,8 @@ SwMaterial::SwMaterial(
 
 void SwMaterial::init() {
     const std::array<vk::DescriptorSetLayout, 3> geometrySetLayouts{
-        SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwIBL::Resources::sConsumeDescriptorLayout.getRawLayout(),
-        SwLighting::Resources::sSpotShadowConsumeDescriptorLayout.getRawLayout()
+        SwMaterialResources::sMaterialResourcesDescriptorLayout.getHandle(), SwIBL::Resources::sConsumeDescriptorLayout.getHandle(),
+        SwLighting::Resources::sSpotShadowConsumeDescriptorLayout.getHandle()
     };
     sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
     sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryTransparentPipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
@@ -139,7 +139,7 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
     rvlBlendState.alphaBlendOp = vk::BlendOp::eAdd;
 
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions graphicsPipelineOptions;
-    graphicsPipelineOptions.mVertexShader = sVertexShader.getRawModule();
+    graphicsPipelineOptions.mVertexShader = sVertexShader.getHandle();
     graphicsPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     graphicsPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     graphicsPipelineOptions.mCullMode = cullMode;
@@ -154,10 +154,10 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             // Write depth normally with Reverse-Z test. Both share one fragment module; the masked
             // entry point adds the alpha-cutout discard (and drops early depth-stencil) while the
             // opaque entry point keeps [earlydepthstencil].
-            graphicsPipelineOptions.mFragmentShader = sOpaqueMaskedFragmentShader.getRawModule();
+            graphicsPipelineOptions.mFragmentShader = sOpaqueMaskedFragmentShader.getHandle();
             graphicsPipelineOptions.mFragmentEntryPoint =
                 materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask ? std::string(GEOMETRY_MASKED_ENTRY_POINT) : std::string(GEOMETRY_OPAQUE_ENTRY_POINT);
-            graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getRawLayout();
+            graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getHandle();
             graphicsPipelineOptions.mColorAttachments =
                 std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
             graphicsPipelineOptions.mDepthWriteEnabled = true;
@@ -165,8 +165,8 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             break;
         case fastgltf::AlphaMode::Blend:
             // Tests against pre-pass depth for occlusion; never writes depth.
-            graphicsPipelineOptions.mFragmentShader = sTransparentFragmentShader.getRawModule();
-            graphicsPipelineOptions.mLayout = sTransparentPipelineLayout.getRawLayout();
+            graphicsPipelineOptions.mFragmentShader = sTransparentFragmentShader.getHandle();
+            graphicsPipelineOptions.mLayout = sTransparentPipelineLayout.getHandle();
             graphicsPipelineOptions.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{
                 {SwSwapchain::DRAW_FORMAT, accumBlendState},
                 {SwWBOIT::RVL_FORMAT, rvlBlendState},

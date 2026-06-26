@@ -161,7 +161,7 @@ void SwSwapchain::resize() {
 
 void SwSwapchain::acquireNextImage(uint64_t timeout) {
     try {
-        mSwapchainIndex = mSwapchain.acquireNextImage(timeout, getCurrentFrame().getAvailableSemaphore().getRawSemaphore(), nullptr).value;
+        mSwapchainIndex = mSwapchain.acquireNextImage(timeout, getCurrentFrame().getAvailableSemaphore().getHandle(), nullptr).value;
     } catch (vk::OutOfDateKHRError& e) {
         mResizeRequested = true;
     }
@@ -183,7 +183,7 @@ void SwSwapchain::submit(
 }
 
 void SwSwapchain::present() {
-    vk::Semaphore renderSemaphore = getCurrentSwapchainImage().getRenderedSemaphore().getRawSemaphore();
+    vk::Semaphore renderSemaphore = getCurrentSwapchainImage().getRenderedSemaphore().getHandle();
     vk::PresentInfoKHR presentInfo = {};
     presentInfo.pNext = nullptr;
     presentInfo.pSwapchains = &(*mSwapchain);

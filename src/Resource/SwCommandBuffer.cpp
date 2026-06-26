@@ -26,7 +26,7 @@ vk::CommandBufferSubmitInfo SwCommandBuffer::generateSubmitInfo() {
 
 
 SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(std::string name, SwCommandPool& pool) {
-    return createCommandBuffer(std::move(name), pool.getRawCommandPool());
+    return createCommandBuffer(std::move(name), pool.getHandle());
 }
 
 SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(std::string name, vk::CommandPool pool) {
@@ -37,6 +37,6 @@ SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(std::string name, vk
     commandBufferAllocateInfo.level = vk::CommandBufferLevel::ePrimary;
 
     SwCommandBuffer commandBuffer(std::move(SwRenderer::sRendererContext.mDevice->allocateCommandBuffers(commandBufferAllocateInfo).front()));
-    SwRenderer::sRendererContext.labelResourceDebug(commandBuffer.getRawCommandBuffer(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(commandBuffer.getHandle(), name.c_str());
     return commandBuffer;
 }

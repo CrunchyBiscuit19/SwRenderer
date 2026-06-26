@@ -15,12 +15,12 @@ void SwImmSubmit::initialize() {
 }
 
 void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& function) {
-    SwRenderer::sRendererContext.mDevice->resetFences(mFence.getRawFence());
+    SwRenderer::sRendererContext.mDevice->resetFences(mFence.getHandle());
 
     mCommandBuffer.reset();
 
     mCommandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
-    function(mCommandBuffer.getRawCommandBuffer());
+    function(mCommandBuffer.getHandle());
     mCommandBuffer.end();
 
     vk::CommandBufferSubmitInfo commandBufferSubmitInfo = mCommandBuffer.generateSubmitInfo();
@@ -34,18 +34,18 @@ void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& 
     submitInfo.commandBufferInfoCount = 1;
     submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
 
-    SwRenderer::sRendererContext.mGraphicsQueue->submit2(submitInfo, mFence.getRawFence());
-    vk::Result result = SwRenderer::sRendererContext.mDevice->waitForFences(mFence.getRawFence(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
+    SwRenderer::sRendererContext.mGraphicsQueue->submit2(submitInfo, mFence.getHandle());
+    vk::Result result = SwRenderer::sRendererContext.mDevice->waitForFences(mFence.getHandle(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
 }
 
 void SwImmSubmit::queuedSubmit() {
-    SwRenderer::sRendererContext.mDevice->resetFences(mFence.getRawFence());
+    SwRenderer::sRendererContext.mDevice->resetFences(mFence.getHandle());
 
     mCommandBuffer.reset();
 
     mCommandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     for (auto& callback : mCallbacks) {
-        callback(mCommandBuffer.getRawCommandBuffer());
+        callback(mCommandBuffer.getHandle());
     }
     mCommandBuffer.end();
 
@@ -60,8 +60,8 @@ void SwImmSubmit::queuedSubmit() {
     submitInfo.commandBufferInfoCount = 1;
     submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
 
-    SwRenderer::sRendererContext.mGraphicsQueue->submit2(submitInfo, mFence.getRawFence());
-    vk::Result result = SwRenderer::sRendererContext.mDevice->waitForFences(mFence.getRawFence(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
+    SwRenderer::sRendererContext.mGraphicsQueue->submit2(submitInfo, mFence.getHandle());
+    vk::Result result = SwRenderer::sRendererContext.mDevice->waitForFences(mFence.getHandle(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
 
     mCallbacks.clear();
 }

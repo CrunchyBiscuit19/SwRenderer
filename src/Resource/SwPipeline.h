@@ -21,7 +21,7 @@ public:
     SwPipelineLayout(const SwPipelineLayout&) = delete;
     SwPipelineLayout& operator=(const SwPipelineLayout&) = delete;
 
-    inline vk::PipelineLayout getRawLayout() { return *mLayout; };
+    inline vk::PipelineLayout getHandle() { return *mLayout; };
 
     void destroy();
 };
@@ -48,9 +48,9 @@ public:
 
     inline std::uint32_t getID() { return mId; };
 
-    inline vk::Pipeline getRawPipeline() { return *mPipeline; };
+    inline vk::Pipeline getPipelineHandle() { return *mPipeline; };
 
-    inline vk::PipelineLayout getRawLayout() { return mLayout; };
+    inline vk::PipelineLayout getLayouthandle() { return mLayout; };
 };
 
 class SwGraphicsPipelineBundle : public SwPipelineBundle {

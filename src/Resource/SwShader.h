@@ -17,7 +17,7 @@ public:
 
     SwShader(vk::raii::ShaderModule, vk::ShaderStageFlagBits);
 
-    inline vk::ShaderModule getRawModule() { return *mModule; }
+    inline vk::ShaderModule getHandle() { return *mModule; }
 
     void destroy();
 };

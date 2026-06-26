@@ -30,6 +30,6 @@ void SwSamplerFactory::cleanup() { SwSampler::sDefaultSampler = SwSampler{}; }
 
 SwSampler SwSamplerFactory::createSampler(std::string name, vk::SamplerCreateInfo samplerCreateInfo) {
     SwSampler sampler(SwRenderer::sRendererContext.mDevice->createSampler(samplerCreateInfo));
-    SwRenderer::sRendererContext.labelResourceDebug(sampler.getRawSampler(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(sampler.getHandle(), name.c_str());
     return sampler;
 }

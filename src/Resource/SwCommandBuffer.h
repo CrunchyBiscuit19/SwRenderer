@@ -15,7 +15,7 @@ public:
 
     SwCommandBuffer(vk::raii::CommandBuffer);
 
-    inline vk::CommandBuffer getRawCommandBuffer() { return *mCommandBuffer; }
+    inline vk::CommandBuffer getHandle() { return *mCommandBuffer; }
 
     void reset();
 

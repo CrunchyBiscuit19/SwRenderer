@@ -24,7 +24,7 @@ public:
     SwDescriptorLayout(const SwDescriptorLayout&) = delete;
     SwDescriptorLayout& operator=(const SwDescriptorLayout&) = delete;
 
-    inline vk::DescriptorSetLayout getRawLayout() { return *mLayout; };
+    inline vk::DescriptorSetLayout getHandle() { return *mLayout; };
     inline std::span<const vk::DescriptorSetLayoutBinding> getBindings() const { return mBindings; };
     inline bool usesBindless() const { return mUseBindless; };
 
@@ -57,7 +57,7 @@ public:
 
     void clearWrites();
 
-    inline vk::DescriptorSet getRawSet() { return *mSet; };
+    inline vk::DescriptorSet getHandle() { return *mSet; };
 
     SwDescriptorSet(SwDescriptorSet&&) noexcept = default;
     SwDescriptorSet& operator=(SwDescriptorSet&&) noexcept = default;
@@ -80,7 +80,7 @@ public:
 
     SwDescriptorPool(vk::raii::DescriptorPool);
 
-    inline vk::DescriptorPool getRawPool() { return *mPool; }
+    inline vk::DescriptorPool getHandle() { return *mPool; }
 
     inline void reset() { mPool.reset(); };
 };

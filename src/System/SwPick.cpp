@@ -22,7 +22,7 @@ void SwPick::System::initializeResources() {
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("PickReadbackDescriptorSet", mResources.mReadbackDescriptorLayout);
 
     mResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "PickDrawPipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getRawLayout(), SwPick::DrawPC::getRange()
+        "PickDrawPipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getHandle(), SwPick::DrawPC::getRange()
     );
 
     SwShader drawVertexShader = SwShaderFactory::createShader("PickDrawVertexShaderModule", PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
@@ -34,9 +34,9 @@ void SwPick::System::initializeResources() {
     noBlendState.blendEnable = VK_FALSE;
 
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
-    drawPipelineOptions.mVertexShader = drawVertexShader.getRawModule();
-    drawPipelineOptions.mFragmentShader = drawFragmentShader.getRawModule();
-    drawPipelineOptions.mLayout = mResources.mDrawPipelineLayout.getRawLayout();
+    drawPipelineOptions.mVertexShader = drawVertexShader.getHandle();
+    drawPipelineOptions.mFragmentShader = drawFragmentShader.getHandle();
+    drawPipelineOptions.mLayout = mResources.mDrawPipelineLayout.getHandle();
     drawPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     drawPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     drawPipelineOptions.mCullMode = vk::CullModeFlagBits::eBack;
@@ -58,11 +58,11 @@ void SwPick::System::initializeResources() {
     mResources.mDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawMaskedPipeline", drawPipelineOptions);
 
     mResources.mReadbackPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("PickReadbackPipelineLayout", mResources.mReadbackDescriptorLayout.getRawLayout(), SwPick::ReadbackPC::getRange());
+        SwPipelineFactory::createPipelineLayout("PickReadbackPipelineLayout", mResources.mReadbackDescriptorLayout.getHandle(), SwPick::ReadbackPC::getRange());
 
     SwShader workShader = SwShaderFactory::createShader("PickReadbackShaderModule", PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mReadbackPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {workShader.getRawModule(), mResources.mReadbackPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {workShader.getHandle(), mResources.mReadbackPipelineLayout.getHandle()});
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const bool* keyState = SDL_GetKeyboardState(nullptr);
@@ -97,19 +97,19 @@ void SwPick::System::initializePasses() {
 
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
 
-        cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
+        cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
         cmd.bindDescriptorSets(
             mResources.mDrawOpaqueTransparentPipelineBundle.getBindPoint(),  // Same across opaque / transparent / masked
-            mResources.mDrawPipelineLayout.getRawLayout(),
+            mResources.mDrawPipelineLayout.getHandle(),
             0,
-            mScene.getSceneMaterialResourcesDescriptorSet().getRawSet(),
+            mScene.getSceneMaterialResourcesDescriptorSet().getHandle(),
             nullptr
         );
 
         // Draw only the culled commands, mirroring what the geometry pass put in the shared depth image. 
         // Opaque / transparent share one pipeline, while masked uses the discard one.
         auto drawBatches = [&](auto&& batches, SwGraphicsPipelineBundle& pipeline, bool early) {
-            cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getRawPipeline());
+            cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
 
             for (auto& batch : batches) {
                 if (batch.getRcs().empty()) {
@@ -120,7 +120,7 @@ void SwPick::System::initializePasses() {
                 auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
 
                 mResources.mDrawPushConstants.mDrawRcsBuffer = rcBuffer.getDeviceAddress().value();
-                cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getRawLayout(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+                cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
                 cmd.drawIndexedIndirectCount(
                     rcBuffer.getRawBuffer(),
@@ -153,18 +153,18 @@ void SwPick::System::initializePasses() {
             glm::ivec2 mousePos = glm::ivec2(mousePosF);
             mResources.mReadbackBuffer.copyFromUnchecked(glm::value_ptr(mousePos), sizeof(SwPick::ReadbackData::mCoords));
 
-            cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getRawPipeline());
+            cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getPipelineHandle());
 
             cmd.bindDescriptorSets(
                 mResources.mReadbackPipelineBundle.getBindPoint(),
-                mResources.mReadbackPipelineBundle.getRawLayout(),
+                mResources.mReadbackPipelineBundle.getLayouthandle(),
                 0,
-                mResources.mReadbackDescriptorSet.getRawSet(),
+                mResources.mReadbackDescriptorSet.getHandle(),
                 nullptr
             );
 
             cmd.pushConstants<SwPick::ReadbackPC>(
-                mResources.mReadbackPipelineBundle.getRawLayout(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
+                mResources.mReadbackPipelineBundle.getLayouthandle(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
             );
 
             cmd.dispatch(1, 1, 1);
@@ -222,7 +222,7 @@ void SwPick::System::reInitializeOnResize() {
         mResources.mReadbackImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     });
 
-    mResources.mReadbackDescriptorSet.writeImage(0, mResources.mReadbackImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mReadbackDescriptorSet.writeImage(0, mResources.mReadbackImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mReadbackDescriptorSet.pushWrites();
 }
 

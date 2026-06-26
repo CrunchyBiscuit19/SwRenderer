@@ -21,6 +21,6 @@ SwSemaphore SwSemaphoreFactory::createSemaphore(std::string name) {
     vk::SemaphoreCreateInfo semaphoreCreateInfo = {};
     semaphoreCreateInfo.pNext = nullptr;
     SwSemaphore semaphore(SwRenderer::sRendererContext.mDevice->createSemaphore(semaphoreCreateInfo));
-    SwRenderer::sRendererContext.labelResourceDebug(semaphore.getRawSemaphore(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(semaphore.getHandle(), name.c_str());
     return semaphore;
 }

@@ -50,7 +50,7 @@ public:
 
     void* getMappedPtr();
     inline const std::string& getName() const { return mName; }
-    inline vk::Buffer getRawBuffer() { return *mBuffer; }
+    inline vk::Buffer getHandle() { return *mBuffer; }
     std::optional<vk::DeviceAddress> getDeviceAddress() { return mAddress; }
     inline vk::PipelineStageFlags2 getCurrentStage() { return mCurrentStage; }
     inline vk::AccessFlags2 getCurrentAccess() { return mCurrentAccess; }

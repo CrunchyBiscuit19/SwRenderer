@@ -104,8 +104,8 @@ void SwScene::initializeResources() {
                                                                                 : SwMaterialTexture::sDefaultWhiteTexture;
         mSceneMaterialResourcesDescriptorSet.writeImage(
             0,
-            seed.getImage().getRawMainImageView(),
-            seed.getSampler().getRawSampler(),
+            seed.getImage().getMainImageViewHandle(),
+            seed.getSampler().getHandle(),
             vk::ImageLayout::eShaderReadOnlyOptimal,
             i
         );
@@ -128,7 +128,7 @@ void SwScene::refresh() { refreshDynamicDependencies(); }
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(
-        commandBuffer.getRawCommandBuffer(), SwDependency::ImageDepType::PresentSrc
+        commandBuffer.getHandle(), SwDependency::ImageDepType::PresentSrc
     );
 }
 
@@ -180,7 +180,7 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
         for (auto& sceneVisibilityRisBuffer : mSceneVisibilityRisBuffers) {
-            cmd.fillBuffer(sceneVisibilityRisBuffer.getRawBuffer(), 0, vk::WholeSize, 0);  // Clear to 0 to mark all render items as not visible again.
+            cmd.fillBuffer(sceneVisibilityRisBuffer.getHandle(), 0, vk::WholeSize, 0);  // Clear to 0 to mark all render items as not visible again.
         }
     });
 }
@@ -243,13 +243,13 @@ void SwScene::regenerateRcsAndRis() {
 
             SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, RcsCopy, RisCopy](vk::CommandBuffer cmd) {
                 batch.getRcsStaging().copyFrom(cmd, batch.getRcs().data(), RcsCopy.size);
-                cmd.fillBuffer(batch.getInitialRcsBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+                cmd.fillBuffer(batch.getInitialRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
                 batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getInitialRcsBuffer().copyFrom(cmd, batch.getRcsStaging(), RcsCopy);
                 batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
                 batch.getRisStaging().copyFrom(cmd, batch.getRis().data(), RisCopy.size);
-                cmd.fillBuffer(batch.getRisBuffer().getRawBuffer(), 0, vk::WholeSize, 0);
+                cmd.fillBuffer(batch.getRisBuffer().getHandle(), 0, vk::WholeSize, 0);
                 batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
                 batch.getRisBuffer().copyFrom(cmd, batch.getRisStaging(), RisCopy);
                 batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
@@ -472,8 +472,8 @@ void SwScene::reloadSceneMaterialResourcesArray() {
             for (std::uint32_t i = 0; i < SwMaterial::NUM_PBR_IMAGES; i++) {
                 mSceneMaterialResourcesDescriptorSet.writeImage(
                     0,
-                    materialTextures[i]->getImage().getRawMainImageView(),
-                    materialTextures[i]->getSampler().getRawSampler(),
+                    materialTextures[i]->getImage().getMainImageViewHandle(),
+                    materialTextures[i]->getSampler().getHandle(),
                     vk::ImageLayout::eShaderReadOnlyOptimal,
                     materialTextureArrayIndex + i
                 );
@@ -550,8 +550,8 @@ void SwScene::draw() {
 
     SwFrame& currentFrame = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame();
 
-    auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getRawFence(), true, 1e9);
-    SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getRawFence());
+    auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, 1e9);
+    SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getHandle());
     SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
     SwRenderer::sRendererContext.mSwapchain->acquireNextImage(1e9);
 
@@ -607,7 +607,7 @@ void SwScene::draw() {
     vk::SemaphoreSubmitInfo signalInfo = SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().getRenderedSemaphore().generateSubmitInfo(
         vk::PipelineStageFlagBits2::eColorAttachmentOutput
     );
-    SwRenderer::sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getRawFence());
+    SwRenderer::sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getHandle());
     SwRenderer::sRendererContext.mSwapchain->present();
 
     auto end = std::chrono::system_clock::now();

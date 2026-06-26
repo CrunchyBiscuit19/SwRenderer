@@ -49,7 +49,7 @@ void SwLighting::Resources::cleanup() {
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
-void SwLighting::System::spawnTestLight(SwLight::Type type, const glm::vec3& worldPos) {
+void SwLighting::System::spawnTestLight(SwLight::Type type, const glm::vec3& worldPos, const glm::vec3& worldDir) {
     SwLight light;
     switch (type) {
         case SwLight::Type::Directional:
@@ -64,25 +64,27 @@ void SwLighting::System::spawnTestLight(SwLight::Type type, const glm::vec3& wor
             break;
     }
     light.getPosition() = worldPos;
+    const float dirLength = glm::length(worldDir);
+    light.getDirection() = dirLength > 1e-4f ? worldDir / dirLength : glm::vec3(0.f, 0.f, -1.f);
     mResources.mGlobalLights.emplace_back(light);
 }
 
 void SwLighting::System::selectActiveLights(
     const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount
 ) const {
-    const std::vector<AssetLight>& lights = mResources.mAssetLights;
+    const std::vector<AssetLight>& assetLights = mResources.mAssetLights;
+    const std::vector<SwLight>& globalLights = mResources.mGlobalLights;
 
     // Score every light by its perceived brightness at the camera, then keep the brightest MAX_ACTIVE_LIGHTS.
     std::vector<std::pair<float, std::uint32_t>> scored;
-    scored.reserve(lights.size());
-    for (std::uint32_t i = 0; i < lights.size(); i++) {
-        const SwLight::Params& params = lights[i].mLight->getParams();
+    scored.reserve(assetLights.size() + globalLights.size());
 
+    auto scoreLight = [&](const SwLight::Params& params, const glm::vec3& worldPos, std::uint32_t index) {
         float score;
         if (params.mType == SwLight::Type::Directional) {
             score = std::numeric_limits<float>::max();  // no attenuation, always relevant
         } else {
-            const glm::vec3 toLight = lights[i].mWorldPosition - cameraPos;
+            const glm::vec3 toLight = worldPos - cameraPos;
             const float dist2 = std::max(glm::dot(toLight, toLight), 1e-4f);
             float attenuation = 1.f / dist2;
             if (params.mRange > 0.f) {
@@ -93,7 +95,15 @@ void SwLighting::System::selectActiveLights(
             const float luminance = glm::dot(params.mColor, glm::vec3(0.2126f, 0.7152f, 0.0722f));
             score = params.mIntensity * luminance * attenuation;
         }
-        scored.emplace_back(score, i);
+        scored.emplace_back(score, index);
+    };
+
+    const std::uint32_t assetCount = static_cast<std::uint32_t>(assetLights.size());
+    for (std::uint32_t i = 0; i < assetCount; i++) {
+        scoreLight(assetLights[i].mLight->getParams(), assetLights[i].mWorldPosition, i);
+    }
+    for (std::uint32_t i = 0; i < globalLights.size(); i++) {
+        scoreLight(globalLights[i].getParams(), globalLights[i].getPosition(), assetCount + i);
     }
 
     outCount = std::min<std::uint32_t>(static_cast<std::uint32_t>(scored.size()), SwLight::MAX_ACTIVE_LIGHTS);
@@ -102,7 +112,6 @@ void SwLighting::System::selectActiveLights(
         outIndices[i] = scored[i].second;
     }
 }
-
 
 glm::mat4 SwLighting::System::computeLightMatrix(const SwLight::Params& params, const glm::vec3& worldPos, const glm::vec3& worldDir) {
     const glm::vec3 forward = glm::normalize(worldDir);
@@ -129,34 +138,48 @@ glm::mat4 SwLighting::System::computeLightMatrix(const SwLight::Params& params, 
 void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
     selectActiveLights(cameraPos, mResources.mActiveLightIndices, mResources.mActiveLightCount);
 
+    const std::vector<AssetLight>& assetLights = mResources.mAssetLights;
+    const std::vector<SwLight>& globalLights = mResources.mGlobalLights;
+
     mResources.mLightViewProj.fill(glm::mat4(1.f));
     mResources.mSpotShadowCount = 0;
     mResources.mPointShadowCount = 0;
     mResources.mDirShadowCount = 0;
-    for (std::uint32_t i = 0; i < mResources.mActiveLightCount; i++) {
-        const std::uint32_t lightIndex = mResources.mActiveLightIndices[i];
-        const AssetLight& light = mResources.mAssetLights[lightIndex];
-        const SwLight::Type type = light.mLight->getParams().mType;
+
+    auto processLight = [&](std::uint32_t slot, const SwLight::Params& params, const glm::vec3& worldPos, const glm::vec3& worldDir) {
+        const SwLight::Type type = params.mType;
 
         if (type == SwLight::Type::Spot) {
             if (mResources.mSpotShadowCount < NUM_SPOT_SHADOWS) {
-                mResources.mSpotShadowLightIndices[mResources.mSpotShadowCount++] = i;
+                mResources.mSpotShadowLightIndices[mResources.mSpotShadowCount++] = slot;
             }
         } else if (type == SwLight::Type::Point) {
             if (mResources.mPointShadowCount < NUM_POINT_SHADOWS) {
-                mResources.mPointShadowLightIndices[mResources.mPointShadowCount++] = i;
+                mResources.mPointShadowLightIndices[mResources.mPointShadowCount++] = slot;
             }
         } else if (type == SwLight::Type::Directional) {
             if (mResources.mDirShadowCount < NUM_DIR_SHADOWS) {
-                mResources.mDirShadowLightIndices[mResources.mDirShadowCount++] = i;
+                mResources.mDirShadowLightIndices[mResources.mDirShadowCount++] = slot;
             }
         }
 
         // Point lights need a cube map (6 matrices)
         if (type == SwLight::Type::Point) {
-            continue; // TODO 6 matrices
+            return;  // TODO 6 matrices
         }
-        mResources.mLightViewProj[i] = computeLightMatrix(light.mLight->getParams(), light.mWorldPosition, light.mWorldDirection);
+        mResources.mLightViewProj[slot] = computeLightMatrix(params, worldPos, worldDir);
+    };
+
+    const std::uint32_t assetCount = static_cast<std::uint32_t>(assetLights.size());
+    for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
+        const std::uint32_t lightIndex = mResources.mActiveLightIndices[slot];
+        if (lightIndex < assetCount) {
+            const AssetLight& light = assetLights[lightIndex];
+            processLight(slot, light.mLight->getParams(), light.mWorldPosition, light.mWorldDirection);
+        } else {
+            const SwLight& light = globalLights[lightIndex - assetCount];
+            processLight(slot, light.getParams(), light.getPosition(), light.getDirection());
+        }
     }
 }
 
@@ -173,7 +196,7 @@ void SwLighting::System::initializeResources() {
     constexpr vk::ImageUsageFlags shadowMapUsage =
         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled;
 
-    // Linear filtering gives hardware 2x2 PCF per SampleCmp tap. 
+    // Linear filtering gives hardware 2x2 PCF per SampleCmp tap.
     // The 2D pools use opaque-black border so taps outside a frustum read as lit, while cube clamp to edge.
     auto makeComparisonSampler = [](const char* name, vk::SamplerAddressMode addressMode) {
         vk::SamplerCreateInfo info{};
@@ -192,49 +215,70 @@ void SwLighting::System::initializeResources() {
         return SwSamplerFactory::createSampler(name, info);
     };
 
-    // --- Spotlight 2D pool (drawn and sampled) ---
+    // Spotlight 2D pool
     for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
         mResources.mSpotShadowMaps[i] = SwImageFactory::createDepthImage2D(
-            std::format("SpotShadowMap{}", i), nullptr, SHADOW_MAP_FORMAT, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1}, shadowMapUsage, true
+            std::format("SpotShadowMap{}", i),
+            nullptr,
+            SHADOW_MAP_FORMAT,
+            vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1},
+            shadowMapUsage,
+            true
         );
     }
     mResources.mSpotShadowMapsSampler = makeComparisonSampler("SpotShadowMapsSampler", vk::SamplerAddressMode::eClampToBorder);
     mResources.mSpotShadowMapsDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SpotShadowMapsDescriptorSet", Resources::sSpotShadowConsumeDescriptorLayout);
     for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
-        mResources.mSpotShadowMapsDescriptorSet.writeImage(0, mResources.mSpotShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
+        mResources.mSpotShadowMapsDescriptorSet.writeImage(
+            0, mResources.mSpotShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+        );
     }
-    mResources.mSpotShadowMapsDescriptorSet.writeSampler(1, mResources.mSpotShadowMapsSampler.getRawSampler());
+    mResources.mSpotShadowMapsDescriptorSet.writeSampler(1, mResources.mSpotShadowMapsSampler.getHandle());
     mResources.mSpotShadowMapsDescriptorSet.pushWrites();
 
-    // --- Point-light cube pool (allocated and descriptor-ready; draw and sampling are a follow-up) ---
+    // Point-light cube pool
     for (std::uint32_t i = 0; i < NUM_POINT_SHADOWS; i++) {
         mResources.mPointShadowMaps[i] = SwImageFactory::createDepthImageCubemap(
-            std::format("PointShadowMap{}", i), nullptr, SHADOW_MAP_FORMAT, vk::Extent3D{SHADOW_CUBE_MAP_WIDTH_HEIGHT, SHADOW_CUBE_MAP_WIDTH_HEIGHT, 1}, shadowMapUsage, false
+            std::format("PointShadowMap{}", i),
+            nullptr,
+            SHADOW_MAP_FORMAT,
+            vk::Extent3D{SHADOW_CUBE_MAP_WIDTH_HEIGHT, SHADOW_CUBE_MAP_WIDTH_HEIGHT, 1},
+            shadowMapUsage,
+            false
         );
     }
     mResources.mPointShadowMapsSampler = makeComparisonSampler("PointShadowMapsSampler", vk::SamplerAddressMode::eClampToEdge);
     mResources.mPointShadowMapsDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("PointShadowMapsDescriptorSet", Resources::sPointShadowConsumeDescriptorLayout);
     for (std::uint32_t i = 0; i < NUM_POINT_SHADOWS; i++) {
-        mResources.mPointShadowMapsDescriptorSet.writeImage(0, mResources.mPointShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
+        mResources.mPointShadowMapsDescriptorSet.writeImage(
+            0, mResources.mPointShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+        );
     }
-    mResources.mPointShadowMapsDescriptorSet.writeSampler(1, mResources.mPointShadowMapsSampler.getRawSampler());
+    mResources.mPointShadowMapsDescriptorSet.writeSampler(1, mResources.mPointShadowMapsSampler.getHandle());
     mResources.mPointShadowMapsDescriptorSet.pushWrites();
 
-    // --- Directional 2D pool (allocated and descriptor-ready; draw and sampling are a follow-up) ---
+    // Directional 2D pool
     for (std::uint32_t i = 0; i < NUM_DIR_SHADOWS; i++) {
         mResources.mDirShadowMaps[i] = SwImageFactory::createDepthImage2D(
-            std::format("DirShadowMap{}", i), nullptr, SHADOW_MAP_FORMAT, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1}, shadowMapUsage, true
+            std::format("DirShadowMap{}", i),
+            nullptr,
+            SHADOW_MAP_FORMAT,
+            vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1},
+            shadowMapUsage,
+            true
         );
     }
     mResources.mDirShadowMapsSampler = makeComparisonSampler("DirShadowMapsSampler", vk::SamplerAddressMode::eClampToBorder);
     mResources.mDirShadowMapsDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("DirShadowMapsDescriptorSet", Resources::sDirShadowConsumeDescriptorLayout);
     for (std::uint32_t i = 0; i < NUM_DIR_SHADOWS; i++) {
-        mResources.mDirShadowMapsDescriptorSet.writeImage(0, mResources.mDirShadowMaps[i].getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
+        mResources.mDirShadowMapsDescriptorSet.writeImage(
+            0, mResources.mDirShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+        );
     }
-    mResources.mDirShadowMapsDescriptorSet.writeSampler(1, mResources.mDirShadowMapsSampler.getRawSampler());
+    mResources.mDirShadowMapsDescriptorSet.writeSampler(1, mResources.mDirShadowMapsSampler.getHandle());
     mResources.mDirShadowMapsDescriptorSet.pushWrites();
 
     for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
@@ -256,9 +300,9 @@ void SwLighting::System::initializeResources() {
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.blendEnable = VK_FALSE;
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
-    drawPipelineOptions.mVertexShader = drawVertexShader.getRawModule();
+    drawPipelineOptions.mVertexShader = drawVertexShader.getHandle();
     drawPipelineOptions.mFragmentShader = std::nullopt;
-    drawPipelineOptions.mLayout = mResources.mShadowDrawPipelineLayout.getRawLayout();
+    drawPipelineOptions.mLayout = mResources.mShadowDrawPipelineLayout.getHandle();
     drawPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     drawPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     drawPipelineOptions.mCullMode = vk::CullModeFlagBits::eFront;
@@ -270,7 +314,7 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    
+
     drawPipelineOptions.mVertexEntryPoint = SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT;
     mResources.mShadowDrawOpaqueTransparentPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowDrawPipeline", drawPipelineOptions);
 
@@ -280,7 +324,7 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowCullPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowCullPipelineLayout", nullptr, SwLighting::ShadowCullPC::getRange());
     SwShader cullShader = SwShaderFactory::createShader("ShadowCullShaderModule", SwLighting::SHADOW_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowCullPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("ShadowCullPipeline", {cullShader.getRawModule(), mResources.mShadowCullPipelineLayout.getRawLayout()});
+        SwComputePipelineFactory::createComputePipeline("ShadowCullPipeline", {cullShader.getHandle(), mResources.mShadowCullPipelineLayout.getHandle()});
 }
 
 void SwLighting::System::initializePasses() {
@@ -292,8 +336,8 @@ void SwLighting::System::initializePasses() {
     }
     mScene.insertPass(SwPass::Type::LightingShadowReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < NUM_SPOT_SHADOWS; i++) {
-            cmd.fillBuffer(mResources.mSpotLightDrawRisIndicesBuffer[i].getRawBuffer(), 0, VK_WHOLE_SIZE, 0);
-            cmd.fillBuffer(mResources.mSpotLightRcsBuffer[i].getRawBuffer(), 0, VK_WHOLE_SIZE, 0);
+            cmd.fillBuffer(mResources.mSpotLightDrawRisIndicesBuffer[i].getHandle(), 0, VK_WHOLE_SIZE, 0);
+            cmd.fillBuffer(mResources.mSpotLightRcsBuffer[i].getHandle(), 0, VK_WHOLE_SIZE, 0);
         }
     });
     staticDeps.clear();
@@ -313,7 +357,8 @@ void SwLighting::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(
-        SwPass::Type::LightingShadowDraw, std::move(staticDeps),
+        SwPass::Type::LightingShadowDraw,
+        std::move(staticDeps),
         [&](vk::CommandBuffer cmd) {
             auto& pipeline = mResources.mShadowDrawOpaqueTransparentPipelineBundle;
 
@@ -327,16 +372,16 @@ void SwLighting::System::initializePasses() {
                 cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT}, {}, depth));
                 SwPass::setViewportScissors(cmd, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1});
 
-                cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getRawPipeline());
-                cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getRawBuffer(), 0, vk::IndexType::eUint32);
+                cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+                cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
 
                 mResources.mShadowDrawPc.mLightIndex = slot;
 
                 auto drawList = [&](SwBatch& batch, SwAllocatedBuffer& rcsBuffer, SwAllocatedBuffer& countBuffer) {
                     mResources.mShadowDrawPc.mLightRcsBuffer = rcsBuffer.getDeviceAddress().value();
-                    cmd.pushConstants<SwLighting::ShadowDrawPC>(pipeline.getRawLayout(), SwLighting::ShadowDrawPC::sStages, 0, mResources.mShadowDrawPc);
+                    cmd.pushConstants<SwLighting::ShadowDrawPC>(pipeline.getLayouthandle(), SwLighting::ShadowDrawPC::sStages, 0, mResources.mShadowDrawPc);
                     cmd.drawIndexedIndirectCount(
-                        rcsBuffer.getRawBuffer(), 0, countBuffer.getRawBuffer(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
+                        rcsBuffer.getHandle(), 0, countBuffer.getHandle(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
                     );
                     SwRenderer::sRendererContext.mStats->mNumDrawCall++;
                 };

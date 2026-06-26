@@ -13,7 +13,7 @@ public:
 
     SwFence(vk::raii::Fence);
 
-    inline vk::Fence getRawFence() { return *mFence; }
+    inline vk::Fence getHandle() { return *mFence; }
 
     void reset();
 };

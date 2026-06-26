@@ -12,6 +12,6 @@ SwFence SwFenceFactory::createFence(std::string name, vk::FenceCreateFlags fence
     fenceCreateInfo.pNext = nullptr;
     fenceCreateInfo.flags = fenceCreateFlags;
     SwFence fence(SwRenderer::sRendererContext.mDevice->createFence(fenceCreateInfo));
-    SwRenderer::sRendererContext.labelResourceDebug(fence.getRawFence(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(fence.getHandle(), name.c_str());
     return fence;
 }

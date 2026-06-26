@@ -13,7 +13,7 @@ void SwWBOIT::System::initializeResources() {
     );
     mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("WBOITWorkDescriptorSet", mResources.mWorkDescriptorLayout);
 
-    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITWorkPipelineLayout", mResources.mWorkDescriptorLayout.getRawLayout(), nullptr);
+    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITWorkPipelineLayout", mResources.mWorkDescriptorLayout.getHandle(), nullptr);
 
     SwShader wboitVertexShader = SwShaderFactory::createShader("WBOITVertexShaderModule", WBOIT_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader wboitFragmentShader = SwShaderFactory::createShader("WBOITFragmentShaderModule", WBOIT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -30,9 +30,9 @@ void SwWBOIT::System::initializeResources() {
     compositeBlendAttachment.alphaBlendOp = vk::BlendOp::eAdd;
 
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions wboitPipelineOptions;
-    wboitPipelineOptions.mVertexShader = wboitVertexShader.getRawModule();
-    wboitPipelineOptions.mFragmentShader = wboitFragmentShader.getRawModule();
-    wboitPipelineOptions.mLayout = mResources.mWorkPipelineLayout.getRawLayout();
+    wboitPipelineOptions.mVertexShader = wboitVertexShader.getHandle();
+    wboitPipelineOptions.mFragmentShader = wboitFragmentShader.getHandle();
+    wboitPipelineOptions.mLayout = mResources.mWorkPipelineLayout.getHandle();
     wboitPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     wboitPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     wboitPipelineOptions.mCullMode = vk::CullModeFlagBits::eNone;
@@ -63,9 +63,9 @@ void SwWBOIT::System::initializePasses() {
 
         cmd.beginRendering(renderInfo);
 
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawPipeline());
+        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
-            mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getRawLayout(), 0, mResources.mWorkDescriptorSet.getRawSet(), nullptr
+            mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getLayouthandle(), 0, mResources.mWorkDescriptorSet.getHandle(), nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
@@ -101,10 +101,10 @@ void SwWBOIT::System::reInitializeOnResize() {
     });
 
     mResources.mWorkDescriptorSet.writeImage(
-        0, mResources.mAccumImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
+        0, mResources.mAccumImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mWorkDescriptorSet.writeImage(
-        1, mResources.mRvlImage.getRawMainImageView(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
+        1, mResources.mRvlImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mWorkDescriptorSet.pushWrites();
 }

@@ -109,7 +109,7 @@ SwDescriptorLayout SwDescriptorAllocator::createDescriptorLayout(
     SwDescriptorLayout descriptorLayout(
         SwRenderer::sRendererContext.mDevice->createDescriptorSetLayout(descriptorLayoutCreateInfo, nullptr), std::move(bindings), useBindless
     );
-    SwRenderer::sRendererContext.labelResourceDebug(descriptorLayout.getRawLayout(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(descriptorLayout.getHandle(), name.c_str());
     return descriptorLayout;
 }
 
@@ -119,9 +119,9 @@ SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(std::string name, SwD
     }
 
     vk::DescriptorSetAllocateInfo descriptorSetAllocateInfo{};
-    descriptorSetAllocateInfo.descriptorPool = getPool().getRawPool();
+    descriptorSetAllocateInfo.descriptorPool = getPool().getHandle();
     descriptorSetAllocateInfo.descriptorSetCount = 1;
-    auto rawLayout = layout.getRawLayout();
+    auto rawLayout = layout.getHandle();
     descriptorSetAllocateInfo.pSetLayouts = &rawLayout;
 
     vk::DescriptorSetVariableDescriptorCountAllocateInfo countInfo;
@@ -132,7 +132,7 @@ SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(std::string name, SwD
     try {
         auto sets = SwRenderer::sRendererContext.mDevice->allocateDescriptorSets(descriptorSetAllocateInfo);
         SwDescriptorSet descriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
-        SwRenderer::sRendererContext.labelResourceDebug(descriptorSet.getRawSet(), name.c_str());
+        SwRenderer::sRendererContext.labelResourceDebug(descriptorSet.getHandle(), name.c_str());
         return descriptorSet;
     } catch (const vk::OutOfPoolMemoryError&) {
         /* grow below */
@@ -144,11 +144,11 @@ SwDescriptorSet SwDescriptorAllocator::createDescriptorSet(std::string name, SwD
     mReadyPools.pop_back();
     mSetsPerPool = nextPoolSize(mSetsPerPool);
     mReadyPools.emplace_back(std::move(createPool(mSetsPerPool)));
-    descriptorSetAllocateInfo.descriptorPool = mReadyPools.back().getRawPool();
+    descriptorSetAllocateInfo.descriptorPool = mReadyPools.back().getHandle();
 
     auto sets = SwRenderer::sRendererContext.mDevice->allocateDescriptorSets(descriptorSetAllocateInfo);
     SwDescriptorSet descriptorSet(std::move(sets.front()), layout.getBindings(), layout.usesBindless());
-    SwRenderer::sRendererContext.labelResourceDebug(descriptorSet.getRawSet(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(descriptorSet.getHandle(), name.c_str());
     return descriptorSet;
 }
 

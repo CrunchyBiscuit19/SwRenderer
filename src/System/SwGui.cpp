@@ -34,7 +34,7 @@ void SwGui::System::initializeResources() {
     initInfo.PhysicalDevice = **SwRenderer::sRendererContext.mChosenGPU;
     initInfo.Device = **SwRenderer::sRendererContext.mDevice;
     initInfo.Queue = **SwRenderer::sRendererContext.mGraphicsQueue;
-    initInfo.DescriptorPool = mResources.mDescriptorPool.getRawPool();
+    initInfo.DescriptorPool = mResources.mDescriptorPool.getHandle();
     initInfo.MinImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
     initInfo.ImageCount = SwSwapchain::NUM_SWAPCHAIN_IMAGES;
     initInfo.UseDynamicRendering = true;
@@ -173,19 +173,20 @@ void SwGui::System::initializeResources() {
         if (ImGui::CollapsingHeader("Objects", ImGuiTreeNodeFlags_DefaultOpen)) {
             SwLighting::System& lighting = mScene.getLightingSystem();
 
-            const glm::vec3 spawnPos = mScene.getCamera().getPosition() + mScene.getCamera().getDirectionVector() * 5.f;
+            const glm::vec3 spawnDir = mScene.getCamera().getDirectionVector();
+            const glm::vec3 spawnPos = mScene.getCamera().getPosition() + spawnDir * 5.f;
             ImGui::TextUnformatted("Spawn Test Light:");
             ImGui::SameLine();
             if (ImGui::Button("Point")) {
-                lighting.spawnTestLight(SwLight::Type::Point, spawnPos);
+                lighting.spawnTestLight(SwLight::Type::Point, spawnPos, spawnDir);
             }
             ImGui::SameLine();
             if (ImGui::Button("Spot")) {
-                lighting.spawnTestLight(SwLight::Type::Spot, spawnPos);
+                lighting.spawnTestLight(SwLight::Type::Spot, spawnPos, spawnDir);
             }
             ImGui::SameLine();
             if (ImGui::Button("Directional")) {
-                lighting.spawnTestLight(SwLight::Type::Directional, spawnPos);
+                lighting.spawnTestLight(SwLight::Type::Directional, spawnPos, spawnDir);
             }
 
             auto& globalLights = lighting.getGlobalLights();
@@ -198,6 +199,14 @@ void SwGui::System::initializeResources() {
                 if (ImGui::TreeNode(label.c_str())) {
                     ImGui::ColorEdit3("Color", glm::value_ptr(params.mColor));
                     ImGui::DragFloat3("Position", glm::value_ptr(light.getPosition()), 0.1f);
+                    if (params.mType != SwLight::Type::Point) {
+                        if (ImGui::DragFloat3("Direction", glm::value_ptr(light.getDirection()), 0.01f, -1.f, 1.f)) {
+                            const float dirLength = glm::length(light.getDirection());
+                            if (dirLength > 1e-4f) {
+                                light.getDirection() /= dirLength;
+                            }
+                        }
+                    }
                     ImGui::SliderFloat("Intensity", &params.mIntensity, 0.f, 100.f, "%.1f");
                     if (params.mType != SwLight::Type::Directional) {
                         ImGui::SliderFloat("Range", &params.mRange, 0.f, 100.f, "%.1f");

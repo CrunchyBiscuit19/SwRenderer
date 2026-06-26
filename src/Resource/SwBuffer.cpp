@@ -283,7 +283,7 @@ SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
         std::move(name), vk::raii::Buffer(*SwRenderer::sRendererContext.mDevice, tempBuffer), tempAddress, SwRenderer::sRendererContext.mAllocator, tempAllocation,
         tempInfo, usage, flags, size
     );
-    SwRenderer::sRendererContext.labelResourceDebug(buffer.getRawBuffer(), buffer.getName().c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(buffer.getHandle(), buffer.getName().c_str());
     return buffer;
 }
 
@@ -307,6 +307,6 @@ SwStagingBuffer SwBufferFactory::createStagingBuffer(std::string name, std::uint
     SwStagingBuffer buffer(
         std::move(name), vk::raii::Buffer(*SwRenderer::sRendererContext.mDevice, tempBuffer), SwRenderer::sRendererContext.mAllocator, tempAllocation, tempInfo, size
     );
-    SwRenderer::sRendererContext.labelResourceDebug(buffer.getRawBuffer(), buffer.getName().c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(buffer.getHandle(), buffer.getName().c_str());
     return buffer;
 }
