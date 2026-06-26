@@ -5,8 +5,6 @@
 #include <System/SwLighting.h>
 #include <Scene/SwScene.h>
 
-// Issues one indirect draw per non-empty batch. `early` pulls commands from the batch's
-// pre-occlusion (early) draw list; otherwise from the final post-occlusion list.
 template <typename BatchRange>
 void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBuffer cmd, BatchRange&& batches, bool early) {
     for (auto& batch : batches) {
@@ -18,12 +16,12 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
         auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
         auto& pipeline = batch.getGraphicsPipelineBundle();
 
-        cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getRawPipeline());
+        cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.bindIndexBuffer(scene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
         cmd.bindDescriptorSets(
             pipeline.getBindPoint(),
-            pipeline.getRawLayout(),
+            pipeline.getLayoutHandle(),
             0,
             {scene.getSceneMaterialResourcesDescriptorSet().getHandle(), scene.getIBLSystem().getConsumeDescriptorSet().getHandle(),
              scene.getLightingSystem().getSpotShadowMapsDescriptorSet().getHandle()},
@@ -31,10 +29,10 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
         );
 
         resources.mWorkPushConstants.mDrawRcsBuffer = itemsBuffer.getDeviceAddress().value();
-        cmd.pushConstants<SwGeometry::WorkPC>(pipeline.getRawLayout(), SwGeometry::WorkPC::sStages, 0, resources.mWorkPushConstants);
+        cmd.pushConstants<SwGeometry::WorkPC>(pipeline.getLayoutHandle(), SwGeometry::WorkPC::sStages, 0, resources.mWorkPushConstants);
 
         cmd.drawIndexedIndirectCount(
-            itemsBuffer.getRawBuffer(), 0, countBuffer.getRawBuffer(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
+            itemsBuffer.getHandle(), 0, countBuffer.getHandle(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
         );
 
         SwRenderer::sRendererContext.mStats->mNumDrawCall++;

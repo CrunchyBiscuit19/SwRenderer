@@ -50,7 +50,7 @@ public:
 
     inline vk::Pipeline getPipelineHandle() { return *mPipeline; };
 
-    inline vk::PipelineLayout getLayouthandle() { return mLayout; };
+    inline vk::PipelineLayout getLayoutHandle() { return mLayout; };
 };
 
 class SwGraphicsPipelineBundle : public SwPipelineBundle {

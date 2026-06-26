@@ -185,7 +185,7 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
 
 std::vector<SwLight::Data> SwLighting::System::collectLightData() const {
     std::vector<SwLight::Data> out;
-    out.reserve(mResources.mAssetLights.size());
+    out.reserve(mResources.mAssetLights.size() + mResources.mGlobalLights.size());
     for (const AssetLight& light : mResources.mAssetLights) {
         out.emplace_back(light.mLight->toData(light.mNodeTransformIndex, light.mInstanceIndex));
     }
@@ -379,7 +379,7 @@ void SwLighting::System::initializePasses() {
 
                 auto drawList = [&](SwBatch& batch, SwAllocatedBuffer& rcsBuffer, SwAllocatedBuffer& countBuffer) {
                     mResources.mShadowDrawPc.mLightRcsBuffer = rcsBuffer.getDeviceAddress().value();
-                    cmd.pushConstants<SwLighting::ShadowDrawPC>(pipeline.getLayouthandle(), SwLighting::ShadowDrawPC::sStages, 0, mResources.mShadowDrawPc);
+                    cmd.pushConstants<SwLighting::ShadowDrawPC>(pipeline.getLayoutHandle(), SwLighting::ShadowDrawPC::sStages, 0, mResources.mShadowDrawPc);
                     cmd.drawIndexedIndirectCount(
                         rcsBuffer.getHandle(), 0, countBuffer.getHandle(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
                     );

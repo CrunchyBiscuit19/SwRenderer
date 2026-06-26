@@ -123,9 +123,9 @@ void SwPick::System::initializePasses() {
                 cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
                 cmd.drawIndexedIndirectCount(
-                    rcBuffer.getRawBuffer(),
+                    rcBuffer.getHandle(),
                     0,
-                    countBuffer.getRawBuffer(),
+                    countBuffer.getHandle(),
                     0,
                     static_cast<std::uint32_t>(batch.getRcs().size()),
                     sizeof(SwRenderCommand)
@@ -157,14 +157,14 @@ void SwPick::System::initializePasses() {
 
             cmd.bindDescriptorSets(
                 mResources.mReadbackPipelineBundle.getBindPoint(),
-                mResources.mReadbackPipelineBundle.getLayouthandle(),
+                mResources.mReadbackPipelineBundle.getLayoutHandle(),
                 0,
                 mResources.mReadbackDescriptorSet.getHandle(),
                 nullptr
             );
 
             cmd.pushConstants<SwPick::ReadbackPC>(
-                mResources.mReadbackPipelineBundle.getLayouthandle(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
+                mResources.mReadbackPipelineBundle.getLayoutHandle(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
             );
 
             cmd.dispatch(1, 1, 1);

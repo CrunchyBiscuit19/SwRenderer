@@ -140,7 +140,7 @@ void SwIBL::System::initializeResources() {
         cmd.bindPipeline(mResources.mBrdfLutPipelineBundle.getBindPoint(), mResources.mBrdfLutPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
             mResources.mBrdfLutPipelineBundle.getBindPoint(),
-            mResources.mBrdfLutPipelineBundle.getLayouthandle(),
+            mResources.mBrdfLutPipelineBundle.getLayoutHandle(),
             0,
             mResources.mBrdfLutDescriptorSet.getHandle(),
             nullptr
@@ -268,10 +268,10 @@ void SwIBL::System::initializePasses() {
 
         cmd.bindPipeline(mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
-            mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getLayouthandle(), 0, mResources.mDrawDescriptorSet.getHandle(), nullptr
+            mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getLayoutHandle(), 0, mResources.mDrawDescriptorSet.getHandle(), nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
-        cmd.pushConstants<SwIBL::DrawPC>(mResources.mDrawPipelineBundle.getLayouthandle(), SwIBL::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.pushConstants<SwIBL::DrawPC>(mResources.mDrawPipelineBundle.getLayoutHandle(), SwIBL::DrawPC::sStages, 0, mResources.mDrawPushConstants);
         cmd.draw(SwIBL::NUM_SKYBOX_VERTICES, 1, 0, 0);
         SwRenderer::sRendererContext.mStats->mNumDrawCall++;
 
@@ -303,7 +303,7 @@ void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampl
         cmd.bindPipeline(mResources.mIrradiancePipelineBundle.getBindPoint(), mResources.mIrradiancePipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
             mResources.mIrradiancePipelineBundle.getBindPoint(),
-            mResources.mIrradiancePipelineBundle.getLayouthandle(),
+            mResources.mIrradiancePipelineBundle.getLayoutHandle(),
             0,
             mResources.mIrradianceDescriptorSet.getHandle(),
             nullptr
@@ -319,14 +319,14 @@ void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampl
         for (std::uint32_t mip = 0; mip < mPrefilterMipLevels; mip++) {
             cmd.bindDescriptorSets(
                 mResources.mPrefilterPipelineBundle.getBindPoint(),
-                mResources.mPrefilterPipelineBundle.getLayouthandle(),
+                mResources.mPrefilterPipelineBundle.getLayoutHandle(),
                 0,
                 mResources.mPrefilterMipDescriptorSets[mip].getHandle(),
                 nullptr
             );
             SwIBL::PrefilterPC pc{};
             pc.mRoughness = mPrefilterMipLevels > 1 ? static_cast<float>(mip) / static_cast<float>(mPrefilterMipLevels - 1) : 0.f;
-            cmd.pushConstants<SwIBL::PrefilterPC>(mResources.mPrefilterPipelineBundle.getLayouthandle(), SwIBL::PrefilterPC::sStages, 0, pc);
+            cmd.pushConstants<SwIBL::PrefilterPC>(mResources.mPrefilterPipelineBundle.getLayoutHandle(), SwIBL::PrefilterPC::sStages, 0, pc);
 
             const std::uint32_t mipWidth = std::max(1u, PREFILTER_EXTENT.width >> mip);
             const std::uint32_t mipHeight = std::max(1u, PREFILTER_EXTENT.height >> mip);

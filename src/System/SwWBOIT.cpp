@@ -65,7 +65,7 @@ void SwWBOIT::System::initializePasses() {
 
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
-            mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getLayouthandle(), 0, mResources.mWorkDescriptorSet.getHandle(), nullptr
+            mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getLayoutHandle(), 0, mResources.mWorkDescriptorSet.getHandle(), nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);

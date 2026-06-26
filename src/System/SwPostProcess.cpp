@@ -57,12 +57,12 @@ void SwPostProcess::System::initializePasses() {
         cmd.bindPipeline(mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getLayouthandle(), 0, mResources.mTonemapDescriptorSet.getHandle(),
+            mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getLayoutHandle(), 0, mResources.mTonemapDescriptorSet.getHandle(),
             nullptr
         );
 
         cmd.pushConstants<SwPostProcess::TonemapPC>(
-            mResources.mTonemapPipelineBundle.getLayouthandle(), SwPostProcess::TonemapPC::sStages, 0, mResources.mTonemapPushConstants
+            mResources.mTonemapPipelineBundle.getLayoutHandle(), SwPostProcess::TonemapPC::sStages, 0, mResources.mTonemapPushConstants
         );
 
         vk::Extent3D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
@@ -79,11 +79,11 @@ void SwPostProcess::System::initializePasses() {
         cmd.bindPipeline(mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getLayouthandle(), 0, mResources.mFXAADescriptorSet.getHandle(), nullptr
+            mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getLayoutHandle(), 0, mResources.mFXAADescriptorSet.getHandle(), nullptr
         );
 
         cmd.pushConstants<SwPostProcess::FXAAPC>(
-            mResources.mFXAAPipelineBundle.getLayouthandle(), SwPostProcess::FXAAPC::sStages, 0, mResources.mFXAAPushConstants
+            mResources.mFXAAPipelineBundle.getLayoutHandle(), SwPostProcess::FXAAPC::sStages, 0, mResources.mFXAAPushConstants
         );
 
         vk::Extent3D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();

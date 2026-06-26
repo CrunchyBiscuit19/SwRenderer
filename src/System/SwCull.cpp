@@ -38,7 +38,7 @@ void SwCull::System::initializeOtherPasses() {
             const std::uint32_t rcsCount = static_cast<std::uint32_t>(batch.getRcs().size());
             mResources.mResetPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
             mResources.mResetPushConstants.mRcsLimit = rcsCount;
-            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayouthandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
@@ -87,7 +87,7 @@ void SwCull::System::initializeEarlyPasses() {
 
             cmd.bindDescriptorSets(
                 mResources.mWorkPipelineBundle.getBindPoint(),
-                mResources.mWorkPipelineBundle.getLayouthandle(),
+                mResources.mWorkPipelineBundle.getLayoutHandle(),
                 0,
                 mResources.mWorkDescriptorSet.getHandle(),
                 nullptr
@@ -97,7 +97,7 @@ void SwCull::System::initializeEarlyPasses() {
             mResources.mWorkPushConstants.mRisBuffer = batch.getRisBuffer().getDeviceAddress().value();
             mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
             mResources.mWorkPushConstants.mPhase = SwCull::Phase::Early;
-            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayouthandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+            cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayoutHandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
@@ -118,7 +118,7 @@ void SwCull::System::initializeEarlyPasses() {
             mResources.mCompactPushConstants.mPostRcsCount = batch.getEarlyRcsCount().getDeviceAddress().value();
             mResources.mCompactPushConstants.mPreRcsLimit = batch.getRcs().size();
             cmd.pushConstants<SwCull::CompactPC>(
-                mResources.mCompactPipelineBundle.getLayouthandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
+                mResources.mCompactPipelineBundle.getLayoutHandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
             );
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRcs().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
@@ -145,7 +145,7 @@ void SwCull::System::initializeLatePasses() {
             const std::uint32_t rcsCount = static_cast<std::uint32_t>(batch.getRcs().size());
             mResources.mResetPushConstants.mRcsBuffer = batch.getInitialRcsBuffer().getDeviceAddress().value();
             mResources.mResetPushConstants.mRcsLimit = rcsCount;
-            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayouthandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+            cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
 
             cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
@@ -162,7 +162,7 @@ void SwCull::System::initializeLatePasses() {
 
         cmd.bindDescriptorSets(
             mResources.mPrepOcclusionPipelineBundle.getBindPoint(),
-            mResources.mPrepOcclusionPipelineBundle.getLayouthandle(),
+            mResources.mPrepOcclusionPipelineBundle.getLayoutHandle(),
             0,
             mResources.mPrepOcclusionDescriptorSet.getHandle(),
             nullptr
@@ -170,7 +170,7 @@ void SwCull::System::initializeLatePasses() {
 
         mResources.mPrepOcclusionPushConstants.mLevel = -1;
         cmd.pushConstants<SwCull::PrepOcclusionPC>(
-            mResources.mPrepOcclusionPipelineBundle.getLayouthandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+            mResources.mPrepOcclusionPipelineBundle.getLayoutHandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
         );
 
         cmd.dispatch(
@@ -186,7 +186,7 @@ void SwCull::System::initializeLatePasses() {
         for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
             mResources.mPrepOcclusionPushConstants.mLevel = i;
             cmd.pushConstants<SwCull::PrepOcclusionPC>(
-                mResources.mPrepOcclusionPipelineBundle.getLayouthandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+                mResources.mPrepOcclusionPipelineBundle.getLayoutHandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
             );
 
             const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidImage.getExtent().width >> (i + 1));
@@ -228,7 +228,7 @@ void SwCull::System::initializeLatePasses() {
 
                 cmd.bindDescriptorSets(
                     mResources.mWorkPipelineBundle.getBindPoint(),
-                    mResources.mWorkPipelineBundle.getLayouthandle(),
+                    mResources.mWorkPipelineBundle.getLayoutHandle(),
                     0,
                     mResources.mWorkDescriptorSet.getHandle(),
                     nullptr
@@ -239,7 +239,7 @@ void SwCull::System::initializeLatePasses() {
                 mResources.mWorkPushConstants.mRisLimit = batch.getRis().size();
                 mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
                 mResources.mWorkPushConstants.mHasEarlyDraw = hasEarlyDraw;
-                cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayouthandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+                cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayoutHandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
 
                 cmd.dispatch(SwHelper::fastDivCeil(batch.getRis().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
             }
@@ -264,7 +264,7 @@ void SwCull::System::initializeLatePasses() {
             mResources.mCompactPushConstants.mPostRcsCount = batch.getLateRcsCount().getDeviceAddress().value();
             mResources.mCompactPushConstants.mPreRcsLimit = batch.getRcs().size();
             cmd.pushConstants<SwCull::CompactPC>(
-                mResources.mCompactPipelineBundle.getLayouthandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
+                mResources.mCompactPipelineBundle.getLayoutHandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
             );
 
             cmd.dispatch(SwHelper::fastDivCeil(batch.getRcs().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
