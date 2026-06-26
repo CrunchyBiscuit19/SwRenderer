@@ -29,7 +29,7 @@ public:
         Type mType{Type::Point};
         glm::vec3 mColor{1.f};
         float mIntensity{1.f};
-        float mRange{-1.f};                                 
+        float mRange{5.f};                                 
         float mInnerConeAngle{0.f};                         // spot only, rads
         float mOuterConeAngle{glm::quarter_pi<float>()};    // spot only, rads
     };
@@ -61,16 +61,4 @@ public:
 
     static void init();
     static void cleanup();
-};
-
-struct SwTestDirectionalLight : public SwLight {
-    SwTestDirectionalLight();
-};
-
-struct SwTestSpotLight : public SwLight {
-    SwTestSpotLight();
-};
-
-struct SwTestPointLight : public SwLight {
-    SwTestPointLight();
 };

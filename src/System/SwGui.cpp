@@ -80,7 +80,7 @@ void SwGui::System::initializeResources() {
         ImGui::Indent();
 
         for (auto& asset : mScene.getAssets() | std::views::values) {
-            if (asset.isStandaloneLight()) continue; 
+            if (asset.isStandaloneLight()) continue;
             const auto name = asset.getName();
             ImGui::PushStyleColor(ImGuiCol_Header, static_cast<ImVec4>(IMGUI_HEADER_GREEN));
             if (ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -188,7 +188,9 @@ void SwGui::System::initializeResources() {
                     edited |= ImGui::ColorEdit3("Color", glm::value_ptr(params.mColor));
                     edited |= ImGui::SliderFloat("Intensity", &params.mIntensity, 0.f, 100.f, "%.1f");
                     if (params.mType != SwLight::Type::Directional) {
-                        edited |= ImGui::SliderFloat("Range", &params.mRange, 0.f, 100.f, "%.1f");
+                        // Range is a soft cutoff that only bites as the surface distance approaches it, so the slider
+                        // reaches small values (logarithmic) where shrinking the range visibly tightens the light.
+                        edited |= ImGui::SliderFloat("Range", &params.mRange, 0.1f, 100.f, "%.2f", ImGuiSliderFlags_Logarithmic);
                     }
 
                     // Asset lights transform with their owning asset, so only standalone lights expose transform controls.
@@ -198,11 +200,21 @@ void SwGui::System::initializeResources() {
                         ImGuizmo::DecomposeMatrixToComponents(
                             glm::value_ptr(transform), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale)
                         );
+
                         bool transformEdited = false;
-                        transformEdited |= ImGui::DragFloat3("Position", glm::value_ptr(translation), 0.1f);
-                        if (params.mType != SwLight::Type::Point) {
-                            transformEdited |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 1.f);
+                        switch (params.mType) {
+                            case SwLight::Type::Spot:
+                                transformEdited |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 1.f);
+                                transformEdited |= ImGui::DragFloat3("Position", glm::value_ptr(translation), 0.1f);
+                                break;
+                            case SwLight::Type::Point:
+                                transformEdited |= ImGui::DragFloat3("Position", glm::value_ptr(translation), 0.1f);
+                                break;
+                            case SwLight::Type::Directional:
+                                transformEdited |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 1.f);
+                                break;     
                         }
+
                         if (transformEdited) {
                             ImGuizmo::RecomposeMatrixFromComponents(
                                 glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale), glm::value_ptr(transform)
@@ -213,7 +225,7 @@ void SwGui::System::initializeResources() {
 
                         ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(IMGUI_BUTTON_RED));
                         if (ImGui::Button("Remove")) {
-                            owningAsset.markDelete();
+                            record.mInstance->markDelete();
                         }
                         ImGui::PopStyleColor();
                     }

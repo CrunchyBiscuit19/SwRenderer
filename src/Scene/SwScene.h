@@ -47,6 +47,8 @@ private:
     std::unordered_map<std::uint32_t, SwAsset> mAssets;
     std::unordered_set<std::string> mAlreadyLoadedAssets;
 
+    std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
+
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
@@ -78,6 +80,7 @@ private:
 
     void initializeMiscPasses();
     void initializeResources();
+    void loadStandaloneLightAssets();
 
     void refreshDynamicDependencies();
     void refresh();

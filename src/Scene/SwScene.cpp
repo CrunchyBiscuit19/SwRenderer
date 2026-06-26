@@ -149,6 +149,8 @@ void SwScene::initialize() {
     mGeometry.initialize();
     mPostProcess.initialize();
     mLighting.initialize();
+
+    loadStandaloneLightAssets();
 }
 
 void SwScene::resize() {
@@ -185,46 +187,58 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
     });
 }
 
-void SwScene::spawnStandaloneLight(SwLight::Type type) {
-    std::filesystem::path lightPath = std::filesystem::path(LIGHTS_PATH);
-    switch (type) {
-        case SwLight::Type::Directional:
-            lightPath /= "directional.gltf";
-            break;
-        case SwLight::Type::Spot:
-            lightPath /= "spot.gltf";
-            break;
-        case SwLight::Type::Point:
-        default:
-            lightPath /= "point.gltf";
-            break;
-    }
+void SwScene::loadStandaloneLightAssets() {
+    constexpr std::array<std::pair<SwLight::Type, const char*>, 3> lightAssetFiles{{
+        {SwLight::Type::Point, "point.gltf"},
+        {SwLight::Type::Spot, "spot.gltf"},
+        {SwLight::Type::Directional, "directional.gltf"},
+    }};
 
-    // Standalone lights are real scene assets, just hidden from the assets menu, so they are not registered in
-    // mAlreadyLoadedAssets and a fresh asset id is minted on every spawn.
-    SwAsset lightAsset(lightPath);
-    lightAsset.setStandaloneLight(true);
-    auto [it, inserted] = mAssets.try_emplace(lightAsset.getId(), std::move(lightAsset));
-    if (inserted) {
-        it->second.createInstance(mCamera);
+    for (const auto& [type, file] : lightAssetFiles) {
+        std::filesystem::path lightPath = std::filesystem::path(LIGHTS_PATH) / file;
+        SwAsset lightAsset(lightPath);
+        lightAsset.setStandaloneLight(true);
+        const std::uint32_t id = lightAsset.getId();
+        mAssets.try_emplace(id, std::move(lightAsset));
+        mStandaloneLightAssetIds[type] = id;
     }
+}
+
+void SwScene::spawnStandaloneLight(SwLight::Type type) {
+    const auto it = mStandaloneLightAssetIds.find(type);
+    if (it == mStandaloneLightAssetIds.end()) {
+        return;
+    }
+    mAssets.at(it->second).createInstance(mCamera);
 }
 
 void SwScene::unloadAssetsAndInstances() {
     std::erase_if(mAssets, [&](std::pair<const std::uint32_t, SwAsset>& pair) {
         SwAsset& asset = pair.second;
-        if (asset.isMarkedDelete()) {
+        const bool assetDeleted = asset.isMarkedDelete();
+        if (assetDeleted) {
             mAlreadyLoadedAssets.erase(asset.getName());
             mFlags.mAssetUnloaded = true;
-            std::erase_if(asset.getInstances(), [&](const SwInstance& instance) {
-                if (instance.isMarkedDelete() && &instance == SwRenderer::sRendererContext.mScene->getPickSystem().getSelectedInstancePtr()) {
-                    SwRenderer::sRendererContext.mScene->getPickSystem().setSelectedInstancePtr(nullptr);
-                    mFlags.mInstanceUnloaded = true;
-                }
-                return instance.isMarkedDelete();
-            });
         }
-        return asset.isMarkedDelete();
+
+        // A standalone-light asset is shared by every light of its type, so removing one light deletes just that
+        // instance, not the whole asset. Instances are also erased when their owning asset is going away.
+        std::erase_if(asset.getInstances(), [&](const SwInstance& instance) {
+            const bool instanceDeleted = assetDeleted || instance.isMarkedDelete();
+            if (!instanceDeleted) {
+                return false;
+            }
+            if (&instance == SwRenderer::sRendererContext.mScene->getPickSystem().getSelectedInstancePtr()) {
+                SwRenderer::sRendererContext.mScene->getPickSystem().setSelectedInstancePtr(nullptr);
+            }
+            if (!assetDeleted) {
+                mFlags.mInstanceUnloaded = true;
+                asset.setReloadInstancesFlag(true);  // repack the asset's instance buffer without the removed instance
+            }
+            return true;
+        });
+
+        return assetDeleted;
     });
 }
 
