@@ -80,6 +80,7 @@ void SwGui::System::initializeResources() {
         ImGui::Indent();
 
         for (auto& asset : mScene.getAssets() | std::views::values) {
+            if (asset.isStandaloneLight()) continue; 
             const auto name = asset.getName();
             ImGui::PushStyleColor(ImGuiCol_Header, static_cast<ImVec4>(IMGUI_HEADER_GREEN));
             if (ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
@@ -152,74 +153,79 @@ void SwGui::System::initializeResources() {
             mResources.mSelectSkyboxFileBrowser.ClearSelected();
         }
 
-        if (ImGui::CollapsingHeader("Sunlight", ImGuiTreeNodeFlags_DefaultOpen)) {
-            SwSunlight& sunlight = mScene.getLightingSystem().getSunlight();
-            ImGui::ColorEdit3("Color", glm::value_ptr(sunlight.mColor));
-            glm::vec2 azimuthElevationDeg = glm::degrees(sunlight.mAzimuthElevation);
-            if (ImGui::SliderFloat2(
-                    "Azimuth / Elevation", glm::value_ptr(azimuthElevationDeg), -glm::degrees(glm::pi<float>()), glm::degrees(glm::pi<float>()), "%.0f deg"
-                )) {
-                sunlight.mAzimuthElevation = glm::radians(azimuthElevationDeg);
-            }
-            ImGui::SliderFloat("Intensity", &sunlight.mIntensity, 0.f, 5.f, "%.2f");
-        }
-
         if (ImGui::CollapsingHeader("Tone-Mapping", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::SliderFloat("Exposure", mScene.getPostProcessSystem().getExposurePtr(), 0.f, 8.f, "%.2f");
         }
 
-        // if (ImGui::CollapsingHeader("Objects", ImGuiTreeNodeFlags_DefaultOpen)) {
-        //     SwLighting::System& lighting = mScene.getLightingSystem();
-        //
-        //     const glm::vec3 spawnDir = mScene.getCamera().getDirectionVector();
-        //     const glm::vec3 spawnPos = mScene.getCamera().getPosition() + spawnDir * 5.f;
-        //     ImGui::TextUnformatted("Spawn Test Light:");
-        //     ImGui::SameLine();
-        //     if (ImGui::Button("Point")) {
-        //         lighting.spawnTestLight(SwLight::Type::Point, spawnPos, spawnDir);
-        //     }
-        //     ImGui::SameLine();
-        //     if (ImGui::Button("Spot")) {
-        //         lighting.spawnTestLight(SwLight::Type::Spot, spawnPos, spawnDir);
-        //     }
-        //     ImGui::SameLine();
-        //     if (ImGui::Button("Directional")) {
-        //         lighting.spawnTestLight(SwLight::Type::Directional, spawnPos, spawnDir);
-        //     }
-        //
-        //     auto& globalLights = lighting.getGlobalLights();
-        //     std::size_t removeIndex = globalLights.size();
-        //     for (std::size_t i = 0; i < globalLights.size(); i++) {
-        //         SwLight& light = globalLights[i];
-        //         SwLight::Params& params = light.getParams();
-        //         ImGui::PushID(static_cast<int>(light.getId()));
-        //         const std::string label = fmt::format("{} Light {}", magic_enum::enum_name(params.mType), light.getId());
-        //         if (ImGui::TreeNode(label.c_str())) {
-        //             ImGui::ColorEdit3("Color", glm::value_ptr(params.mColor));
-        //             ImGui::DragFloat3("Position", glm::value_ptr(light.getPosition()), 0.1f);
-        //             if (params.mType != SwLight::Type::Point) {
-        //                 if (ImGui::DragFloat3("Direction", glm::value_ptr(light.getDirection()), 0.01f, -1.f, 1.f)) {
-        //                     const float dirLength = glm::length(light.getDirection());
-        //                     if (dirLength > 1e-4f) {
-        //                         light.getDirection() /= dirLength;
-        //                     }
-        //                 }
-        //             }
-        //             ImGui::SliderFloat("Intensity", &params.mIntensity, 0.f, 100.f, "%.1f");
-        //             if (params.mType != SwLight::Type::Directional) {
-        //                 ImGui::SliderFloat("Range", &params.mRange, 0.f, 100.f, "%.1f");
-        //             }
-        //             if (ImGui::Button("Remove")) {
-        //                 removeIndex = i;
-        //             }
-        //             ImGui::TreePop();
-        //         }
-        //         ImGui::PopID();
-        //     }
-        //     if (removeIndex < globalLights.size()) {
-        //         globalLights.erase(globalLights.begin() + removeIndex);
-        //     }
-        // }
+        if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::TextUnformatted("Spawn Light:");
+            ImGui::SameLine();
+            if (ImGui::Button("Point")) {
+                mScene.spawnStandaloneLight(SwLight::Type::Point);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Spot")) {
+                mScene.spawnStandaloneLight(SwLight::Type::Spot);
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Directional")) {
+                mScene.spawnStandaloneLight(SwLight::Type::Directional);
+            }
+
+            // Both standalone and asset lights are flattened into the asset-light list, one entry per instance.
+            auto& assetLights = mScene.getLightingSystem().getAssetLights();
+            for (std::size_t i = 0; i < assetLights.size(); i++) {
+                SwLighting::AssetLight& record = assetLights[i];
+                SwLight::Params& params = record.mLight->getParams();
+                SwAsset& owningAsset = mScene.getAsset(record.mAssetId);
+                const bool standalone = owningAsset.isStandaloneLight();
+
+                ImGui::PushID(static_cast<int>(i));
+                const std::string label =
+                    fmt::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), record.mLight->getId());
+                if (ImGui::TreeNode(label.c_str())) {
+                    bool edited = false;
+                    edited |= ImGui::ColorEdit3("Color", glm::value_ptr(params.mColor));
+                    edited |= ImGui::SliderFloat("Intensity", &params.mIntensity, 0.f, 100.f, "%.1f");
+                    if (params.mType != SwLight::Type::Directional) {
+                        edited |= ImGui::SliderFloat("Range", &params.mRange, 0.f, 100.f, "%.1f");
+                    }
+
+                    // Asset lights transform with their owning asset, so only standalone lights expose transform controls.
+                    if (standalone && record.mInstance != nullptr) {
+                        glm::mat4& transform = record.mInstance->getData().mTransformMatrix;
+                        glm::vec3 translation, rotation, scale;
+                        ImGuizmo::DecomposeMatrixToComponents(
+                            glm::value_ptr(transform), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale)
+                        );
+                        bool transformEdited = false;
+                        transformEdited |= ImGui::DragFloat3("Position", glm::value_ptr(translation), 0.1f);
+                        if (params.mType != SwLight::Type::Point) {
+                            transformEdited |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 1.f);
+                        }
+                        if (transformEdited) {
+                            ImGuizmo::RecomposeMatrixFromComponents(
+                                glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale), glm::value_ptr(transform)
+                            );
+                            owningAsset.setReloadInstancesFlag(true);
+                            edited = true;
+                        }
+
+                        ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(IMGUI_BUTTON_RED));
+                        if (ImGui::Button("Remove")) {
+                            owningAsset.markDelete();
+                        }
+                        ImGui::PopStyleColor();
+                    }
+
+                    if (edited) {
+                        mScene.mFlags.mLightEdited = true;
+                    }
+                    ImGui::TreePop();
+                }
+                ImGui::PopID();
+            }
+        }
 
         ImGui::Unindent();
     };

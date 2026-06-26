@@ -87,17 +87,14 @@ namespace SwLighting {
         return SwBRDF::cookTorrance(normal, view, toLightDir, albedo, metallic, roughness, radiance);
     }
 
-    // Full PBR shading: directional sun + image-based ambient (AO-modulated) + the per-frame selected punctual lights.
+    // Full PBR shading: image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
     public float3 shadeLit(
         float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::PerFrameData* perFrame,
         Sw::Light* lights, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap,
         Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents, Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS],
         SamplerComparisonState shadowSampler
     ) {
-        Sw::Sunlight sun = perFrame->mSunlight;
-        float3 toSunDir = sun.getDirection();
-        float3 color = SwBRDF::cookTorrance(normal, view, toSunDir, albedo, metallic, roughness, sun.mColor * sun.mIntensity);
-        color += iblIntensity * SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
+        float3 color = iblIntensity * SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
         for (uint i = 0; i < perFrame->mActiveLightCount; i++) {
             Sw::Light light = lights[perFrame->mActiveLightIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);

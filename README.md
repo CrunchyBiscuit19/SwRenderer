@@ -190,8 +190,8 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Lighting `SwLighting`
 
-* **`AssetLight`** — a per-instance binding emitted by asset `SwLightNode`s during regen: a non-owning pointer to the asset-owned `SwLight`, its node-transform and instance indices, and the cached world position and direction. The system references the light object rather than copying its `SwLight::Data`.
-* **`Resources`** — the scene's lights: a single global `SwSunlight` and the `AssetLight` references. All punctual lights now belong to assets, so there is no separate editor/global light list.
+* **`AssetLight`** — a per-instance binding emitted by asset `SwLightNode`s during regen: a non-owning pointer to the asset-owned `SwLight`, its owning instance pointer and asset id, its node-transform and instance indices, and the cached world position and direction. The system references the light object rather than copying its `SwLight::Data`.
+* **`Resources`** — the scene's lights: a single global `SwSunlight` and the `AssetLight` references. All punctual lights belong to assets. Lights spawned from the GUI are loaded from `resources/lights/{point,spot,directional}.gltf` as standalone assets (`SwScene::spawnStandaloneLight`) that live in `mAssets` but are flagged `standalone` so they are hidden from the assets menu and transformable from the lighting panel.
 * **`System`** — flattens its `AssetLight` references into `SwLight::Data` via `collectLightData()`; the scene packs that into `mSceneLightsBuffer` (`reloadSceneLightsBuffer`).
 * **Relations** — feeds the light buffer that `SwGeometry`'s shaders consume; the sunlight is uploaded per frame via the per-frame buffer.
 

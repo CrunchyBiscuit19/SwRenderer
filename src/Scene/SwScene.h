@@ -29,6 +29,7 @@ public:
         bool mInstanceLoaded;
         bool mInstanceUnloaded;
         bool mReloadMainInstancesBuffer;
+        bool mLightEdited;  
     };
 
 private:
@@ -137,6 +138,7 @@ public:
     inline SwRenderGraph& getRenderGraph() { return mRenderGraph; }
 
     void loadAssets(const std::vector<std::filesystem::path>& files);
+    void spawnStandaloneLight(SwLight::Type type);
     void unloadAssetsAndInstances();
     void markAllAssetsDelete();
 

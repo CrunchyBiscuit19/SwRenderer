@@ -21,7 +21,6 @@ void SwFrame::update() {
     SwScene& scene = *SwRenderer::sRendererContext.mScene;
     Data perFrameData{
         .mPerspective = scene.getCamera().getPerspective(),
-        .mSunlight = scene.getLightingSystem().getSunlight(),
         .mCameraWorldPos = scene.getCamera().getPosition(),
     };
     SwLighting::System& lighting = scene.getLightingSystem();

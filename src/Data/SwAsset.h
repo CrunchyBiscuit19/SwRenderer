@@ -21,6 +21,7 @@ private:
     std::uint32_t mId{0};
     bool mDelete{false};
     bool mReloadInstancesFlag{true};
+    bool mStandaloneLight{false};  
 
     fastgltf::Asset mRawAsset;
 
@@ -93,6 +94,8 @@ public:
     void markDelete();
 
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
+    inline void setStandaloneLight(bool flag) { mStandaloneLight = flag; }
+    inline bool isStandaloneLight() { return mStandaloneLight; }
     inline std::string getName() { return mName; }
     inline std::uint32_t getId() { return mId; }
     inline std::deque<SwInstance>& getInstances() { return mInstances; }

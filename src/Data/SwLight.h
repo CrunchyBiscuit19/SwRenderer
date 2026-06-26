@@ -63,12 +63,6 @@ public:
     static void cleanup();
 };
 
-struct SwSunlight {
-    float mIntensity{0.f};
-    glm::vec2 mAzimuthElevation{0.f};  
-    glm::vec3 mColor{1.f};
-};
-
 struct SwTestDirectionalLight : public SwLight {
     SwTestDirectionalLight();
 };

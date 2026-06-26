@@ -13,17 +13,6 @@ namespace Sw {
         public float4x4 mProj;
     };
 
-    public struct Sunlight {
-        public float mIntensity;
-        public float2 mAzimuthElevation;   
-        public float3 mColor;
-
-        public float3 getDirection() {
-            float cosElev = cos(mAzimuthElevation.y);
-            return float3(cos(mAzimuthElevation.x) * cosElev, sin(mAzimuthElevation.y), sin(mAzimuthElevation.x) * cosElev);
-        }
-    };
-
     public enum LightType : uint {
         Directional = 0,
         Point = 1,
@@ -44,7 +33,6 @@ namespace Sw {
 
     public struct PerFrameData {
         public Perspective mPerspective;
-        public Sunlight mSunlight;
         public float3 mCameraWorldPos;
         public uint mActiveLightCount;                     
         public uint mActiveLightIndices[MAX_SHADOW_LIGHTS]; 

@@ -85,6 +85,8 @@ void SwLightNode::generateRcsAndRis() {
         const glm::mat4 model = instances[i].getData().mTransformMatrix * getWorldTransform();
         SwLighting::AssetLight& record = assetLights.emplace_back();
         record.mLight = &mLight;
+        record.mInstance = &instances[i];
+        record.mAssetId = mAssetId;
         record.mNodeTransformIndex = nodeTransformIndex;
         record.mInstanceIndex = asset.mFirstInstanceInScene + i;
         record.mWorldPosition = glm::vec3(instances[i].getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));

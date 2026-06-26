@@ -185,6 +185,31 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
     });
 }
 
+void SwScene::spawnStandaloneLight(SwLight::Type type) {
+    std::filesystem::path lightPath = std::filesystem::path(LIGHTS_PATH);
+    switch (type) {
+        case SwLight::Type::Directional:
+            lightPath /= "directional.gltf";
+            break;
+        case SwLight::Type::Spot:
+            lightPath /= "spot.gltf";
+            break;
+        case SwLight::Type::Point:
+        default:
+            lightPath /= "point.gltf";
+            break;
+    }
+
+    // Standalone lights are real scene assets, just hidden from the assets menu, so they are not registered in
+    // mAlreadyLoadedAssets and a fresh asset id is minted on every spawn.
+    SwAsset lightAsset(lightPath);
+    lightAsset.setStandaloneLight(true);
+    auto [it, inserted] = mAssets.try_emplace(lightAsset.getId(), std::move(lightAsset));
+    if (inserted) {
+        it->second.createInstance(mCamera);
+    }
+}
+
 void SwScene::unloadAssetsAndInstances() {
     std::erase_if(mAssets, [&](std::pair<const std::uint32_t, SwAsset>& pair) {
         SwAsset& asset = pair.second;
@@ -501,6 +526,7 @@ void SwScene::resetFlags() {
     mFlags.mInstanceLoaded = false;
     mFlags.mInstanceUnloaded = false;
     mFlags.mReloadMainInstancesBuffer = false;
+    mFlags.mLightEdited = false;
 }
 
 void SwScene::perFrameUpdate() {
@@ -527,8 +553,13 @@ void SwScene::perFrameUpdate() {
         realignInstancesOffset();
         reloadSceneInstancesBuffer();
         regenerateRcsAndRis();
-    } else if (mFlags.mReloadMainInstancesBuffer) {
-        reloadSceneInstancesBuffer();
+    } else if (mFlags.mReloadMainInstancesBuffer || mFlags.mLightEdited) {
+        if (mFlags.mReloadMainInstancesBuffer) {
+            reloadSceneInstancesBuffer();
+        }
+        if (mFlags.mLightEdited) {
+            regenerateRcsAndRis();  // refreshes the asset-light cache and re-uploads the lights buffer
+        }
     }
 
     resetFlags();

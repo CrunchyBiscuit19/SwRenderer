@@ -23,7 +23,6 @@ class SwFrame {
 public:
     struct Data {
         SwPerspective mPerspective;
-        SwSunlight mSunlight;
         glm::vec3 mCameraWorldPos;
         std::uint32_t mActiveLightCount{0};
         std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};

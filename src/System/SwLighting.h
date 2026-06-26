@@ -9,6 +9,8 @@
 #include <array>
 #include <vector>
 
+class SwInstance;
+
 namespace SwLighting {
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowDraw.vert.spv"};
@@ -55,13 +57,13 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
-// A per-instance binding to an asset-owned light. The system references the SwLight object rather than copying its data,
-// so edits to the asset light are picked up without re-flattening. The world position and direction are cached at regen.
 struct AssetLight {
-    SwLight* mLight{nullptr};               // non-owning reference to the asset-owned light object
-    std::uint32_t mNodeTransformIndex{0};   // into mSceneNodeTransformsBuffer
-    std::uint32_t mInstanceIndex{0};        // into mSceneInstancesBuffer
-    glm::vec3 mWorldPosition{0.f};          // cached for per-frame brightness scoring
+    SwLight* mLight{nullptr};               
+    SwInstance* mInstance{nullptr};         
+    std::uint32_t mAssetId{0};              
+    std::uint32_t mNodeTransformIndex{0};   
+    std::uint32_t mInstanceIndex{0};        
+    glm::vec3 mWorldPosition{0.f};          
     glm::vec3 mWorldDirection{0.f};         // light forward (glTF local -Z) in world space
 };
 
@@ -73,7 +75,6 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    SwSunlight mSunlight;
     std::vector<AssetLight> mAssetLights;
 
     std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
@@ -141,7 +142,6 @@ public:
     inline const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& getLightViewProj() const { return mResources.mLightViewProj; }
 
     inline Resources& getResources() { return mResources; }
-    inline SwSunlight& getSunlight() { return mResources.mSunlight; }
     inline std::vector<AssetLight>& getAssetLights() { return mResources.mAssetLights; }
 };
 
