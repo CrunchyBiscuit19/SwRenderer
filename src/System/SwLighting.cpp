@@ -168,7 +168,7 @@ SwLight& SwLighting::System::getOrCreateInstanceLight(std::uint32_t lightId, std
 }
 
 void SwLighting::System::eraseInstanceLights(std::uint32_t instanceId) {
-    std::erase_if(mResources.mInstanceLights, [instanceId](const auto& pair) { return pair.second == instanceId; });
+    std::erase_if(mResources.mInstanceLights, [instanceId](const auto& entry) { return entry.first.second == instanceId; });
 }
 
 void SwLighting::System::initializeResources() {
