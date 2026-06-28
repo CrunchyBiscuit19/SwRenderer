@@ -163,7 +163,43 @@ public:
     ~SwAllocatedImage();
 };
 
-class SwColorImage2D : public SwAllocatedImage {
+class SwColorImage : public SwAllocatedImage {
+protected:
+    SwColorImage();
+
+    SwColorImage(
+        std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
+    );
+
+public:
+    SwColorImage(SwColorImage&&) noexcept = default;
+    SwColorImage& operator=(SwColorImage&&) noexcept = default;
+
+    SwColorImage(const SwColorImage&) = delete;
+    SwColorImage& operator=(const SwColorImage&) = delete;
+};
+
+class SwDepthImage : public SwAllocatedImage {
+protected:
+    SwDepthImage();
+
+    SwDepthImage(
+        std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
+    );
+
+public:
+    SwDepthImage(SwDepthImage&&) noexcept = default;
+    SwDepthImage& operator=(SwDepthImage&&) noexcept = default;
+
+    SwDepthImage(const SwDepthImage&) = delete;
+    SwDepthImage& operator=(const SwDepthImage&) = delete;
+};
+
+class SwColorImage2D : public SwColorImage {
 public:
     SwColorImage2D();
 
@@ -184,7 +220,7 @@ public:
     SwColorImage2D& operator=(const SwColorImage2D&) = delete;
 };
 
-class SwDepthImage2D : public SwAllocatedImage {
+class SwDepthImage2D : public SwDepthImage {
 public:
     SwDepthImage2D();
 
@@ -205,7 +241,7 @@ public:
     SwDepthImage2D& operator=(const SwDepthImage2D&) = delete;
 };
 
-class SwColorImageCubemap : public SwAllocatedImage {
+class SwColorImageCubemap : public SwColorImage {
 public:
     SwColorImageCubemap();
 
@@ -226,7 +262,7 @@ public:
     SwColorImageCubemap& operator=(const SwColorImageCubemap&) = delete;
 };
 
-class SwDepthImageCubemap : public SwAllocatedImage {
+class SwDepthImageCubemap : public SwDepthImage {
 public:
     SwDepthImageCubemap();
 

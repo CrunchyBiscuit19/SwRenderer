@@ -394,6 +394,32 @@ SwAllocatedImage& SwAllocatedImage::operator=(SwAllocatedImage&& other) noexcept
 
 SwAllocatedImage::~SwAllocatedImage() { destroy(); }
 
+SwColorImage::SwColorImage() {}
+
+SwColorImage::SwColorImage(
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
+    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::deque<vk::raii::ImageView> otherImageViews
+)
+    : SwAllocatedImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
+          std::move(otherFormats), std::move(otherImageViews)
+      ) {}
+
+SwDepthImage::SwDepthImage() {}
+
+SwDepthImage::SwDepthImage(
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
+    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::deque<vk::raii::ImageView> otherImageViews
+)
+    : SwAllocatedImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
+          std::move(otherFormats), std::move(otherImageViews)
+      ) {
+    mClearValue.depthStencil.depth = 0.f;
+}
+
 SwColorImage2D::SwColorImage2D() {}
 
 SwColorImage2D::SwColorImage2D(
@@ -401,8 +427,8 @@ SwColorImage2D::SwColorImage2D(
     const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
-    : SwAllocatedImage(
-          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
+    : SwColorImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
       ) {}
 
@@ -419,12 +445,10 @@ SwDepthImage2D::SwDepthImage2D(
     const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
-    : SwAllocatedImage(
-          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
+    : SwDepthImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
-      ) {
-    mClearValue.depthStencil.depth = 0.f;
-}
+      ) {}
 
 void SwDepthImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
 
@@ -439,8 +463,8 @@ SwColorImageCubemap::SwColorImageCubemap(
     const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
-    : SwAllocatedImage(
-          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
+    : SwColorImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
       ) {}
 
@@ -457,12 +481,10 @@ SwDepthImageCubemap::SwDepthImageCubemap(
     const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
-    : SwAllocatedImage(
-          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
+    : SwDepthImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, allocator, allocation, mipmapped,
           std::move(otherFormats), std::move(otherImageViews)
-      ) {
-    mClearValue.depthStencil.depth = 0.f;
-}
+      ) {}
 
 void SwDepthImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
 

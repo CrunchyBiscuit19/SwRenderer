@@ -68,7 +68,6 @@ struct AssetLight {
     glm::vec3 mWorldDirection{0.f};         // light forward (glTF local -Z) in world space
 };
 
-// Hashes the (lightId, instanceId) key used by the per-instance light map.
 struct InstanceLightKeyHash {
     std::size_t operator()(const std::pair<std::uint32_t, std::uint32_t>& key) const noexcept {
         return (static_cast<std::size_t>(key.first) << 32) ^ static_cast<std::size_t>(key.second);

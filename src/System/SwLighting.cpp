@@ -343,7 +343,6 @@ void SwLighting::System::initializePasses() {
 
             mResources.mShadowDrawPc.mLightDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
 
-            // The spot selection list holds active-light slots, each of which is also its spot-map slot.
             for (std::uint32_t s = 0; s < mResources.mSpotShadowCount; s++) {
                 const std::uint32_t slot = mResources.mSpotShadowLightIndices[s];
 
