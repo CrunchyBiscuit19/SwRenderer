@@ -3,6 +3,8 @@
 std::uint32_t SwLight::sLatestLightId{0};
 SwStagingBuffer SwLight::sLightsStaging{};
 
+SwLight::SwLight() : mId(sLatestLightId++) {}
+
 SwLight::SwLight(Params params) : mId(sLatestLightId++), mParams(std::move(params)) {}
 
 SwLight::Data SwLight::toData(std::uint32_t nodeTransformIndex, std::uint32_t instanceIndex) const {

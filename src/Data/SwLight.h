@@ -46,8 +46,8 @@ public:
     static constexpr std::uint32_t LIGHTS_STAGING_BUFFER_SIZE{1 << 16};
     static SwStagingBuffer sLightsStaging;
 
-    SwLight() = default;
-    explicit SwLight(Params params);
+    SwLight();
+    SwLight(Params params);
 
     inline Params& getParams() { return mParams; }
     inline const Params& getParams() const { return mParams; }

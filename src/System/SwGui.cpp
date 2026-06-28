@@ -180,16 +180,16 @@ void SwGui::System::initializeResources() {
                 SwAsset& owningAsset = mScene.getAsset(record.mAssetId);
                 const bool standalone = owningAsset.isStandaloneLight();
 
-                ImGui::PushID(static_cast<int>(i));
                 const std::string label =
                     fmt::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), record.mLight->getId());
+                ImGui::PushID(label.c_str());
                 if (ImGui::TreeNode(label.c_str())) {
                     bool edited = false;
                     edited |= ImGui::ColorEdit3("Color", glm::value_ptr(params.mColor));
                     edited |= ImGui::SliderFloat("Intensity", &params.mIntensity, 0.f, 100.f, "%.1f");
                     if (params.mType != SwLight::Type::Directional) {
-                        // Range is a soft cutoff that only bites as the surface distance approaches it, so the slider
-                        // reaches small values (logarithmic) where shrinking the range visibly tightens the light.
+                        // Range is a soft cutoff that only bites as the surface distance approaches it.
+                        // Slider reaches small values (logarithmic) where shrinking the range visibly tightens the light.
                         edited |= ImGui::SliderFloat("Range", &params.mRange, 0.1f, 100.f, "%.2f", ImGuiSliderFlags_Logarithmic);
                     }
 
@@ -212,7 +212,7 @@ void SwGui::System::initializeResources() {
                                 break;
                             case SwLight::Type::Directional:
                                 transformEdited |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 1.f);
-                                break;     
+                                break;
                         }
 
                         if (transformEdited) {

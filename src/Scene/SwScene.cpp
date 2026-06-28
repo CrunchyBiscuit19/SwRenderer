@@ -231,6 +231,9 @@ void SwScene::unloadAssetsAndInstances() {
             if (&instance == SwRenderer::sRendererContext.mScene->getPickSystem().getSelectedInstancePtr()) {
                 SwRenderer::sRendererContext.mScene->getPickSystem().setSelectedInstancePtr(nullptr);
             }
+            if (!asset.getLights().empty()) {
+                mLighting.eraseInstanceLights(instance.getId()); 
+            }
             if (!assetDeleted) {
                 mFlags.mInstanceUnloaded = true;
                 asset.setReloadInstancesFlag(true);  // repack the asset's instance buffer without the removed instance

@@ -7,6 +7,7 @@
 #include <Resource/SwPipeline.h>
 
 #include <array>
+#include <unordered_map>
 #include <vector>
 
 class SwInstance;
@@ -76,6 +77,7 @@ struct Resources {
     static void cleanup();
 
     std::vector<AssetLight> mAssetLights;
+    std::unordered_map<std::pair<std::uint32_t, std::uint32_t>, SwLight> mInstanceLights;
 
     std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
     std::uint32_t mActiveLightCount{0};
@@ -133,6 +135,9 @@ public:
     void refreshActiveLights(const glm::vec3& cameraPos);
 
     std::vector<SwLight::Data> collectLightData() const;
+
+    SwLight& getOrCreateInstanceLight(std::uint32_t lightId, std::uint32_t instanceId, const SwLight::Params& defaultParams);
+    void eraseInstanceLights(std::uint32_t instanceId);
 
     inline SwDescriptorSet& getSpotShadowMapsDescriptorSet() { return mResources.mSpotShadowMapsDescriptorSet; }
     inline SwDescriptorSet& getPointShadowMapsDescriptorSet() { return mResources.mPointShadowMapsDescriptorSet; }

@@ -161,6 +161,16 @@ std::vector<SwLight::Data> SwLighting::System::collectLightData() const {
     return out;
 }
 
+SwLight& SwLighting::System::getOrCreateInstanceLight(std::uint32_t lightId, std::uint32_t instanceId, const SwLight::Params& defaultParams) {
+    const std::pair<std::uint32_t, std::uint32_t> key = std::pair(lightId, instanceId);
+    auto [it, inserted] = mResources.mInstanceLights.try_emplace(key, defaultParams);
+    return it->second;
+}
+
+void SwLighting::System::eraseInstanceLights(std::uint32_t instanceId) {
+    std::erase_if(mResources.mInstanceLights, [instanceId](const auto& pair) { return pair.second == instanceId; });
+}
+
 void SwLighting::System::initializeResources() {
     constexpr vk::ImageUsageFlags shadowMapUsage =
         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled;
