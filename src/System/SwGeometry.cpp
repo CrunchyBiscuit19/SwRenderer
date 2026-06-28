@@ -24,7 +24,7 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
             pipeline.getLayoutHandle(),
             0,
             {scene.getSceneMaterialResourcesDescriptorSet().getHandle(), scene.getIBLSystem().getConsumeDescriptorSet().getHandle(),
-             scene.getLightingSystem().getSpotShadowMapsDescriptorSet().getHandle()},
+             scene.getLightingSystem().getShadowMapsDescriptorSet().getHandle()},
             nullptr
         );
 
@@ -43,6 +43,18 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
     }
 }
 
+std::array<vk::DescriptorSetLayout, 3> SwGeometry::Resources::sGeometrySetLayouts{};
+
+void SwGeometry::Resources::init() {
+    SwGeometry::Resources::sGeometrySetLayouts = {
+        SwMaterialResources::sMaterialResourcesDescriptorLayout.getHandle(),
+        SwIBL::Resources::sConsumeDescriptorLayout.getHandle(),
+        SwLighting::Resources::sShadowConsumeDescriptorLayout.getHandle()
+    };
+}
+
+void SwGeometry::Resources::cleanup() {}
+
 SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwGeometry::System::initializeResources() {}
@@ -53,7 +65,10 @@ void SwGeometry::System::initializePasses() {
         deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
         deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        for (auto& shadowMap : mScene.getLightingSystem().getResources().mSpotShadowMaps) {
+        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadow2DMaps) {
+            deps.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        }
+        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowCubeMaps) {
             deps.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
         }
         deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);

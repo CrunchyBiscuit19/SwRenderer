@@ -92,16 +92,18 @@ namespace SwLighting {
     public float3 shadeLit(
         float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::PerFrameData* perFrame,
         Sw::Light* lights, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap,
-        Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents, Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS],
-        SamplerComparisonState shadowSampler
+        Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents, Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS],
+        TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS], SamplerComparisonState shadowSampler
     ) {
         float3 color = iblIntensity * SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
         for (uint i = 0; i < perFrame->mActiveLightCount; i++) {
             Sw::Light light = lights[perFrame->mActiveLightIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
-            // Only spotlights cast shadows for now; their map lives in slot i, parallel to the active-light records.
-            if (light.mType == Sw::LightType::Spot) {
-                contribution *= shadowFactor(i, worldPos, perFrame, shadowMaps, shadowSampler);
+            Sw::ShadowType shadowType = perFrame->mShadowType[i];
+            if (shadowType == Sw::ShadowType::TwoD) {
+                contribution *= shadowFactor2D(i, worldPos, perFrame, shadow2DMaps, shadowSampler);
+            } else if (shadowType == Sw::ShadowType::Cube) {
+                contribution *= shadowFactorCube(i, light, worldPos, perFrame, shadowCubeMaps, shadowSampler);
             }
             color += contribution;
         }
@@ -145,9 +147,10 @@ namespace SwLighting {
 	    return projCoords.xy + POISSON_DISK[index] / radius;
     }
 
-    // Reversed-Z so the bias is added (not subtracted) to kill acne.
-    public float shadowFactor(
-        uint slot, float3 worldPos, Sw::PerFrameData* perFrame, Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS], SamplerComparisonState shadowSampler
+    // Reversed-Z so the bias is added (not subtracted) to kill acne. The view-proj lives in slot-indexed
+    // mLightViewProj, while the 2D map for the slot is located via mShadowIndex.
+    public float shadowFactor2D(
+        uint slot, float3 worldPos, Sw::PerFrameData* perFrame, Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS], SamplerComparisonState shadowSampler
     ) {
         float4 clip = mul(perFrame->mLightViewProj[slot], float4(worldPos, 1.f));
         if (clip.w <= 0.f) {
@@ -159,6 +162,7 @@ namespace SwLighting {
             return 1.f;
         }
 
+        uint mapIndex = perFrame->mShadowIndex[slot];
         const float bias = 0.0015f;
         const float radius = ndc.z + bias;  // reversed-Z, so bias is added to push receivers toward lit
         const float2 texel = 1.f / float2(Sw::SHADOW_MAP_SIZE, Sw::SHADOW_MAP_SIZE);
@@ -168,11 +172,21 @@ namespace SwLighting {
             for (int x = -BLUR_RANGE; x <= BLUR_RANGE; x++) {
                 float2 off = float2(texel.x * x, texel.y * y);
                 float2 coord = GetPoissonDiskCoord(uv + off, count, POISSON_RADIUS);
-                lit += shadowMaps[slot].SampleCmpLevelZero(shadowSampler, coord, radius).r;
+                lit += shadow2DMaps[mapIndex].SampleCmpLevelZero(shadowSampler, coord, radius).r;
                 count++;
             }
         }
         float shadow = lit / count;  // 0 = fully occluded, 1 = fully lit
         return lerp(SwLighting::SHADOW_AMBIENT, 1.0, shadow);
+    }
+
+    // Point-light cube shadows are not rendered yet, so this returns fully lit. The cube pool and
+    // binding exist so the consume path is wired for when the six faces are drawn. TODO: sample
+    // shadowCubeMaps[mShadowIndex[slot]] by direction against a radial depth.
+    public float shadowFactorCube(
+        uint slot, Sw::Light light, float3 worldPos, Sw::PerFrameData* perFrame, TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS],
+        SamplerComparisonState shadowSampler
+    ) {
+        return 1.f;
     }
 }

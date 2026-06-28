@@ -27,6 +27,11 @@ struct WorkPC : SwPC<WorkPC> {
 
 struct Resources {
     WorkPC mWorkPushConstants;
+
+    static std::array<vk::DescriptorSetLayout, 3> sGeometrySetLayouts;
+
+    static void init();
+    static void cleanup();
 };
 
 class System : public SwSystem {

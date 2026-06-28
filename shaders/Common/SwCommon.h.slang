@@ -5,8 +5,9 @@ namespace Sw {
     public static const uint MAX_2D_WORKGROUP_THREADS = 32;
     public static const float PI = 3.1415926535897932384626433832795028841972f;
     public static const uint NUM_PBR_IMAGES = 5;
-    public static const uint MAX_SHADOW_LIGHTS = 16;   // punctual lights selected per frame for shading + shadow casting
-    public static const uint SHADOW_MAP_SIZE = 1024;   // mirrors C++ SwLighting::SHADOW_MAP_WIDTH_HEIGHT for PCF texel offsets
+    public static const uint MAX_SHADOW_LIGHTS = 16;       
+    public static const uint MAX_SHADOW_CUBE_LIGHTS = 8;   
+    public static const uint SHADOW_MAP_SIZE = 1024;
 
     public struct Perspective {
         public float4x4 mView;
@@ -17,6 +18,12 @@ namespace Sw {
         Directional = 0,
         Point = 1,
         Spot = 2
+    };
+
+    public enum ShadowType : uint {
+        None = 0,
+        TwoD = 1,   
+        Cube = 2    
     };
 
     public struct Light {
@@ -36,7 +43,9 @@ namespace Sw {
         public float3 mCameraWorldPos;
         public uint mActiveLightCount;                     
         public uint mActiveLightIndices[MAX_SHADOW_LIGHTS]; 
-        public float4x4 mLightViewProj[MAX_SHADOW_LIGHTS];  
+        public float4x4 mLightViewProj[MAX_SHADOW_LIGHTS];
+        public ShadowType mShadowType[MAX_SHADOW_LIGHTS];   
+        public uint mShadowIndex[MAX_SHADOW_LIGHTS];        
     };
 
     public struct Vertex {

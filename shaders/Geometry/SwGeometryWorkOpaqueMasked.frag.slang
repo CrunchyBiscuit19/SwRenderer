@@ -13,8 +13,10 @@ public uniform Sampler2D iblPrefilterMap;
 public uniform Sampler2D iblBrdfLut;
 
 [[vk::binding(0, 2)]]
-public uniform Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS];
+public uniform Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS];
 [[vk::binding(1, 2)]]
+public uniform TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS];
+[[vk::binding(2, 2)]]
 public uniform SamplerComparisonState shadowSampler;
 
 [[vk::push_constant]]
@@ -46,13 +48,10 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     float3 lit = SwLighting::shadeLit( 
         color.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mPerFrameBuffer, workPc.mSceneLightsBuffer,
         workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
-        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadowMaps, shadowSampler
+        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
     );
     lit += materialResources[NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET)].Sample(in.mUv).rgb * mc.mEmissiveFactor.rgb;
 
-    // Opaque and masked surfaces fully cover their pixel. Write coverage 1 so the skybox composite
-    // (which blends by 1 - draw-image alpha) does not bleed through opaque geometry whose material
-    // base alpha happens to be below 1. color.a above is still used only for the masked discard test.
     return float4(lit, 1.f);
 }
 

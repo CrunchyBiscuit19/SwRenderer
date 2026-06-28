@@ -210,6 +210,7 @@ SwRenderer::SwRenderer()
     SwMaterialResources::init();
     SwIBL::Resources::init();
     SwLighting::Resources::init();
+    SwGeometry::Resources::init();
     SwMaterial::init();
 
     mScene.initialize();
@@ -267,6 +268,7 @@ SwRenderer::~SwRenderer() {
     SwNode::cleanup();
     SwLight::cleanup();
     SwMaterialConstants::cleanup();
+    SwGeometry::Resources::cleanup();
     SwIBL::Resources::cleanup();
     SwLighting::Resources::cleanup();
     SwMaterialResources::cleanup();

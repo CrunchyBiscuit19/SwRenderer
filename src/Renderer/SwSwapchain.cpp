@@ -28,6 +28,11 @@ void SwFrame::update() {
     perFrameData.mActiveLightCount = lighting.getActiveLightCount();
     perFrameData.mActiveLightIndices = lighting.getActiveLightIndices();
     perFrameData.mLightViewProj = lighting.getLightViewProj();
+    const auto& shadowTypes = lighting.getShadowTypes();
+    for (std::size_t i = 0; i < shadowTypes.size(); i++) {
+        perFrameData.mShadowTypes[i] = static_cast<std::uint32_t>(shadowTypes[i]);
+    }
+    perFrameData.mShadowIndices = lighting.getShadowIndices();
     mPerFrameBuffer.copyFromUnchecked(&perFrameData, sizeof(Data));
 }
 

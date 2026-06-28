@@ -1,18 +1,19 @@
 #include <Data/SwMaterial.h>
-#include <Renderer/SwRenderer.h>
 #include <Renderer/SwLogger.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwShader.h>
+#include <Scene/SwScene.h>
 #include <System/SwGeometry.h>
 #include <System/SwIBL.h>
 #include <System/SwLighting.h>
-#include <Scene/SwScene.h>
 #include <fmt/core.h>
-#include <magic_enum.hpp>
 #include <quill/LogMacros.h>
+
+#include <magic_enum.hpp>
 
 SwMaterialTexture SwMaterialTexture::sDefaultWhiteTexture{nullptr, nullptr};
 SwMaterialTexture SwMaterialTexture::sDefaultErrorTexture{nullptr, nullptr};
@@ -30,7 +31,9 @@ SwMaterialTexture SwMaterialTexture::retrieveDefaultFlatNormalTexture() {
 
 SwStagingBuffer SwMaterialConstants::sMaterialConstantsStaging{};
 
-void SwMaterialConstants::init() { sMaterialConstantsStaging = SwBufferFactory::createStagingBuffer("MaterialConstantsStagingBuffer", MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE); }
+void SwMaterialConstants::init() {
+    sMaterialConstantsStaging = SwBufferFactory::createStagingBuffer("MaterialConstantsStagingBuffer", MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE);
+}
 
 void SwMaterialConstants::cleanup() { sMaterialConstantsStaging.destroy(); }
 
@@ -68,7 +71,9 @@ SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
 SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
 const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometry.vert.spv"};
 SwShader SwMaterial::sVertexShader;
-const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkOpaqueMasked.frag.spv"};
+const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH{
+    std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkOpaqueMasked.frag.spv"
+};
 SwShader SwMaterial::sOpaqueMaskedFragmentShader;
 const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkTransparent.frag.spv"};
 SwShader SwMaterial::sTransparentFragmentShader;
@@ -95,16 +100,16 @@ SwMaterial::SwMaterial(
 }
 
 void SwMaterial::init() {
-    const std::array<vk::DescriptorSetLayout, 3> geometrySetLayouts{
-        SwMaterialResources::sMaterialResourcesDescriptorLayout.getHandle(), SwIBL::Resources::sConsumeDescriptorLayout.getHandle(),
-        SwLighting::Resources::sSpotShadowConsumeDescriptorLayout.getHandle()
-    };
-    sOpaquePipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
-    sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout("GeometryTransparentPipelineLayout", geometrySetLayouts, SwGeometry::WorkPC::getRange());
+    sOpaquePipelineLayout =
+        SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", SwGeometry::Resources::sGeometrySetLayouts, SwGeometry::WorkPC::getRange());
+    sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout(
+        "GeometryTransparentPipelineLayout", SwGeometry::Resources::sGeometrySetLayouts, SwGeometry::WorkPC::getRange()
+    );
 
     sVertexShader = SwShaderFactory::createShader("GeometryVertexShaderModule", GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    sOpaqueMaskedFragmentShader =
-        SwShaderFactory::createShader("GeometryOpaqueMaskedFragmentShaderModule", GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    sOpaqueMaskedFragmentShader = SwShaderFactory::createShader(
+        "GeometryOpaqueMaskedFragmentShaderModule", GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment
+    );
     sTransparentFragmentShader =
         SwShaderFactory::createShader("GeometryTransparentFragmentShaderModule", GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
@@ -155,8 +160,9 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             // entry point adds the alpha-cutout discard (and drops early depth-stencil) while the
             // opaque entry point keeps [earlydepthstencil].
             graphicsPipelineOptions.mFragmentShader = sOpaqueMaskedFragmentShader.getHandle();
-            graphicsPipelineOptions.mFragmentEntryPoint =
-                materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask ? std::string(GEOMETRY_MASKED_ENTRY_POINT) : std::string(GEOMETRY_OPAQUE_ENTRY_POINT);
+            graphicsPipelineOptions.mFragmentEntryPoint = materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask
+                                                              ? std::string(GEOMETRY_MASKED_ENTRY_POINT)
+                                                              : std::string(GEOMETRY_OPAQUE_ENTRY_POINT);
             graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getHandle();
             graphicsPipelineOptions.mColorAttachments =
                 std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};

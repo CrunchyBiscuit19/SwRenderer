@@ -17,12 +17,17 @@ static const std::filesystem::path SHADOW_CULL_SHADER_PATH{std::filesystem::path
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowDraw.vert.spv"};
 static constexpr std::string_view SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
-constexpr std::uint32_t NUM_SPOT_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
-constexpr std::uint32_t NUM_POINT_SHADOWS{8};
-constexpr std::uint32_t NUM_DIR_SHADOWS{4};
+constexpr std::uint32_t NUM_2D_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
+constexpr std::uint32_t NUM_CUBE_SHADOWS{8};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
-constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};  
+constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
+
+enum class ShadowType : std::uint32_t {
+    None = 0,
+    TwoD = 1,  
+    Cube = 2,  
+};
 
 constexpr float SHADOW_DIRECTIONAL_HALF_EXTENT{20.f};
 constexpr float SHADOW_DIRECTIONAL_DISTANCE{60.f};
@@ -75,9 +80,7 @@ struct InstanceLightKeyHash {
 };
 
 struct Resources {
-    static SwDescriptorLayout sSpotShadowConsumeDescriptorLayout;
-    static SwDescriptorLayout sPointShadowConsumeDescriptorLayout;
-    static SwDescriptorLayout sDirShadowConsumeDescriptorLayout;
+    static SwDescriptorLayout sShadowConsumeDescriptorLayout;
 
     static void init();
     static void cleanup();
@@ -89,27 +92,16 @@ struct Resources {
     std::uint32_t mActiveLightCount{0};
     std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS> mLightViewProj{};
 
-    std::array<std::uint32_t, NUM_SPOT_SHADOWS> mSpotShadowLightIndices{};
-    std::uint32_t mSpotShadowCount{0};
-    std::array<std::uint32_t, NUM_POINT_SHADOWS> mPointShadowLightIndices{};
-    std::uint32_t mPointShadowCount{0};
-    std::array<std::uint32_t, NUM_DIR_SHADOWS> mDirShadowLightIndices{};
-    std::uint32_t mDirShadowCount{0};
+    std::array<ShadowType, SwLight::MAX_ACTIVE_LIGHTS> mShadowType{};
+    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mShadowIndex{};
 
-    std::array<SwDepthImage2D, NUM_SPOT_SHADOWS> mSpotShadowMaps;
-    SwSampler mSpotShadowMapsSampler;
-    SwDescriptorSet mSpotShadowMapsDescriptorSet;
+    std::array<SwDepthImage2D, NUM_2D_SHADOWS> mShadow2DMaps;
+    std::array<SwDepthImageCubemap, NUM_CUBE_SHADOWS> mShadowCubeMaps;
+    SwSampler mShadowMapsSampler;
+    SwDescriptorSet mShadowMapsDescriptorSet;
 
-    std::array<SwDepthImageCubemap, NUM_POINT_SHADOWS> mPointShadowMaps;
-    SwSampler mPointShadowMapsSampler;
-    SwDescriptorSet mPointShadowMapsDescriptorSet;
-
-    std::array<SwDepthImage2D, NUM_DIR_SHADOWS> mDirShadowMaps;
-    SwSampler mDirShadowMapsSampler;
-    SwDescriptorSet mDirShadowMapsDescriptorSet;
-
-    std::array<SwAllocatedBuffer, NUM_SPOT_SHADOWS> mSpotLightDrawRisIndicesBuffer;
-    std::array<SwAllocatedBuffer, NUM_SPOT_SHADOWS> mSpotLightRcsBuffer;
+    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS> mShadow2DLightDrawRisIndicesBuffer;
+    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS> mShadow2DLightRcsBuffer;
 
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
@@ -145,12 +137,12 @@ public:
     SwLight& getOrCreateInstanceLight(std::uint32_t lightId, std::uint32_t instanceId, const SwLight::Params& defaultParams);
     void eraseInstanceLights(std::uint32_t instanceId);
 
-    inline SwDescriptorSet& getSpotShadowMapsDescriptorSet() { return mResources.mSpotShadowMapsDescriptorSet; }
-    inline SwDescriptorSet& getPointShadowMapsDescriptorSet() { return mResources.mPointShadowMapsDescriptorSet; }
-    inline SwDescriptorSet& getDirShadowMapsDescriptorSet() { return mResources.mDirShadowMapsDescriptorSet; }
+    inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
     inline std::uint32_t getActiveLightCount() const { return mResources.mActiveLightCount; }
     inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getActiveLightIndices() const { return mResources.mActiveLightIndices; }
     inline const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& getLightViewProj() const { return mResources.mLightViewProj; }
+    inline const std::array<ShadowType, SwLight::MAX_ACTIVE_LIGHTS>& getShadowTypes() const { return mResources.mShadowType; }
+    inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getShadowIndices() const { return mResources.mShadowIndex; }
 
     inline Resources& getResources() { return mResources; }
     inline std::vector<AssetLight>& getAssetLights() { return mResources.mAssetLights; }

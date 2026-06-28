@@ -13,8 +13,10 @@ public uniform Sampler2D iblPrefilterMap;
 public uniform Sampler2D iblBrdfLut;
 
 [[vk::binding(0, 2)]]
-public uniform Texture2D shadowMaps[Sw::MAX_SHADOW_LIGHTS];
+public uniform Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS];
 [[vk::binding(1, 2)]]
+public uniform TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS];
+[[vk::binding(2, 2)]]
 public uniform SamplerComparisonState shadowSampler;
 
 [[vk::push_constant]]
@@ -43,7 +45,7 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float3 litColor = SwLighting::shadeLit(
         baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mPerFrameBuffer, workPc.mSceneLightsBuffer,
         workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
-        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadowMaps, shadowSampler
+        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
     );
     litColor += materialResources[NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET)].Sample(in.mUv).rgb * mc.mEmissiveFactor.rgb;
     float4 finalColor = float4(litColor, baseColor.a);

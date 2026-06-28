@@ -27,6 +27,8 @@ public:
         std::uint32_t mActiveLightCount{0};
         std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
         std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS> mLightViewProj{};
+        std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mShadowTypes{};
+        std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mShadowIndices{};
     };
 
 private:
