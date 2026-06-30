@@ -582,6 +582,7 @@ void SwScene::perFrameUpdate() {
     resetFlags();
 
     mCull.refresh();
+    mLighting.refresh();
     mPick.refresh();
     mIBL.refresh();
     mWBOIT.refresh();

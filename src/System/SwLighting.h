@@ -1,7 +1,9 @@
 #pragma once
 
+#include <Data/SwBatch.h>
 #include <Data/SwLight.h>
 #include <Scene/SwSystem.h>
+#include <System/SwCull.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
@@ -19,6 +21,9 @@ static constexpr std::string_view SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT{"ma
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 constexpr std::uint32_t NUM_2D_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
 constexpr std::uint32_t NUM_CUBE_SHADOWS{8};
+constexpr std::uint32_t NUM_FRUSTUM_PLANES{6};
+constexpr std::uint32_t SHADOW_MAX_RENDER_COMMANDS{1 << 14};
+constexpr std::uint32_t SHADOW_RCS_BUFFER_SIZE{SHADOW_MAX_RENDER_COMMANDS * sizeof(SwRenderCommand)};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
@@ -37,22 +42,25 @@ constexpr float SHADOW_SPOT_NEAR{0.05f};
 constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
 
 struct ShadowCullPC : SwPC<ShadowCullPC> {
-    vk::DeviceAddress mLightRcsBuffer;
-    vk::DeviceAddress mRisBuffer;
-    vk::DeviceAddress mRisCount;
-    vk::DeviceAddress mLightDrawRisIndicesBuffer;
+    vk::DeviceAddress mShadowRcsBuffer;
+    vk::DeviceAddress mShadowRisBuffer;
+    vk::DeviceAddress mShadowRisIndicesBuffer;
     vk::DeviceAddress mFrustumBuffer;
     vk::DeviceAddress mPerFrameBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
+    std::uint32_t mShadowRisLimit;
+    glm::vec3 mLightWorldPos;
+    float mLightRange;
+    SwLight::Type mLightType;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ShadowDrawPC : SwPC<ShadowDrawPC> {
-    vk::DeviceAddress mLightDrawRisIndicesBuffer;
-    vk::DeviceAddress mLightRcsBuffer;
+    vk::DeviceAddress mShadowRcsBuffer;
+    vk::DeviceAddress mShadowRisIndicesBuffer;
     vk::DeviceAddress mPerFrameBuffer;
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -70,7 +78,7 @@ struct AssetLight {
     std::uint32_t mNodeTransformIndex{0};   
     std::uint32_t mInstanceIndex{0};        
     glm::vec3 mWorldPosition{0.f};          
-    glm::vec3 mWorldDirection{0.f};         // light forward (glTF local -Z) in world space
+    glm::vec3 mWorldDirection{0.f};         
 };
 
 struct InstanceLightKeyHash {
@@ -100,8 +108,12 @@ struct Resources {
     SwSampler mShadowMapsSampler;
     SwDescriptorSet mShadowMapsDescriptorSet;
 
-    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS> mShadow2DLightDrawRisIndicesBuffer;
-    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS> mShadow2DLightRcsBuffer;
+    std::vector<SwRenderCommand> mShadowRcs;
+    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS + NUM_CUBE_SHADOWS> mShadowRcsBuffer;
+    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS + NUM_CUBE_SHADOWS> mShadowRisIndicesBuffer;
+
+    std::array<SwCull::Plane, NUM_2D_SHADOWS * NUM_FRUSTUM_PLANES> mShadowFrustums{};
+    SwAllocatedBuffer mShadowFrustumsBuffer;
 
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
@@ -121,6 +133,9 @@ private:
     void initializePasses() override;
 
     static glm::mat4 computeLightMatrix(const SwLight::Params& params, const glm::vec3& worldPos, const glm::vec3& worldDir);
+    static void calculateFrustum(const glm::mat4& m, SwCull::Plane* out);
+
+    void prepareShadowCullData();
 
 public:
     System(SwScene& scene);

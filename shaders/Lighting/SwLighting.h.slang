@@ -7,20 +7,23 @@ import SwIBL;
 
 namespace SwLighting {
     public struct ShadowCullPC {
-        public Sw::RenderCommand* mLightRcsBuffer;
-        public Sw::RenderItem* mRisBuffer;
-        public uint mRisCount;
-        public uint* mLightDrawRisIndicesBuffer;
+        public Sw::RenderCommand* mShadowRcsBuffer;
+        public Sw::RenderItem* mShadowRisBuffer;
+        public uint* mShadowRisIndicesBuffer;
         public SwCull::Plane* mFrustumBuffer;
         public Sw::PerFrameData* mPerFrameBuffer;
         public Sw::Bounds* mSceneBoundsBuffer;
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;
         public Sw::Instance* mSceneInstancesBuffer;
+        public uint mShadowRisLimit;
+        public float3 mLightWorldPos;       
+        public float mLightRange;           
+        public Sw::LightType mLightType;             
     };
 
     public struct ShadowDrawPC {
-        public uint* mLightDrawRisIndicesBuffer;
-        public Sw::RenderCommand* mLightRcsBuffer;
+        public Sw::RenderCommand* mShadowRcsBuffer;
+        public uint* mShadowRisIndicesBuffer;
         public Sw::PerFrameData* mPerFrameBuffer;
         public Sw::Vertex* mSceneVertexBuffer;
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;

@@ -1,3 +1,4 @@
+#include <Renderer/SwHelper.h>
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
@@ -24,9 +25,7 @@ void SwLighting::Resources::init() {
     );
 }
 
-void SwLighting::Resources::cleanup() {
-    sShadowConsumeDescriptorLayout.destroy();
-}
+void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy(); }
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -128,6 +127,51 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
         const AssetLight& light = assetLights[lightIndex];
         processLight(slot, light.mLight->getParams(), light.mWorldPosition, light.mWorldDirection);
     }
+
+    prepareShadowCullData();
+}
+
+void SwLighting::System::calculateFrustum(const glm::mat4& m, SwCull::Plane* out) {
+    const glm::vec4 row0{m[0][0], m[1][0], m[2][0], m[3][0]};
+    const glm::vec4 row1{m[0][1], m[1][1], m[2][1], m[3][1]};
+    const glm::vec4 row2{m[0][2], m[1][2], m[2][2], m[3][2]};
+    const glm::vec4 row3{m[0][3], m[1][3], m[2][3], m[3][3]};
+
+    const glm::vec4 planes[SwLighting::NUM_FRUSTUM_PLANES]{
+        row3 + row0,  // left
+        row3 - row0,  // right
+        row3 + row1,  // bottom
+        row3 - row1,  // top
+        row2,         // near
+        row3 - row2,  // far
+    };
+
+    for (std::uint32_t i = 0; i < SwLighting::NUM_FRUSTUM_PLANES; i++) {
+        const glm::vec3 normal{planes[i]};
+        const float length = glm::length(normal);
+        const float invLength = length > 0.f ? 1.f / length : 0.f;
+        out[i].mNormal = normal * invLength;
+        out[i].mDistance = -planes[i].w * invLength;
+    }
+}
+
+void SwLighting::System::prepareShadowCullData() {
+    mResources.mShadowRcs.clear();
+
+    mResources.mShadowCullPc.mShadowRisLimit = 0;
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask)) {
+        for (SwRenderCommand rc : batch.getRcs()) {
+            rc.mRiCount = 0;
+            mResources.mShadowRcs.emplace_back(rc);
+        }
+        mResources.mShadowCullPc.mShadowRisLimit += batch.getRis().size();
+    }
+
+    mResources.mShadowFrustums.fill(SwCull::Plane{});
+    for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
+        if (mResources.mShadowType[slot] != ShadowType::TwoD) continue;  // Skip point
+        calculateFrustum(mResources.mLightViewProj[slot], &mResources.mShadowFrustums[mResources.mShadowIndex[slot] * NUM_FRUSTUM_PLANES]);
+    }
 }
 
 std::vector<SwLight::Data> SwLighting::System::collectLightData() const {
@@ -150,9 +194,6 @@ void SwLighting::System::eraseInstanceLights(std::uint32_t instanceId) {
 }
 
 void SwLighting::System::initializeResources() {
-    constexpr vk::ImageUsageFlags shadowMapUsage =
-        vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled;
-
     // Linear filtering gives hardware 2x2 PCF per SampleCmp tap.
     // Opaque-black border so 2D taps outside a frustum read as lit; harmless for seamless cube sampling.
     auto makeComparisonSampler = [](const char* name, vk::SamplerAddressMode addressMode) {
@@ -178,7 +219,7 @@ void SwLighting::System::initializeResources() {
             nullptr,
             SHADOW_MAP_FORMAT,
             vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1},
-            shadowMapUsage,
+            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             true
         );
     }
@@ -188,7 +229,7 @@ void SwLighting::System::initializeResources() {
             nullptr,
             SHADOW_MAP_FORMAT,
             vk::Extent3D{SHADOW_CUBE_MAP_WIDTH_HEIGHT, SHADOW_CUBE_MAP_WIDTH_HEIGHT, 1},
-            shadowMapUsage,
+            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             false
         );
     }
@@ -210,17 +251,29 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowMapsDescriptorSet.pushWrites();
 
     for (std::uint32_t i = 0; i < NUM_2D_SHADOWS; i++) {
-        mResources.mShadow2DLightDrawRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(
+        mResources.mShadowRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightDrawRisIndicesBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,  
             SwScene::SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
             true
         );
-        mResources.mShadow2DLightRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
-            "Shadow2DLightRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, SwBatch::RENDER_COMMANDS_INITIAL_BUFFER_SIZE, true
+        mResources.mShadowRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
+            std::format("Shadow2DLightRcsBuffer{}", i),
+            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,  // Will change frame to frame
+            SHADOW_RCS_BUFFER_SIZE,
+            true
         );
     }
+
+    mResources.mShadowFrustumsBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ShadowFrustumBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        NUM_2D_SHADOWS * NUM_FRUSTUM_PLANES * sizeof(SwCull::Plane),
+        true
+    );
 
     mResources.mShadowDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowDrawPipelineLayout", nullptr, SwLighting::ShadowDrawPC::getRange());
     SwShader drawVertexShader =
@@ -259,17 +312,31 @@ void SwLighting::System::initializePasses() {
     SwDependency staticDeps;
 
     for (std::uint32_t i = 0; i < NUM_2D_SHADOWS; i++) {
-        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadow2DLightDrawRisIndicesBuffer[i], SwDependency::BufferDepType::TransferWrite);
-        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadow2DLightRcsBuffer[i], SwDependency::BufferDepType::TransferWrite);
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRcsBuffer[i], SwDependency::BufferDepType::HostWrite);
     }
+    staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowFrustumsBuffer, SwDependency::BufferDepType::HostWrite);
     mScene.insertPass(SwPass::Type::LightingShadowReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-        for (std::uint32_t i = 0; i < NUM_2D_SHADOWS; i++) {
-            cmd.fillBuffer(mResources.mShadow2DLightDrawRisIndicesBuffer[i].getHandle(), 0, VK_WHOLE_SIZE, 0);
-            cmd.fillBuffer(mResources.mShadow2DLightRcsBuffer[i].getHandle(), 0, VK_WHOLE_SIZE, 0);
+        for (std::uint32_t i = 0; i < mResources.mActiveLightCount; i++) {
+            mResources.mShadowRcsBuffer[mResources.mShadowIndex[i]].copyFromUnchecked(
+                mResources.mShadowRcs.data(), mResources.mShadowRcs.size() * sizeof(SwRenderCommand)
+            );
         }
+        mResources.mShadowFrustumsBuffer.copyFromUnchecked(mResources.mShadowFrustums.data(), mResources.mShadowFrustums.size() * sizeof(SwCull::Plane));
     });
     staticDeps.clear();
 
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+    staticDeps.mReadBuffers.emplace_back(&mResources.mShadowFrustumsBuffer, SwDependency::BufferDepType::ComputeStorageRead);
+    for (std::uint32_t i = 0; i < NUM_2D_SHADOWS; i++) {
+        staticDeps.mWriteBuffers.emplace_back(
+            &mResources.mShadowRcsBuffer[i],
+            vk::PipelineStageFlagBits2::eComputeShader,
+            vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite
+        );
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRisIndicesBuffer[i], SwDependency::BufferDepType::ComputeStorageWrite);
+    }
     mScene.insertPass(SwPass::Type::LightingShadowCull, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
 
     });
@@ -277,90 +344,19 @@ void SwLighting::System::initializePasses() {
 
     for (std::uint32_t i = 0; i < NUM_2D_SHADOWS; i++) {
         staticDeps.mWriteImages.emplace_back(&mResources.mShadow2DMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        staticDeps.mReadBuffers.emplace_back(&mResources.mShadowRcsBuffer[i], SwDependency::BufferDepType::IndirectRead);
+        staticDeps.mReadBuffers.emplace_back(&mResources.mShadowRisIndicesBuffer[i], SwDependency::BufferDepType::VertexShaderStorageRead);
     }
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    mScene.insertPass(
-        SwPass::Type::LightingShadowDraw,
-        std::move(staticDeps),
-        [&](vk::CommandBuffer cmd) {
-            auto& pipeline = mResources.mShadowDrawOpaqueTransparentPipelineBundle;
-
-            mResources.mShadowDrawPc.mLightDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
-
-            for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
-                if (mResources.mShadowType[slot] != ShadowType::TwoD) {
-                    continue;
-                }
-                const std::uint32_t mapIndex = mResources.mShadowIndex[slot];
-
-                vk::RenderingAttachmentInfo depth = mResources.mShadow2DMaps[mapIndex].generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
-                cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT}, {}, depth));
-                SwPass::setViewportScissors(cmd, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1});
-
-                cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
-                cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
-
-                mResources.mShadowDrawPc.mLightIndex = slot;
-
-                auto drawList = [&](SwBatch& batch, SwAllocatedBuffer& rcsBuffer, SwAllocatedBuffer& countBuffer) {
-                    mResources.mShadowDrawPc.mLightRcsBuffer = rcsBuffer.getDeviceAddress().value();
-                    cmd.pushConstants<SwLighting::ShadowDrawPC>(pipeline.getLayoutHandle(), SwLighting::ShadowDrawPC::sStages, 0, mResources.mShadowDrawPc);
-                    cmd.drawIndexedIndirectCount(
-                        rcsBuffer.getHandle(), 0, countBuffer.getHandle(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
-                    );
-                    SwRenderer::sRendererContext.mStats->mNumDrawCall++;
-                };
-
-                for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
-                    if (batch.getRcs().empty()) {
-                        continue;
-                    }
-                    drawList(batch, batch.getEarlyRcsBuffer(), batch.getEarlyRcsCount());
-                    drawList(batch, batch.getFinalRcsBuffer(), batch.getFinalRcsCount());
-                }
-                for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Mask)) {
-                    if (batch.getRcs().empty()) {
-                        continue;
-                    }
-                    drawList(batch, batch.getFinalRcsBuffer(), batch.getFinalRcsCount());
-                }
-
-                cmd.endRendering();
-            }
-        },
-        true
-    );
+    mScene.insertPass(SwPass::Type::LightingShadowDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {}, true);
     staticDeps.clear();
 }
 
-void SwLighting::System::refreshDynamicDependencies() {
-    SwDependency dynamicDeps;
-    dynamicDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
-    );
-    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
-        if (batch.getRcs().empty()) {
-            continue;
-        }
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsCount(), SwDependency::BufferDepType::IndirectRead);
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRcsCount(), SwDependency::BufferDepType::IndirectRead);
-    }
-    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Mask)) {
-        if (batch.getRcs().empty()) {
-            continue;
-        }
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRcsCount(), SwDependency::BufferDepType::IndirectRead);
-    }
-    mScene.mPasses[SwPass::Type::LightingShadowDraw].setDynamicDeps(std::move(dynamicDeps));
-}
+void SwLighting::System::refreshDynamicDependencies() {}
 
 void SwLighting::System::refreshPushConstants() {
     mResources.mShadowCullPc.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
@@ -374,3 +370,70 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mShadowDrawPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mShadowDrawPc.mSceneMaterialConstantsBuffer = SwRenderer::sRendererContext.mScene->getSceneMaterialConstantsBuffer().getDeviceAddress().value();
 }
+
+/*auto& pipeline = mResources.mShadowCullPipelineBundle;
+cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+
+const std::vector<AssetLight>& assetLights = mResources.mAssetLights;
+for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
+    if (mResources.mShadowType[slot] != ShadowType::TwoD) {
+        continue;
+    }
+    const std::uint32_t mapIndex = mResources.mShadowIndex[slot];
+    const SwLight::Params& params = assetLights[mResources.mActiveLightIndices[slot]].mLight->getParams();
+
+    mResources.mShadowCullPc.mLightWorldPos = assetLights[mResources.mActiveLightIndices[slot]].mWorldPosition;
+    mResources.mShadowCullPc.mLightRange = params.mRange;
+    mResources.mShadowCullPc.mLightType = static_cast<std::uint32_t>(params.mType);
+    mResources.mShadowCullPc.mFrustumBuffer =
+        mResources.mShadowFrustumBuffer.getDeviceAddress().value() + mapIndex * NUM_FRUSTUM_PLANES * sizeof(SwCull::Plane);
+    mResources.mShadowCullPc.mLightDrawRisIndicesBuffer = mResources.mShadowRisIndicesBuffer[mapIndex].getDeviceAddress().value();
+
+    const vk::DeviceAddress rcsBase = mResources.mShadowRcsBuffer[mapIndex].getDeviceAddress().value();
+    for (const ShadowBatch& shadowBatch : mResources.mShadowBatches) {
+        const std::uint32_t risCount = static_cast<std::uint32_t>(shadowBatch.mBatch->getRis().size());
+        if (risCount == 0) {
+            continue;
+        }
+        mResources.mShadowCullPc.mLightRcsBuffer = rcsBase + shadowBatch.mRcsByteOffset;
+        mResources.mShadowCullPc.mLightRisBuffer = shadowBatch.mBatch->getRisBuffer().getDeviceAddress().value();
+        mResources.mShadowCullPc.mLightRisCount = risCount;
+        cmd.pushConstants<SwLighting::ShadowCullPC>(pipeline.getLayoutHandle(), SwLighting::ShadowCullPC::sStages, 0, mResources.mShadowCullPc);
+        cmd.dispatch(SwHelper::fastDivCeil(risCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+    }
+}*/
+
+/*for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
+if (mResources.mShadowType[slot] != ShadowType::TwoD) {
+continue;
+}
+const std::uint32_t mapIndex = mResources.mShadowIndex[slot];
+
+vk::RenderingAttachmentInfo depth = mResources.mShadow2DMaps[mapIndex].generateRenderingAttachment(vk::AttachmentLoadOp::eClear);
+cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT}, {}, depth));
+SwPass::setViewportScissors(cmd, vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1});
+cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
+
+mResources.mShadowDrawPc.mLightIndex = slot;
+mResources.mShadowDrawPc.mLightDrawRisIndicesBuffer = mResources.mShadowDrawRisIndicesBuffer[mapIndex].getDeviceAddress().value();
+const vk::DeviceAddress rcsBase = mResources.mShadowRcsBuffer[mapIndex].getDeviceAddress().value();
+
+SwGraphicsPipelineBundle* bound = nullptr;
+for (const ShadowBatch& shadowBatch : mResources.mShadowBatches) {
+SwGraphicsPipelineBundle& pipeline =
+shadowBatch.mMasked ? mResources.mShadowDrawMaskedPipelineBundle : mResources.mShadowDrawOpaqueTransparentPipelineBundle;
+if (bound != &pipeline) {
+cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+bound = &pipeline;
+}
+
+mResources.mShadowDrawPc.mLightRcsBuffer = rcsBase + shadowBatch.mRcsByteOffset;
+cmd.pushConstants<SwLighting::ShadowDrawPC>(pipeline.getLayoutHandle(), SwLighting::ShadowDrawPC::sStages, 0, mResources.mShadowDrawPc);
+cmd.drawIndexedIndirect(
+mResources.mShadowRcsBuffer[mapIndex].getHandle(), shadowBatch.mRcsByteOffset, shadowBatch.mRcsCount, sizeof(SwRenderCommand)
+);
+SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+}
+
+cmd.endRendering();
+}*/
