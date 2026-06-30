@@ -48,7 +48,7 @@ private:
     std::vector<std::shared_ptr<SwNode>> mNodes;
     SwAllocatedBuffer mNodeTransformsBuffer;
 
-    std::deque<SwInstance> mInstances;
+    std::vector<std::uint32_t> mInstanceIds;
     SwAllocatedBuffer mInstancesBuffer;
 
     std::uint32_t mNumBounds;
@@ -98,7 +98,7 @@ public:
     inline bool isStandaloneLight() { return mStandaloneLight; }
     inline std::string getName() { return mName; }
     inline std::uint32_t getId() { return mId; }
-    inline std::deque<SwInstance>& getInstances() { return mInstances; }
+    inline std::vector<std::uint32_t>& getInstanceIds() { return mInstanceIds; }
     inline bool isMarkedDelete() { return mDelete; }
     inline bool getReloadInstancesFlag() { return mReloadInstancesFlag; }
     inline std::span<SwMesh> getMeshes() { return mMeshes; }

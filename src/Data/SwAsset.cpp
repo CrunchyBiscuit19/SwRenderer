@@ -568,23 +568,25 @@ void SwAsset::generateRcsAndRis() {
 }
 
 void SwAsset::createInstance(SwInstance::Data instanceData) {
-    mInstances.emplace_back(mId, instanceData);
+    SwScene* scene = SwRenderer::sRendererContext.mScene;
+    mInstanceIds.push_back(scene->registerInstance(mId, instanceData));
     mReloadInstancesFlag = true;
-    SwRenderer::sRendererContext.mScene->mFlags.mInstanceLoaded = true;
+    scene->mFlags.mInstanceLoaded = true;
 }
 
 void SwAsset::createInstance(SwCamera& camera) { createInstance(SwInstance::Data(camera.getSpawnTransform())); }
 
 void SwAsset::reloadInstances() {
-    if (mInstances.empty()) {
+    if (mInstanceIds.empty()) {
         mReloadInstancesFlag = false;
         return;
     }
 
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this](vk::CommandBuffer cmd) {
+    SwScene* scene = SwRenderer::sRendererContext.mScene;
+    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, scene](vk::CommandBuffer cmd) {
         std::uint32_t dstOffset = 0;
-        for (auto& instance : mInstances) {
-            mInstancesBuffer.copyFrom(cmd, &instance.getData(), sizeof(SwInstance::Data), dstOffset);
+        for (std::uint32_t instanceId : mInstanceIds) {
+            mInstancesBuffer.copyFrom(cmd, &scene->getInstance(instanceId).getData(), sizeof(SwInstance::Data), dstOffset);
             dstOffset += sizeof(SwInstance::Data);
         }
     });
@@ -594,7 +596,8 @@ void SwAsset::reloadInstances() {
 
 void SwAsset::markDelete() {
     mDelete = true;
-    for (auto& instance : mInstances) {
-        instance.markDelete();
+    SwScene* scene = SwRenderer::sRendererContext.mScene;
+    for (std::uint32_t instanceId : mInstanceIds) {
+        scene->getInstance(instanceId).markDelete();
     }
 }

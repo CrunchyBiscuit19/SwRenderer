@@ -60,11 +60,11 @@ void SwMeshNode::generateRcsAndRis() {
 
         std::uint32_t rcIndex = static_cast<std::uint32_t>(workingBatch.getRcs().size() - 1);
         std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
-        for (std::uint32_t i = 0; i < workingAsset.getInstances().size(); i++) {
+        for (std::uint32_t i = 0; i < workingAsset.getInstanceIds().size(); i++) {
             workingBatch.getRis().emplace_back(rcIndex, instanceIndex + i);
         }
 
-        SwBatch::sFirstRiOffset += workingAsset.getInstances().size();
+        SwBatch::sFirstRiOffset += workingAsset.getInstanceIds().size();
     }
 
     SwNode::generateRcsAndRis();
@@ -80,16 +80,17 @@ void SwLightNode::generateRcsAndRis() {
     const std::uint32_t nodeTransformIndex = asset.mFirstNodeTransformInScene + mRelativeNodeIndex;
     const glm::vec3 nodeWorldPos = glm::vec3(getWorldTransform()[3]);
     auto& assetLights = scene.getLightingSystem().getAssetLights();
-    auto& instances = asset.getInstances();
-    for (std::uint32_t i = 0; i < instances.size(); i++) {
-        const glm::mat4 model = instances[i].getData().mTransformMatrix * getWorldTransform();
+    auto& instanceIds = asset.getInstanceIds();
+    for (std::uint32_t i = 0; i < instanceIds.size(); i++) {
+        SwInstance& instance = scene.getInstance(instanceIds[i]);
+        const glm::mat4 model = instance.getData().mTransformMatrix * getWorldTransform();
         SwLighting::AssetLight& record = assetLights.emplace_back();
-        record.mLight = &scene.getLightingSystem().getOrCreateInstanceLight(mLight.getId(), instances[i].getId(), mLight.getParams());
-        record.mInstance = &instances[i];
+        record.mLight = &scene.getLightingSystem().getOrCreateInstanceLight(mLight.getId(), instance.getId(), mLight.getParams());
+        record.mInstance = &instance;
         record.mAssetId = mAssetId;
         record.mNodeTransformIndex = nodeTransformIndex;
         record.mInstanceIndex = asset.mFirstInstanceInScene + i;
-        record.mWorldPosition = glm::vec3(instances[i].getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));
+        record.mWorldPosition = glm::vec3(instance.getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));
         // glTF lights shine down local -Z. Match SwGeometry's accumulatePunctualLight forward computation.
         record.mWorldDirection = glm::normalize(glm::vec3(model * glm::vec4(0.f, 0.f, -1.f, 0.f)));
     }

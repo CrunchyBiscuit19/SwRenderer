@@ -164,6 +164,13 @@ void SwScene::insertPass(SwPass::Type type, SwDependency deps, std::function<voi
     mPasses[type] = SwPass(type, std::move(deps), callback, mustRun);
 }
 
+std::uint32_t SwScene::registerInstance(std::uint32_t assetId, SwInstance::Data instanceData) {
+    SwInstance instance(assetId, instanceData);
+    std::uint32_t instanceId = instance.getId();
+    mInstances.emplace(instanceId, std::move(instance));
+    return instanceId;
+}
+
 void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
     for (const auto& path : paths) {
         auto shortPath = SwAsset::getNameFromFilePath(path);
@@ -223,21 +230,23 @@ void SwScene::unloadAssetsAndInstances() {
 
         // A standalone-light asset is shared by every light of its type, so removing one light deletes just that
         // instance, not the whole asset. Instances are also erased when their owning asset is going away.
-        std::erase_if(asset.getInstances(), [&](const SwInstance& instance) {
+        std::erase_if(asset.getInstanceIds(), [&](std::uint32_t instanceId) {
+            SwInstance& instance = mInstances.at(instanceId);
             const bool instanceDeleted = assetDeleted || instance.isMarkedDelete();
             if (!instanceDeleted) {
                 return false;
             }
-            if (&instance == SwRenderer::sRendererContext.mScene->getPickSystem().getSelectedInstancePtr()) {
-                SwRenderer::sRendererContext.mScene->getPickSystem().setSelectedInstancePtr(nullptr);
+            if (&instance == getPickSystem().getSelectedInstancePtr()) {
+                getPickSystem().setSelectedInstancePtr(nullptr);
             }
             if (!asset.getLights().empty()) {
-                mLighting.eraseInstanceLights(instance.getId()); 
+                mLighting.eraseInstanceLights(instanceId);
             }
             if (!assetDeleted) {
                 mFlags.mInstanceUnloaded = true;
                 asset.setReloadInstancesFlag(true);  // repack the asset's instance buffer without the removed instance
             }
+            mInstances.erase(instanceId);
             return true;
         });
 
@@ -262,8 +271,8 @@ void SwScene::regenerateRcsAndRis() {
         }
     }
     for (auto& asset : mAssets | std::views::values) {
-        if (asset.getInstances().size() == 0) continue;
-        asset.generateRcsAndRis();  
+        if (asset.getInstanceIds().empty()) continue;
+        asset.generateRcsAndRis();
     }
 
     reloadSceneLightsBuffer();
@@ -344,7 +353,7 @@ void SwScene::realignInstancesOffset() {
     std::uint32_t instanceCumulative = 0;
     for (auto& asset : mAssets | std::views::values) {
         asset.mFirstInstanceInScene = instanceCumulative;
-        instanceCumulative += asset.getInstances().size();
+        instanceCumulative += asset.getInstanceIds().size();
     }
 }
 
@@ -465,14 +474,14 @@ void SwScene::reloadSceneInstancesBuffer() {
     std::uint32_t maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
-        if (asset.getInstances().empty()) {
+        if (asset.getInstanceIds().empty()) {
             continue;
         }
 
         vk::BufferCopy instancesCopy{};
         instancesCopy.dstOffset = dstOffset;
         instancesCopy.srcOffset = 0;
-        instancesCopy.size = asset.getInstances().size() * sizeof(SwInstance::Data);
+        instancesCopy.size = asset.getInstanceIds().size() * sizeof(SwInstance::Data);
 
         dstOffset += instancesCopy.size;
         maxPos = dstOffset;

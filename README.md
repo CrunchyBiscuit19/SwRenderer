@@ -115,7 +115,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 * **`SwInstance`** — a placement of an entire asset in the world, holding the owning asset id and a transform (`SwInstance::Data`); can be flagged for deletion.
 * **`SwInstance::Data`** — the GPU-facing payload, currently just `mTransformMatrix`.
-* **Relations** — created per placement via `SwAsset::createInstance(...)` and owned by that asset. An instance applies its transform on top of every node's local transform, so one instance effectively draws the whole node hierarchy once.
+* **Relations** — created per placement via `SwAsset::createInstance(...)`, which registers the instance with the scene. `SwScene` owns every instance in an `instanceId -> SwInstance` map, while each `SwAsset` tracks only the ids of its own instances (`std::vector<std::uint32_t>`). An instance applies its transform on top of every node's local transform, so one instance effectively draws the whole node hierarchy once.
 
 ### Node
 

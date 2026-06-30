@@ -45,6 +45,7 @@ private:
     SwCamera mCamera;
 
     std::unordered_map<std::uint32_t, SwAsset> mAssets;
+    std::unordered_map<std::uint32_t, SwInstance> mInstances;
     std::unordered_set<std::string> mAlreadyLoadedAssets;
 
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
@@ -119,6 +120,10 @@ public:
     inline SwCamera& getCamera() { return mCamera; }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
     inline std::unordered_map<std::uint32_t, SwAsset>& getAssets() { return mAssets; }
+
+    std::uint32_t registerInstance(std::uint32_t assetId, SwInstance::Data instanceData);
+    inline SwInstance& getInstance(const std::uint32_t instanceId) { return mInstances.at(instanceId); }
+    inline std::unordered_map<std::uint32_t, SwInstance>& getInstances() { return mInstances; }
     
     inline SwDescriptorSet& getSceneMaterialResourcesDescriptorSet() { return mSceneMaterialResourcesDescriptorSet; }
     inline SwAllocatedBuffer& getSceneVertexBuffer() { return mSceneVertexBuffer; }

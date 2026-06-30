@@ -94,7 +94,8 @@ void SwGui::System::initializeResources() {
                 }
                 ImGui::PopStyleColor();
 
-                for (auto& instance : asset.getInstances()) {
+                for (std::uint32_t instanceId : asset.getInstanceIds()) {
+                    SwInstance& instance = mScene.getInstance(instanceId);
                     if (ImGui::TreeNode(fmt::format("{}-{}", name, instance.getId()).c_str())) {
                         ImGui::PushID(fmt::format("{}-{}", name, instance.getId()).c_str());
                         glm::vec3 translation, rotation, scale;

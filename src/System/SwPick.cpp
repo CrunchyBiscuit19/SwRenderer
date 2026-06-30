@@ -198,7 +198,7 @@ void SwPick::System::initializePasses() {
             SwAsset& selectedAsset = mScene.getAssets()[assetId];
 
             std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
-            mSelectedInstance = &selectedAsset.getInstances()[localInstanceIndex];
+            mSelectedInstance = &mScene.getInstance(selectedAsset.getInstanceIds()[localInstanceIndex]);
         },
         true
     );
