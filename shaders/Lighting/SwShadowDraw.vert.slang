@@ -21,9 +21,9 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     uint sceneMaterialIndex = rc.mMaterialIndex;
     Sw::MaterialConstant materialConstant = shadowDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
-    float4x4 lightViewProj = shadowDrawPc.mPerFrameBuffer->mLightViewProj[shadowDrawPc.mLightIndex];
+    float4x4 activeLightViewProj = float4x4(1.f);  // TODO: source the rebuilt per-light view-projection (this pass is currently a no-op)
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
-    out.mPosition = mul(lightViewProj, mul(modelMatrix, position));
+    out.mPosition = mul(activeLightViewProj, mul(modelMatrix, position));
     out.mUv = v.mUv;
     out.mColor = v.mColor * materialConstant.mBaseFactor;
     out.mAlphaCutoff = materialConstant.mAlphaCutoff;

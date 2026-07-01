@@ -97,10 +97,11 @@ namespace SwLighting {
         TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS], SamplerComparisonState shadowSampler
     ) {
         float3 color = iblIntensity * SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
-        for (uint i = 0; i < perFrame->mActiveLightCount; i++) {
-            Sw::Light light = lights[perFrame->mActiveLightIndices[i]];
+        Sw::ActiveLights* activeLights = perFrame->mActiveLights;
+        for (uint i = 0; i < activeLights->mCount; i++) {
+            Sw::Light light = lights[activeLights->mIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
-            Sw::ShadowType shadowType = perFrame->mShadowType[i];
+            Sw::ShadowType shadowType = activeLights->mShadowType[i];
             if (shadowType == Sw::ShadowType::TwoD) {
                 contribution *= shadowFactor2D(i, worldPos, perFrame, shadow2DMaps, shadowSampler);
             } else if (shadowType == Sw::ShadowType::Cube) {
@@ -148,12 +149,18 @@ namespace SwLighting {
 	    return projCoords.xy + POISSON_DISK[index] / radius;
     }
 
-    // Reversed-Z so the bias is added (not subtracted) to kill acne. The view-proj lives in slot-indexed
-    // mLightViewProj, while the 2D map for the slot is located via mShadowIndex.
+    // 2D shadow sampling is disabled while the per-light view-projection is rebuilt. The early-out keeps
+    // the consume path fully lit; the reversed-Z PCF below is preserved for when the view-projection returns.
     public float shadowFactor2D(
         uint slot, float3 worldPos, Sw::PerFrameData* perFrame, Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS], SamplerComparisonState shadowSampler
     ) {
-        float4 clip = mul(perFrame->mLightViewProj[slot], float4(worldPos, 1.f));
+        const bool shadow2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
+        if (!shadow2DEnabled) {
+            return 1.f;
+        }
+
+        float4x4 lightViewProj = float4x4(1.f);  // TODO: source the rebuilt per-light view-projection
+        float4 clip = mul(lightViewProj, float4(worldPos, 1.f));
         if (clip.w <= 0.f) {
             return 1.f;
         }
@@ -163,7 +170,7 @@ namespace SwLighting {
             return 1.f;
         }
 
-        uint mapIndex = perFrame->mShadowIndex[slot];
+        uint mapIndex = perFrame->mActiveLights->mShadowIndex[slot];
         const float bias = 0.0015f;
         const float radius = ndc.z + bias;  // reversed-Z, so bias is added to push receivers toward lit
         const float2 texel = 1.f / float2(Sw::SHADOW_MAP_SIZE, Sw::SHADOW_MAP_SIZE);

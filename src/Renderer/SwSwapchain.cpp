@@ -25,14 +25,7 @@ void SwFrame::update() {
     };
     SwLighting::System& lighting = scene.getLightingSystem();
     lighting.refreshActiveLights(perFrameData.mCameraWorldPos);
-    perFrameData.mActiveLightCount = lighting.getActiveLightCount();
-    perFrameData.mActiveLightIndices = lighting.getActiveLightIndices();
-    perFrameData.mLightViewProj = lighting.getLightViewProj();
-    const auto& shadowTypes = lighting.getShadowTypes();
-    for (std::size_t i = 0; i < shadowTypes.size(); i++) {
-        perFrameData.mShadowTypes[i] = static_cast<std::uint32_t>(shadowTypes[i]);
-    }
-    perFrameData.mShadowIndices = lighting.getShadowIndices();
+    perFrameData.mActiveLightsBuffer = lighting.getActiveLightsBuffer().getDeviceAddress().value();
     mPerFrameBuffer.copyFromUnchecked(&perFrameData, sizeof(Data));
 }
 

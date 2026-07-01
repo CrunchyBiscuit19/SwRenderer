@@ -39,14 +39,17 @@ namespace Sw {
         public float3 mBaseDirection;      // light forward in node-local space (glTF local -Z)
     };
 
+    public struct ActiveLights {
+        public uint mCount;
+        public uint mIndices[MAX_SHADOW_LIGHTS];
+        public ShadowType mShadowType[MAX_SHADOW_LIGHTS];
+        public uint mShadowIndex[MAX_SHADOW_LIGHTS];
+    };
+
     public struct PerFrameData {
         public Perspective mPerspective;
         public float3 mCameraWorldPos;
-        public uint mActiveLightCount;                     
-        public uint mActiveLightIndices[MAX_SHADOW_LIGHTS]; 
-        public float4x4 mActiveLightViewProj[MAX_SHADOW_LIGHTS];
-        public ShadowType mShadowType[MAX_SHADOW_LIGHTS];   
-        public uint mShadowIndex[MAX_SHADOW_LIGHTS];        
+        public ActiveLights* mActiveLights;
     };
 
     public struct Vertex {

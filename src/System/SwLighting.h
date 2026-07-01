@@ -41,6 +41,15 @@ constexpr float SHADOW_DIRECTIONAL_FAR{160.f};
 constexpr float SHADOW_SPOT_NEAR{0.05f};
 constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
 
+// Mirrors Sw::ActiveLights in the shaders. Packed each frame and uploaded to mActiveLightsBuffer, which
+// the per-frame data reaches through a device-address pointer.
+struct ActiveLights {
+    std::uint32_t mCount{0};
+    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mIndices{};
+    std::array<ShadowType, SwLight::MAX_ACTIVE_LIGHTS> mShadowType{};
+    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mShadowIndex{};
+};
+
 struct ShadowCullPC : SwPC<ShadowCullPC> {
     vk::DeviceAddress mShadowRcsBuffer;
     vk::DeviceAddress mShadowRisBuffer;
@@ -75,12 +84,11 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
     std::uint32_t mActiveLightCount{0};
-    std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS> mLightViewProj{};
-
+    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
     std::array<ShadowType, SwLight::MAX_ACTIVE_LIGHTS> mShadowType{};
     std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mShadowIndex{};
+    SwAllocatedBuffer mActiveLightsBuffer;
 
     std::array<SwDepthImage2D, NUM_2D_SHADOWS> mShadow2DMaps;
     std::array<SwDepthImageCubemap, NUM_CUBE_SHADOWS> mShadowCubeMaps;
@@ -116,7 +124,7 @@ private:
 
     void resolveLightWorld(const SwLight& light, glm::vec3& outPosition, glm::vec3& outDirection);
 
-    void prepareShadowCullData();
+    void prepareShadowCullData(const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& lightViewProj);
 
 public:
     System(SwScene& scene);
@@ -129,11 +137,7 @@ public:
     void refreshActiveLights(const glm::vec3& cameraPos);
 
     inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
-    inline std::uint32_t getActiveLightCount() const { return mResources.mActiveLightCount; }
-    inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getActiveLightIndices() const { return mResources.mActiveLightIndices; }
-    inline const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& getLightViewProj() const { return mResources.mLightViewProj; }
-    inline const std::array<ShadowType, SwLight::MAX_ACTIVE_LIGHTS>& getShadowTypes() const { return mResources.mShadowType; }
-    inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getShadowIndices() const { return mResources.mShadowIndex; }
+    inline SwAllocatedBuffer& getActiveLightsBuffer() { return mResources.mActiveLightsBuffer; }
 
     inline Resources& getResources() { return mResources; }
 };

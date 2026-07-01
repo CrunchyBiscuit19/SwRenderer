@@ -78,7 +78,7 @@ void main(SwLighting::CSInput in) {
     buildWorldCorners(bounds, model, corners);
 
     bool visible = true;
-    if (shadowCullPc.mPerFrameBuffer->mActiveLightIndices[shadowCullPc.mLightIndex] != Sw::LightType::Point) {
+    if (shadowCullPc.mPerFrameBuffer->mActiveLights->mIndices[shadowCullPc.mLightIndex] != Sw::LightType::Point) {
         visible = frustumTest(shadowCullPc.mFrustumBuffer, corners);
     }
     if (visible && shadowCullPc.mLightType != Sw::LightType::Directional) {

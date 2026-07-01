@@ -22,6 +22,7 @@ public:
         CullLateWork,
         CullLateCompact,
         CullPublishCount,
+        LightingSelection,
         LightingShadowReset,
         LightingShadowCull,
         LightingShadowDraw,

@@ -105,7 +105,10 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
 
     const std::vector<std::uint32_t>& lightIds = mScene.getLightIds();
 
-    mResources.mLightViewProj.fill(glm::mat4(1.f));
+    // The per-light view-projection is no longer stored on the resources. It lives only long enough to seed
+    // the shadow frustums, so it is rebuilt into this frame-local array each time.
+    std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS> lightViewProj;
+    lightViewProj.fill(glm::mat4(1.f));
     mResources.mShadowType.fill(ShadowType::None);
     mResources.mShadowIndex.fill(0);
 
@@ -127,7 +130,7 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
         if (next2D < NUM_2D_SHADOWS) {
             mResources.mShadowType[slot] = ShadowType::TwoD;
             mResources.mShadowIndex[slot] = next2D++;
-            mResources.mLightViewProj[slot] = computeLightMatrix(params, worldPos, worldDir);
+            lightViewProj[slot] = computeLightMatrix(params, worldPos, worldDir);
         }
     };
 
@@ -139,7 +142,14 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
         processLight(slot, light.getParams(), worldPos, worldDir);
     }
 
-    prepareShadowCullData();
+    prepareShadowCullData(lightViewProj);
+
+    ActiveLights packed{};
+    packed.mCount = mResources.mActiveLightCount;
+    packed.mIndices = mResources.mActiveLightIndices;
+    packed.mShadowType = mResources.mShadowType;
+    packed.mShadowIndex = mResources.mShadowIndex;
+    mResources.mActiveLightsBuffer.copyFromUnchecked(&packed, sizeof(ActiveLights));
 }
 
 void SwLighting::System::calculateFrustum(const glm::mat4& m, SwCull::Plane* out) {
@@ -166,7 +176,7 @@ void SwLighting::System::calculateFrustum(const glm::mat4& m, SwCull::Plane* out
     }
 }
 
-void SwLighting::System::prepareShadowCullData() {
+void SwLighting::System::prepareShadowCullData(const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& lightViewProj) {
     mResources.mShadowRcs.clear();
 
     mResources.mShadowCullPc.mShadowRisLimit = 0;
@@ -181,11 +191,19 @@ void SwLighting::System::prepareShadowCullData() {
     mResources.mShadowFrustums.fill(SwCull::Plane{});
     for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
         if (mResources.mShadowType[slot] != ShadowType::TwoD) continue;  // Skip point
-        calculateFrustum(mResources.mLightViewProj[slot], &mResources.mShadowFrustums[mResources.mShadowIndex[slot] * NUM_FRUSTUM_PLANES]);
+        calculateFrustum(lightViewProj[slot], &mResources.mShadowFrustums[mResources.mShadowIndex[slot] * NUM_FRUSTUM_PLANES]);
     }
 }
 
 void SwLighting::System::initializeResources() {
+    mResources.mActiveLightsBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ActiveLightsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        sizeof(ActiveLights),
+        true
+    );
+
     // Linear filtering gives hardware 2x2 PCF per SampleCmp tap.
     // Opaque-black border so 2D taps outside a frustum read as lit; harmless for seamless cube sampling.
     auto makeComparisonSampler = [](const char* name, vk::SamplerAddressMode addressMode) {
