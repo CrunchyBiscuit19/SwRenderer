@@ -15,15 +15,14 @@
 class SwInstance;
 
 namespace SwLighting {
+static const std::filesystem::path SELECTION_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwSelection.comp.spv"};
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwShadowDraw.vert.spv"};
 static constexpr std::string_view SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
-constexpr std::uint32_t NUM_2D_SHADOWS{SwLight::MAX_ACTIVE_LIGHTS};
-constexpr std::uint32_t NUM_CUBE_SHADOWS{8};
-constexpr std::uint32_t NUM_FRUSTUM_PLANES{6};
-constexpr std::uint32_t SHADOW_MAX_RENDER_COMMANDS{1 << 14};
-constexpr std::uint32_t SHADOW_RCS_BUFFER_SIZE{SHADOW_MAX_RENDER_COMMANDS * sizeof(SwRenderCommand)};
+
+static constexpr std::uint32_t MAX_ACTIVE_LIGHTS{16};
+constexpr std::uint32_t SHADOW_INITIAL_RENDER_COMMANDS{1 << 10};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
@@ -41,21 +40,26 @@ constexpr float SHADOW_DIRECTIONAL_FAR{160.f};
 constexpr float SHADOW_SPOT_NEAR{0.05f};
 constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
 
-// Mirrors Sw::ActiveLights in the shaders. Packed each frame and uploaded to mActiveLightsBuffer, which
-// the per-frame data reaches through a device-address pointer.
 struct ActiveLights {
     std::uint32_t mCount{0};
-    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mIndices{};
-    std::array<ShadowType, SwLight::MAX_ACTIVE_LIGHTS> mShadowType{};
-    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mShadowIndex{};
+    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mIndices{};
+    std::array<ShadowType, MAX_ACTIVE_LIGHTS> mShadowType{};
+    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mShadowIndex{};
+};
+
+struct SelectionPC : SwPC<SelectionPC> {
+    vk::DeviceAddress mPerFrameBuffer;
+    vk::DeviceAddress mSceneLightsBuffer;
+    vk::DeviceAddress mSceneNodeTransformsBuffer;
+    vk::DeviceAddress mSceneInstancesBuffer;
+    vk::DeviceAddress mActiveLightsBuffer;
 };
 
 struct ShadowCullPC : SwPC<ShadowCullPC> {
     vk::DeviceAddress mShadowRcsBuffer;
     vk::DeviceAddress mShadowRisBuffer;
     vk::DeviceAddress mShadowRisIndicesBuffer;
-    vk::DeviceAddress mShadowFrustumsBuffer;
-    vk::DeviceAddress mPerFrameBuffer;
+    vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
@@ -68,7 +72,7 @@ struct ShadowCullPC : SwPC<ShadowCullPC> {
 struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mShadowRcsBuffer;
     vk::DeviceAddress mShadowRisIndicesBuffer;
-    vk::DeviceAddress mPerFrameBuffer;
+    vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
@@ -85,22 +89,23 @@ struct Resources {
     static void cleanup();
 
     std::uint32_t mActiveLightCount{0};
-    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
-    std::array<ShadowType, SwLight::MAX_ACTIVE_LIGHTS> mShadowType{};
-    std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mShadowIndex{};
+    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
+    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mShadowIndices{}; // Get type from light, then decide whether to index into 2d of cubemap shadow descriptor array
     SwAllocatedBuffer mActiveLightsBuffer;
 
-    std::array<SwDepthImage2D, NUM_2D_SHADOWS> mShadow2DMaps;
-    std::array<SwDepthImageCubemap, NUM_CUBE_SHADOWS> mShadowCubeMaps;
+    std::array<SwDepthImage2D, MAX_ACTIVE_LIGHTS> mShadow2DMaps;
+    std::array<SwDepthImageCubemap, MAX_ACTIVE_LIGHTS> mShadowCubeMaps;
     SwSampler mShadowMapsSampler;
     SwDescriptorSet mShadowMapsDescriptorSet;
 
     std::vector<SwRenderCommand> mShadowRcs;
-    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS + NUM_CUBE_SHADOWS> mShadowRcsBuffer;
-    std::array<SwAllocatedBuffer, NUM_2D_SHADOWS + NUM_CUBE_SHADOWS> mShadowRisIndicesBuffer;
+    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRcsBuffer; // Reload per frame from CPU
+    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRisBuffer; // Read into during shaders, reload when ris generated
+    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRisIndicesBuffer; // Reload per frame
 
-    std::array<SwCull::Plane, NUM_2D_SHADOWS * NUM_FRUSTUM_PLANES> mShadowFrustums{};
-    SwAllocatedBuffer mShadowFrustumsBuffer;
+    SelectionPC mSelectionPc;
+    SwPipelineLayout mSelectionPipelineLayout;
+    SwComputePipelineBundle mSelectionPipelineBundle;
 
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
@@ -118,13 +123,6 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
-
-    static glm::mat4 computeLightMatrix(const SwLight::Params& params, const glm::vec3& worldPos, const glm::vec3& worldDir);
-    static void calculateFrustum(const glm::mat4& m, SwCull::Plane* out);
-
-    void resolveLightWorld(const SwLight& light, glm::vec3& outPosition, glm::vec3& outDirection);
-
-    void prepareShadowCullData(const std::array<glm::mat4, SwLight::MAX_ACTIVE_LIGHTS>& lightViewProj);
 
 public:
     System(SwScene& scene);

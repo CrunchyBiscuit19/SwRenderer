@@ -1,6 +1,6 @@
-#include <Scene/SwDependency.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwImage.h>
+#include <Scene/SwDependency.h>
 
 SwDependency::ImageDep::ImageDep(SwImage* image) : mImage(image), mDesc(image->getCurrentStage(), image->getCurrentAccess(), image->getCurrentLayout()) {}
 
@@ -75,6 +75,8 @@ const SwDependency::BufferDepDesc SwDependency::BufferDepDesc::get(SwDependency:
             return {vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageRead};
         case SwDependency::BufferDepType::ComputeStorageWrite:
             return {vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageWrite};
+        case SwDependency::BufferDepType::ComputeStorageReadWrite:
+            return {vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderStorageRead | vk::AccessFlagBits2::eShaderStorageWrite};
         case SwDependency::BufferDepType::TransferRead:
             return {vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead};
         case SwDependency::BufferDepType::TransferWrite:

@@ -42,6 +42,7 @@ public:
         IndirectRead,
         ComputeStorageRead,
         ComputeStorageWrite,
+        ComputeStorageReadWrite,
         TransferRead,
         TransferWrite,
         HostWrite,
