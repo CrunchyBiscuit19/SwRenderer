@@ -20,12 +20,6 @@ namespace Sw {
         Spot = 2
     };
 
-    public enum ShadowType : uint {
-        None = 0,
-        TwoD = 1,   
-        Cube = 2    
-    };
-
     public struct Light {
         public float3 mColor;
         public float mIntensity;
@@ -41,15 +35,13 @@ namespace Sw {
 
     public struct ActiveLights {
         public uint mCount;
-        public uint mIndices[MAX_SHADOW_LIGHTS];
-        public ShadowType mShadowType[MAX_SHADOW_LIGHTS];
-        public uint mShadowIndex[MAX_SHADOW_LIGHTS];
+        public uint mLightIndices[MAX_SHADOW_LIGHTS];
+        public uint mShadowIndices[MAX_SHADOW_LIGHTS];
     };
 
-    public struct PerFrameData {
+    public struct CameraData {
         public Perspective mPerspective;
-        public float3 mCameraWorldPos;
-        public ActiveLights* mActiveLights;
+        public float3 mWorldPos;
     };
 
     public struct Vertex {

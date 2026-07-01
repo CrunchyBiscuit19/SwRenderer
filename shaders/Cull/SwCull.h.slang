@@ -26,7 +26,7 @@ namespace SwCull {
         public Sw::RenderItem* mRisBuffer;
         public uint* mRisCount;
         public Plane* mFrustumBuffer;
-        public Sw::PerFrameData* mPerFrameBuffer;
+        public Sw::CameraData* mCameraBuffer;
         public Sw::Bounds* mSceneBoundsBuffer;
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;
         public Sw::Instance* mSceneInstancesBuffer;

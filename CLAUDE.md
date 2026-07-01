@@ -1,7 +1,5 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
-
 ## Build Commands
 
 > **The user builds the C++ themselves — do NOT build or configure the C++ project.** After making
@@ -9,30 +7,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 > are still responsible for compiling shaders — see Shader Compilation below.)
 
 > Do not attempt to build the shaders either. The user will run the shader compiler themselves  after shader files are modified.
-
-Build presets are defined in `CMakePresets.json` (configure presets only; there are no build
-presets). Generator: Ninja. Compiler: MSVC with C++23. Binaries output to `C:\Projects\SwRenderer\bin`.
-
-For reference, the user configures/builds with:
-
-```powershell
-cmake --preset x64-debug
-cmake --build --preset x64-debug
-```
-
-### Shader Compilation
-
-Shaders are written in Slang (`.slang`) and compiled to SPIR-V (`.spv`) via a custom tool:
-
-```powershell
-# Build the shader compiler first
-tools\build.bat
-
-# Then run the compiled shader compiler (from repo root)
-.\tools\compileShaders.exe
-```
-
-Compiled `.spv` files land next to their `.slang` sources in `shaders/`.
 
 ## Architecture
 
@@ -85,7 +59,7 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 
 - All project classes are prefixed with `Sw` (e.g., `SwRenderer`, `SwBuffer`, `SwScene`).
 - Precompiled header (`SwPch.h`) provides STL, GLM, and Vulkan headers — do not re-include them in source files.
-- **Slang struct layout is relaxed — do NOT hand-pad for std140/std430.** Slang uses scalar/natural layout, so a `float3` is 12 bytes (not rounded up to 16) and members sit at their natural offsets. This matches GLM's default (non-force-aligned) layout 1:1, so a struct shared between Slang and C++ can be a plain field-for-field mirror with no `mPadN` filler or 16-byte-boundary tricks. Keep the field order/types identical on both sides and (optionally) guard with a `static_assert(sizeof(...))`.
+- **Slang struct layout is relaxed — do NOT hand-pad for std140/std430.**
 - clang-format: Google base, 4-space indent, 160-column limit, left-aligned pointers, attached braces.
 - No unit test framework is used; validation is done via Vulkan validation layers (enabled in debug builds).
 - Avoid leaving excessive comments.

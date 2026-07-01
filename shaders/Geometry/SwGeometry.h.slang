@@ -17,8 +17,9 @@ namespace SwGeometry {
         public Sw::Instance* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
         public Sw::RenderCommand* mDrawRcsBuffer;
-        public Sw::PerFrameData* mPerFrameBuffer;
+        public Sw::CameraData* mCameraBuffer;
         public Sw::Light* mSceneLightsBuffer;
+        public Sw::ActiveLights* mActiveLightsBuffer;
         public float mMaxPrefilterMip;   // highest mip index of the specular prefilter chain
         public float mIblIntensity;      // scales the image-based ambient term (GUI-controlled)
         public uint mIblComponents;      // IBL_DIFFUSE / IBL_SPECULAR bit mask (GUI-controlled)

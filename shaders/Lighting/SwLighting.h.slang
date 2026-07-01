@@ -6,15 +6,23 @@ import SwBRDF;
 import SwIBL;
 
 namespace SwLighting {
+    public struct SelectionPC {
+        public Sw::CameraData* mCameraBuffer;
+        public Sw::Light* mSceneLightsBuffer;
+        public Sw::NodeTransform* mSceneNodeTransformsBuffer;
+        public Sw::Instance* mSceneInstancesBuffer;
+        public Sw::ActiveLights* mActiveLightsBuffer;
+    };    
+
     public struct ShadowCullPC {
         public Sw::RenderCommand* mShadowRcsBuffer;
         public Sw::RenderItem* mShadowRisBuffer;
         public uint* mShadowRisIndicesBuffer;
-        public SwCull::Plane* mShadowFrustumsBuffer;
-        public Sw::PerFrameData* mPerFrameBuffer;
+        public Sw::Light* mSceneLightsBuffer;
         public Sw::Bounds* mSceneBoundsBuffer;
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;
         public Sw::Instance* mSceneInstancesBuffer;
+        public Sw::ActiveLights* mActiveLightsBuffer;
         public uint mShadowRisLimit;
         public uint mLightIndex;        
     };
@@ -22,11 +30,11 @@ namespace SwLighting {
     public struct ShadowDrawPC {
         public Sw::RenderCommand* mShadowRcsBuffer;
         public uint* mShadowRisIndicesBuffer;
-        public Sw::PerFrameData* mPerFrameBuffer;
         public Sw::Vertex* mSceneVertexBuffer;
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;
         public Sw::Instance* mSceneInstancesBuffer;
         public Sw::MaterialConstant* mSceneMaterialConstantsBuffer;
+        public Sw::ActiveLights* mActiveLightsBuffer;
         public uint mLightIndex;  
     };
 
@@ -91,21 +99,23 @@ namespace SwLighting {
 
     // Full PBR shading: image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
     public float3 shadeLit(
-        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::PerFrameData* perFrame,
+        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, Sw::ActiveLights* activeLights,
         Sw::Light* lights, Sw::Instance* instances, Sw::NodeTransform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap,
         Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents, Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS],
         TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS], SamplerComparisonState shadowSampler
     ) {
         float3 color = iblIntensity * SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
-        Sw::ActiveLights* activeLights = perFrame->mActiveLights;
         for (uint i = 0; i < activeLights->mCount; i++) {
-            Sw::Light light = lights[activeLights->mIndices[i]];
+            Sw::Light light = lights[activeLights->mLightIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
-            Sw::ShadowType shadowType = activeLights->mShadowType[i];
-            if (shadowType == Sw::ShadowType::TwoD) {
-                contribution *= shadowFactor2D(i, worldPos, perFrame, shadow2DMaps, shadowSampler);
-            } else if (shadowType == Sw::ShadowType::Cube) {
-                contribution *= shadowFactorCube(i, light, worldPos, perFrame, shadowCubeMaps, shadowSampler);
+            switch (light.mType) {
+                case Sw::LightType::Spot:
+                case Sw::LightType::Directional:
+                    contribution *= shadowFactor2D(i, worldPos, activeLights, shadow2DMaps, shadowSampler);
+                    break;
+                case Sw::LightType::Point:
+                    contribution *= shadowFactorCube(i, light, worldPos, activeLights, shadowCubeMaps, shadowSampler);
+                    break;       
             }
             color += contribution;
         }
@@ -152,7 +162,7 @@ namespace SwLighting {
     // 2D shadow sampling is disabled while the per-light view-projection is rebuilt. The early-out keeps
     // the consume path fully lit; the reversed-Z PCF below is preserved for when the view-projection returns.
     public float shadowFactor2D(
-        uint slot, float3 worldPos, Sw::PerFrameData* perFrame, Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS], SamplerComparisonState shadowSampler
+        uint slot, float3 worldPos, Sw::ActiveLights* activeLights, Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS], SamplerComparisonState shadowSampler
     ) {
         const bool shadow2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
         if (!shadow2DEnabled) {
@@ -170,7 +180,7 @@ namespace SwLighting {
             return 1.f;
         }
 
-        uint mapIndex = perFrame->mActiveLights->mShadowIndex[slot];
+        uint mapIndex = activeLights->mShadowIndices[slot];
         const float bias = 0.0015f;
         const float radius = ndc.z + bias;  // reversed-Z, so bias is added to push receivers toward lit
         const float2 texel = 1.f / float2(Sw::SHADOW_MAP_SIZE, Sw::SHADOW_MAP_SIZE);
@@ -192,7 +202,7 @@ namespace SwLighting {
     // binding exist so the consume path is wired for when the six faces are drawn. TODO: sample
     // shadowCubeMaps[mShadowIndex[slot]] by direction against a radial depth.
     public float shadowFactorCube(
-        uint slot, Sw::Light light, float3 worldPos, Sw::PerFrameData* perFrame, TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS],
+        uint slot, Sw::Light light, float3 worldPos, Sw::ActiveLights* activeLights, TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS],
         SamplerComparisonState shadowSampler
     ) {
         return 1.f;

@@ -231,7 +231,7 @@ void SwPick::System::refreshDynamicDependencies() {
 
     // Pick Draw
     dynamicDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
+        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
     );
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
         dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
@@ -250,7 +250,7 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneDrawRisIndicesBuffer =
         mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
 }
 
 void SwPick::System::changePickOperation() {

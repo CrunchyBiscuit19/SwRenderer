@@ -121,7 +121,7 @@ void main(SwCull::CSInput in) {
     Sw::NodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
     Sw::Instance* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
     SwCull::Plane* frustum = workPc.mFrustumBuffer;
-    Sw::Perspective* perspective = &workPc.mPerFrameBuffer.mPerspective;
+    Sw::Perspective* perspective = &workPc.mCameraBuffer.mPerspective;
     float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMax.z, 1.f),

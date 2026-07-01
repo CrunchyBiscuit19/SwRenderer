@@ -10,7 +10,7 @@ namespace SwPick {
         public Sw::Instance* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
         public Sw::RenderCommand *mDrawRcsBuffer;
-        public Sw::PerFrameData *mPerFrameBuffer;
+        public Sw::CameraData *mCameraBuffer;
     };
 
     public struct VSInput {

@@ -11,22 +11,19 @@ void SwFrame::initialize(std::uint32_t frameIndex) {
     mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(fmt::format("Frame{}CommandBuffer", frameIndex), mCommandPool);
     mRenderFence = SwFenceFactory::createFence(fmt::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore(fmt::format("Frame{}AvailableSemaphore", frameIndex));
-    mPerFrameBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("Frame{}PerFrameBuffer", frameIndex), vk::BufferUsageFlagBits::eUniformBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        PER_FRAME_BUFFER_SIZE, true
+    mCameraBuffer = SwBufferFactory::createAllocatedBuffer(
+        fmt::format("Frame{}CameraBuffer", frameIndex), vk::BufferUsageFlagBits::eUniformBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        CAMERA_BUFFER_SIZE, true
     );
 }
 
 void SwFrame::update() {
     SwScene& scene = *SwRenderer::sRendererContext.mScene;
-    Data perFrameData{
+    Data cameraData{
         .mPerspective = scene.getCamera().getPerspective(),
-        .mCameraWorldPos = scene.getCamera().getPosition(),
+        .mWorldPos = scene.getCamera().getPosition(),
     };
-    SwLighting::System& lighting = scene.getLightingSystem();
-    lighting.refreshActiveLights(perFrameData.mCameraWorldPos);
-    perFrameData.mActiveLightsBuffer = lighting.getActiveLightsBuffer().getDeviceAddress().value();
-    mPerFrameBuffer.copyFromUnchecked(&perFrameData, sizeof(Data));
+    mCameraBuffer.copyFromUnchecked(&cameraData, sizeof(Data));
 }
 
 vk::ClearColorValue SwSwapchain::DRAW_CLEAR_VALUE{.463f, .616f, .859f, 0.f};

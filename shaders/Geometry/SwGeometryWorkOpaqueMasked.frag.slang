@@ -43,10 +43,10 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     float3 sampledNormal = materialResources[NonUniformResourceIndex(base + SwGeometry::NORMAL_TEXTURE_OFFSET)].Sample(in.mUv).rgb;
     float3 normal = SwGeometry::applyNormalMap(in.mNormal, in.mTangent, sampledNormal, mc.mNormalScale);
 
-    float3 view = normalize(workPc.mPerFrameBuffer->mCameraWorldPos - in.mWorldPos);
+    float3 view = normalize(workPc.mCameraBuffer->mWorldPos - in.mWorldPos);
 
     float3 lit = SwLighting::shadeLit( 
-        color.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mPerFrameBuffer, workPc.mSceneLightsBuffer,
+        color.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mActiveLightsBuffer, workPc.mSceneLightsBuffer,
         workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
         workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
     );

@@ -51,7 +51,7 @@ struct PrefilterPC : SwPC<PrefilterPC> {
 
 struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mDrawVertexBuffer;
-    vk::DeviceAddress mPerFrameBuffer;
+    vk::DeviceAddress mCameraBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };

@@ -122,7 +122,10 @@ void SwGeometry::System::refreshDynamicDependencies() {
     auto setDynamicDeps = [&](SwPass::Type type, auto&& batches, bool early) {
         SwDependency dynamicDeps;
         dynamicDeps.mReadBuffers.emplace_back(
-            &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+            &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+        );
+        dynamicDeps.mReadBuffers.emplace_back(
+            &mScene.getLightingSystem().getActiveLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
         );
         for (auto& batch : batches) {
             auto& itemsBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
@@ -145,8 +148,9 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mPerFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getPerFrameBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneLightsBuffer = mScene.getSceneLightsBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mActiveLightsBuffer = mScene.getLightingSystem().getActiveLightsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mMaxPrefilterMip = mScene.getIBLSystem().getMaxPrefilterMip();
     mResources.mWorkPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
     mResources.mWorkPushConstants.mIblComponents = mScene.getIBLSystem().getIblComponents();

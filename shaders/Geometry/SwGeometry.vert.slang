@@ -27,7 +27,7 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
     float4 worldPosition = mul(modelMatrix, position);
 
-    out.mPosition = mul(mul(workPc.mPerFrameBuffer->mPerspective.mProj, workPc.mPerFrameBuffer->mPerspective.mView), worldPosition);
+    out.mPosition = mul(mul(workPc.mCameraBuffer->mPerspective.mProj, workPc.mCameraBuffer->mPerspective.mView), worldPosition);
     out.mWorldPos = worldPosition.xyz;
     out.mNormal = normalize(mul((float3x3)modelMatrix, v.mNormal));  // world-space normal; uniform scale only, so normalize absorbs the scale
     out.mTangent = float4(mul((float3x3)modelMatrix, v.mTangent.xyz), v.mTangent.w);

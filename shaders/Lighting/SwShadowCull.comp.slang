@@ -5,27 +5,49 @@ import SwCull;
 [[vk::push_constant]]
 SwLighting::ShadowCullPC shadowCullPc;
 
-static const uint NUM_CORNERS = 8;
-
-void buildWorldCorners(Sw::Bounds bounds, float4x4 model, out float4 corners[NUM_CORNERS]) {
-    corners[0] = float4(bounds.mMin.x, bounds.mMin.y, bounds.mMin.z, 1.f);
-    corners[1] = float4(bounds.mMin.x, bounds.mMin.y, bounds.mMax.z, 1.f);
-    corners[2] = float4(bounds.mMin.x, bounds.mMax.y, bounds.mMin.z, 1.f);
-    corners[3] = float4(bounds.mMin.x, bounds.mMax.y, bounds.mMax.z, 1.f);
-    corners[4] = float4(bounds.mMax.x, bounds.mMin.y, bounds.mMin.z, 1.f);
-    corners[5] = float4(bounds.mMax.x, bounds.mMin.y, bounds.mMax.z, 1.f);
-    corners[6] = float4(bounds.mMax.x, bounds.mMax.y, bounds.mMin.z, 1.f);
-    corners[7] = float4(bounds.mMax.x, bounds.mMax.y, bounds.mMax.z, 1.f);
-    for (uint i = 0; i < NUM_CORNERS; i++) {
-        corners[i] = mul(model, corners[i]);
+void constructCorners(Sw::Bounds* riBounds, float4x4* riModelMatrix, out float4 corners[SwCull::NUM_AABB_CORNERS]) {
+    corners[0] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMin.z, 1.f);
+    corners[1] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMax.z, 1.f);
+    corners[2] = float4(riBounds->mMin.x, riBounds->mMax.y, riBounds->mMin.z, 1.f);
+    corners[3] = float4(riBounds->mMin.x, riBounds->mMax.y, riBounds->mMax.z, 1.f);
+    corners[4] = float4(riBounds->mMax.x, riBounds->mMin.y, riBounds->mMin.z, 1.f);
+    corners[5] = float4(riBounds->mMax.x, riBounds->mMin.y, riBounds->mMax.z, 1.f);
+    corners[6] = float4(riBounds->mMax.x, riBounds->mMax.y, riBounds->mMin.z, 1.f);
+    corners[7] = float4(riBounds->mMax.x, riBounds->mMax.y, riBounds->mMax.z, 1.f);
+    for (uint i = 0; i < SwCull::NUM_AABB_CORNERS; i++) {
+        corners[i] = mul(*riModelMatrix, corners[i]);
     }
 }
 
+// Spot light perspective frustum whose four side planes pass through the apex ("tip" of the frustum).
+// Directional lights have no intrinsic bounds to cull against, so they skip this test entirely.
+void constructFrustum(Sw::Light* light, float3* apex, float3* forward, out SwCull::Plane frustum[SwCull::NUM_FRUSTUM_PLANES]) {
+    float3 up = (abs(forward->y) < 0.999f) ? float3(0.f, 1.f, 0.f) : float3(1.f, 0.f, 0.f);
+    float3 right = normalize(cross(up, *forward));
+    up = cross(*forward, right);
+
+    float halfAngle = acos(clamp(light->mOuterCos, -0.9999f, 0.9999f));
+    float s = sin(halfAngle);
+    float c = cos(halfAngle);
+    float far = (light->mRange > 0.f) ? light->mRange : 60.f;
+    frustum[0].mNormal = *forward * s - right * c;  // right
+    frustum[1].mNormal = *forward * s + right * c;  // left
+    frustum[2].mNormal = *forward * s - up * c;     // top
+    frustum[3].mNormal = *forward * s + up * c;     // bottom
+    for (uint i = 0; i < 4; i++) {
+        frustum[i].mDistance = dot(frustum[i].mNormal, *apex);
+    }
+    frustum[4].mNormal = *forward;
+    frustum[4].mDistance = dot(*forward, *apex + *forward * 0.05f);
+    frustum[5].mNormal = -*forward;
+    frustum[5].mDistance = dot(-*forward, *apex + *forward * far);
+}
+
 // At least one corner on the inward side of all six planes means the world-space AABB intersects the frustum.
-bool frustumTest(SwCull::Plane* frustum, float4 corners[NUM_CORNERS]) {
+bool frustumTest(SwCull::Plane frustum[SwCull::NUM_FRUSTUM_PLANES], float4 corners[SwCull::NUM_AABB_CORNERS]) {
     float4 aabbMin = corners[0];
     float4 aabbMax = corners[0];
-    for (uint j = 1; j < NUM_CORNERS; j++) {
+    for (uint j = 1; j < SwCull::NUM_AABB_CORNERS; j++) {
         aabbMin = min(aabbMin, corners[j]);
         aabbMax = max(aabbMax, corners[j]);
     }
@@ -44,18 +66,18 @@ bool frustumTest(SwCull::Plane* frustum, float4 corners[NUM_CORNERS]) {
 }
 
 // The closest point on the world-space AABB to the light is within range means the light can reach the caster.
-bool rangeTest(float4 corners[NUM_CORNERS], float3 center, float range) {
+bool rangeTest(float4 corners[SwCull::NUM_AABB_CORNERS], float3* center, float range) {
     if (range <= 0.f) {
-        return true;  // infinite range, nothing to cull
+        return true;  
     }
     float3 aabbMin = corners[0].xyz;
     float3 aabbMax = corners[0].xyz;
-    for (uint j = 1; j < NUM_CORNERS; j++) {
+    for (uint j = 1; j < SwCull::NUM_AABB_CORNERS; j++) {
         aabbMin = min(aabbMin, corners[j].xyz);
         aabbMax = max(aabbMax, corners[j].xyz);
     }
-    float3 closest = clamp(center, aabbMin, aabbMax);
-    float3 delta = closest - center;
+    float3 closest = clamp(*center, aabbMin, aabbMax);
+    float3 delta = closest - *center;
     return dot(delta, delta) <= range * range;
 }
 
@@ -66,28 +88,38 @@ void main(SwLighting::CSInput in) {
         return;
     }
 
-    Sw::RenderItem ri = shadowCullPc.mShadowRisBuffer[risIndex];
-    Sw::RenderCommand* rc = &shadowCullPc.mShadowRcsBuffer[ri.mRcIndex];
+    Sw::RenderItem* ri = &shadowCullPc.mShadowRisBuffer[risIndex];
+    Sw::RenderCommand* rc = &shadowCullPc.mShadowRcsBuffer[ri->mRcIndex];
 
-    Sw::Bounds bounds = shadowCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
-    float4x4 nodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    float4x4 instanceTransform = shadowCullPc.mSceneInstancesBuffer[ri.mSceneInstanceIndex].mTransformMatrix;
-    float4x4 model = mul(instanceTransform, nodeTransform);
+    Sw::Bounds* riBounds = &shadowCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    float4x4 riNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
+    float4x4 riInstanceTransform = shadowCullPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex].mTransformMatrix;
+    float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
-    float4 corners[NUM_CORNERS];
-    buildWorldCorners(bounds, model, corners);
+    uint sceneLightsIndex = shadowCullPc.mActiveLightsBuffer->mLightIndices[shadowCullPc.mLightIndex];
+    Sw::Light* light = &shadowCullPc.mSceneLightsBuffer[sceneLightsIndex];
+    float4x4 lightNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[light->mNodeTransformIndex]; 
+    float4x4 lightInstanceTransform = shadowCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
+    float4x4 lightModelMatrix = mul(lightInstanceTransform, lightNodeTransform);
+    float3 lightApex = mul(lightModelMatrix, float4(light->mBasePosition, 1.f)).xyz;
+    float3 lightForward = normalize(mul(lightModelMatrix, float4(light->mBaseDirection, 0.f)).xyz);
+
+    float4 corners[SwCull::NUM_AABB_CORNERS];
+    constructCorners(riBounds, &riModelMatrix, corners);
 
     bool visible = true;
-    if (shadowCullPc.mPerFrameBuffer->mActiveLights->mIndices[shadowCullPc.mLightIndex] != Sw::LightType::Point) {
-        visible = frustumTest(shadowCullPc.mFrustumBuffer, corners);
+    if (light->mType == Sw::LightType::Spot) {
+        SwCull::Plane frustum[SwCull::NUM_FRUSTUM_PLANES];
+        constructFrustum(light, &lightApex, &lightForward, frustum);
+        visible = frustumTest(frustum, corners);
     }
-    if (visible && shadowCullPc.mLightType != Sw::LightType::Directional) {
-        visible = rangeTest(corners, shadowCullPc.mLightWorldPos, shadowCullPc.mLightRange);
+    if (visible && light->mType != Sw::LightType::Directional) {
+        visible = rangeTest(corners, &lightApex, light->mRange);
     }
 
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowCullPc.mLightDrawRisIndicesBuffer[rc->mFirstRi + offset] = ri.mSceneInstanceIndex;
+        shadowCullPc.mShadowRisIndicesBuffer[rc->mFirstRi + offset] = ri->mSceneInstanceIndex;
     }
 }

@@ -23,18 +23,17 @@ class SwFrame {
 public:
     struct Data {
         SwPerspective mPerspective;
-        glm::vec3 mCameraWorldPos;
-        vk::DeviceAddress mActiveLightsBuffer{0};  // points at SwLighting's active-lights buffer (Sw::ActiveLights)
+        glm::vec3 mWorldPos;
     };
 
 private:
-    static constexpr std::uint32_t PER_FRAME_BUFFER_SIZE{sizeof(Data)};
+    static constexpr std::uint32_t CAMERA_BUFFER_SIZE{sizeof(Data)};
 
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;
     SwFence mRenderFence;
     SwSemaphore mAvailableSemaphore;
-    SwAllocatedBuffer mPerFrameBuffer;
+    SwAllocatedBuffer mCameraBuffer;
 
 public:
     SwFrame();
@@ -48,7 +47,7 @@ public:
     inline SwCommandBuffer& getCommandBuffer() { return mCommandBuffer; };
     inline SwFence& getRenderFence() { return mRenderFence; };
     inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };
-    inline SwAllocatedBuffer& getPerFrameBuffer() { return mPerFrameBuffer; };
+    inline SwAllocatedBuffer& getCameraBuffer() { return mCameraBuffer; };
 };
 
 class SwSwapchain {

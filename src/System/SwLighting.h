@@ -42,17 +42,18 @@ constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
 
 struct ActiveLights {
     std::uint32_t mCount{0};
-    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mIndices{};
-    std::array<ShadowType, MAX_ACTIVE_LIGHTS> mShadowType{};
-    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mShadowIndex{};
+    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mLightIndices{};
+    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mShadowIndices{};
 };
 
 struct SelectionPC : SwPC<SelectionPC> {
-    vk::DeviceAddress mPerFrameBuffer;
+    vk::DeviceAddress mCameraBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mActiveLightsBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ShadowCullPC : SwPC<ShadowCullPC> {
@@ -63,6 +64,7 @@ struct ShadowCullPC : SwPC<ShadowCullPC> {
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
+    vk::DeviceAddress mActiveLightsBuffer; 
     std::uint32_t mShadowRisLimit;
     std::uint32_t mLightIndex;
 
@@ -77,6 +79,7 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
+    vk::DeviceAddress mActiveLightsBuffer;
     std::uint32_t mLightIndex;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
@@ -129,10 +132,6 @@ public:
 
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
-
-    void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount);
-
-    void refreshActiveLights(const glm::vec3& cameraPos);
 
     inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
     inline SwAllocatedBuffer& getActiveLightsBuffer() { return mResources.mActiveLightsBuffer; }

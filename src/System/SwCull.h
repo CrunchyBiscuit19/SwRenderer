@@ -38,7 +38,7 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mRisBuffer;
     vk::DeviceAddress mRisCount;
     vk::DeviceAddress mFrustumBuffer;
-    vk::DeviceAddress mPerFrameBuffer;
+    vk::DeviceAddress mCameraBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
