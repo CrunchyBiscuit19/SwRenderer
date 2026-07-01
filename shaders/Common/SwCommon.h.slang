@@ -29,13 +29,14 @@ namespace Sw {
     public struct Light {
         public float3 mColor;
         public float mIntensity;
-        public LightType mType;                 
+        public LightType mType;
         public float mRange;               // Less than or equal to 0 = infinite
         public float mInnerCos;            // spot inner cone, cos
         public float mOuterCos;            // spot outer cone, cos
         public uint mNodeTransformIndex;   // into the scene node-transform buffer
         public uint mInstanceIndex;        // into the scene instance buffer
-        public float2 mPad;
+        public float3 mBasePosition;       // light position in node-local space
+        public float3 mBaseDirection;      // light forward in node-local space (glTF local -Z)
     };
 
     public struct PerFrameData {
@@ -43,7 +44,7 @@ namespace Sw {
         public float3 mCameraWorldPos;
         public uint mActiveLightCount;                     
         public uint mActiveLightIndices[MAX_SHADOW_LIGHTS]; 
-        public float4x4 mLightViewProj[MAX_SHADOW_LIGHTS];
+        public float4x4 mActiveLightViewProj[MAX_SHADOW_LIGHTS];
         public ShadowType mShadowType[MAX_SHADOW_LIGHTS];   
         public uint mShadowIndex[MAX_SHADOW_LIGHTS];        
     };

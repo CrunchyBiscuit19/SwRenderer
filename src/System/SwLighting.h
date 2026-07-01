@@ -45,15 +45,13 @@ struct ShadowCullPC : SwPC<ShadowCullPC> {
     vk::DeviceAddress mShadowRcsBuffer;
     vk::DeviceAddress mShadowRisBuffer;
     vk::DeviceAddress mShadowRisIndicesBuffer;
-    vk::DeviceAddress mFrustumBuffer;
+    vk::DeviceAddress mShadowFrustumsBuffer;
     vk::DeviceAddress mPerFrameBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     std::uint32_t mShadowRisLimit;
-    glm::vec3 mLightWorldPos;
-    float mLightRange;
-    SwLight::Type mLightType;
+    std::uint32_t mLightIndex;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -71,30 +69,11 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
 
-struct AssetLight {
-    SwLight* mLight{nullptr};               
-    SwInstance* mInstance{nullptr};         
-    std::uint32_t mAssetId{0};              
-    std::uint32_t mNodeTransformIndex{0};   
-    std::uint32_t mInstanceIndex{0};        
-    glm::vec3 mWorldPosition{0.f};          
-    glm::vec3 mWorldDirection{0.f};         
-};
-
-struct InstanceLightKeyHash {
-    std::size_t operator()(const std::pair<std::uint32_t, std::uint32_t>& key) const noexcept {
-        return (static_cast<std::size_t>(key.first) << 32) ^ static_cast<std::size_t>(key.second);
-    }
-};
-
 struct Resources {
     static SwDescriptorLayout sShadowConsumeDescriptorLayout;
 
     static void init();
     static void cleanup();
-
-    std::vector<AssetLight> mAssetLights;
-    std::unordered_map<std::pair<std::uint32_t, std::uint32_t>, SwLight, InstanceLightKeyHash> mInstanceLights;
 
     std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
     std::uint32_t mActiveLightCount{0};
@@ -135,6 +114,8 @@ private:
     static glm::mat4 computeLightMatrix(const SwLight::Params& params, const glm::vec3& worldPos, const glm::vec3& worldDir);
     static void calculateFrustum(const glm::mat4& m, SwCull::Plane* out);
 
+    void resolveLightWorld(const SwLight& light, glm::vec3& outPosition, glm::vec3& outDirection);
+
     void prepareShadowCullData();
 
 public:
@@ -143,14 +124,9 @@ public:
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
 
-    void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount) const;
+    void selectActiveLights(const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount);
 
     void refreshActiveLights(const glm::vec3& cameraPos);
-
-    std::vector<SwLight::Data> collectLightData() const;
-
-    SwLight& getOrCreateInstanceLight(std::uint32_t lightId, std::uint32_t instanceId, const SwLight::Params& defaultParams);
-    void eraseInstanceLights(std::uint32_t instanceId);
 
     inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
     inline std::uint32_t getActiveLightCount() const { return mResources.mActiveLightCount; }
@@ -160,7 +136,6 @@ public:
     inline const std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& getShadowIndices() const { return mResources.mShadowIndex; }
 
     inline Resources& getResources() { return mResources; }
-    inline std::vector<AssetLight>& getAssetLights() { return mResources.mAssetLights; }
 };
 
 }  // namespace SwLighting

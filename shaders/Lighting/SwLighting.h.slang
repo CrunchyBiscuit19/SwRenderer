@@ -10,15 +10,13 @@ namespace SwLighting {
         public Sw::RenderCommand* mShadowRcsBuffer;
         public Sw::RenderItem* mShadowRisBuffer;
         public uint* mShadowRisIndicesBuffer;
-        public SwCull::Plane* mFrustumBuffer;
+        public SwCull::Plane* mShadowFrustumsBuffer;
         public Sw::PerFrameData* mPerFrameBuffer;
         public Sw::Bounds* mSceneBoundsBuffer;
         public Sw::NodeTransform* mSceneNodeTransformsBuffer;
         public Sw::Instance* mSceneInstancesBuffer;
         public uint mShadowRisLimit;
-        public float3 mLightWorldPos;       
-        public float mLightRange;           
-        public Sw::LightType mLightType;             
+        public uint mLightIndex;        
     };
 
     public struct ShadowDrawPC {
@@ -65,8 +63,8 @@ namespace SwLighting {
         Sw::NodeTransform* nodeTransforms
     ) {
         float4x4 model = mul(instances[light.mInstanceIndex].mTransformMatrix, nodeTransforms[light.mNodeTransformIndex]);
-        float3 lightWorldPos = mul(model, float4(0.f, 0.f, 0.f, 1.f)).xyz;
-        float3 lightForward = normalize(mul(model, float4(0.f, 0.f, -1.f, 0.f)).xyz);  // glTF: light shines down local -Z
+        float3 lightWorldPos = mul(model, float4(light.mBasePosition, 1.f)).xyz;
+        float3 lightForward = normalize(mul(model, float4(light.mBaseDirection, 0.f)).xyz);  // glTF: light shines down local -Z
 
         float3 toLightDir;  // unit vector from the surface toward the light
         float attenuation = 1.f;

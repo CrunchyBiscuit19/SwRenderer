@@ -7,7 +7,15 @@ SwLight::SwLight() : mId(sLatestLightId++) {}
 
 SwLight::SwLight(Params params) : mId(sLatestLightId++), mParams(std::move(params)) {}
 
-SwLight::Data SwLight::toData(std::uint32_t nodeTransformIndex, std::uint32_t instanceIndex) const {
+glm::vec3 SwLight::worldPosition(const glm::mat4& instanceTransform, const glm::mat4& nodeWorldTransform) const {
+    return glm::vec3(instanceTransform * nodeWorldTransform * glm::vec4(mBasePosition, 1.f));
+}
+
+glm::vec3 SwLight::worldDirection(const glm::mat4& instanceTransform, const glm::mat4& nodeWorldTransform) const {
+    return glm::normalize(glm::vec3(instanceTransform * nodeWorldTransform * glm::vec4(mBaseDirection, 0.f)));
+}
+
+SwLight::Data SwLight::toData() const {
     Data d;
     d.mType = static_cast<std::uint32_t>(mParams.mType);
     d.mColor = mParams.mColor;
@@ -15,8 +23,10 @@ SwLight::Data SwLight::toData(std::uint32_t nodeTransformIndex, std::uint32_t in
     d.mRange = mParams.mRange;
     d.mInnerCos = std::cos(mParams.mInnerConeAngle);
     d.mOuterCos = std::cos(mParams.mOuterConeAngle);
-    d.mNodeTransformIndex = nodeTransformIndex;
-    d.mInstanceIndex = instanceIndex;
+    d.mNodeTransformIndex = mNodeTransformIndex;
+    d.mInstanceIndex = mInstanceIndex;
+    d.mBasePosition = mBasePosition;
+    d.mBaseDirection = mBaseDirection;
     return d;
 }
 

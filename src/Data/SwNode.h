@@ -31,6 +31,8 @@ public:
 
     inline std::weak_ptr<SwNode> getParent() { return mParent; }
 
+    inline std::uint32_t getRelativeNodeIndex() const { return mRelativeNodeIndex; }
+
     inline glm::mat4& getWorldTransform() { return mWorldTransform; }
 
     void setParent(std::weak_ptr<SwNode> parent);
@@ -62,6 +64,4 @@ public:
     SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwLight& light, std::uint32_t assetId);
 
     inline SwLight& getLight() { return mLight; }
-
-    void generateRcsAndRis() override;
 };

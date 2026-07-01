@@ -62,12 +62,12 @@ bool rangeTest(float4 corners[NUM_CORNERS], float3 center, float range) {
 [numthreads(Sw::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
-    if (risIndex >= shadowCullPc.mRisCount) {
+    if (risIndex >= shadowCullPc.mShadowRisLimit) {
         return;
     }
 
-    Sw::RenderItem ri = shadowCullPc.mRisBuffer[risIndex];
-    Sw::RenderCommand* rc = &shadowCullPc.mLightRcsBuffer[ri.mRcIndex];
+    Sw::RenderItem ri = shadowCullPc.mShadowRisBuffer[risIndex];
+    Sw::RenderCommand* rc = &shadowCullPc.mShadowRcsBuffer[ri.mRcIndex];
 
     Sw::Bounds bounds = shadowCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     float4x4 nodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
@@ -78,7 +78,7 @@ void main(SwLighting::CSInput in) {
     buildWorldCorners(bounds, model, corners);
 
     bool visible = true;
-    if (shadowCullPc.mLightType != Sw::LightType::Point) {
+    if (shadowCullPc.mPerFrameBuffer->mActiveLightIndices[shadowCullPc.mLightIndex] != Sw::LightType::Point) {
         visible = frustumTest(shadowCullPc.mFrustumBuffer, corners);
     }
     if (visible && shadowCullPc.mLightType != Sw::LightType::Directional) {

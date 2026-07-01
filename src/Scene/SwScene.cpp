@@ -168,7 +168,47 @@ std::uint32_t SwScene::registerInstance(std::uint32_t assetId, SwInstance::Data 
     SwInstance instance(assetId, instanceData);
     std::uint32_t instanceId = instance.getId();
     mInstances.emplace(instanceId, std::move(instance));
+    addInstanceLights(getAsset(assetId), instanceId);
     return instanceId;
+}
+
+void SwScene::addInstanceLights(SwAsset& asset, std::uint32_t instanceId) {
+    for (auto& node : asset.getNodes()) {
+        auto* lightNode = dynamic_cast<SwLightNode*>(node.get());
+        if (lightNode == nullptr) {
+            continue;
+        }
+        SwLight light(lightNode->getLight().getParams());
+        light.setInstanceContext(asset.getId(), instanceId, lightNode->getRelativeNodeIndex());
+        mLights.emplace(light.getId(), std::move(light));
+    }
+}
+
+void SwScene::removeInstanceLights(std::uint32_t instanceId) {
+    std::erase_if(mLights, [instanceId](const auto& entry) { return entry.second.getInstanceId() == instanceId; });
+}
+
+void SwScene::refreshLightIndices() {
+    mLightIds.clear();
+    mLightIds.reserve(mLights.size());
+
+    // Resolve each light's scene instance index from its position inside its asset's instance list.
+    std::unordered_map<std::uint32_t, std::unordered_map<std::uint32_t, std::uint32_t>> assetInstanceLocalIndex;
+    for (auto& asset : mAssets | std::views::values) {
+        auto& localMap = assetInstanceLocalIndex[asset.getId()];
+        const std::vector<std::uint32_t>& instanceIds = asset.getInstanceIds();
+        for (std::uint32_t i = 0; i < instanceIds.size(); i++) {
+            localMap[instanceIds[i]] = i;
+        }
+    }
+
+    for (auto& [lightId, light] : mLights) {
+        SwAsset& asset = mAssets.at(light.getAssetId());
+        const std::uint32_t localIndex = assetInstanceLocalIndex.at(light.getAssetId()).at(light.getInstanceId());
+        light.setNodeTransformIndex(asset.mFirstNodeTransformInScene + light.getRelativeNodeIndex());
+        light.setInstanceIndex(asset.mFirstInstanceInScene + localIndex);
+        mLightIds.emplace_back(lightId);
+    }
 }
 
 void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
@@ -240,7 +280,7 @@ void SwScene::unloadAssetsAndInstances() {
                 getPickSystem().setSelectedInstancePtr(nullptr);
             }
             if (!asset.getLights().empty()) {
-                mLighting.eraseInstanceLights(instanceId);
+                removeInstanceLights(instanceId);
             }
             if (!assetDeleted) {
                 mFlags.mInstanceUnloaded = true;
@@ -262,7 +302,6 @@ void SwScene::markAllAssetsDelete() {
 
 void SwScene::regenerateRcsAndRis() {
     SwBatch::sFirstRiOffset = 0;
-    mLighting.getAssetLights().clear();
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
@@ -274,8 +313,6 @@ void SwScene::regenerateRcsAndRis() {
         if (asset.getInstanceIds().empty()) continue;
         asset.generateRcsAndRis();
     }
-
-    reloadSceneLightsBuffer();
 
     for (auto& batchType : mBatchTypes | std::views::values) {
         for (auto& batch : batchType | std::views::values) {
@@ -494,11 +531,16 @@ void SwScene::reloadSceneInstancesBuffer() {
 }
 
 void SwScene::reloadSceneLightsBuffer() {
-    if (mLighting.getAssetLights().empty()) {
+    if (mLightIds.empty()) {
         return;
     }
 
-    std::vector<SwLight::Data> lightData = mLighting.collectLightData();
+    std::vector<SwLight::Data> lightData;
+    lightData.reserve(mLightIds.size());
+    for (std::uint32_t lightId : mLightIds) {
+        lightData.emplace_back(mLights.at(lightId).toData());
+    }
+
     vk::BufferCopy lightsCopy{};
     lightsCopy.dstOffset = 0;
     lightsCopy.srcOffset = 0;
@@ -575,16 +617,20 @@ void SwScene::perFrameUpdate() {
         realignOffsets();
         reloadSceneBuffers();
         regenerateRcsAndRis();
+        refreshLightIndices();
+        reloadSceneLightsBuffer();
     } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
         realignInstancesOffset();
         reloadSceneInstancesBuffer();
         regenerateRcsAndRis();
+        refreshLightIndices();
+        reloadSceneLightsBuffer();
     } else if (mFlags.mReloadMainInstancesBuffer || mFlags.mLightEdited) {
         if (mFlags.mReloadMainInstancesBuffer) {
             reloadSceneInstancesBuffer();
         }
         if (mFlags.mLightEdited) {
-            regenerateRcsAndRis();  // refreshes the asset-light cache and re-uploads the lights buffer
+            reloadSceneLightsBuffer();  // light params changed; re-upload without touching indices
         }
     }
 

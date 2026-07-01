@@ -72,28 +72,3 @@ void SwMeshNode::generateRcsAndRis() {
 
 SwLightNode::SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwLight& light, std::uint32_t assetId)
     : SwNode(name, relativeNodeIndex, localTransform), mLight(light), mAssetId(assetId) {}
-
-void SwLightNode::generateRcsAndRis() {
-    SwScene& scene = *SwRenderer::sRendererContext.mScene;
-    SwAsset& asset = scene.getAsset(mAssetId);
-
-    const std::uint32_t nodeTransformIndex = asset.mFirstNodeTransformInScene + mRelativeNodeIndex;
-    const glm::vec3 nodeWorldPos = glm::vec3(getWorldTransform()[3]);
-    auto& assetLights = scene.getLightingSystem().getAssetLights();
-    auto& instanceIds = asset.getInstanceIds();
-    for (std::uint32_t i = 0; i < instanceIds.size(); i++) {
-        SwInstance& instance = scene.getInstance(instanceIds[i]);
-        const glm::mat4 model = instance.getData().mTransformMatrix * getWorldTransform();
-        SwLighting::AssetLight& record = assetLights.emplace_back();
-        record.mLight = &scene.getLightingSystem().getOrCreateInstanceLight(mLight.getId(), instance.getId(), mLight.getParams());
-        record.mInstance = &instance;
-        record.mAssetId = mAssetId;
-        record.mNodeTransformIndex = nodeTransformIndex;
-        record.mInstanceIndex = asset.mFirstInstanceInScene + i;
-        record.mWorldPosition = glm::vec3(instance.getData().mTransformMatrix * glm::vec4(nodeWorldPos, 1.f));
-        // glTF lights shine down local -Z. Match SwGeometry's accumulatePunctualLight forward computation.
-        record.mWorldDirection = glm::normalize(glm::vec3(model * glm::vec4(0.f, 0.f, -1.f, 0.f)));
-    }
-
-    SwNode::generateRcsAndRis();  
-}

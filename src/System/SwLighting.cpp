@@ -29,14 +29,21 @@ void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy()
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
+void SwLighting::System::resolveLightWorld(const SwLight& light, glm::vec3& outPosition, glm::vec3& outDirection) {
+    const glm::mat4 instanceTransform = mScene.getInstance(light.getInstanceId()).getData().mTransformMatrix;
+    const glm::mat4 nodeWorldTransform = mScene.getAsset(light.getAssetId()).getNodes()[light.getRelativeNodeIndex()]->getWorldTransform();
+    outPosition = light.worldPosition(instanceTransform, nodeWorldTransform);
+    outDirection = light.worldDirection(instanceTransform, nodeWorldTransform);
+}
+
 void SwLighting::System::selectActiveLights(
     const glm::vec3& cameraPos, std::array<std::uint32_t, SwLight::MAX_ACTIVE_LIGHTS>& outIndices, std::uint32_t& outCount
-) const {
-    const std::vector<AssetLight>& assetLights = mResources.mAssetLights;
+) {
+    const std::vector<std::uint32_t>& lightIds = mScene.getLightIds();
 
     // Score every light by its perceived brightness at the camera, then keep the brightest MAX_ACTIVE_LIGHTS.
     std::vector<std::pair<float, std::uint32_t>> scored;
-    scored.reserve(assetLights.size());
+    scored.reserve(lightIds.size());
 
     auto scoreLight = [&](const SwLight::Params& params, const glm::vec3& worldPos, std::uint32_t index) {
         float score;
@@ -57,9 +64,11 @@ void SwLighting::System::selectActiveLights(
         scored.emplace_back(score, index);
     };
 
-    const std::uint32_t assetCount = static_cast<std::uint32_t>(assetLights.size());
-    for (std::uint32_t i = 0; i < assetCount; i++) {
-        scoreLight(assetLights[i].mLight->getParams(), assetLights[i].mWorldPosition, i);
+    for (std::uint32_t i = 0; i < static_cast<std::uint32_t>(lightIds.size()); i++) {
+        const SwLight& light = mScene.getLight(lightIds[i]);
+        glm::vec3 worldPos, worldDir;
+        resolveLightWorld(light, worldPos, worldDir);
+        scoreLight(light.getParams(), worldPos, i);
     }
 
     outCount = std::min<std::uint32_t>(static_cast<std::uint32_t>(scored.size()), SwLight::MAX_ACTIVE_LIGHTS);
@@ -94,7 +103,7 @@ glm::mat4 SwLighting::System::computeLightMatrix(const SwLight::Params& params, 
 void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
     selectActiveLights(cameraPos, mResources.mActiveLightIndices, mResources.mActiveLightCount);
 
-    const std::vector<AssetLight>& assetLights = mResources.mAssetLights;
+    const std::vector<std::uint32_t>& lightIds = mScene.getLightIds();
 
     mResources.mLightViewProj.fill(glm::mat4(1.f));
     mResources.mShadowType.fill(ShadowType::None);
@@ -124,8 +133,10 @@ void SwLighting::System::refreshActiveLights(const glm::vec3& cameraPos) {
 
     for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
         const std::uint32_t lightIndex = mResources.mActiveLightIndices[slot];
-        const AssetLight& light = assetLights[lightIndex];
-        processLight(slot, light.mLight->getParams(), light.mWorldPosition, light.mWorldDirection);
+        const SwLight& light = mScene.getLight(lightIds[lightIndex]);
+        glm::vec3 worldPos, worldDir;
+        resolveLightWorld(light, worldPos, worldDir);
+        processLight(slot, light.getParams(), worldPos, worldDir);
     }
 
     prepareShadowCullData();
@@ -172,25 +183,6 @@ void SwLighting::System::prepareShadowCullData() {
         if (mResources.mShadowType[slot] != ShadowType::TwoD) continue;  // Skip point
         calculateFrustum(mResources.mLightViewProj[slot], &mResources.mShadowFrustums[mResources.mShadowIndex[slot] * NUM_FRUSTUM_PLANES]);
     }
-}
-
-std::vector<SwLight::Data> SwLighting::System::collectLightData() const {
-    std::vector<SwLight::Data> out;
-    out.reserve(mResources.mAssetLights.size());
-    for (const AssetLight& light : mResources.mAssetLights) {
-        out.emplace_back(light.mLight->toData(light.mNodeTransformIndex, light.mInstanceIndex));
-    }
-    return out;
-}
-
-SwLight& SwLighting::System::getOrCreateInstanceLight(std::uint32_t lightId, std::uint32_t instanceId, const SwLight::Params& defaultParams) {
-    const std::pair<std::uint32_t, std::uint32_t> key = std::pair(lightId, instanceId);
-    auto [it, inserted] = mResources.mInstanceLights.try_emplace(key, defaultParams);
-    return it->second;
-}
-
-void SwLighting::System::eraseInstanceLights(std::uint32_t instanceId) {
-    std::erase_if(mResources.mInstanceLights, [instanceId](const auto& entry) { return entry.first.second == instanceId; });
 }
 
 void SwLighting::System::initializeResources() {
@@ -254,7 +246,7 @@ void SwLighting::System::initializeResources() {
         mResources.mShadowRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightDrawRisIndicesBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,  
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             SwScene::SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
             true
         );
@@ -338,7 +330,10 @@ void SwLighting::System::initializePasses() {
         staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRisIndicesBuffer[i], SwDependency::BufferDepType::ComputeStorageWrite);
     }
     mScene.insertPass(SwPass::Type::LightingShadowCull, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-
+        cmd.bindPipeline(mResources.mShadowCullPipelineBundle.getBindPoint(), mResources.mShadowCullPipelineBundle.getPipelineHandle());
+        for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
+            
+        }
     });
     staticDeps.clear();
 

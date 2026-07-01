@@ -48,6 +48,9 @@ private:
     std::unordered_map<std::uint32_t, SwInstance> mInstances;
     std::unordered_set<std::string> mAlreadyLoadedAssets;
 
+    std::unordered_map<std::uint32_t, SwLight> mLights;     
+    std::vector<std::uint32_t> mLightIds;             
+
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
 
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
@@ -124,6 +127,10 @@ public:
     std::uint32_t registerInstance(std::uint32_t assetId, SwInstance::Data instanceData);
     inline SwInstance& getInstance(const std::uint32_t instanceId) { return mInstances.at(instanceId); }
     inline std::unordered_map<std::uint32_t, SwInstance>& getInstances() { return mInstances; }
+
+    inline std::unordered_map<std::uint32_t, SwLight>& getLights() { return mLights; }
+    inline SwLight& getLight(const std::uint32_t lightId) { return mLights.at(lightId); }
+    inline const std::vector<std::uint32_t>& getLightIds() const { return mLightIds; }
     
     inline SwDescriptorSet& getSceneMaterialResourcesDescriptorSet() { return mSceneMaterialResourcesDescriptorSet; }
     inline SwAllocatedBuffer& getSceneVertexBuffer() { return mSceneVertexBuffer; }
@@ -149,6 +156,10 @@ public:
     void spawnStandaloneLight(SwLight::Type type);
     void unloadAssetsAndInstances();
     void markAllAssetsDelete();
+
+    void addInstanceLights(SwAsset& asset, std::uint32_t instanceId);
+    void removeInstanceLights(std::uint32_t instanceId);
+    void refreshLightIndices();
 
     void regenerateRcsAndRis();
 

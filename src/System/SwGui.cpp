@@ -173,16 +173,14 @@ void SwGui::System::initializeResources() {
                 mScene.spawnStandaloneLight(SwLight::Type::Directional);
             }
 
-            // Both standalone and asset lights are flattened into the asset-light list, one entry per instance.
-            auto& assetLights = mScene.getLightingSystem().getAssetLights();
-            for (std::size_t i = 0; i < assetLights.size(); i++) {
-                SwLighting::AssetLight& record = assetLights[i];
-                SwLight::Params& params = record.mLight->getParams();
-                SwAsset& owningAsset = mScene.getAsset(record.mAssetId);
+            // Every light in the scene, one entry per instance of its owning asset.
+            for (auto& [lightId, light] : mScene.getLights()) {
+                SwLight::Params& params = light.getParams();
+                SwAsset& owningAsset = mScene.getAsset(light.getAssetId());
                 const bool standalone = owningAsset.isStandaloneLight();
 
                 const std::string label =
-                    fmt::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), record.mLight->getId());
+                    fmt::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), light.getId());
                 ImGui::PushID(label.c_str());
                 if (ImGui::TreeNode(label.c_str())) {
                     bool edited = false;
@@ -195,8 +193,9 @@ void SwGui::System::initializeResources() {
                     }
 
                     // Asset lights transform with their owning asset, so only standalone lights expose transform controls.
-                    if (standalone && record.mInstance != nullptr) {
-                        glm::mat4& transform = record.mInstance->getData().mTransformMatrix;
+                    if (standalone) {
+                        SwInstance& instance = mScene.getInstance(light.getInstanceId());
+                        glm::mat4& transform = instance.getData().mTransformMatrix;
                         glm::vec3 translation, rotation, scale;
                         ImGuizmo::DecomposeMatrixToComponents(
                             glm::value_ptr(transform), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale)
@@ -226,7 +225,7 @@ void SwGui::System::initializeResources() {
 
                         ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(IMGUI_BUTTON_RED));
                         if (ImGui::Button("Remove")) {
-                            record.mInstance->markDelete();
+                            instance.markDelete();
                         }
                         ImGui::PopStyleColor();
                     }
