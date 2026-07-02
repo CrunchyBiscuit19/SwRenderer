@@ -94,7 +94,7 @@ void SwLighting::System::initializeResources() {
         mResources.mShadowRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightRcsBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
-            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,  // Will change frame to frame
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,  
             SHADOW_INITIAL_RENDER_COMMANDS * sizeof(SwRenderCommand),
             true
         );
@@ -114,10 +114,13 @@ void SwLighting::System::initializeResources() {
         );
     }
 
-    mResources.mSelectionPipelineLayout = SwPipelineFactory::createPipelineLayout("SelectionPipelineLayout", nullptr, SwLighting::SelectionPC::getRange());
-    SwShader selectionShader = SwShaderFactory::createShader("SelectionShaderModule", SwLighting::SELECTION_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mResources.mSelectionPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("SelectionPipeline", {selectionShader.getHandle(), mResources.mSelectionPipelineLayout.getHandle()});
+    mResources.mActiveLightsSelectionPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("ActiveLightsSelectionPipelineLayout", nullptr, SwLighting::ActiveLightsSelectionPC::getRange());
+    SwShader activeLightsSelectionShader =
+        SwShaderFactory::createShader("ActiveLightsSelectionShaderModule", SwLighting::ACTIVE_LIGHTS_SELECTION_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mActiveLightsSelectionPipelineBundle = SwComputePipelineFactory::createComputePipeline(
+        "ActiveLightsSelectionPipeline", {activeLightsSelectionShader.getHandle(), mResources.mActiveLightsSelectionPipelineLayout.getHandle()}
+    );
 
     mResources.mShadowCullPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowCullPipelineLayout", nullptr, SwLighting::ShadowCullPC::getRange());
     SwShader cullShader = SwShaderFactory::createShader("ShadowCullShaderModule", SwLighting::SHADOW_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
@@ -163,7 +166,7 @@ void SwLighting::System::initializePasses() {
     }
     mScene.insertPass(SwPass::Type::LightingShadowReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.fillBuffer(mResources.mActiveLightsBuffer.getHandle(), 0, vk::WholeSize, 0);
-        for (std::uint32_t i = 0; i < mResources.mActiveLightCount; i++) {
+        for (std::uint32_t i = 0; i < MAX_ACTIVE_LIGHTS; i++) {
             for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask)) {
                 for (auto rc : batch.getRcs()) {
                     rc.mRiCount = 0;
@@ -171,13 +174,15 @@ void SwLighting::System::initializePasses() {
                 }
             }
             mResources.mShadowRcsBuffer[i].copyFromUnchecked(mResources.mShadowRcs.data(), mResources.mShadowRcs.size() * sizeof(SwRenderCommand));
-
             cmd.fillBuffer(mResources.mShadowRisIndicesBuffer[i].getHandle(), 0, vk::WholeSize, 0);
+            // TODO fill the mShadowRcs vector whenever generateRcandRis is called
+            // TODO create a static staging buffer for mShadowRcsBuffer
+            // TODO create a similar reset shader just resetting mRiCount to 0
         }
     });
     staticDeps.clear();
 
-    // Selection
+    // Active Lights Selection
     staticDeps.mReadBuffers.emplace_back(
         &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
@@ -185,8 +190,13 @@ void SwLighting::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&mResources.mActiveLightsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
-    mScene.insertPass(SwPass::Type::LightingSelection, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
-
+    mScene.insertPass(SwPass::Type::LightingActiveLightsSelection, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+        auto& pipeline = mResources.mActiveLightsSelectionPipelineBundle;
+        cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+        cmd.pushConstants<SwLighting::ActiveLightsSelectionPC>(
+            pipeline.getLayoutHandle(), SwLighting::ActiveLightsSelectionPC::sStages, 0, mResources.mActiveLightsSelectionPc
+        );
+        cmd.dispatch(SwHelper::fastDivCeil(MAX_ACTIVE_LIGHTS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
     staticDeps.clear();
 
@@ -197,6 +207,7 @@ void SwLighting::System::initializePasses() {
         staticDeps.mReadBuffers.emplace_back(&mResources.mShadowRisBuffer[i], SwDependency::BufferDepType::ComputeStorageRead);
         staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRisIndicesBuffer[i], SwDependency::BufferDepType::ComputeStorageWrite);
     }
+    staticDeps.mReadBuffers.emplace_back(&mResources.mActiveLightsBuffer, SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -222,11 +233,12 @@ void SwLighting::System::initializePasses() {
 void SwLighting::System::refreshDynamicDependencies() {}
 
 void SwLighting::System::refreshPushConstants() {
-    mResources.mSelectionPc.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
-    mResources.mSelectionPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mSelectionPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mSelectionPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mSelectionPc.mActiveLightsBuffer = mResources.mActiveLightsBuffer.getDeviceAddress().value();
+    mResources.mActiveLightsSelectionPc.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
+    mResources.mActiveLightsSelectionPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
+    mResources.mActiveLightsSelectionPc.mSceneNodeTransformsBuffer =
+        SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mActiveLightsSelectionPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mActiveLightsSelectionPc.mActiveLightsBuffer = mResources.mActiveLightsBuffer.getDeviceAddress().value();
 
     mResources.mShadowCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
     mResources.mShadowCullPc.mSceneBoundsBuffer = SwRenderer::sRendererContext.mScene->getSceneBoundsBuffer().getDeviceAddress().value();

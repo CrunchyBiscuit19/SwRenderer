@@ -132,14 +132,7 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
     const float halfVSide = std::tanf(glm::radians(FOVY) * .5f);
     const float halfHSide = halfVSide * SwRenderer::sRendererContext.mSwapchain->getAspectRatio();
 
-    mFrustum.mNear = SwPlane(forward, mPosition + forward * NEAR_PLANE);
-    mFrustum.mFar = SwPlane(-forward, mPosition + forward * FAR_PLANE);
-    mFrustum.mLeft = SwPlane(glm::cross(forward - right * halfHSide, up), mPosition);
-    mFrustum.mRight = SwPlane(glm::cross(up, forward + right * halfHSide), mPosition);
-    mFrustum.mTop = SwPlane(glm::cross(forward + up * halfVSide, right), mPosition);
-    mFrustum.mBottom = SwPlane(glm::cross(right, forward - up * halfVSide), mPosition);
-    // Cross product between slanted vectors and up / right vectors gives plane normals pointing inward.
-    // Planes stretch indefinitely. Left, right, top, bottom planes all pass through camera position. Near and far calculate with normal * distance.
+    mFrustum = SwFrustum::calculateFrustum(mPosition, forward, right, up, halfHSide, halfVSide, NEAR_PLANE, FAR_PLANE);
 }
 
 SwPerspective SwCamera::getPerspective() const {

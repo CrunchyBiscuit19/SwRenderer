@@ -19,36 +19,8 @@ void constructCorners(SwMesh::Bounds* riBounds, float4x4 riModelMatrix, out floa
     }
 }
 
-// Spot light perspective frustum whose four side planes pass through the apex ("tip" of the frustum).
-// Directional lights have no intrinsic bounds to cull against, so they skip this test entirely.
-void constructFrustum(SwLight::Data* light, float3 apex, float3 forward, out SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES]) {
-    float3 up = (abs(forward.y) < 0.999f) ? float3(0.f, 1.f, 0.f) : float3(1.f, 0.f, 0.f);
-    float3 right = normalize(cross(forward, up));
-    up = cross(right, forward);
-
-    float outerAngle = acos(clamp(light->mOuterCos, -0.9999f, 0.9999f));
-    float aspect = 1.f;
-    float halfVSide = tan(outerAngle);
-    float halfHSide = halfVSide * aspect;
-    float near = 0.05f;
-    float far = (light->mRange > 0.f) ? light->mRange : 60.f;
-
-    frustum[0].mNormal = forward;
-    frustum[0].mDistance = dot(forward, apex + forward * near);
-    frustum[1].mNormal = -forward;
-    frustum[1].mDistance = dot(-forward, apex + forward * far);
-    frustum[2].mNormal = normalize(cross(forward - right * halfHSide, up));
-    frustum[2].mDistance = dot(frustum[2].mNormal, apex);
-    frustum[3].mNormal = normalize(cross(up, forward + right * halfHSide));
-    frustum[3].mDistance = dot(frustum[3].mNormal, apex);
-    frustum[4].mNormal = normalize(cross(forward + up * halfVSide, right));
-    frustum[4].mDistance = dot(frustum[4].mNormal, apex);
-    frustum[5].mNormal = normalize(cross(right, forward - up * halfVSide));
-    frustum[5].mDistance = dot(frustum[5].mNormal, apex);
-}
-
 // At least one corner on the inward side of all six planes means the world-space AABB intersects the frustum.
-bool frustumTest(SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES], float4 corners[SwMesh::NUM_AABB_CORNERS]) {
+bool frustumTest(SwFrustum::Data frustum, float4 corners[SwMesh::NUM_AABB_CORNERS]) {
     float4 aabbMin = corners[0];
     float4 aabbMax = corners[0];
     for (uint j = 1; j < SwMesh::NUM_AABB_CORNERS; j++) {
@@ -56,8 +28,12 @@ bool frustumTest(SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES], float4
         aabbMax = max(aabbMax, corners[j]);
     }
 
+    SwFrustum::Plane* planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
+        &frustum.mNear, &frustum.mFar, &frustum.mLeft, &frustum.mRight, &frustum.mTop, &frustum.mBottom
+    };
+
     for (uint i = 0; i < SwFrustum::NUM_FRUSTUM_PLANES; i++) {
-        SwFrustum::Plane p = frustum[i];
+        SwFrustum::Plane p = *planes[i];
         float3 chosen;
         chosen.x = (p.mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
         chosen.y = (p.mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
@@ -106,16 +82,14 @@ void main(SwLighting::CSInput in) {
     float4x4 lightInstanceTransform = shadowCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
     float4x4 lightModelMatrix = mul(lightInstanceTransform, lightNodeTransform);
     float3 lightApex = mul(lightModelMatrix, float4(light->mBasePosition, 1.f)).xyz;
-    float3 lightForward = normalize(mul(lightModelMatrix, float4(light->mBaseDirection, 0.f)).xyz);
 
     float4 corners[SwMesh::NUM_AABB_CORNERS];
     constructCorners(riBounds, riModelMatrix, corners);
 
     bool visible = true;
     if (light->mType == SwLight::Type::Spot) {
-        SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES];
-        constructFrustum(light, lightApex, lightForward, frustum);
-        visible = frustumTest(frustum, corners);
+        SwFrustum::Data frustumData = shadowCullPc.mActiveLightsBuffer->mActiveLightFrustums[shadowCullPc.mLightIndex];
+        visible = frustumTest(frustumData, corners);
     }
     if (visible && light->mType != SwLight::Type::Directional) {
         visible = rangeTest(corners, lightApex, light->mRange);

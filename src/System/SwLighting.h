@@ -17,7 +17,7 @@ class SwInstance;
 
 namespace SwLighting {
 static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Lighting"};
-static const std::filesystem::path SELECTION_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwSelection.comp.spv"};
+static const std::filesystem::path ACTIVE_LIGHTS_SELECTION_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwActiveLightsSelection.comp.spv"};
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowDraw.vert.spv"};
 static constexpr std::string_view SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT{"mainOpaque"};
@@ -28,12 +28,6 @@ constexpr std::uint32_t SHADOW_INITIAL_RENDER_COMMANDS{1 << 10};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
-
-enum class ShadowType : std::uint32_t {
-    None = 0,
-    TwoD = 1,  
-    Cube = 2,  
-};
 
 constexpr float SHADOW_DIRECTIONAL_HALF_EXTENT{20.f};
 constexpr float SHADOW_DIRECTIONAL_DISTANCE{60.f};
@@ -48,7 +42,7 @@ struct ActiveLights {
     std::array<SwFrustum, MAX_ACTIVE_LIGHTS> mActiveLightFrustums{};
 };
 
-struct SelectionPC : SwPC<SelectionPC> {
+struct ActiveLightsSelectionPC : SwPC<ActiveLightsSelectionPC> {
     vk::DeviceAddress mCameraBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -93,9 +87,6 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    std::uint32_t mActiveLightCount{0};
-    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
-    std::array<SwFrustum, MAX_ACTIVE_LIGHTS> mActiveLightFrustums{};
     SwAllocatedBuffer mActiveLightsBuffer;
 
     std::array<SwDepthImage2D, MAX_ACTIVE_LIGHTS> mShadow2DMaps;
@@ -108,9 +99,9 @@ struct Resources {
     std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRisBuffer; // Read into during shaders, reload when ris generated
     std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRisIndicesBuffer; // Reload per frame
 
-    SelectionPC mSelectionPc;
-    SwPipelineLayout mSelectionPipelineLayout;
-    SwComputePipelineBundle mSelectionPipelineBundle;
+    ActiveLightsSelectionPC mActiveLightsSelectionPc;
+    SwPipelineLayout mActiveLightsSelectionPipelineLayout;
+    SwComputePipelineBundle mActiveLightsSelectionPipelineBundle;
 
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;

@@ -17,6 +17,8 @@ namespace SwLighting {
     public static const uint MAX_SHADOW_CUBE_LIGHTS = 8;
     public static const uint SHADOW_MAP_SIZE = 1024;
     public static const uint MAX_ACTIVE_LIGHTS = 16;
+    public static const float SHADOW_SPOT_NEAR = 0.05f;
+    public static const float SHADOW_SPOT_DEFAULT_RANGE = 60.f;
 
     public struct ActiveLights {
         public uint mCount;
@@ -24,7 +26,7 @@ namespace SwLighting {
         public SwFrustum::Data mActiveLightFrustums[MAX_SHADOW_LIGHTS];
     };
 
-    public struct SelectionPC {
+    public struct ActiveLightsSelectionPC {
         public SwCamera::Data* mCameraBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
@@ -166,8 +168,6 @@ namespace SwLighting {
         return projCoords.xy + POISSON_DISK[index] / radius;
     }
 
-    // 2D shadow sampling is disabled while the per-light view-projection is rebuilt. The early-out keeps
-    // the consume path fully lit; the reversed-Z PCF below is preserved for when the view-projection returns.
     public float shadowFactor2D(
         uint slot, float3 worldPos, SwLighting::ActiveLights* activeLights, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS],
         SamplerComparisonState shadowSampler
@@ -205,13 +205,10 @@ namespace SwLighting {
         return lerp(SwLighting::SHADOW_AMBIENT, 1.0, shadow);
     }
 
-    // Point-light cube shadows are not rendered yet, so this returns fully lit. The cube pool and
-    // binding exist so the consume path is wired for when the six faces are drawn. TODO: sample
-    // shadowCubeMaps[mShadowIndex[slot]] by direction against a radial depth.
     public float shadowFactorCube(
         uint slot, SwLight::Data light, float3 worldPos, SwLighting::ActiveLights* activeLights, TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS],
         SamplerComparisonState shadowSampler
     ) {
-        return 1.f;
+        return 1.f; // TODO actually implement it
     }
 }

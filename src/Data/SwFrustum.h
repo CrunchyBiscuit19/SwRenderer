@@ -17,4 +17,9 @@ struct SwFrustum {
     SwPlane mRight;
     SwPlane mTop;
     SwPlane mBottom;
+
+    static SwFrustum calculateFrustum(
+        const glm::vec3& position, const glm::vec3& forward, const glm::vec3& right, const glm::vec3& up, float halfHSide, float halfVSide, float nearPlane,
+        float farPlane
+    );
 };
