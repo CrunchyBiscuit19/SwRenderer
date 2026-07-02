@@ -52,42 +52,53 @@ std::vector<std::string> findAnnotatedEntryPoints(const fs::path& p) {
     return entries;
 }
 
-// A header module ("*.h.slang") and the names of the other modules it imports. The module name is
-// the filename stem before the first dot, which is what is passed to slangc via -module-name and
-// what other files reference in their `import` declarations. A file's own `module X;` declaration is
-// overridden by -module-name, so the filename stem, not that declaration, is the authoritative name.
+// A module file (a ".slang" file without a ".vert/.frag/.comp" stage suffix) and the names of the
+// other modules it imports. The module name is the filename stem, which is what is passed to slangc
+// via -module-name and what the last component of a dotted `import` declaration references. A file's
+// own `module X;` declaration is overridden by -module-name, so the filename stem is authoritative.
 struct HeaderModule {
     fs::path mPath;
     std::string mName;
     std::vector<std::string> mImports;
 };
 
-// Pull the identifier that immediately follows a leading keyword on a comment-stripped line. For the
-// line "import Foo;" with keyword "import" this returns "Foo". Returns empty when the line does not
-// begin with the keyword as a whole word.
+// Pull the identifier that immediately follows a leading keyword on a comment-stripped line. Dots are
+// part of the identifier, so for the line "import Data.SwCamera;" with keyword "import" this returns
+// "Data.SwCamera". Returns empty when the line does not begin with the keyword as a whole word.
 std::string identifierAfterKeyword(const std::string& line, const std::string& keyword) {
     if (line.size() <= keyword.size() || line.compare(0, keyword.size(), keyword) != 0) return "";
     if (!std::isspace(static_cast<unsigned char>(line[keyword.size()]))) return "";
     size_t i = keyword.size();
     while (i < line.size() && std::isspace(static_cast<unsigned char>(line[i]))) ++i;
     size_t begin = i;
-    while (i < line.size() && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_')) ++i;
+    while (i < line.size() && (std::isalnum(static_cast<unsigned char>(line[i])) || line[i] == '_' || line[i] == '.')) ++i;
     return line.substr(begin, i - begin);
 }
 
-// Scan a header module for its `import <Module>;` declarations. Line comments are stripped first so a
-// commented-out import is not mistaken for a real dependency.
+// Scan a module for its `import <Path.To.Module>;` declarations, including `__exported import` forms.
+// Line comments are stripped first so a commented-out import is not mistaken for a real dependency.
+// Only the last component of a dotted path is recorded because module names are unique filename stems.
 std::vector<std::string> findModuleImports(const fs::path& p) {
     std::ifstream in(p);
     std::vector<std::string> imports;
     std::string line;
+    const std::string exported = "__exported";
     while (std::getline(in, line)) {
         size_t comment = line.find("//");
         if (comment != std::string::npos) line.erase(comment);
         size_t start = line.find_first_not_of(" \t\r\n");
         if (start == std::string::npos) continue;
-        std::string name = identifierAfterKeyword(line.substr(start), "import");
-        if (!name.empty()) imports.push_back(name);
+        std::string stmt = line.substr(start);
+        if (stmt.compare(0, exported.size(), exported) == 0) {
+            stmt = stmt.substr(exported.size());
+            size_t next = stmt.find_first_not_of(" \t");
+            if (next == std::string::npos) continue;
+            stmt = stmt.substr(next);
+        }
+        std::string name = identifierAfterKeyword(stmt, "import");
+        if (name.empty()) continue;
+        size_t lastDot = name.rfind('.');
+        imports.push_back(lastDot == std::string::npos ? name : name.substr(lastDot + 1));
     }
     return imports;
 }
@@ -121,24 +132,25 @@ std::string shaderType(ShaderType type, bool l = false) {
 
 int main() {
     fs::path srcDir = fs::current_path() / "../shaders";
-    fs::path outDir = fs::current_path() / "../shaders/out";
     std::string slang = "slangc";
 
-    fs::create_directories(outDir);
-
-    // Delete existing .spv and .slang-module files
-    for (auto& p : fs::directory_iterator(outDir)) {
+    // Delete existing .spv and .slang-module files anywhere in the shader tree. The paths are
+    // collected first so the removal does not invalidate the directory iteration.
+    std::vector<fs::path> stale;
+    for (auto& p : fs::recursive_directory_iterator(srcDir)) {
+        if (!p.is_regular_file()) continue;
         auto ext = p.path().extension();
-        if (ext == ".spv" || ext == ".slang-module") {
-            fs::remove(p.path());
-            std::string deletedPath = fs::weakly_canonical(p.path()).string();
-            std::replace(deletedPath.begin(), deletedPath.end(), '\\', '/');
-            std::cout << "Deleted: " << deletedPath << "\n";
-        }
+        if (ext == ".spv" || ext == ".slang-module") stale.push_back(p.path());
+    }
+    for (const auto& p : stale) {
+        fs::remove(p);
+        std::string deletedPath = fs::weakly_canonical(p).string();
+        std::replace(deletedPath.begin(), deletedPath.end(), '\\', '/');
+        std::cout << "Deleted: " << deletedPath << "\n";
     }
 
-    // Gather every header module ("*.h.slang", including those under Common) along with the modules
-    // it imports. slangc resolves an `import` by reading the imported module's already-compiled
+    // Gather every module file (any ".slang" file without a stage suffix) along with the modules it
+    // imports. slangc resolves an `import` by reading the imported module's already-compiled
     // ".slang-module" off disk, so a module can only be built after everything it imports. Recording
     // the import edges here lets a topological sort decide a safe build order below.
     std::vector<HeaderModule> headerModules;
@@ -146,9 +158,9 @@ int main() {
     for (auto& f : fs::recursive_directory_iterator(srcDir)) {
         if (!f.is_regular_file()) continue;
         fs::path p = f.path();
-        if (fs::relative(p, srcDir).begin()->string() == "out") continue;
         std::string filename = p.filename().string();
-        if (!filename.ends_with(".h.slang")) continue;
+        if (!filename.ends_with(".slang")) continue;
+        if (filename.ends_with(".vert.slang") || filename.ends_with(".frag.slang") || filename.ends_with(".comp.slang")) continue;
         std::string moduleName = filename.substr(0, filename.find('.'));
         if (moduleIndex.contains(moduleName)) {
             std::cerr << "Duplicate module name '" << moduleName << "' from " << p.string() << "\n";
@@ -187,14 +199,15 @@ int main() {
     }
     if (cycleFound) return 1;
 
-    // Compile the modules in dependency order.
+    // Compile the modules in dependency order, each into its own source directory. The shaders root
+    // is the single include path so dotted imports resolve against it.
     for (int i : compileOrder) {
         const HeaderModule& m = headerModules[i];
         std::string outName = m.mName + ".slang-module";
-        fs::path outPath = outDir / outName;
-        std::string cmd = std::format("{} {} -o {} -I {} -I {} -module-name {} -fvk-use-scalar-layout",
+        fs::path outPath = m.mPath.parent_path() / outName;
+        std::string cmd = std::format("{} {} -o {} -I {} -module-name {} -fvk-use-scalar-layout",
                                       slang, m.mPath.string(), outPath.string(),
-                                      m.mPath.parent_path().string(), outDir.string(), m.mName);
+                                      srcDir.string(), m.mName);
         std::cout << "Compiling module: " << outName << "\n";
         std::system(cmd.c_str());
     }
@@ -204,7 +217,6 @@ int main() {
     for (auto& f : fs::recursive_directory_iterator(srcDir)) {
         if (!f.is_regular_file()) continue;
         fs::path p = f.path();
-        if (fs::relative(p, srcDir).begin()->string() == "out") continue;
         std::string filename = p.filename().string();
         ShaderType type;
         std::string stem;
@@ -221,21 +233,19 @@ int main() {
             continue;
         }
         std::string outName = stem + "." + shaderType(type) + ".spv";
-        fs::path outPath = outDir / outName;
+        fs::path outPath = p.parent_path() / outName;
         std::string cmd;
         std::vector<std::string> entryPoints = findAnnotatedEntryPoints(p);
         if (!entryPoints.empty()) {
             // Multiple [shader("...")] entry points: name each explicitly so they are all packed into one module.
-            cmd = std::format("{} {} -o {} -I {} -I {} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout",
-                              slang, p.string(), outPath.string(),
-                              p.parent_path().string(), outDir.string());
+            cmd = std::format("{} {} -o {} -I {} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout",
+                              slang, p.string(), outPath.string(), srcDir.string());
             for (const auto& entryPoint : entryPoints) {
                 cmd += " -entry " + entryPoint;
             }
         } else {
-            cmd = std::format("{} {} -o {} -I {} -I {} -stage {} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout",
-                              slang, p.string(), outPath.string(),
-                              p.parent_path().string(), outDir.string(),
+            cmd = std::format("{} {} -o {} -I {} -stage {} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout",
+                              slang, p.string(), outPath.string(), srcDir.string(),
                               shaderType(type, true));
         }
         std::cout << "Compiling: " << outName << "\n";

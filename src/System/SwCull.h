@@ -10,10 +10,11 @@
 #include <filesystem>
 
 namespace SwCull {
-static const std::filesystem::path CULL_RESET_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullReset.comp.spv"};
-static const std::filesystem::path CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullPrepOcclusion.comp.spv"};
-static const std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullWork.comp.spv"};
-static const std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullCompact.comp.spv"};
+static const std::filesystem::path CULL_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Cull"};
+static const std::filesystem::path CULL_RESET_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullReset.comp.spv"};
+static const std::filesystem::path CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullPrepOcclusion.comp.spv"};
+static const std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullWork.comp.spv"};
+static const std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullCompact.comp.spv"};
 static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
 
 enum class Phase { Early, Late };

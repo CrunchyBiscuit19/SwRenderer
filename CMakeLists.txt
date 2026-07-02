@@ -214,7 +214,7 @@ target_compile_definitions(SwRenderer PUBLIC DOCS_PATH="${CMAKE_CURRENT_SOURCE_D
 
 set(CMAKE_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 file(MAKE_DIRECTORY "${CMAKE_SHADER_DIR}/out")
-target_compile_definitions(SwRenderer PUBLIC SHADERS_PATH="${CMAKE_SHADER_DIR}/out")
+target_compile_definitions(SwRenderer PUBLIC SHADERS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/shaders/System")
 
 target_compile_definitions(SwRenderer PRIVATE $<$<CONFIG:Release>:RELEASE>)
 

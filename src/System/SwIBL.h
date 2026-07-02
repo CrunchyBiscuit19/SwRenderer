@@ -16,14 +16,15 @@
 class SwScene;
 
 namespace SwIBL {
-static const std::filesystem::path IRRADIANCE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLIrradiance.comp.spv"};
-static const std::filesystem::path PREFILTER_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLPrefilter.comp.spv"};
-static const std::filesystem::path BRDF_LUT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLBrdfLut.comp.spv"};
+static const std::filesystem::path IBL_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "IBL"};
+static const std::filesystem::path IRRADIANCE_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLIrradiance.comp.spv"};
+static const std::filesystem::path PREFILTER_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLPrefilter.comp.spv"};
+static const std::filesystem::path BRDF_LUT_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLBrdfLut.comp.spv"};
 
 // Skybox draw: rasterizes the environment equirect behind the scene geometry.
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
-static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLSkybox.vert.spv"};
-static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwIBLSkybox.frag.spv"};
+static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLSkybox.vert.spv"};
+static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLSkybox.frag.spv"};
 static const std::filesystem::path SKYBOX_DEFAULT_HDR_PATH{std::filesystem::path(SKYBOXES_PATH) / "AutumnHillView2k.hdr"};
 
 // HDR float maps so the prefilter/irradiance integrals stay meaningful (the environment is HDR).

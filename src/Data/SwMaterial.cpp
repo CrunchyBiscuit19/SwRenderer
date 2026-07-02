@@ -69,13 +69,14 @@ std::uint32_t SwMaterial::sLatestMaterialId{0};
 std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> SwMaterial::sMaterialPipelineBundles{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
 SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
-const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometry.vert.spv"};
+static const std::filesystem::path GEOMETRY_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Geometry"};
+const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometry.vert.spv"};
 SwShader SwMaterial::sVertexShader;
 const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH{
-    std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkOpaqueMasked.frag.spv"
+    GEOMETRY_SHADERS_DIR / "SwGeometryWorkOpaqueMasked.frag.spv"
 };
 SwShader SwMaterial::sOpaqueMaskedFragmentShader;
-const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwGeometryWorkTransparent.frag.spv"};
+const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometryWorkTransparent.frag.spv"};
 SwShader SwMaterial::sTransparentFragmentShader;
 
 SwMaterial::SwMaterial(
