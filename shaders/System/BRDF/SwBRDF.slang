@@ -1,6 +1,6 @@
 module SwBRDF;
 
-import SwCommon;
+import Data.SwConstants;
 
 namespace SwBRDF {
     public static const float DIELECTRICS_REFLECTANCE = 0.04f;
@@ -10,12 +10,12 @@ namespace SwBRDF {
         float3 d = normalize(dir);
         float phi = atan2(d.z, d.x);
         float theta = asin(clamp(d.y, -1.f, 1.f));
-        return float2(phi / (2.f * Sw::PI) + 0.5f, theta / Sw::PI + 0.5f);
+        return float2(phi / (2.f * SwConstants::PI) + 0.5f, theta / SwConstants::PI + 0.5f);
     }
 
     public float3 equirectUvToDir(float2 uv) {
-        float phi = (uv.x - 0.5f) * 2.f * Sw::PI;
-        float theta = (uv.y - 0.5f) * Sw::PI;
+        float phi = (uv.x - 0.5f) * 2.f * SwConstants::PI;
+        float theta = (uv.y - 0.5f) * SwConstants::PI;
         float cosTheta = cos(theta);
         return float3(cos(phi) * cosTheta, sin(theta), sin(phi) * cosTheta);
     }
@@ -26,7 +26,7 @@ namespace SwBRDF {
         float NdotH2 = NdotH * NdotH;
 
         float d = NdotH2 * (a2 - 1.f) + 1.f;
-        return a2 / max(Sw::PI * d * d, 1e-7f);
+        return a2 / max(SwConstants::PI * d * d, 1e-7f);
     }
 
     float3 fresnelSchlick(float cosTheta, float3 F0) {
@@ -66,7 +66,7 @@ namespace SwBRDF {
         float3 kS = F;
         float3 specular = (D * G * F) / max(4.f * NdotV * NdotL, 1e-4f);
         float3 kD = (float3(1.f) - kS) * (1.f - metallic);
-        float3 diffuse = albedo / Sw::PI;
+        float3 diffuse = albedo / SwConstants::PI;
 
         return (kD * diffuse + specular) * radiance * NdotL;
         // Radiance for how bright the light is

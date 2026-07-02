@@ -1,5 +1,4 @@
-import SwCommon;
-import SwLighting;
+import System.Lighting.SwLighting;
 
 [[vk::push_constant]]
 SwLighting::ShadowDrawPC shadowDrawPc;
@@ -7,10 +6,10 @@ SwLighting::ShadowDrawPC shadowDrawPc;
 SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     SwLighting::VSOutput out;
 
-    Sw::Vertex v = shadowDrawPc.mSceneVertexBuffer[in.mVertexIndex];
+    SwMesh::Vertex v = shadowDrawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    Sw::RenderCommand rc = shadowDrawPc.mShadowRcsBuffer[in.mDrawIndex];
+    SwBatch::RenderCommand rc = shadowDrawPc.mShadowRcsBuffer[in.mDrawIndex];
 
     uint mSceneInstanceIndex = shadowDrawPc.mShadowRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = shadowDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
@@ -19,7 +18,7 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     float4x4 nodeTransformMatrix = shadowDrawPc.mSceneNodeTransformsBuffer[mSceneNodeTransformIndex];
 
     uint sceneMaterialIndex = rc.mMaterialIndex;
-    Sw::MaterialConstant materialConstant = shadowDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
+    SwMaterial::Constant materialConstant = shadowDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     float4x4 activeLightViewProj = float4x4(1.f);  // TODO: source the rebuilt per-light view-projection (this pass is currently a no-op)
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);

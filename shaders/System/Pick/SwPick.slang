@@ -1,16 +1,21 @@
 module SwPick;
 
-import SwCommon;
+__exported import Data.SwBatch;
+__exported import Data.SwCamera;
+__exported import Data.SwInstance;
+__exported import Data.SwMaterial;
+__exported import Data.SwMesh;
+__exported import Data.SwNode;
 
 namespace SwPick {
     public struct DrawPC {
-        public Sw::Vertex* mSceneVertexBuffer;
-        public Sw::MaterialConstant* mSceneMaterialConstantsBuffer;
-        public Sw::NodeTransform* mSceneNodeTransformsBuffer;
-        public Sw::Instance* mSceneInstancesBuffer;
+        public SwMesh::Vertex* mSceneVertexBuffer;
+        public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
+        public SwNode::Transform* mSceneNodeTransformsBuffer;
+        public SwInstance::Data* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
-        public Sw::RenderCommand *mDrawRcsBuffer;
-        public Sw::CameraData *mCameraBuffer;
+        public SwBatch::RenderCommand *mDrawRcsBuffer;
+        public SwCamera::Data *mCameraBuffer;
     };
 
     public struct VSInput {

@@ -9,7 +9,7 @@ The incremental path from a hardcoded sun to a data-driven PBR pipeline is **com
 - **Phase 3 — Multiple punctual lights**: `Light` SSBO, `SwLight`/`SwLightNode`,
   `KHR_lights_punctual` parsing, and directional/point/spot accumulation — done.
 - **Phase 4 — Image-based lighting**: diffuse irradiance, specular prefilter, BRDF LUT (the
-  `SwIBL` system + `shaders/IBL/`), consumed via the split-sum ambient term — done.
+  `SwIBL` system + `shaders/System/IBL/`), consumed via the split-sum ambient term — done.
 
 What remains is the follow-on work deferred during the phases above.
 

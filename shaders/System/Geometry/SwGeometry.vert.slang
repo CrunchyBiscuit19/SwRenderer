@@ -1,5 +1,4 @@
-import SwGeometry;
-import SwCommon;
+import System.Geometry.SwGeometry;
 
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
@@ -10,10 +9,10 @@ SwGeometry::WorkPC workPc;
 SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     SwGeometry::VSOutput out;
 
-    Sw::Vertex v = workPc.mSceneVertexBuffer[in.mVertexIndex];
+    SwMesh::Vertex v = workPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    Sw::RenderCommand rc = workPc.mDrawRcsBuffer[in.mDrawIndex];
+    SwBatch::RenderCommand rc = workPc.mDrawRcsBuffer[in.mDrawIndex];
 
     uint sceneInstanceIndex = workPc.mSceneDrawRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = workPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
@@ -22,7 +21,7 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     float4x4 nodeTransformMatrix = workPc.mSceneNodeTransformsBuffer[sceneNodeTransformIndex];
 
     uint sceneMaterialIndex = workPc.mDrawRcsBuffer[in.mDrawIndex].mMaterialIndex;
-    Sw::MaterialConstant materialConstant = workPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
+    SwMaterial::Constant materialConstant = workPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
     float4 worldPosition = mul(modelMatrix, position);

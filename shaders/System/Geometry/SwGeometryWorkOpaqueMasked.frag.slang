@@ -1,6 +1,5 @@
-import SwGeometry;
-import SwCommon;
-import SwLighting;
+import System.Geometry.SwGeometry;
+import System.Lighting.SwLighting;
 
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
@@ -13,9 +12,9 @@ public uniform Sampler2D iblPrefilterMap;
 public uniform Sampler2D iblBrdfLut;
 
 [[vk::binding(0, 2)]]
-public uniform Texture2D shadow2DMaps[Sw::MAX_SHADOW_LIGHTS];
+public uniform Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS];
 [[vk::binding(1, 2)]]
-public uniform TextureCube shadowCubeMaps[Sw::MAX_SHADOW_CUBE_LIGHTS];
+public uniform TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS];
 [[vk::binding(2, 2)]]
 public uniform SamplerComparisonState shadowSampler;
 
@@ -23,8 +22,8 @@ public uniform SamplerComparisonState shadowSampler;
 SwGeometry::WorkPC workPc;
 
 float4 shade(SwGeometry::FSInput in, bool masked) {
-    Sw::MaterialConstant mc = workPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
-    uint base = in.mMaterialIndex * Sw::NUM_PBR_IMAGES;
+    SwMaterial::Constant mc = workPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
+    uint base = in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES;
 
     float4 diffuseColor = materialResources[NonUniformResourceIndex(base + SwGeometry::BASE_TEXTURE_OFFSET)].Sample(in.mUv);
     if (masked) {
@@ -45,10 +44,27 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
 
     float3 view = normalize(workPc.mCameraBuffer->mWorldPos - in.mWorldPos);
 
-    float3 lit = SwLighting::shadeLit( 
-        color.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mActiveLightsBuffer, workPc.mSceneLightsBuffer,
-        workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
-        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
+    float3 lit = SwLighting::shadeLit(
+        color.rgb,
+        metallic,
+        roughness,
+        ao,
+        in.mWorldPos,
+        normal,
+        view,
+        workPc.mActiveLightsBuffer,
+        workPc.mSceneLightsBuffer,
+        workPc.mSceneInstancesBuffer,
+        workPc.mSceneNodeTransformsBuffer,
+        iblIrradianceMap,
+        iblPrefilterMap,
+        iblBrdfLut,
+        workPc.mMaxPrefilterMip,
+        workPc.mIblIntensity,
+        workPc.mIblComponents,
+        shadow2DMaps,
+        shadowCubeMaps,
+        shadowSampler
     );
     lit += materialResources[NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET)].Sample(in.mUv).rgb * mc.mEmissiveFactor.rgb;
 

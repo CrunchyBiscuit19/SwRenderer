@@ -1,5 +1,4 @@
-import SwIBL;
-import SwCommon;
+import System.IBL.SwIBL;
 
 [[vk::push_constant]]
 SwIBL::SkyboxPC skyboxPc;

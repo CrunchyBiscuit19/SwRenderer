@@ -1,5 +1,5 @@
-import SwCommon;
-import SwIBL;
+import Data.SwConstants;
+import System.IBL.SwIBL;
 
 // Pre-integrates the environment-BRDF scale/bias for the split-sum specular term. 
 [[vk::binding(0, 0)]]
@@ -17,7 +17,7 @@ float geometrySmith(float NdotV, float NdotL, float roughness) {
     return geometrySchlickGGX(NdotV, roughness) * geometrySchlickGGX(NdotL, roughness);
 }
 
-[numthreads(Sw::MAX_2D_WORKGROUP_THREADS, Sw::MAX_2D_WORKGROUP_THREADS, 1)]
+[numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     uint2 pixel = dispatchThreadID.xy;
     uint2 extent;

@@ -1,4 +1,4 @@
-import SwPick;
+import System.Pick.SwPick;
 
 [[vk::binding(0, 0)]]
 public uniform Texture2D<uint2> readbackImage;

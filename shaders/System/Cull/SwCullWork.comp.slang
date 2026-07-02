@@ -1,5 +1,5 @@
-import SwCull;
-import SwCommon;
+import System.Cull.SwCull;
+import Data.SwConstants;
 
 [[vk::binding(0, 0)]]
 public uniform Texture2D<float> depthPyramidImage;
@@ -10,19 +10,19 @@ public uniform SamplerState minSampler;
 [[vk::push_constant]]
 SwCull::WorkPC workPc;
 
-void transformCornersToWorld(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, Sw::Instance* currInstance, Sw::NodeTransform* nodeTransform) {
-    for (uint j = 0; j < SwCull::NUM_AABB_CORNERS; j++) {
+void transformCornersToWorld(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwInstance::Data* currInstance, SwNode::Transform* nodeTransform) {
+    for (uint j = 0; j < SwMesh::NUM_AABB_CORNERS; j++) {
         aabbCorners[j] = mul(currInstance->mTransformMatrix, mul(*nodeTransform, aabbCorners[j]));
     }
 }
 
-bool frustumTest(SwCull::Plane* frustum, float4[SwCull::NUM_AABB_CORNERS] aabbCorners) {
+bool frustumTest(SwFrustum::Data* frustum, float4[SwMesh::NUM_AABB_CORNERS] aabbCorners) {
     bool visible = true;
 
     // Get the min and max corners of the (already world-space) AABB
     float4 aabbMin = aabbCorners[0];
     float4 aabbMax = aabbCorners[0];
-    for (uint j = 1; j < SwCull::NUM_AABB_CORNERS; j++) {
+    for (uint j = 1; j < SwMesh::NUM_AABB_CORNERS; j++) {
         aabbMin = min(aabbMin, aabbCorners[j]);
         aabbMax = max(aabbMax, aabbCorners[j]);
     }
@@ -31,14 +31,17 @@ bool frustumTest(SwCull::Plane* frustum, float4[SwCull::NUM_AABB_CORNERS] aabbCo
     // Point-normal plane equation is positive if it's on the side of the plane the normal is pointing
     // Frustum plane normals point inward => non-negative result means at least 1 corner is on correct side of the plane
     // At least 1 corner on correct side of all 6 planes means render item is within frustum and therefore visible
-    for (uint i = 0; i < SwCull::NUM_FRUSTUM_PLANES; i++) {
-        SwCull::Plane p = frustum[i];
+    const SwFrustum::Plane* planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
+        &frustum->mNear, &frustum->mFar, &frustum->mLeft, &frustum->mRight, &frustum->mTop, &frustum->mBottom
+    };
+    for (uint i = 0; i < SwFrustum::NUM_FRUSTUM_PLANES; i++) {
+        SwFrustum::Plane* p = planes[i];
         float4 chosen;
-        chosen.x = (p.mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
-        chosen.y = (p.mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
-        chosen.z = (p.mNormal.z >= 0) ? aabbMax.z : aabbMin.z;
+        chosen.x = (p->mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
+        chosen.y = (p->mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
+        chosen.z = (p->mNormal.z >= 0) ? aabbMax.z : aabbMin.z;
         chosen.w = 1.0;
-        float result = dot(p.mNormal, chosen.xyz) - p.mDistance;
+        float result = dot(p->mNormal, chosen.xyz) - p->mDistance;
         if (result < 0) {
             visible = false;
             break;
@@ -47,7 +50,9 @@ bool frustumTest(SwCull::Plane* frustum, float4[SwCull::NUM_AABB_CORNERS] aabbCo
     return visible;
 }
 
-bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, Sw::Perspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents) {
+bool occlusionCull(
+    inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwCamera::Perspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents
+) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
     float closestDepthInRi = 0.f;
@@ -55,7 +60,7 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, Sw::Persp
     // Transform AABB corners to NDC / Screen space and find min/max XY and closest Z
     // Vulkan NDC is [0, 1] for Z and [-1, 1] for XY
     // Reverse-Z in effect (1 == near, 0 == far)
-    for (uint j = 0; j < SwCull::NUM_AABB_CORNERS; j++) {
+    for (uint j = 0; j < SwMesh::NUM_AABB_CORNERS; j++) {
         float4 clipPos = mul(perspective->mProj, mul(perspective->mView, aabbCorners[j]));
 
         // Corner is behind the near plane: w <= 0 means perspective division would flip
@@ -99,7 +104,7 @@ bool occlusionCull(inout float4[SwCull::NUM_AABB_CORNERS] aabbCorners, Sw::Persp
     return closestDepthInRi >= furthestDepthInPyramid;
 }
 
-void markDrawRiIndex(Sw::RenderCommand* rc, Sw::RenderItem* ri, uint* sceneDrawRisIndicesBuffer) {
+void markDrawRiIndex(SwBatch::RenderCommand* rc, SwBatch::RenderItem* ri, uint* sceneDrawRisIndicesBuffer) {
     // Write the indices of to-draw render items to the draw instances indices buffer
     // Index into to-draw instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
@@ -109,20 +114,20 @@ void markDrawRiIndex(Sw::RenderCommand* rc, Sw::RenderItem* ri, uint* sceneDrawR
     sceneDrawRisIndicesBuffer[visibleRiIndex] = ri->mSceneInstanceIndex;
 }
 
-[numthreads(Sw::MAX_1D_WORKGROUP_THREADS, 1, 1)]
+[numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
     if (risIndex >= workPc.mRisLimit)
         return;
-    Sw::RenderItem* ri = &workPc.mRisBuffer[risIndex];
-    Sw::RenderCommand* rc = &workPc.mRcsBuffer[ri->mRcIndex];
+    SwBatch::RenderItem* ri = &workPc.mRisBuffer[risIndex];
+    SwBatch::RenderCommand* rc = &workPc.mRcsBuffer[ri->mRcIndex];
 
-    Sw::Bounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
-    Sw::NodeTransform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    Sw::Instance* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
-    SwCull::Plane* frustum = workPc.mFrustumBuffer;
-    Sw::Perspective* perspective = &workPc.mCameraBuffer.mPerspective;
-    float4[SwCull::NUM_AABB_CORNERS] aabbCorners = {
+    SwMesh::Bounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    SwNode::Transform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
+    SwInstance::Data* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
+    SwFrustum::Data* frustum = workPc.mFrustumBuffer;
+    SwCamera::Perspective* perspective = &workPc.mCameraBuffer.mPerspective;
+    float4[SwMesh::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMax.z, 1.f),
         float4(bounds->mMin.x, bounds->mMax.y, bounds->mMin.z, 1.f),

@@ -105,7 +105,7 @@ The light direction follows by reflecting the view about $H$, namely $L = 2(V \c
 
 $\text{pdf} = \dfrac{D(N \cdot H)\,(N \cdot H)}{4\,(V \cdot H)}, \qquad \Omega_\text{sample} = \dfrac{1}{N_s\,\text{pdf}}, \qquad \text{mip} = \dfrac{1}{2}\log_2\!\left(\dfrac{\Omega_\text{sample}}{\Omega_\text{texel}}\right)$
 
-with $\text{mip} = 0$ forced at $r = 0$. This is the same solid-angle-matching trick as the diffuse bake, here preventing fireflies from concentrated bright sources on the rougher (blurrier) mips. The GGX distribution itself is the shared one in `SwBRDF.h.slang`:
+with $\text{mip} = 0$ forced at $r = 0$. This is the same solid-angle-matching trick as the diffuse bake, here preventing fireflies from concentrated bright sources on the rougher (blurrier) mips. The GGX distribution itself is the shared one in `SwBRDF.slang`:
 
 $D(N \cdot H) = \dfrac{a^2}{\pi\big((N \cdot H)^2 (a^2 - 1) + 1\big)^2}, \qquad a = r^2.$
 
@@ -122,7 +122,7 @@ $f_c = (1 - V \cdot H)^5$, then divides both sums by the sample count.
 $g_\text{vis} = \dfrac{G\,(V \cdot H)}{(N \cdot H)(N \cdot V)}, \qquad \text{scale} \leftarrow \text{scale} + (1 - f_c)\,g_\text{vis}, \qquad \text{bias} \leftarrow \text{bias} + f_c\,g_\text{vis}$
 
 $g_\text{vis}$ is the Smith geometry term divided by the importance-sampling PDF and BRDF denominator, all of which collapse to this compact expression. 
-The geometry function uses the **IBL** remap of $k$ (distinct from the direct-lighting remap in `SwBRDF.h.slang`):
+The geometry function uses the **IBL** remap of $k$ (distinct from the direct-lighting remap in `SwBRDF.slang`):
 
 $k = \dfrac{r^2}{2}, \qquad G = G_1(N \cdot V, k)\,G_1(N \cdot L, k), \qquad G_1(x, k) = \dfrac{x}{x(1 - k) + k}.$
 
@@ -130,7 +130,7 @@ $\text{scale}$ multiplies $F_0$ and $\text{bias}$ is added, so at runtime $F_0\,
 
 ## At Runtime
 
-`ambientIBL` in `shaders/Geometry/SwGeometry.h.slang` samples the three maps and combines them. With $F_0 = \operatorname{lerp}(0.04,\ \text{albedo},\ \text{metallic})$:
+`ambientIBL` in `shaders/System/Geometry/SwGeometry.slang` samples the three maps and combines them. With $F_0 = \operatorname{lerp}(0.04,\ \text{albedo},\ \text{metallic})$:
 
 **Diffuse.** Sampling the irradiance map along $N$ gives $E(N)$, and
 
@@ -177,10 +177,10 @@ Only the light the surfaces *receive* is normalized, not the backdrop itself.
 
 | File                                     | Role                                                          |
 | ---------------------------------------- | ------------------------------------------------------------- |
-| `shaders/IBL/SwIBLIrradiance.comp.slang` | Diffuse irradiance convolution                                |
-| `shaders/IBL/SwIBLPrefilter.comp.slang`  | GGX specular prefilter (one dispatch per mip)                 |
-| `shaders/IBL/SwIBLBrdfLut.comp.slang`    | Environment-BRDF pre-integration                              |
-| `shaders/IBL/SwIBL.h.slang`              | Hammersley, Van der Corput, `importanceSampleGGX`             |
-| `shaders/BRDF/SwBRDF.h.slang`            | Equirect mapping, `distributionGGX`, Fresnel/geometry         |
-| `shaders/Geometry/SwGeometry.h.slang`    | `ambientIBL` / `shadeLit` runtime application                 |
+| `shaders/System/IBL/SwIBLIrradiance.comp.slang` | Diffuse irradiance convolution                                |
+| `shaders/System/IBL/SwIBLPrefilter.comp.slang`  | GGX specular prefilter (one dispatch per mip)                 |
+| `shaders/System/IBL/SwIBLBrdfLut.comp.slang`    | Environment-BRDF pre-integration                              |
+| `shaders/System/IBL/SwIBL.slang`              | Hammersley, Van der Corput, `importanceSampleGGX`             |
+| `shaders/System/BRDF/SwBRDF.slang`            | Equirect mapping, `distributionGGX`, Fresnel/geometry         |
+| `shaders/System/Geometry/SwGeometry.slang`    | `ambientIBL` / `shadeLit` runtime application                 |
 | `src/System/SwIBL.cpp`                   | Bake orchestration, HDR load, average-luminance normalization |

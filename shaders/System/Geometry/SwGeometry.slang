@@ -1,7 +1,14 @@
 module SwGeometry;
 
-import SwCommon;
-import SwBRDF;
+__exported import Data.SwBatch;
+__exported import Data.SwCamera;
+__exported import Data.SwInstance;
+__exported import Data.SwLight;
+__exported import System.Lighting.SwLighting;
+__exported import Data.SwMaterial;
+__exported import Data.SwMesh;
+__exported import Data.SwNode;
+import System.BRDF.SwBRDF;
 
 namespace SwGeometry {
     public static const uint BASE_TEXTURE_OFFSET = 0;
@@ -11,15 +18,15 @@ namespace SwGeometry {
     public static const uint EMISSIVE_TEXTURE_OFFSET = 4;
 
     public struct WorkPC {
-        public Sw::Vertex* mSceneVertexBuffer;
-        public Sw::MaterialConstant* mSceneMaterialConstantsBuffer;
-        public Sw::NodeTransform* mSceneNodeTransformsBuffer;
-        public Sw::Instance* mSceneInstancesBuffer;
+        public SwMesh::Vertex* mSceneVertexBuffer;
+        public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
+        public SwNode::Transform* mSceneNodeTransformsBuffer;
+        public SwInstance::Data* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
-        public Sw::RenderCommand* mDrawRcsBuffer;
-        public Sw::CameraData* mCameraBuffer;
-        public Sw::Light* mSceneLightsBuffer;
-        public Sw::ActiveLights* mActiveLightsBuffer;
+        public SwBatch::RenderCommand* mDrawRcsBuffer;
+        public SwCamera::Data* mCameraBuffer;
+        public SwLight::Data* mSceneLightsBuffer;
+        public SwLighting::ActiveLights* mActiveLightsBuffer;
         public float mMaxPrefilterMip;   // highest mip index of the specular prefilter chain
         public float mIblIntensity;      // scales the image-based ambient term (GUI-controlled)
         public uint mIblComponents;      // IBL_DIFFUSE / IBL_SPECULAR bit mask (GUI-controlled)

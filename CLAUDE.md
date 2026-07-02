@@ -26,7 +26,7 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 | `src/Scene/`    | Scene orchestration (`SwScene`), render graph (`SwRenderGraph`), passes/dependencies (`SwPass`/`SwDependency`), and the `SwSystem` base class        |
 | `src/System/`   | Self-contained rendering systems: `SwCull`, `SwGeometry`, `SwIBL`, `SwLighting`, `SwWBOIT`, `SwPick`, `SwPostProcess`, `SwGui`                       |
 | `src/Data/`     | CPU-side data: assets, meshes, nodes, instances, batches, cameras, materials, lights                                                                 |
-| `shaders/`      | Slang shaders organised by system (Common, Cull, Geometry, IBL, Pick, PostProcess, Skybox, WBOIT)                                                    |
+| `shaders/`      | Slang shaders mirroring `src/`: per-data-type modules in `Data/`, per-system directories in `System/`                                                |
 | `docs/`         | Graphviz diagrams of the render graph and pass dependencies                                                                                          |
 | `thirdParty/`   | Vendored dependencies                                                                                                                                |
 

@@ -1,4 +1,4 @@
-import SwWBOIT;
+import System.WBOIT.SwWBOIT;
 
 [[vk::binding(0, 0)]]
 public uniform Texture2D<float4> accumImage;

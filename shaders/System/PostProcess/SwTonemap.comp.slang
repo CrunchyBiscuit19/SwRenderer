@@ -1,5 +1,5 @@
-import SwCommon;
-import SwPostProcess;
+import Data.SwConstants;
+import System.PostProcess.SwPostProcess;
 
 [[vk::binding(0, 0)]]
 public uniform RWTexture2D<float4> drawImage;
@@ -7,7 +7,7 @@ public uniform RWTexture2D<float4> drawImage;
 [[vk::push_constant]]
 SwPostProcess::Tonemap::WorkPC tonemapPc;
 
-[numthreads(Sw::MAX_2D_WORKGROUP_THREADS, Sw::MAX_2D_WORKGROUP_THREADS, 1)]
+[numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     uint2 pixel = dispatchThreadID.xy;
 

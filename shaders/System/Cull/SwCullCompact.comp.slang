@@ -1,10 +1,10 @@
-import SwCull;
-import SwCommon;
+import System.Cull.SwCull;
+import Data.SwConstants;
 
 [[vk::push_constant]]
 SwCull::CompactPC compactPc;
 
-[numthreads(Sw::MAX_1D_WORKGROUP_THREADS, 1, 1)]
+[numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     // Get thread ID as index into render command
     uint rcsIndex = in.mDispatchThreadID.x;
@@ -12,7 +12,7 @@ void main(SwCull::CSInput in) {
         return;
 
     // Copy over render commands with more than zero instances, and increment counter
-    Sw::RenderCommand* rc = &compactPc.mPreRcsBuffer[rcsIndex];
+    SwBatch::RenderCommand* rc = &compactPc.mPreRcsBuffer[rcsIndex];
 
     if (rc->mRiCount == 0)
         return;

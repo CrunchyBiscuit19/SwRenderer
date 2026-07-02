@@ -1,6 +1,6 @@
-import SwCommon;
-import SwBRDF;
-import SwIBL;
+import Data.SwConstants;
+import System.BRDF.SwBRDF;
+import System.IBL.SwIBL;
 
 // GGX-importance-sampled specular prefilter for one roughness level (one mip of the equirect
 // prefilter chain). Dispatched once per mip with mRoughness = mip / (mipCount - 1).
@@ -14,7 +14,7 @@ SwIBL::PrefilterPC pc;
 
 static const uint SAMPLE_COUNT = 1024u;
 
-[numthreads(Sw::MAX_2D_WORKGROUP_THREADS, Sw::MAX_2D_WORKGROUP_THREADS, 1)]
+[numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     uint2 pixel = dispatchThreadID.xy;
     uint2 extent;
@@ -30,7 +30,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
     // Solid angle covered by one texel of the source environment (equirect spans 4*PI steradians).
     uint2 envExtent;
     environmentMap.GetDimensions(envExtent.x, envExtent.y);
-    float saTexel = 4.f * Sw::PI / float(envExtent.x * envExtent.y);
+    float saTexel = 4.f * SwConstants::PI / float(envExtent.x * envExtent.y);
 
     float3 prefiltered = float3(0.f);
     float totalWeight = 0.f;

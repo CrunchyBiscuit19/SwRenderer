@@ -1,4 +1,5 @@
-    import SwCull;
+    import System.Cull.SwCull;
+    import Data.SwConstants;
 
     [[vk::binding(0, 0)]]
     public uniform Texture2D<float> depthFullImage;
@@ -12,7 +13,7 @@
     [[vk::push_constant]]
     SwCull::PrepOcclusionPC prepOcclusionPc;
 
-    [numthreads(Sw::MAX_2D_WORKGROUP_THREADS, Sw::MAX_2D_WORKGROUP_THREADS, 1)]
+    [numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
     void main(SwCull::CSInput in) {
         uint2 writePos = in.mDispatchThreadID.xy;
 

@@ -1,4 +1,4 @@
-import SwWBOIT;
+import System.WBOIT.SwWBOIT;
 
 SwWBOIT::VSOutput main(SwWBOIT::VSInput in) {
     SwWBOIT::VSOutput out;

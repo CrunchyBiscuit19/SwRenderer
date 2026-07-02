@@ -1,7 +1,8 @@
 module SwIBL;
 
-import SwCommon;
-import SwBRDF;
+__exported import Data.SwCamera;
+__exported import Data.SwConstants;
+import System.BRDF.SwBRDF;
 
 namespace SwIBL {
     public static const uint IBL_DIFFUSE = 1u;
@@ -20,7 +21,7 @@ namespace SwIBL {
 
     public float3 importanceSampleGGX(float2 xi, float3 N, float roughness) {
         float a = roughness * roughness;
-        float phi = 2.f * Sw::PI * xi.x;
+        float phi = 2.f * SwConstants::PI * xi.x;
         float cosTheta = sqrt((1.f - xi.y) / (1.f + (a * a - 1.f) * xi.y));
         float sinTheta = sqrt(max(1.f - cosTheta * cosTheta, 0.f));
 
@@ -66,7 +67,7 @@ namespace SwIBL {
 
     public struct SkyboxPC {
         public SwIBL::Vertex* mWorkVertexBuffer;
-        public Sw::CameraData* mCameraBuffer;
+        public SwCamera::Data* mCameraBuffer;
     };
 
     public struct Vertex {

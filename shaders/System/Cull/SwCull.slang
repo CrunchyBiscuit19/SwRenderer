@@ -1,35 +1,32 @@
 module SwCull;
 
-__exported import SwCommon;
+__exported import Data.SwBatch;
+__exported import Data.SwCamera;
+__exported import Data.SwInstance;
+__exported import Data.SwMesh;
+__exported import Data.SwNode;
+__exported import Data.SwFrustum;
 
 namespace SwCull {
-    public static const uint NUM_FRUSTUM_PLANES = 6;
-    public static const uint NUM_AABB_CORNERS = 8;
-
     public static const bool ENABLE_FRUSTUM_CULL = true;
     public static const bool ENABLE_OCCLUSION_CULL = true;
 
-    public struct Plane {
-        public float3 mNormal;
-        public float mDistance;
-    }
-
     public struct ResetPC {
-        public Sw::RenderCommand* mRcsBuffer;
+        public SwBatch::RenderCommand* mRcsBuffer;
         public uint mRcsLimit;
     };
 
     public enum Phase { Early, Late };
 
     public struct WorkPC {
-        public Sw::RenderCommand* mRcsBuffer;
-        public Sw::RenderItem* mRisBuffer;
+        public SwBatch::RenderCommand* mRcsBuffer;
+        public SwBatch::RenderItem* mRisBuffer;
         public uint* mRisCount;
-        public Plane* mFrustumBuffer;
-        public Sw::CameraData* mCameraBuffer;
-        public Sw::Bounds* mSceneBoundsBuffer;
-        public Sw::NodeTransform* mSceneNodeTransformsBuffer;
-        public Sw::Instance* mSceneInstancesBuffer;
+        public SwFrustum::Data* mFrustumBuffer;
+        public SwCamera::Data* mCameraBuffer;
+        public SwMesh::Bounds* mSceneBoundsBuffer;
+        public SwNode::Transform* mSceneNodeTransformsBuffer;
+        public SwInstance::Data* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
         public bool* mSceneVisibilityRisReadBuffer;
         public bool* mSceneVisibilityRisWriteBuffer;
@@ -41,8 +38,8 @@ namespace SwCull {
     };
 
     public struct CompactPC {
-        public Sw::RenderCommand* mPreRcsBuffer;
-        public Sw::RenderCommand* mPostRcsBuffer;
+        public SwBatch::RenderCommand* mPreRcsBuffer;
+        public SwBatch::RenderCommand* mPostRcsBuffer;
         public uint* mPostRcsCount;
         public uint mPreRcsLimit;
     };

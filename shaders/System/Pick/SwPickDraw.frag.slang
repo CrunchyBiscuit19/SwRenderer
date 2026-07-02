@@ -1,5 +1,4 @@
-import SwPick;
-import SwCommon;
+import System.Pick.SwPick;
 
 [[vk::binding(0, 0)]]
 public uniform Sampler2D materialResources[];
@@ -12,7 +11,7 @@ uint2 mainOpaque(SwPick::FSInputOpaque in) : SV_Target {
 
 [shader("fragment")]
 uint2 mainMasked(SwPick::FSInput in) : SV_Target {
-    float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * Sw::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
+    float4 diffuseColor = materialResources[NonUniformResourceIndex(in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES + 0)].Sample(in.mUv);
     if (in.mColor.a * diffuseColor.a < in.mAlphaCutoff)
         discard;
     return uint2(in.mModelIndex + 1, in.mInstanceIndex + 1);
