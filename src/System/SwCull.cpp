@@ -22,7 +22,7 @@ void SwCull::System::initializeOtherPasses() {
 
         cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneDrawRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
-        mScene.getCamera().getFrustumBuffer().copyFromUnchecked(mScene.getCamera().getFrustumPlanes().data(), SwCamera::NUM_FRUSTUM_PLANES * sizeof(Plane));
+        mScene.getCamera().getFrustumBuffer().copyFromUnchecked(&mScene.getCamera().getFrustum(), sizeof(SwFrustum));
         cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getHandle(), 0, vk::WholeSize, 0);
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {

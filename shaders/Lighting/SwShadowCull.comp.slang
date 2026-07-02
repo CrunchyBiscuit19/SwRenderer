@@ -23,24 +23,28 @@ void constructCorners(Sw::Bounds* riBounds, float4x4* riModelMatrix, out float4 
 // Directional lights have no intrinsic bounds to cull against, so they skip this test entirely.
 void constructFrustum(Sw::Light* light, float3* apex, float3* forward, out SwCull::Plane frustum[SwCull::NUM_FRUSTUM_PLANES]) {
     float3 up = (abs(forward->y) < 0.999f) ? float3(0.f, 1.f, 0.f) : float3(1.f, 0.f, 0.f);
-    float3 right = normalize(cross(up, *forward));
-    up = cross(*forward, right);
+    float3 right = normalize(cross(*forward, up));
+    up = cross(right, *forward);
 
-    float halfAngle = acos(clamp(light->mOuterCos, -0.9999f, 0.9999f));
-    float s = sin(halfAngle);
-    float c = cos(halfAngle);
+    float outerAngle = acos(clamp(light->mOuterCos, -0.9999f, 0.9999f));
+    float aspect = 1.f;
+    float halfVSide = tan(outerAngle);
+    float halfHSide = halfVSide * aspect;
+    float near = 0.05f;
     float far = (light->mRange > 0.f) ? light->mRange : 60.f;
-    frustum[0].mNormal = *forward * s - right * c;  // right
-    frustum[1].mNormal = *forward * s + right * c;  // left
-    frustum[2].mNormal = *forward * s - up * c;     // top
-    frustum[3].mNormal = *forward * s + up * c;     // bottom
-    for (uint i = 0; i < 4; i++) {
-        frustum[i].mDistance = dot(frustum[i].mNormal, *apex);
-    }
-    frustum[4].mNormal = *forward;
-    frustum[4].mDistance = dot(*forward, *apex + *forward * 0.05f);
-    frustum[5].mNormal = -*forward;
-    frustum[5].mDistance = dot(-*forward, *apex + *forward * far);
+
+    frustum[0].mNormal = *forward;
+    frustum[0].mDistance = dot(*forward, *apex + *forward * near);
+    frustum[1].mNormal = -*forward;
+    frustum[1].mDistance = dot(-*forward, *apex + *forward * far);
+    frustum[2].mNormal = normalize(cross(*forward - right * halfHSide, up));
+    frustum[2].mDistance = dot(frustum[2].mNormal, *apex);
+    frustum[3].mNormal = normalize(cross(up, *forward + right * halfHSide));
+    frustum[3].mDistance = dot(frustum[3].mNormal, *apex);
+    frustum[4].mNormal = normalize(cross(*forward + up * halfVSide, right));
+    frustum[4].mDistance = dot(frustum[4].mNormal, *apex);
+    frustum[5].mNormal = normalize(cross(right, *forward - up * halfVSide));
+    frustum[5].mDistance = dot(frustum[5].mNormal, *apex);
 }
 
 // At least one corner on the inward side of all six planes means the world-space AABB intersects the frustum.
@@ -96,7 +100,7 @@ void main(SwLighting::CSInput in) {
     float4x4 riInstanceTransform = shadowCullPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
-    uint sceneLightsIndex = shadowCullPc.mActiveLightsBuffer->mLightIndices[shadowCullPc.mLightIndex];
+    uint sceneLightsIndex = shadowCullPc.mActiveLightsBuffer->mActiveLightIndices[shadowCullPc.mLightIndex];
     Sw::Light* light = &shadowCullPc.mSceneLightsBuffer[sceneLightsIndex];
     float4x4 lightNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[light->mNodeTransformIndex]; 
     float4x4 lightInstanceTransform = shadowCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 

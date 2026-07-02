@@ -6,8 +6,9 @@ namespace Sw {
     public static const float PI = 3.1415926535897932384626433832795028841972f;
     public static const uint NUM_PBR_IMAGES = 5;
     public static const uint MAX_SHADOW_LIGHTS = 16;       
-    public static const uint MAX_SHADOW_CUBE_LIGHTS = 8;   
+    public static const uint MAX_SHADOW_CUBE_LIGHTS = 8;
     public static const uint SHADOW_MAP_SIZE = 1024;
+    public static const uint MAX_ACTIVE_LIGHTS = 16;
 
     public struct Perspective {
         public float4x4 mView;
@@ -33,10 +34,12 @@ namespace Sw {
         public float3 mBaseDirection;      // light forward in node-local space (glTF local -Z)
     };
 
+    public typedef uint Frustum; // TODO: Refactor organisation of shader files and change this later.
+
     public struct ActiveLights {
         public uint mCount;
-        public uint mLightIndices[MAX_SHADOW_LIGHTS];
-        public uint mShadowIndices[MAX_SHADOW_LIGHTS];
+        public uint mActiveLightIndices[MAX_SHADOW_LIGHTS];
+        public Sw::Frustum mActiveLightFrustums[MAX_SHADOW_LIGHTS];
     };
 
     public struct CameraData {

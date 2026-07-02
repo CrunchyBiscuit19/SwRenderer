@@ -1,7 +1,7 @@
 #pragma once
 
+#include <Data/SwFrustum.h>
 #include <Data/SwLight.h>
-#include <System/SwCull.h>
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwBuffer.h>
 #include <SDL3/SDL_events.h>
@@ -31,9 +31,6 @@ public:
 struct SwRendererContext;
 
 class SwCamera {
-public:
-    static constexpr std::uint32_t NUM_FRUSTUM_PLANES{6};
-
 private:
     static constexpr float FOVY{70.f};
     static constexpr float NEAR_PLANE{.1f};
@@ -54,7 +51,7 @@ private:
     SwMovementMode mMovementMode;
     std::unordered_map<SwMovementMode, std::function<void()>> mMovementFunctions;
     SwAllocatedBuffer mFrustumBuffer;
-    std::array<SwCull::Plane, NUM_FRUSTUM_PLANES> mFrustumPlanes;
+    SwFrustum mFrustum;
 
 public:
     static constexpr float MAX_CAMERA_SPEED{10.f};
@@ -73,7 +70,7 @@ public:
     glm::mat4 getSpawnTransform(float distance = 5.f, float scale = 1.f, bool rotated = false) const;
     void update(float deltaTime, float expectedDeltaTime);
 
-    inline std::array<SwCull::Plane, NUM_FRUSTUM_PLANES>& getFrustumPlanes() { return mFrustumPlanes; }
+    inline SwFrustum& getFrustum() { return mFrustum; }
     inline SwAllocatedBuffer& getFrustumBuffer() { return mFrustumBuffer; }
     inline bool getRelativeMode() const { return mRelativeMode; }
     inline SwMovementMode getMovementMode() const { return mMovementMode; }

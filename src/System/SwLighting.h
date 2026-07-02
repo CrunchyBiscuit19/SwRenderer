@@ -2,6 +2,7 @@
 
 #include <Data/SwBatch.h>
 #include <Data/SwLight.h>
+#include <Data/SwCamera.h>
 #include <Scene/SwSystem.h>
 #include <System/SwCull.h>
 #include <Resource/SwDescriptor.h>
@@ -42,8 +43,8 @@ constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
 
 struct ActiveLights {
     std::uint32_t mCount{0};
-    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mLightIndices{};
-    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mShadowIndices{};
+    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
+    std::array<SwFrustum, MAX_ACTIVE_LIGHTS> mActiveLightFrustums{};
 };
 
 struct SelectionPC : SwPC<SelectionPC> {
@@ -93,7 +94,7 @@ struct Resources {
 
     std::uint32_t mActiveLightCount{0};
     std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
-    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mShadowIndices{}; // Get type from light, then decide whether to index into 2d of cubemap shadow descriptor array
+    std::array<SwFrustum, MAX_ACTIVE_LIGHTS> mActiveLightFrustums{};
     SwAllocatedBuffer mActiveLightsBuffer;
 
     std::array<SwDepthImage2D, MAX_ACTIVE_LIGHTS> mShadow2DMaps;

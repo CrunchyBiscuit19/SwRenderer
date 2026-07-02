@@ -16,14 +16,6 @@ static const std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH{std::filesystem
 static const std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "SwCullCompact.comp.spv"};
 static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
 
-struct Plane {
-    glm::vec3 mNormal;
-    float mDistance;
-
-    Plane() : mNormal(glm::vec3(0.f)), mDistance(0.f) {}
-    Plane(glm::vec3 n, glm::vec3 p) : mNormal(glm::normalize(n)), mDistance(glm::dot(glm::normalize(n), p)) {}
-};
-
 enum class Phase { Early, Late };
 
 struct ResetPC : public SwPC<ResetPC> {

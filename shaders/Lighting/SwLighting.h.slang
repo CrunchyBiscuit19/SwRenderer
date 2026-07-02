@@ -106,7 +106,7 @@ namespace SwLighting {
     ) {
         float3 color = iblIntensity * SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
         for (uint i = 0; i < activeLights->mCount; i++) {
-            Sw::Light light = lights[activeLights->mLightIndices[i]];
+            Sw::Light light = lights[activeLights->mActiveLightIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
             switch (light.mType) {
                 case Sw::LightType::Spot:
@@ -180,7 +180,6 @@ namespace SwLighting {
             return 1.f;
         }
 
-        uint mapIndex = activeLights->mShadowIndices[slot];
         const float bias = 0.0015f;
         const float radius = ndc.z + bias;  // reversed-Z, so bias is added to push receivers toward lit
         const float2 texel = 1.f / float2(Sw::SHADOW_MAP_SIZE, Sw::SHADOW_MAP_SIZE);
@@ -190,7 +189,7 @@ namespace SwLighting {
             for (int x = -BLUR_RANGE; x <= BLUR_RANGE; x++) {
                 float2 off = float2(texel.x * x, texel.y * y);
                 float2 coord = GetPoissonDiskCoord(uv + off, count, POISSON_RADIUS);
-                lit += shadow2DMaps[mapIndex].SampleCmpLevelZero(shadowSampler, coord, radius).r;
+                lit += shadow2DMaps[slot].SampleCmpLevelZero(shadowSampler, coord, radius).r;
                 count++;
             }
         }

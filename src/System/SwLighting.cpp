@@ -257,7 +257,7 @@ for (std::uint32_t slot = 0; slot < mResources.mActiveLightCount; slot++) {
     mResources.mShadowCullPc.mLightRange = params.mRange;
     mResources.mShadowCullPc.mLightType = static_cast<std::uint32_t>(params.mType);
     mResources.mShadowCullPc.mFrustumBuffer =
-        mResources.mShadowFrustumBuffer.getDeviceAddress().value() + mapIndex * NUM_FRUSTUM_PLANES * sizeof(SwCull::Plane);
+        mResources.mShadowFrustumBuffer.getDeviceAddress().value() + mapIndex * NUM_FRUSTUM_PLANES * sizeof(SwPlane);
     mResources.mShadowCullPc.mLightDrawRisIndicesBuffer = mResources.mShadowRisIndicesBuffer[mapIndex].getDeviceAddress().value();
 
     const vk::DeviceAddress rcsBase = mResources.mShadowRcsBuffer[mapIndex].getDeviceAddress().value();
