@@ -5,7 +5,7 @@ import System.Cull.SwCull;
 [[vk::push_constant]]
 SwLighting::ShadowCullPC shadowCullPc;
 
-void constructCorners(SwMesh::Bounds* riBounds, float4x4* riModelMatrix, out float4 corners[SwMesh::NUM_AABB_CORNERS]) {
+void constructCorners(SwMesh::Bounds* riBounds, float4x4 riModelMatrix, out float4 corners[SwMesh::NUM_AABB_CORNERS]) {
     corners[0] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMin.z, 1.f);
     corners[1] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMax.z, 1.f);
     corners[2] = float4(riBounds->mMin.x, riBounds->mMax.y, riBounds->mMin.z, 1.f);
@@ -15,16 +15,16 @@ void constructCorners(SwMesh::Bounds* riBounds, float4x4* riModelMatrix, out flo
     corners[6] = float4(riBounds->mMax.x, riBounds->mMax.y, riBounds->mMin.z, 1.f);
     corners[7] = float4(riBounds->mMax.x, riBounds->mMax.y, riBounds->mMax.z, 1.f);
     for (uint i = 0; i < SwMesh::NUM_AABB_CORNERS; i++) {
-        corners[i] = mul(*riModelMatrix, corners[i]);
+        corners[i] = mul(riModelMatrix, corners[i]);
     }
 }
 
 // Spot light perspective frustum whose four side planes pass through the apex ("tip" of the frustum).
 // Directional lights have no intrinsic bounds to cull against, so they skip this test entirely.
-void constructFrustum(SwLight::Data* light, float3* apex, float3* forward, out SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES]) {
-    float3 up = (abs(forward->y) < 0.999f) ? float3(0.f, 1.f, 0.f) : float3(1.f, 0.f, 0.f);
-    float3 right = normalize(cross(*forward, up));
-    up = cross(right, *forward);
+void constructFrustum(SwLight::Data* light, float3 apex, float3 forward, out SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES]) {
+    float3 up = (abs(forward.y) < 0.999f) ? float3(0.f, 1.f, 0.f) : float3(1.f, 0.f, 0.f);
+    float3 right = normalize(cross(forward, up));
+    up = cross(right, forward);
 
     float outerAngle = acos(clamp(light->mOuterCos, -0.9999f, 0.9999f));
     float aspect = 1.f;
@@ -33,18 +33,18 @@ void constructFrustum(SwLight::Data* light, float3* apex, float3* forward, out S
     float near = 0.05f;
     float far = (light->mRange > 0.f) ? light->mRange : 60.f;
 
-    frustum[0].mNormal = *forward;
-    frustum[0].mDistance = dot(*forward, *apex + *forward * near);
-    frustum[1].mNormal = -*forward;
-    frustum[1].mDistance = dot(-*forward, *apex + *forward * far);
-    frustum[2].mNormal = normalize(cross(*forward - right * halfHSide, up));
-    frustum[2].mDistance = dot(frustum[2].mNormal, *apex);
-    frustum[3].mNormal = normalize(cross(up, *forward + right * halfHSide));
-    frustum[3].mDistance = dot(frustum[3].mNormal, *apex);
-    frustum[4].mNormal = normalize(cross(*forward + up * halfVSide, right));
-    frustum[4].mDistance = dot(frustum[4].mNormal, *apex);
-    frustum[5].mNormal = normalize(cross(right, *forward - up * halfVSide));
-    frustum[5].mDistance = dot(frustum[5].mNormal, *apex);
+    frustum[0].mNormal = forward;
+    frustum[0].mDistance = dot(forward, apex + forward * near);
+    frustum[1].mNormal = -forward;
+    frustum[1].mDistance = dot(-forward, apex + forward * far);
+    frustum[2].mNormal = normalize(cross(forward - right * halfHSide, up));
+    frustum[2].mDistance = dot(frustum[2].mNormal, apex);
+    frustum[3].mNormal = normalize(cross(up, forward + right * halfHSide));
+    frustum[3].mDistance = dot(frustum[3].mNormal, apex);
+    frustum[4].mNormal = normalize(cross(forward + up * halfVSide, right));
+    frustum[4].mDistance = dot(frustum[4].mNormal, apex);
+    frustum[5].mNormal = normalize(cross(right, forward - up * halfVSide));
+    frustum[5].mDistance = dot(frustum[5].mNormal, apex);
 }
 
 // At least one corner on the inward side of all six planes means the world-space AABB intersects the frustum.
@@ -70,7 +70,7 @@ bool frustumTest(SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES], float4
 }
 
 // The closest point on the world-space AABB to the light is within range means the light can reach the caster.
-bool rangeTest(float4 corners[SwMesh::NUM_AABB_CORNERS], float3* center, float range) {
+bool rangeTest(float4 corners[SwMesh::NUM_AABB_CORNERS], float3 center, float range) {
     if (range <= 0.f) {
         return true;  
     }
@@ -80,8 +80,8 @@ bool rangeTest(float4 corners[SwMesh::NUM_AABB_CORNERS], float3* center, float r
         aabbMin = min(aabbMin, corners[j].xyz);
         aabbMax = max(aabbMax, corners[j].xyz);
     }
-    float3 closest = clamp(*center, aabbMin, aabbMax);
-    float3 delta = closest - *center;
+    float3 closest = clamp(center, aabbMin, aabbMax);
+    float3 delta = closest - center;
     return dot(delta, delta) <= range * range;
 }
 
@@ -109,16 +109,16 @@ void main(SwLighting::CSInput in) {
     float3 lightForward = normalize(mul(lightModelMatrix, float4(light->mBaseDirection, 0.f)).xyz);
 
     float4 corners[SwMesh::NUM_AABB_CORNERS];
-    constructCorners(riBounds, &riModelMatrix, corners);
+    constructCorners(riBounds, riModelMatrix, corners);
 
     bool visible = true;
     if (light->mType == SwLight::Type::Spot) {
         SwFrustum::Plane frustum[SwFrustum::NUM_FRUSTUM_PLANES];
-        constructFrustum(light, &lightApex, &lightForward, frustum);
+        constructFrustum(light, lightApex, lightForward, frustum);
         visible = frustumTest(frustum, corners);
     }
     if (visible && light->mType != SwLight::Type::Directional) {
-        visible = rangeTest(corners, &lightApex, light->mRange);
+        visible = rangeTest(corners, lightApex, light->mRange);
     }
 
     if (visible) {

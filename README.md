@@ -381,9 +381,24 @@ This realises the two-pass cull (early draw of last frame's visible set, build t
 
 ---
 
+## Shaders
+
+Shaders are written in [Slang](https://shader-slang.com/) and live under `shaders/`, mirroring the `src/` layout:
+
+* `shaders/Data/` holds one module per CPU-side data type (`SwCamera`, `SwMesh`, `SwBatch`, ...) with the GPU-visible structs, plus `SwConstants` for shared constants.
+* `shaders/System/<Name>/` holds each rendering system's interface module (e.g. `SwLighting.slang`) alongside its `.vert/.frag/.comp` entry-point shaders.
+
+Conventions:
+
+* A module's namespace equals its filename, and the redundant part of a type name folds into the namespace (`SwCamera::Data`, `SwLight::Type`, `SwMaterial::Constant`).
+* Imports are dotted paths rooted at `shaders/` (`import Data.SwCamera`, `import System.Lighting.SwLighting`), matching the single search path in `shaders/slangdconfig.json`.
+* A system's interface module re-exports (`__exported import`) the Data modules used in its public structs, so an entry shader only imports its own system module plus whatever it names directly.
+
+---
+
 ## Build
 
-Requirements: CMake 4.3.2+, Ninja, MSVC with C++23, Vulkan 1.4 capable GPU.
+Requirements: CMake 4.3.2+, Ninja, MSVC with C++23, Vulkan 1.4 capable GPU, `slangc` on PATH (ships with the Vulkan SDK).
 
 ```powershell
 # Configure
@@ -395,7 +410,9 @@ cmake --build --preset x64-debug
 
 Binaries output to `bin/`.
 
-Shaders are written in [Slang](https://shader-slang.com/) and compiled to SPIR-V with a custom tool:
+Shaders compile to SPIR-V as part of the normal CMake build. Each entry shader has its own `slangc` rule that compiles it and its imported modules to a `.spv` placed next to the source. The rule writes a depfile listing every transitively imported module, so editing a module recompiles exactly the dependent shaders and editing an entry shader recompiles only itself. Entry points declared with `[shader("...")]` annotations are discovered at configure time, so rerun the configure step after adding or removing one.
+
+A standalone compiler remains as a manual fallback for compiling the whole tree outside of CMake:
 
 ```powershell
 tools\build.bat              # build the shader compiler

@@ -146,9 +146,9 @@ void SwScene::initialize() {
     mPick.initialize();
     mIBL.initialize();
     mWBOIT.initialize();
+    mLighting.initialize();
     mGeometry.initialize();
     mPostProcess.initialize();
-    mLighting.initialize();
 
     loadStandaloneLightAssets();
 }

@@ -23,14 +23,71 @@ project(SwRenderer)
 # ---------------------------------------------------------------------------
 # Shaders
 # ---------------------------------------------------------------------------
-file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS
-    "${CMAKE_CURRENT_SOURCE_DIR}/shaders/*.slang"
-	"${CMAKE_CURRENT_SOURCE_DIR}/shaders/**/*.slang"
-	"${CMAKE_CURRENT_SOURCE_DIR}/shaders/slangdconfig.json"
-)
-add_custom_target(Shaders ALL SOURCES ${SLANG_SOURCES})
+set(CMAKE_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 
-source_group(TREE "${CMAKE_CURRENT_SOURCE_DIR}/shaders"
+find_program(SLANGC slangc REQUIRED)
+
+file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_SHADER_DIR}/*.slang"
+	"${CMAKE_SHADER_DIR}/**/*.slang"
+	"${CMAKE_SHADER_DIR}/slangdconfig.json"
+)
+
+# Entry-point shaders compile to a .spv next to their source. Imported modules are compiled from
+# source as part of each shader, and the slangc depfile records those imports so that a module edit
+# rebuilds exactly the .spv files that transitively depend on it.
+file(GLOB_RECURSE SLANG_ENTRY_SOURCES CONFIGURE_DEPENDS
+    "${CMAKE_SHADER_DIR}/**/*.vert.slang"
+    "${CMAKE_SHADER_DIR}/**/*.frag.slang"
+    "${CMAKE_SHADER_DIR}/**/*.comp.slang"
+)
+
+set(SPV_OUTPUTS "")
+foreach(SHADER IN LISTS SLANG_ENTRY_SOURCES)
+    if(SHADER MATCHES "\\.vert\\.slang$")
+        set(SHADER_STAGE vertex)
+    elseif(SHADER MATCHES "\\.frag\\.slang$")
+        set(SHADER_STAGE fragment)
+    else()
+        set(SHADER_STAGE compute)
+    endif()
+
+    string(REGEX REPLACE "\\.slang$" ".spv" SHADER_SPV "${SHADER}")
+    file(RELATIVE_PATH SHADER_REL "${CMAKE_SHADER_DIR}" "${SHADER}")
+    set(SHADER_DEPFILE "${CMAKE_BINARY_DIR}/shaderDeps/${SHADER_REL}.d")
+    get_filename_component(SHADER_DEPFILE_DIR "${SHADER_DEPFILE}" DIRECTORY)
+    file(MAKE_DIRECTORY "${SHADER_DEPFILE_DIR}")
+
+    # Files that declare [shader("...")] entry points name each one explicitly so slangc packs them
+    # into a single module, while the rest compile their implicit "main" for the filename's stage.
+    file(READ "${SHADER}" SHADER_TEXT)
+    string(REGEX MATCHALL "\\[shader\\(\"[a-z]+\"\\)\\][^(]*\\(" SHADER_ENTRY_DECLS "${SHADER_TEXT}")
+    set(SHADER_STAGE_ARGS "")
+    if(SHADER_ENTRY_DECLS)
+        foreach(ENTRY_DECL IN LISTS SHADER_ENTRY_DECLS)
+            string(REGEX MATCH "([A-Za-z_][A-Za-z0-9_]*)[ \t\r\n]*\\($" ENTRY_MATCH "${ENTRY_DECL}")
+            list(APPEND SHADER_STAGE_ARGS -entry "${CMAKE_MATCH_1}")
+        endforeach()
+    else()
+        set(SHADER_STAGE_ARGS -stage ${SHADER_STAGE})
+    endif()
+
+    add_custom_command(
+        OUTPUT "${SHADER_SPV}"
+        COMMAND ${SLANGC} "${SHADER}" -o "${SHADER_SPV}" -I "${CMAKE_SHADER_DIR}"
+                ${SHADER_STAGE_ARGS} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout
+                -depfile "${SHADER_DEPFILE}"
+        DEPFILE "${SHADER_DEPFILE}"
+        DEPENDS "${SHADER}"
+        COMMENT "Compiling shader ${SHADER_REL}"
+        VERBATIM
+    )
+    list(APPEND SPV_OUTPUTS "${SHADER_SPV}")
+endforeach()
+
+add_custom_target(Shaders ALL DEPENDS ${SPV_OUTPUTS} SOURCES ${SLANG_SOURCES})
+
+source_group(TREE "${CMAKE_SHADER_DIR}"
              PREFIX "Shaders"
              FILES ${SLANG_SOURCES})
 
@@ -212,8 +269,6 @@ target_compile_definitions(SwRenderer PUBLIC LIGHTS_PATH="${CMAKE_CURRENT_SOURCE
 target_compile_definitions(SwRenderer PUBLIC SKYBOXES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/skyboxes/")
 target_compile_definitions(SwRenderer PUBLIC DOCS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/docs")
 
-set(CMAKE_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
-file(MAKE_DIRECTORY "${CMAKE_SHADER_DIR}/out")
 target_compile_definitions(SwRenderer PUBLIC SHADERS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/shaders/System")
 
 target_compile_definitions(SwRenderer PRIVATE $<$<CONFIG:Release>:RELEASE>)
