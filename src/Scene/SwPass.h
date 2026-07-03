@@ -24,7 +24,6 @@ public:
         CullPublishCount,
         LightingShadowReset,
         LightingActiveLightsSelection,
-        LightingActiveLightsFrustumFill,
         LightingShadowCull,
         LightingShadowDraw,
         GeometryLateOpaque,

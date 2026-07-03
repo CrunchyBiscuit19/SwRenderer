@@ -12,5 +12,5 @@ void main(SwLighting::CSInput in) {
         return;
 
     // Reset render command instance count to zero
-    shadowResetPc.mShadowRcsBuffer[rcsIndex].mRiCount = 0;
+    shadowResetPc.mShadowDrawRcsBuffer[rcsIndex].mRiCount = 0;
 }

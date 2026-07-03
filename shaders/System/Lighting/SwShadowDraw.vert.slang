@@ -9,9 +9,9 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     SwMesh::Vertex v = shadowDrawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwBatch::RenderCommand rc = shadowDrawPc.mShadowRcsBuffer[in.mDrawIndex];
+    SwBatch::RenderCommand rc = shadowDrawPc.mShadowDrawRcsBuffer[in.mDrawIndex];
 
-    uint mSceneInstanceIndex = shadowDrawPc.mShadowRisIndicesBuffer[in.mInstanceIndex];
+    uint mSceneInstanceIndex = shadowDrawPc.mShadowDrawRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = shadowDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
     uint mSceneNodeTransformIndex = rc.mNodeTransformIndex;

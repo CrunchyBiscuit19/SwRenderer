@@ -68,8 +68,8 @@ void main(SwLighting::CSInput in) {
         return;
     }
 
-    SwBatch::RenderItem* ri = &shadowCullPc.mShadowRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &shadowCullPc.mShadowRcsBuffer[ri->mRcIndex];
+    SwBatch::RenderItem* ri = &shadowCullPc.mShadowDrawRisBuffer[risIndex];
+    SwBatch::RenderCommand* rc = &shadowCullPc.mShadowDrawRcsBuffer[ri->mRcIndex];
 
     SwMesh::Bounds* riBounds = &shadowCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
@@ -98,6 +98,6 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowCullPc.mShadowRisIndicesBuffer[rc->mFirstRi + offset] = ri->mSceneInstanceIndex;
+        shadowCullPc.mShadowDrawRisIndicesBuffer[rc->mFirstRi + offset] = ri->mSceneInstanceIndex;
     }
 }

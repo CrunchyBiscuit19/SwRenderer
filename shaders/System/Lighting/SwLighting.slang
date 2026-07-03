@@ -35,14 +35,14 @@ namespace SwLighting {
     };
 
     public struct ShadowResetPC {
-        public SwBatch::RenderCommand* mShadowRcsBuffer;
+        public SwBatch::RenderCommand* mShadowDrawRcsBuffer;
         public uint mShadowRcsLimit;
     };
 
     public struct ShadowCullPC {
-        public SwBatch::RenderCommand* mShadowRcsBuffer;
-        public SwBatch::RenderItem* mShadowRisBuffer;
-        public uint* mShadowRisIndicesBuffer;
+        public SwBatch::RenderCommand* mShadowDrawRcsBuffer;
+        public SwBatch::RenderItem* mShadowDrawRisBuffer;
+        public uint* mShadowDrawRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwMesh::Bounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
@@ -53,8 +53,8 @@ namespace SwLighting {
     };
 
     public struct ShadowDrawPC {
-        public SwBatch::RenderCommand* mShadowRcsBuffer;
-        public uint* mShadowRisIndicesBuffer;
+        public SwBatch::RenderCommand* mShadowDrawRcsBuffer;
+        public uint* mShadowDrawRisIndicesBuffer;
         public SwMesh::Vertex* mSceneVertexBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;

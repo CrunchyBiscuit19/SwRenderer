@@ -54,16 +54,16 @@ struct ActiveLightsSelectionPC : SwPC<ActiveLightsSelectionPC> {
 };
 
 struct ShadowResetPC : SwPC<ShadowResetPC> {
-    vk::DeviceAddress mShadowRcsBuffer;
+    vk::DeviceAddress mShadowDrawRcsBuffer;
     std::uint32_t mShadowRcsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ShadowCullPC : SwPC<ShadowCullPC> {
-    vk::DeviceAddress mShadowRcsBuffer;
-    vk::DeviceAddress mShadowRisBuffer;
-    vk::DeviceAddress mShadowRisIndicesBuffer;
+    vk::DeviceAddress mShadowDrawRcsBuffer;
+    vk::DeviceAddress mShadowDrawRisBuffer;
+    vk::DeviceAddress mShadowDrawRisIndicesBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -76,8 +76,8 @@ struct ShadowCullPC : SwPC<ShadowCullPC> {
 };
 
 struct ShadowDrawPC : SwPC<ShadowDrawPC> {
-    vk::DeviceAddress mShadowRcsBuffer;
-    vk::DeviceAddress mShadowRisIndicesBuffer;
+    vk::DeviceAddress mShadowDrawRcsBuffer;
+    vk::DeviceAddress mShadowDrawRisIndicesBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -96,7 +96,7 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    SwAllocatedBuffer mActiveLightsBuffer;
+    SwAllocatedBuffer mActiveLightsBuffer; 
 
     std::array<SwDepthImage2D, MAX_ACTIVE_LIGHTS> mShadow2DMaps;
     std::array<SwDepthImageCubemap, MAX_ACTIVE_LIGHTS> mShadowCubeMaps;
@@ -104,9 +104,9 @@ struct Resources {
     SwDescriptorSet mShadowMapsDescriptorSet;
 
     std::vector<SwRenderCommand> mShadowRcs;
-    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRcsBuffer; // Reload per frame from CPU
-    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRisBuffer; // Read into during shaders, reload when ris generated
-    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowRisIndicesBuffer; // Reload per frame
+    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowDrawRcsBuffer; 
+    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowDrawRisBuffer; 
+    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowDrawRisIndicesBuffer; 
 
     ActiveLightsSelectionPC mActiveLightsSelectionPc;
     SwPipelineLayout mActiveLightsSelectionPipelineLayout;
