@@ -20,7 +20,7 @@ static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SH
 static const std::filesystem::path ACTIVE_LIGHTS_SELECTION_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwActiveLightsSelection.comp.spv"};
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowDraw.vert.spv"};
-static constexpr std::string_view SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT{"mainOpaque"};
+static constexpr std::string_view SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_ACTIVE_LIGHTS{16};
@@ -83,6 +83,7 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
 
 struct Resources {
     static SwDescriptorLayout sShadowConsumeDescriptorLayout;
+    static SwStagingBuffer sShadowRcsStaging;
 
     static void init();
     static void cleanup();
@@ -109,7 +110,7 @@ struct Resources {
     
     ShadowDrawPC mShadowDrawPc;
     SwPipelineLayout mShadowDrawPipelineLayout;
-    SwGraphicsPipelineBundle mShadowDrawOpaqueTransparentPipelineBundle;
+    SwGraphicsPipelineBundle mShadowDrawOpaquePipelineBundle;
     SwGraphicsPipelineBundle mShadowDrawMaskedPipelineBundle;
 };
 
@@ -125,6 +126,8 @@ public:
 
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
+
+    void regenerateShadowRcs();
 
     inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
     inline SwAllocatedBuffer& getActiveLightsBuffer() { return mResources.mActiveLightsBuffer; }

@@ -303,50 +303,48 @@ void SwScene::markAllAssetsDelete() {
 void SwScene::regenerateRcsAndRis() {
     SwBatch::sFirstRiOffset = 0;
 
-    for (auto& batchType : mBatchTypes | std::views::values) {
-        for (auto& batch : batchType | std::views::values) {
-            batch.getRcs().clear();
-            batch.getRis().clear();
-        }
+    for (auto& batch : getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+        batch.getRcs().clear();
+        batch.getRis().clear();
     }
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getInstanceIds().empty()) continue;
         asset.generateRcsAndRis();
     }
 
-    for (auto& batchType : mBatchTypes | std::views::values) {
-        for (auto& batch : batchType | std::views::values) {
-            if (batch.getRcs().empty()) {
-                continue;
-            }
-
-            vk::BufferCopy RcsCopy{};
-            RcsCopy.dstOffset = 0;
-            RcsCopy.srcOffset = 0;
-            RcsCopy.size = batch.getRcs().size() * sizeof(SwRenderCommand);
-            vk::BufferCopy RisCopy{};
-            RisCopy.dstOffset = 0;
-            RisCopy.srcOffset = 0;
-            RisCopy.size = batch.getRis().size() * sizeof(SwRenderItem);
-
-            SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, RcsCopy, RisCopy](vk::CommandBuffer cmd) {
-                batch.getRcsStaging().copyFrom(cmd, batch.getRcs().data(), RcsCopy.size);
-                cmd.fillBuffer(batch.getInitialRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
-                batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getInitialRcsBuffer().copyFrom(cmd, batch.getRcsStaging(), RcsCopy);
-                batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
-
-                batch.getRisStaging().copyFrom(cmd, batch.getRis().data(), RisCopy.size);
-                cmd.fillBuffer(batch.getRisBuffer().getHandle(), 0, vk::WholeSize, 0);
-                batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-                batch.getRisBuffer().copyFrom(cmd, batch.getRisStaging(), RisCopy);
-                batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
-
-                batch.getEarlyRcsBuffer().ensureCapacity(cmd, RcsCopy.size);  // At least as big as mInitialRcsBuffer
-                batch.getLateRcsBuffer().ensureCapacity(cmd, RcsCopy.size);   // At least as big as mInitialRcsBuffer
-            });
+    for (auto& batch : getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+        if (batch.getRcs().empty()) {
+            continue;
         }
+
+        vk::BufferCopy RcsCopy{};
+        RcsCopy.dstOffset = 0;
+        RcsCopy.srcOffset = 0;
+        RcsCopy.size = batch.getRcs().size() * sizeof(SwRenderCommand);
+        vk::BufferCopy RisCopy{};
+        RisCopy.dstOffset = 0;
+        RisCopy.srcOffset = 0;
+        RisCopy.size = batch.getRis().size() * sizeof(SwRenderItem);
+
+        SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, RcsCopy, RisCopy](vk::CommandBuffer cmd) {
+            batch.getRcsStaging().copyFrom(cmd, batch.getRcs().data(), RcsCopy.size);
+            cmd.fillBuffer(batch.getInitialRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
+            batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+            batch.getInitialRcsBuffer().copyFrom(cmd, batch.getRcsStaging(), RcsCopy);
+            batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
+
+            batch.getRisStaging().copyFrom(cmd, batch.getRis().data(), RisCopy.size);
+            cmd.fillBuffer(batch.getRisBuffer().getHandle(), 0, vk::WholeSize, 0);
+            batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+            batch.getRisBuffer().copyFrom(cmd, batch.getRisStaging(), RisCopy);
+            batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
+
+            batch.getEarlyRcsBuffer().ensureCapacity(cmd, RcsCopy.size);  // At least as big as mInitialRcsBuffer
+            batch.getLateRcsBuffer().ensureCapacity(cmd, RcsCopy.size);   // At least as big as mInitialRcsBuffer
+        });
     }
+
+    mLighting.regenerateShadowRcs();
 }
 
 void SwScene::realignVertexIndexOffset() {

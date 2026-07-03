@@ -12,6 +12,7 @@
 #include <utility>
 
 SwDescriptorLayout SwLighting::Resources::sShadowConsumeDescriptorLayout{};
+SwStagingBuffer SwLighting::Resources::sShadowRcsStaging{};
 
 void SwLighting::Resources::init() {
     sShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -23,9 +24,14 @@ void SwLighting::Resources::init() {
         },
         vk::ShaderStageFlagBits::eFragment
     );
+
+    sShadowRcsStaging = SwBufferFactory::createStagingBuffer("ShadowRcsStagingBuffer", SHADOW_INITIAL_RENDER_COMMANDS * sizeof(SwRenderCommand));
 }
 
-void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy(); }
+void SwLighting::Resources::cleanup() {
+    sShadowConsumeDescriptorLayout.destroy();
+    sShadowRcsStaging.destroy();
+}
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -148,8 +154,8 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
 
-    drawPipelineOptions.mVertexEntryPoint = SHADOW_DRAW_OPAQUE_TRANSPARENT_ENTRY_POINT;
-    mResources.mShadowDrawOpaqueTransparentPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowDrawPipeline", drawPipelineOptions);
+    drawPipelineOptions.mVertexEntryPoint = SHADOW_DRAW_OPAQUE_ENTRY_POINT;
+    mResources.mShadowDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowDrawPipeline", drawPipelineOptions);
 
     drawPipelineOptions.mVertexEntryPoint = SHADOW_DRAW_MASKED_ENTRY_POINT;
     mResources.mShadowDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowDrawPipeline", drawPipelineOptions);
@@ -161,22 +167,22 @@ void SwLighting::System::initializePasses() {
     // Shadows Reset
     staticDeps.mWriteBuffers.emplace_back(&mResources.mActiveLightsBuffer, SwDependency::BufferDepType::TransferWrite);
     for (std::uint32_t i = 0; i < MAX_ACTIVE_LIGHTS; i++) {
-        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRcsBuffer[i], SwDependency::BufferDepType::HostWrite);
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRcsBuffer[i], SwDependency::BufferDepType::TransferWrite);
         staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRisIndicesBuffer[i], SwDependency::BufferDepType::TransferWrite);
     }
     mScene.insertPass(SwPass::Type::LightingShadowReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.fillBuffer(mResources.mActiveLightsBuffer.getHandle(), 0, vk::WholeSize, 0);
+
+        vk::BufferCopy rcsCopy{};
+        rcsCopy.srcOffset = 0;
+        rcsCopy.dstOffset = 0;
+        rcsCopy.size = mResources.mShadowRcs.size() * sizeof(SwRenderCommand);
+        if (rcsCopy.size == 0) return;
+        Resources::sShadowRcsStaging.copyFrom(cmd, mResources.mShadowRcs.data(), rcsCopy.size);
+
         for (std::uint32_t i = 0; i < MAX_ACTIVE_LIGHTS; i++) {
-            for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask)) {
-                for (auto rc : batch.getRcs()) {
-                    rc.mRiCount = 0;
-                    mResources.mShadowRcs.emplace_back(rc);
-                }
-            }
-            mResources.mShadowRcsBuffer[i].copyFromUnchecked(mResources.mShadowRcs.data(), mResources.mShadowRcs.size() * sizeof(SwRenderCommand));
             cmd.fillBuffer(mResources.mShadowRisIndicesBuffer[i].getHandle(), 0, vk::WholeSize, 0);
-            // TODO fill the mShadowRcs vector whenever generateRcandRis is called
-            // TODO create a static staging buffer for mShadowRcsBuffer
+            mResources.mShadowRcsBuffer[i].copyFrom(cmd, Resources::sShadowRcsStaging, rcsCopy);
             // TODO create a similar reset shader just resetting mRiCount to 0
         }
     });
@@ -228,6 +234,14 @@ void SwLighting::System::initializePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     mScene.insertPass(SwPass::Type::LightingShadowDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {});
     staticDeps.clear();
+}
+
+void SwLighting::System::regenerateShadowRcs() {
+    mResources.mShadowRcs.clear();
+    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask)) {
+        const std::vector<SwRenderCommand>& rcs = batch.getRcs();
+        mResources.mShadowRcs.insert(mResources.mShadowRcs.end(), rcs.begin(), rcs.end());
+    }
 }
 
 void SwLighting::System::refreshDynamicDependencies() {}
@@ -304,7 +318,7 @@ const vk::DeviceAddress rcsBase = mResources.mShadowRcsBuffer[mapIndex].getDevic
 SwGraphicsPipelineBundle* bound = nullptr;
 for (const ShadowBatch& shadowBatch : mResources.mShadowBatches) {
 SwGraphicsPipelineBundle& pipeline =
-shadowBatch.mMasked ? mResources.mShadowDrawMaskedPipelineBundle : mResources.mShadowDrawOpaqueTransparentPipelineBundle;
+shadowBatch.mMasked ? mResources.mShadowDrawMaskedPipelineBundle : mResources.mShadowDrawOpaquePipelineBundle;
 if (bound != &pipeline) {
 cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
 bound = &pipeline;
