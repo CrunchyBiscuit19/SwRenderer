@@ -34,6 +34,11 @@ namespace SwLighting {
         public SwLighting::ActiveLights* mActiveLightsBuffer;
     };
 
+    public struct ShadowResetPC {
+        public SwBatch::RenderCommand* mShadowRcsBuffer;
+        public uint mShadowRcsLimit;
+    };
+
     public struct ShadowCullPC {
         public SwBatch::RenderCommand* mShadowRcsBuffer;
         public SwBatch::RenderItem* mShadowRisBuffer;

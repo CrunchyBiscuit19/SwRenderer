@@ -128,6 +128,11 @@ void SwLighting::System::initializeResources() {
         "ActiveLightsSelectionPipeline", {activeLightsSelectionShader.getHandle(), mResources.mActiveLightsSelectionPipelineLayout.getHandle()}
     );
 
+    mResources.mShadowResetPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowResetPipelineLayout", nullptr, SwLighting::ShadowResetPC::getRange());
+    SwShader resetShader = SwShaderFactory::createShader("ShadowResetShaderModule", SwLighting::SHADOW_RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mShadowResetPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline("ShadowResetPipeline", {resetShader.getHandle(), mResources.mShadowResetPipelineLayout.getHandle()});
+
     mResources.mShadowCullPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowCullPipelineLayout", nullptr, SwLighting::ShadowCullPC::getRange());
     SwShader cullShader = SwShaderFactory::createShader("ShadowCullShaderModule", SwLighting::SHADOW_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowCullPipelineBundle =
@@ -167,23 +172,25 @@ void SwLighting::System::initializePasses() {
     // Shadows Reset
     staticDeps.mWriteBuffers.emplace_back(&mResources.mActiveLightsBuffer, SwDependency::BufferDepType::TransferWrite);
     for (std::uint32_t i = 0; i < MAX_ACTIVE_LIGHTS; i++) {
-        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRcsBuffer[i], SwDependency::BufferDepType::TransferWrite);
+        staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRcsBuffer[i], SwDependency::BufferDepType::ComputeStorageWrite);
         staticDeps.mWriteBuffers.emplace_back(&mResources.mShadowRisIndicesBuffer[i], SwDependency::BufferDepType::TransferWrite);
     }
     mScene.insertPass(SwPass::Type::LightingShadowReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.fillBuffer(mResources.mActiveLightsBuffer.getHandle(), 0, vk::WholeSize, 0);
-
-        vk::BufferCopy rcsCopy{};
-        rcsCopy.srcOffset = 0;
-        rcsCopy.dstOffset = 0;
-        rcsCopy.size = mResources.mShadowRcs.size() * sizeof(SwRenderCommand);
-        if (rcsCopy.size == 0) return;
-        Resources::sShadowRcsStaging.copyFrom(cmd, mResources.mShadowRcs.data(), rcsCopy.size);
-
         for (std::uint32_t i = 0; i < MAX_ACTIVE_LIGHTS; i++) {
             cmd.fillBuffer(mResources.mShadowRisIndicesBuffer[i].getHandle(), 0, vk::WholeSize, 0);
-            mResources.mShadowRcsBuffer[i].copyFrom(cmd, Resources::sShadowRcsStaging, rcsCopy);
-            // TODO create a similar reset shader just resetting mRiCount to 0
+        }
+
+        const std::uint32_t rcsCount = static_cast<std::uint32_t>(mResources.mShadowRcs.size());
+        if (rcsCount == 0) return;
+
+        auto& resetPipeline = mResources.mShadowResetPipelineBundle;
+        cmd.bindPipeline(resetPipeline.getBindPoint(), resetPipeline.getPipelineHandle());
+        for (std::uint32_t i = 0; i < MAX_ACTIVE_LIGHTS; i++) {
+            mResources.mShadowResetPc.mShadowRcsBuffer = mResources.mShadowRcsBuffer[i].getDeviceAddress().value();
+            mResources.mShadowResetPc.mShadowRcsLimit = rcsCount;
+            cmd.pushConstants<SwLighting::ShadowResetPC>(resetPipeline.getLayoutHandle(), SwLighting::ShadowResetPC::sStages, 0, mResources.mShadowResetPc);
+            cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }
     });
     staticDeps.clear();
@@ -242,6 +249,20 @@ void SwLighting::System::regenerateShadowRcs() {
         const std::vector<SwRenderCommand>& rcs = batch.getRcs();
         mResources.mShadowRcs.insert(mResources.mShadowRcs.end(), rcs.begin(), rcs.end());
     }
+
+    vk::BufferCopy rcsCopy{};
+    rcsCopy.srcOffset = 0;
+    rcsCopy.dstOffset = 0;
+    rcsCopy.size = mResources.mShadowRcs.size() * sizeof(SwRenderCommand);
+    if (rcsCopy.size == 0) return;
+
+    // The command template is uploaded once per RCS change; the per-frame reset pass only rezeroes mRiCount.
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, rcsCopy](vk::CommandBuffer cmd) {
+        Resources::sShadowRcsStaging.copyFrom(cmd, mResources.mShadowRcs.data(), rcsCopy.size);
+        for (std::uint32_t i = 0; i < MAX_ACTIVE_LIGHTS; i++) {
+            mResources.mShadowRcsBuffer[i].copyFrom(cmd, Resources::sShadowRcsStaging, rcsCopy);
+        }
+    });
 }
 
 void SwLighting::System::refreshDynamicDependencies() {}

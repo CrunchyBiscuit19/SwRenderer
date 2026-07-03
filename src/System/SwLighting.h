@@ -18,6 +18,7 @@ class SwInstance;
 namespace SwLighting {
 static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Lighting"};
 static const std::filesystem::path ACTIVE_LIGHTS_SELECTION_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwActiveLightsSelection.comp.spv"};
+static const std::filesystem::path SHADOW_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowReset.comp.spv"};
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowDraw.vert.spv"};
 static constexpr std::string_view SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
@@ -48,6 +49,13 @@ struct ActiveLightsSelectionPC : SwPC<ActiveLightsSelectionPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mActiveLightsBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct ShadowResetPC : SwPC<ShadowResetPC> {
+    vk::DeviceAddress mShadowRcsBuffer;
+    std::uint32_t mShadowRcsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -103,6 +111,10 @@ struct Resources {
     ActiveLightsSelectionPC mActiveLightsSelectionPc;
     SwPipelineLayout mActiveLightsSelectionPipelineLayout;
     SwComputePipelineBundle mActiveLightsSelectionPipelineBundle;
+
+    ShadowResetPC mShadowResetPc;
+    SwPipelineLayout mShadowResetPipelineLayout;
+    SwComputePipelineBundle mShadowResetPipelineBundle;
 
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
