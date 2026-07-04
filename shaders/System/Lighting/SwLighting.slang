@@ -13,30 +13,42 @@ import System.BRDF.SwBRDF;
 import System.IBL.SwIBL;
 
 namespace SwLighting {
+  public struct Cluster {};
+
     public static const uint MAX_SHADOW_LIGHTS = 16;
     public static const uint MAX_SHADOW_CUBE_LIGHTS = 8;
     public static const uint SHADOW_MAP_SIZE = 1024;
-    public static const uint MAX_ACTIVE_LIGHTS = 16;
+    public static const uint MAX_NUM_SHADOW_CASTERS = 16;
     public static const float SHADOW_SPOT_NEAR = 0.05f;
     public static const float SHADOW_SPOT_DEFAULT_RANGE = 60.f;
 
-    public struct ActiveLights {
-        public uint mCount;
-        public uint mActiveLightIndices[MAX_SHADOW_LIGHTS];
-        public SwFrustum::Data mActiveLightFrustums[MAX_SHADOW_LIGHTS];
-    };
-
-    public struct ActiveLightsSelectionPC {
-        public SwCamera::Data* mCameraBuffer;
-        public SwLight::Data* mSceneLightsBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
-        public SwLighting::ActiveLights* mActiveLightsBuffer;
+    public struct VisibleLights {
+        public uint mLitCount;
+        public uint* mLitIndices;
+        public uint mShadowCastCount;
+        public uint mShadowCastIndices[MAX_NUM_SHADOW_CASTERS];
     };
 
     public struct ShadowResetPC {
         public SwBatch::RenderCommand* mShadowDrawRcsBuffer;
         public uint mShadowRcsLimit;
+    };
+
+    public struct BuildClustersPC {
+        public Cluster* mClustersBuffer;
+    };
+
+    public struct MarkActiveClustersPC {
+        public uint* mActiveClustersIndicesBuffer;
+    };
+
+    public struct LightsCullPC {
+        public SwCamera::Data* mCameraBuffer;
+        public SwLight::Data* mSceneLightsBuffer;
+        public SwNode::Transform* mSceneNodeTransformsBuffer;
+        public SwInstance::Data* mSceneInstancesBuffer;
+        public SwLighting::VisibleLights* mVisibleLightsBuffer;
+        public uint* mActiveClustersIndicesBuffer;
     };
 
     public struct ShadowCullPC {
@@ -47,7 +59,7 @@ namespace SwLighting {
         public SwMesh::Bounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public SwLighting::ActiveLights* mActiveLightsBuffer;
+        public SwLighting::VisibleLights* mVisibleLightsBuffer;
         public uint mShadowRisLimit;
         public uint mLightIndex;
     };
@@ -59,7 +71,7 @@ namespace SwLighting {
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
-        public SwLighting::ActiveLights* mActiveLightsBuffer;
+        public SwLighting::VisibleLights* mVisibleLightsBuffer;
         public uint mLightIndex;
     };
 
@@ -124,23 +136,23 @@ namespace SwLighting {
 
     // Full PBR shading: image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
     public float3 shadeLit(
-        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, SwLighting::ActiveLights* activeLights,
+        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, SwLighting::VisibleLights* visibleLights,
         SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap,
         Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS],
         TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS], SamplerComparisonState shadowSampler
     ) {
         float3 color = iblIntensity *
                        SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
-        for (uint i = 0; i < activeLights->mCount; i++) {
-            SwLight::Data light = lights[activeLights->mActiveLightIndices[i]];
+        for (uint i = 0; i < visibleLights->mLitCount; i++) {
+            SwLight::Data light = lights[visibleLights->mLitIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
             switch (light.mType) {
                 case SwLight::Type::Spot:
                 case SwLight::Type::Directional:
-                    contribution *= shadowFactor2D(i, worldPos, activeLights, shadow2DMaps, shadowSampler);
+                    contribution *= shadowFactor2D(i, worldPos, visibleLights, shadow2DMaps, shadowSampler);
                     break;
                 case SwLight::Type::Point:
-                    contribution *= shadowFactorCube(i, light, worldPos, activeLights, shadowCubeMaps, shadowSampler);
+                    contribution *= shadowFactorCube(i, light, worldPos, visibleLights, shadowCubeMaps, shadowSampler);
                     break;
             }
             color += contribution;
@@ -174,7 +186,7 @@ namespace SwLighting {
     }
 
     public float shadowFactor2D(
-        uint slot, float3 worldPos, SwLighting::ActiveLights* activeLights, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS],
+        uint slot, float3 worldPos, SwLighting::VisibleLights* visibleLights, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS],
         SamplerComparisonState shadowSampler
     ) {
         const bool shadow2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
@@ -211,7 +223,7 @@ namespace SwLighting {
     }
 
     public float shadowFactorCube(
-        uint slot, SwLight::Data light, float3 worldPos, SwLighting::ActiveLights* activeLights, TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS],
+        uint slot, SwLight::Data light, float3 worldPos, SwLighting::VisibleLights* visibleLights, TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS],
         SamplerComparisonState shadowSampler
     ) {
         return 1.f; // TODO actually implement it

@@ -679,7 +679,7 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingActiveLightsSelection]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingLightsCull]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowCull]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowDraw]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);

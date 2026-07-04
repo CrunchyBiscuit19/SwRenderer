@@ -17,14 +17,16 @@ class SwInstance;
 
 namespace SwLighting {
 static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Lighting"};
-static const std::filesystem::path ACTIVE_LIGHTS_SELECTION_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwActiveLightsSelection.comp.spv"};
 static const std::filesystem::path SHADOW_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowReset.comp.spv"};
+static const std::filesystem::path BUILD_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwBuildClusters.comp.spv"};
+static const std::filesystem::path MARK_ACTIVE_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwMarkActiveClusters.comp.spv"};
+static const std::filesystem::path LIGHTS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightsCull.comp.spv"};
 static const std::filesystem::path SHADOW_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowCull.comp.spv"};
 static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwShadowDraw.vert.spv"};
 static constexpr std::string_view SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
-static constexpr std::uint32_t MAX_ACTIVE_LIGHTS{16};
+static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
 constexpr std::uint32_t SHADOW_INITIAL_RENDER_COMMANDS{1 << 10};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};
@@ -37,25 +39,36 @@ constexpr float SHADOW_DIRECTIONAL_FAR{160.f};
 constexpr float SHADOW_SPOT_NEAR{0.05f};
 constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
 
-struct ActiveLights {
-    std::uint32_t mCount{0};
-    std::array<std::uint32_t, MAX_ACTIVE_LIGHTS> mActiveLightIndices{};
-    std::array<SwFrustum, MAX_ACTIVE_LIGHTS> mActiveLightFrustums{};
-};
+constexpr std::uint32_t INITIAL_ACTIVE_LIGHTS_BUFFER_SIZE{1 << 10};
 
-struct ActiveLightsSelectionPC : SwPC<ActiveLightsSelectionPC> {
-    vk::DeviceAddress mCameraBuffer;
-    vk::DeviceAddress mSceneLightsBuffer;
-    vk::DeviceAddress mSceneNodeTransformsBuffer;
-    vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mActiveLightsBuffer;
-
-    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
-};
+// LightingShadowReset, LightingBuildClusters, LightingMarkActiveClusters, LightingLightsCull, LightingShadowCull, LightingShadowDraw,
 
 struct ShadowResetPC : SwPC<ShadowResetPC> {
     vk::DeviceAddress mShadowDrawRcsBuffer;
     std::uint32_t mShadowRcsLimit;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct BuildClustersPC : SwPC<BuildClustersPC> {
+    vk::DeviceAddress mClustersBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct MarkActiveClustersPC : SwPC<MarkActiveClustersPC> {
+    vk::DeviceAddress mActiveClustersIndicesBuffer;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct LightsCullPC : SwPC<LightsCullPC> {
+    vk::DeviceAddress mCameraBuffer;
+    vk::DeviceAddress mSceneLightsBuffer;
+    vk::DeviceAddress mSceneNodeTransformsBuffer;
+    vk::DeviceAddress mSceneInstancesBuffer;
+    vk::DeviceAddress mVisibleLightsBuffer;
+    vk::DeviceAddress mActiveClustersIndicesBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -68,9 +81,8 @@ struct ShadowCullPC : SwPC<ShadowCullPC> {
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mActiveLightsBuffer; 
+    vk::DeviceAddress mVisibleLightsBuffer; 
     std::uint32_t mShadowRisLimit;
-    std::uint32_t mLightIndex;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -83,7 +95,7 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
-    vk::DeviceAddress mActiveLightsBuffer;
+    vk::DeviceAddress mVisibleLightsBuffer;
     std::uint32_t mLightIndex;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
@@ -96,25 +108,33 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    SwAllocatedBuffer mActiveLightsBuffer; 
+    SwAllocatedBuffer mVisibleLightsBuffer; 
 
-    std::array<SwDepthImage2D, MAX_ACTIVE_LIGHTS> mShadow2DMaps;
-    std::array<SwDepthImageCubemap, MAX_ACTIVE_LIGHTS> mShadowCubeMaps;
+    std::array<SwDepthImage2D, MAX_NUM_SHADOW_CASTERS> mShadow2DMaps;
+    std::array<SwDepthImageCubemap, MAX_NUM_SHADOW_CASTERS> mShadowCubeMaps;
     SwSampler mShadowMapsSampler;
     SwDescriptorSet mShadowMapsDescriptorSet;
 
-    std::vector<SwRenderCommand> mShadowRcs;
-    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowDrawRcsBuffer; 
-    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowDrawRisBuffer; 
-    std::array<SwAllocatedBuffer, MAX_ACTIVE_LIGHTS> mShadowDrawRisIndicesBuffer; 
-
-    ActiveLightsSelectionPC mActiveLightsSelectionPc;
-    SwPipelineLayout mActiveLightsSelectionPipelineLayout;
-    SwComputePipelineBundle mActiveLightsSelectionPipelineBundle;
+    std::vector<SwRenderCommand> mInitialShadowDrawRcs;
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRcsBuffer; 
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisBuffer; 
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisIndicesBuffer; 
 
     ShadowResetPC mShadowResetPc;
     SwPipelineLayout mShadowResetPipelineLayout;
     SwComputePipelineBundle mShadowResetPipelineBundle;
+
+    BuildClustersPC mBuildClustersPc;
+    SwPipelineLayout mBuildClustersPipelineLayout;
+    SwComputePipelineBundle mBuildClustersPipelineBundle;
+
+    MarkActiveClustersPC mMarkActiveClustersPc;
+    SwPipelineLayout mMarkActiveClustersPipelineLayout;
+    SwComputePipelineBundle mMarkActiveClustersPipelineBundle;
+
+    LightsCullPC mLightsCullPc;
+    SwPipelineLayout mLightsCullPipelineLayout;
+    SwComputePipelineBundle mLightsCullPipelineBundle;
 
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
@@ -142,7 +162,7 @@ public:
     void regenerateShadowRcs();
 
     inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
-    inline SwAllocatedBuffer& getActiveLightsBuffer() { return mResources.mActiveLightsBuffer; }
+    inline SwAllocatedBuffer& getVisibleLightsBuffer() { return mResources.mVisibleLightsBuffer; }
 
     inline Resources& getResources() { return mResources; }
 };

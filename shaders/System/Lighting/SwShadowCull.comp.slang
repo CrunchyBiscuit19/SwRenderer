@@ -76,7 +76,7 @@ void main(SwLighting::CSInput in) {
     float4x4 riInstanceTransform = shadowCullPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
-    uint sceneLightsIndex = shadowCullPc.mActiveLightsBuffer->mActiveLightIndices[shadowCullPc.mLightIndex];
+    uint sceneLightsIndex = shadowCullPc.mVisibleLightsBuffer->mLitIndices[shadowCullPc.mLightIndex];
     SwLight::Data* light = &shadowCullPc.mSceneLightsBuffer[sceneLightsIndex];
     float4x4 lightNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[light->mNodeTransformIndex]; 
     float4x4 lightInstanceTransform = shadowCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
@@ -88,8 +88,8 @@ void main(SwLighting::CSInput in) {
 
     bool visible = true;
     if (light->mType == SwLight::Type::Spot) {
-        SwFrustum::Data frustumData = shadowCullPc.mActiveLightsBuffer->mActiveLightFrustums[shadowCullPc.mLightIndex];
-        visible = frustumTest(frustumData, corners);
+        //SwFrustum::Data frustumData = shadowCullPc.mVisibleLightsBuffer->mActiveLightFrustums[shadowCullPc.mLightIndex];
+        //visible = frustumTest(frustumData, corners);
     }
     if (visible && light->mType != SwLight::Type::Directional) {
         visible = rangeTest(corners, lightApex, light->mRange);

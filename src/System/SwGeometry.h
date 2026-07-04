@@ -18,7 +18,7 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mDrawRcsBuffer;
     vk::DeviceAddress mCameraBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
-    vk::DeviceAddress mActiveLightsBuffer;
+    vk::DeviceAddress mVisibleLightsBuffer;
     float mMaxPrefilterMip;       // highest mip index of the SwIBL specular prefilter chain
     float mIblIntensity;          // scales the image-based ambient term (GUI-controlled)
     std::uint32_t mIblComponents; // IBL diffuse / specular bit mask (GUI-controlled)

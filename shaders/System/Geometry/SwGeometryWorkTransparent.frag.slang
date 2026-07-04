@@ -42,7 +42,7 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float3 view = normalize(workPc.mCameraBuffer->mWorldPos - in.mWorldPos);
 
     float3 litColor = SwLighting::shadeLit(
-        baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mActiveLightsBuffer, workPc.mSceneLightsBuffer,
+        baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mVisibleLightsBuffer, workPc.mSceneLightsBuffer,
         workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
         workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
     );
