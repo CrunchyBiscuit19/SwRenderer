@@ -186,6 +186,7 @@ SwRenderer::SwRenderer()
         &mDescriptorAllocator,
         &mSwapchain,
         &mImmSubmit,
+        &mStagingRing,
         &mEvents,
         &mScene,
         &mStats,
@@ -193,6 +194,7 @@ SwRenderer::SwRenderer()
     );
 
     mImmSubmit.initialize();
+    mStagingRing.initialize(SwStagingRing::INITIAL_CAPACITY);
 
     SwSamplerFactory::init();
     SwImageFactory::init();

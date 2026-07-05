@@ -55,9 +55,6 @@ private:
     glm::vec3 mBaseDirection{0.f, 0.f, -1.f};
 
 public:
-    static constexpr std::uint32_t LIGHTS_STAGING_BUFFER_SIZE{1 << 16};
-    static SwStagingBuffer sLightsStaging;
-
     SwLight();
     SwLight(Params params);
 

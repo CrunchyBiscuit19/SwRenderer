@@ -38,31 +38,10 @@ void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& 
     vk::Result result = SwRenderer::sRendererContext.mDevice->waitForFences(mFence.getHandle(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
 }
 
-void SwImmSubmit::queuedSubmit() {
-    SwRenderer::sRendererContext.mDevice->resetFences(mFence.getHandle());
-
-    mCommandBuffer.reset();
-
-    mCommandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+void SwImmSubmit::flushInto(vk::CommandBuffer cmd) {
     for (auto& callback : mCallbacks) {
-        callback(mCommandBuffer.getHandle());
+        callback(cmd);
     }
-    mCommandBuffer.end();
-
-    vk::CommandBufferSubmitInfo commandBufferSubmitInfo = mCommandBuffer.generateSubmitInfo();
-
-    vk::SubmitInfo2 submitInfo = {};
-    submitInfo.pNext = nullptr;
-    submitInfo.waitSemaphoreInfoCount = 0;
-    submitInfo.pWaitSemaphoreInfos = nullptr;
-    submitInfo.signalSemaphoreInfoCount = 0;
-    submitInfo.pSignalSemaphoreInfos = nullptr;
-    submitInfo.commandBufferInfoCount = 1;
-    submitInfo.pCommandBufferInfos = &commandBufferSubmitInfo;
-
-    SwRenderer::sRendererContext.mGraphicsQueue->submit2(submitInfo, mFence.getHandle());
-    vk::Result result = SwRenderer::sRendererContext.mDevice->waitForFences(mFence.getHandle(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
-
     mCallbacks.clear();
 }
 

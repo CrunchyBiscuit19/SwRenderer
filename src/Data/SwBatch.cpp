@@ -11,8 +11,6 @@ SwBatch::SwBatch(SwPrimitive& primitive) {
 
     const std::uint32_t batchId = mGraphicsPipelineBundle->getID();
 
-    mRcsStaging = SwBufferFactory::createStagingBuffer(fmt::format("Batch{:<03}RcsStagingBuffer", batchId), RENDER_COMMANDS_INITIAL_BUFFER_SIZE);
-
     mInitialRcsBuffer = SwBufferFactory::createAllocatedBuffer(
         fmt::format("Batch{:<03}InitialRcsBuffer", batchId),
         vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
@@ -45,7 +43,6 @@ SwBatch::SwBatch(SwPrimitive& primitive) {
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, sizeof(uint32_t), true
     );
 
-    mRisStaging = SwBufferFactory::createStagingBuffer(fmt::format("Batch{:<03}RisStagingBuffer", batchId), RENDER_ITEMS_INITIAL_BUFFER_SIZE);
     mRisBuffer = SwBufferFactory::createAllocatedBuffer(
         fmt::format("Batch{:<03}RisBuffer", batchId), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         RENDER_ITEMS_INITIAL_BUFFER_SIZE, true

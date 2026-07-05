@@ -57,6 +57,7 @@ DEFINE_VULKAN_RAII_RESOURCE_INFO(vk::raii::Semaphore, VkSemaphore, vk::ObjectTyp
 DEFINE_VULKAN_RAII_RESOURCE_INFO(vk::raii::Sampler, VkSampler, vk::ObjectType::eSampler)
 
 class SwImmSubmit;
+class SwStagingRing;
 class SwEvents;
 class SwCamera;
 class SwSwapchain;
@@ -74,6 +75,7 @@ struct SwRendererContext {
     SwDescriptorAllocator* mDescriptorAllocator;
     SwSwapchain* mSwapchain;
     SwImmSubmit* mImmSubmit;
+    SwStagingRing* mStagingRing;
     SwEvents* mEvents;
     SwScene* mScene;
     SwStats* mStats;
@@ -82,8 +84,8 @@ struct SwRendererContext {
     SwRendererContext() = default;
     SwRendererContext(
         vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
-        vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwEvents* events, SwScene* scene,
-        SwStats* stats, SwLogger* logger
+        vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwStagingRing* stagingRing,
+        SwEvents* events, SwScene* scene, SwStats* stats, SwLogger* logger
     );
 
     template <typename T>

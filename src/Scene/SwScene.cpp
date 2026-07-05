@@ -2,6 +2,7 @@
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
+#include <Renderer/SwStagingRing.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
@@ -327,16 +328,16 @@ void SwScene::regenerateRcsAndRis() {
         RisCopy.size = batch.getRis().size() * sizeof(SwRenderItem);
 
         SwRenderer::sRendererContext.mImmSubmit->addCallback([&batch, RcsCopy, RisCopy](vk::CommandBuffer cmd) {
-            batch.getRcsStaging().copyFrom(cmd, batch.getRcs().data(), RcsCopy.size);
+            SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
+
             cmd.fillBuffer(batch.getInitialRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
             batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-            batch.getInitialRcsBuffer().copyFrom(cmd, batch.getRcsStaging(), RcsCopy);
+            stagingRing->upload(cmd, batch.getInitialRcsBuffer(), batch.getRcs().data(), RcsCopy.size);
             batch.getInitialRcsBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
-            batch.getRisStaging().copyFrom(cmd, batch.getRis().data(), RisCopy.size);
             cmd.fillBuffer(batch.getRisBuffer().getHandle(), 0, vk::WholeSize, 0);
             batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-            batch.getRisBuffer().copyFrom(cmd, batch.getRisStaging(), RisCopy);
+            stagingRing->upload(cmd, batch.getRisBuffer(), batch.getRis().data(), RisCopy.size);
             batch.getRisBuffer().emitBarrier(cmd, SwDependency::BufferDepType::ComputeStorageRead);
 
             batch.getEarlyRcsBuffer().ensureCapacity(cmd, RcsCopy.size);  // At least as big as mInitialRcsBuffer
@@ -546,8 +547,7 @@ void SwScene::reloadSceneLightsBuffer() {
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this, lightData = std::move(lightData), lightsCopy](vk::CommandBuffer cmd) {
         if (lightsCopy.size == 0) return;
-        SwLight::sLightsStaging.copyFrom(cmd, lightData.data(), lightsCopy.size);
-        mSceneLightsBuffer.copyFrom(cmd, SwLight::sLightsStaging, lightsCopy);
+        SwRenderer::sRendererContext.mStagingRing->upload(cmd, mSceneLightsBuffer, lightData.data(), lightsCopy.size);
     });
 }
 
@@ -642,8 +642,6 @@ void SwScene::perFrameUpdate() {
     mGeometry.refresh();
     mPostProcess.refresh();
 
-    SwRenderer::sRendererContext.mImmSubmit->queuedSubmit();
-
     const auto end = std::chrono::system_clock::now();
     const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
     SwRenderer::sRendererContext.mStats->mSceneUpdateTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
@@ -657,6 +655,7 @@ void SwScene::draw() {
     auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, 1e9);
     SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getHandle());
     SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    SwRenderer::sRendererContext.mStagingRing->tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
     SwRenderer::sRendererContext.mSwapchain->acquireNextImage(1e9);
 
     refresh();
@@ -664,6 +663,10 @@ void SwScene::draw() {
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+
+    // Fold the accumulated per-frame uploads into the front of the render command buffer so they run
+    // before the passes that consume them, under the same submission and render fence.
+    SwRenderer::sRendererContext.mImmSubmit->flushInto(commandBuffer.getHandle());
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
     if (mIBL.isActive() && mIBL.isFileSelected()) {

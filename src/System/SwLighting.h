@@ -103,7 +103,6 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
 
 struct Resources {
     static SwDescriptorLayout sShadowConsumeDescriptorLayout;
-    static SwStagingBuffer sShadowRcsStaging;
 
     static void init();
     static void cleanup();

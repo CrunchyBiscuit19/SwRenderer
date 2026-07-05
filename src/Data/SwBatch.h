@@ -31,7 +31,6 @@ private:
     bool mDoubleSided{false};
 
     std::vector<SwRenderCommand> mRcs;
-    SwStagingBuffer mRcsStaging;
     SwAllocatedBuffer mInitialRcsBuffer;
     SwAllocatedBuffer mEarlyRcsBuffer; // Compacted early draw list 
     SwAllocatedBuffer mEarlyRcsCount;   
@@ -39,7 +38,6 @@ private:
     SwAllocatedBuffer mLateRcsCount;
 
     std::vector<SwRenderItem> mRis;
-    SwStagingBuffer mRisStaging;
     SwAllocatedBuffer mRisBuffer;
 
 public:
@@ -61,7 +59,6 @@ public:
     inline bool isDoubleSided() const { return mDoubleSided; }
     
     inline std::vector<SwRenderCommand>& getRcs() { return mRcs; }
-    inline SwStagingBuffer& getRcsStaging() { return mRcsStaging; }
     inline SwAllocatedBuffer& getInitialRcsBuffer() { return mInitialRcsBuffer; }
     inline SwAllocatedBuffer& getEarlyRcsBuffer() { return mEarlyRcsBuffer; }
     inline SwAllocatedBuffer& getEarlyRcsCount() { return mEarlyRcsCount; }
@@ -71,6 +68,5 @@ public:
     inline SwAllocatedBuffer& getFinalRcsCount() { return mLateRcsCount; }  // Return whatever is the last one for future-proofing
 
     inline std::vector<SwRenderItem>& getRis() { return mRis; }
-    inline SwStagingBuffer& getRisStaging() { return mRisStaging; }
     inline SwAllocatedBuffer& getRisBuffer() { return mRisBuffer; }
 };

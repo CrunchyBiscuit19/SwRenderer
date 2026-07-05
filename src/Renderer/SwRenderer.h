@@ -4,6 +4,7 @@
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwLogger.h>
 #include <Renderer/SwRendererContext.h>
+#include <Renderer/SwStagingRing.h>
 #include <Scene/SwScene.h>
 #include <Renderer/SwStats.h>
 #include <Renderer/SwSwapchain.h>
@@ -55,6 +56,7 @@ private:
     bool mStopRendering{false};
 
     SwImmSubmit mImmSubmit;
+    SwStagingRing mStagingRing;
     SwSwapchain mSwapchain;
     SwStats mStats;
     SwEvents mEvents;

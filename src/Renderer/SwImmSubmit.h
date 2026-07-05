@@ -25,7 +25,9 @@ public:
 
     void individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& function);
 
-    void queuedSubmit();
+    // Runs and clears the accumulated callbacks against the given command buffer without submitting,
+    // so per-frame uploads can be folded into the frame's render command buffer.
+    void flushInto(vk::CommandBuffer cmd);
 
     void addCallback(std::function<void(vk::CommandBuffer cmd)>&& function);
 };

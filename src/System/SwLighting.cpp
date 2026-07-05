@@ -1,5 +1,6 @@
 #include <Renderer/SwHelper.h>
 #include <Renderer/SwRenderer.h>
+#include <Renderer/SwStagingRing.h>
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
@@ -12,7 +13,6 @@
 #include <utility>
 
 SwDescriptorLayout SwLighting::Resources::sShadowConsumeDescriptorLayout{};
-SwStagingBuffer SwLighting::Resources::sShadowRcsStaging{};
 
 void SwLighting::Resources::init() {
     sShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -24,13 +24,10 @@ void SwLighting::Resources::init() {
         },
         vk::ShaderStageFlagBits::eFragment
     );
-
-    sShadowRcsStaging = SwBufferFactory::createStagingBuffer("ShadowRcsStagingBuffer", SHADOW_INITIAL_RENDER_COMMANDS * sizeof(SwRenderCommand));
 }
 
 void SwLighting::Resources::cleanup() {
     sShadowConsumeDescriptorLayout.destroy();
-    sShadowRcsStaging.destroy();
 }
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
@@ -184,6 +181,8 @@ void SwLighting::System::initializePasses() {
         const std::uint32_t rcsCount = static_cast<std::uint32_t>(mResources.mInitialShadowDrawRcs.size());
         if (rcsCount == 0) return;
 
+
+
         auto& resetPipeline = mResources.mShadowResetPipelineBundle;
         cmd.bindPipeline(resetPipeline.getBindPoint(), resetPipeline.getPipelineHandle());
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
@@ -261,9 +260,9 @@ void SwLighting::System::regenerateShadowRcs() {
     if (rcsCopy.size == 0) return;
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this, rcsCopy](vk::CommandBuffer cmd) {
-        Resources::sShadowRcsStaging.copyFrom(cmd, mResources.mInitialShadowDrawRcs.data(), rcsCopy.size);
+        SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            mResources.mShadowDrawRcsBuffer[i].copyFrom(cmd, Resources::sShadowRcsStaging, rcsCopy);
+            stagingRing->upload(cmd, mResources.mShadowDrawRcsBuffer[i], mResources.mInitialShadowDrawRcs.data(), rcsCopy.size);
         }
     });
 }

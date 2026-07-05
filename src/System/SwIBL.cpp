@@ -234,7 +234,7 @@ void SwIBL::System::initializeResources() {
         "SkyboxDrawVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, skyboxVertexSize, true
     );
 
-    SwStagingBuffer skyboxVertexStagingBuffer = SwBufferFactory::createStagingBuffer("SkyboxDrawVertexStagingBuffer", skyboxVertexSize);
+    SwStagingBuffer skyboxVertexStaging = SwBufferFactory::createStagingBuffer("SkyboxDrawVertexStagingBuffer", skyboxVertexSize);
 
     vk::BufferCopy skyboxVertexCopy{};
     skyboxVertexCopy.dstOffset = 0;
@@ -242,8 +242,8 @@ void SwIBL::System::initializeResources() {
     skyboxVertexCopy.size = skyboxVertexSize;
 
     SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        skyboxVertexStagingBuffer.copyFromUnchecked(mResources.mDrawVertices.data(), skyboxVertexCopy.size);
-        mResources.mDrawVertexBuffer.copyFrom(cmd, skyboxVertexStagingBuffer, skyboxVertexCopy);
+        skyboxVertexStaging.copyFromUnchecked(mResources.mDrawVertices.data(), skyboxVertexCopy.size);
+        mResources.mDrawVertexBuffer.copyFrom(cmd, skyboxVertexStaging, skyboxVertexCopy);
     });
 
     reinitializeOnUpdate(SKYBOX_DEFAULT_HDR_PATH);

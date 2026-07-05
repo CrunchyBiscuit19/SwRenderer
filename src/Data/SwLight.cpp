@@ -1,7 +1,6 @@
 #include <Data/SwLight.h>
 
 std::uint32_t SwLight::sLatestLightId{0};
-SwStagingBuffer SwLight::sLightsStaging{};
 
 SwLight::SwLight() : mId(sLatestLightId++) {}
 
@@ -30,6 +29,6 @@ SwLight::Data SwLight::toData() const {
     return d;
 }
 
-void SwLight::init() { sLightsStaging = SwBufferFactory::createStagingBuffer("LightsStagingBuffer", LIGHTS_STAGING_BUFFER_SIZE); }
+void SwLight::init() {}
 
-void SwLight::cleanup() { sLightsStaging.destroy(); }
+void SwLight::cleanup() {}
