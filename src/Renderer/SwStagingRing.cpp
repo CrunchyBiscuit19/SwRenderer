@@ -39,36 +39,38 @@ void SwStagingRing::upload(vk::CommandBuffer cmd, SwBuffer& dst, const void* src
     if (size == 0) {
         return;
     }
+    std::uint64_t uploadSize = alignUp(size, mAlignment);
 
-    size = alignUp(size, mAlignment);
-
-    std::uint64_t start = mHead % mCapacity;
-    std::uint64_t skip = (start + size > mCapacity) ? (mCapacity - start) : 0;
-    std::uint64_t regionEnd = mHead + skip + size;
-
+    std::uint64_t headOffset = mHead % mCapacity;
+    bool skip = (headOffset + uploadSize > mCapacity);
+    std::uint64_t skipSize = skip ? (mCapacity - headOffset) : 0;
+    
+    std::uint64_t regionStart = mHead + skipSize;
+    std::uint64_t regionEnd = mHead + skipSize + uploadSize;
     if (regionEnd - mTail > mCapacity) {
-        grow(size);
-        skip = 0;
-        regionEnd = size;
+        grow(uploadSize);
+        regionStart = 0;
+        regionEnd = uploadSize;
     }
+    mHead = regionEnd;
+    std::uint64_t regionStartOffset = regionStart % mCapacity;
 
-    const std::uint64_t srcOffset = (mHead + skip) % mCapacity;
-
-    mRing.copyFromUnchecked(src, size, srcOffset);
+    mRing.copyFromUnchecked(src, uploadSize, regionStartOffset);
 
     vk::BufferCopy copy{};
-    copy.srcOffset = srcOffset;
+    copy.srcOffset = regionStartOffset;
     copy.dstOffset = dstOffset;
-    copy.size = size;
+    copy.size = uploadSize;
     dst.copyFrom(cmd, mRing, copy);
 
-    mHead = regionEnd;
-    mInFlight.emplace_back(mHead, SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    mInFlight.emplace_back(regionEnd, SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
 }
 
 void SwStagingRing::tick(std::uint64_t currentFrame) {
+    // Reclaim all regions with the current frame.
+    // Keep popping and reassigning tail until the last one sets it as the new tail.
     while (!mInFlight.empty() && currentFrame >= mInFlight.front().mFrame + SwSwapchain::NUM_FRAME_OVERLAP) {
-        mTail = mInFlight.front().mHeadEnd;
+        mTail = mInFlight.front().mEnd;
         mInFlight.pop_front();
     }
 }
