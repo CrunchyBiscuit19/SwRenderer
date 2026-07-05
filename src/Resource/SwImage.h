@@ -298,10 +298,6 @@ private:
         VmaAllocation mAllocation;
     };
 
-    static constexpr std::uint32_t IMAGE_STAGING_BUFFER_SIZE{256 * (1 << 20)};  // 256 MB
-    static SwStagingBuffer sImageStaging;
-
-
     static std::uint32_t getFormatTexelSize(vk::Format format);
 
     static SwImageConstructionInfo prepareImageConstructionInfo(

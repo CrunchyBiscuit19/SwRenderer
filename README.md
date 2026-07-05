@@ -273,9 +273,9 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Staging Ring `SwStagingRing`
 
-* **`SwStagingRing`** — one all-purpose, persistently mapped host-visible buffer sub-allocated as a ring, so streaming CPU data into a device-local buffer is a single `upload(cmd, dst, src, size)` call and the staging is invisible.
+* **`SwStagingRing`** — one all-purpose, persistently mapped host-visible buffer sub-allocated as a ring, so streaming CPU data into a device-local resource is a single `upload(...)` call and the staging is invisible. The `SwBuffer&` overload records a `vkCmdCopyBuffer`, while the `SwImage&` overload transitions the image to transfer-dst optimal and records a `vkCmdCopyBufferToImage` from caller-supplied per-subresource regions (whose `bufferOffset` values are relative to the staged data and shifted by the ring offset internally).
 * Each region is tagged with the frame it was recorded in and reclaimed by `tick(frameNumber)` once that frame retires (the same `NUM_FRAME_OVERLAP` window as `SwBufferFactory`), which makes uploads non-blocking. On overflow the backing buffer grows and the old one is deferred-destroyed until every in-flight copy that still reads it has completed.
-* Used by the per-frame streaming path (batch RCS/RIS, scene lights, shadow render commands). Load-time uploads still stage through `SwImmSubmit`.
+* Used by the per-frame streaming path (batch RCS/RIS, scene lights, shadow render commands) and by image uploads (`SwImageFactory::fillImageData`). Remaining `SwAsset` load-time buffer uploads still stage through `SwImmSubmit`.
 
 ### Logger `SwLogger`
 

@@ -39,8 +39,8 @@ void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& 
 }
 
 void SwImmSubmit::flushInto(vk::CommandBuffer cmd) {
-    for (auto& callback : mCallbacks) {
-        callback(cmd);
+    for (auto& flushIntoCallback : mCallbacks) {
+        flushIntoCallback(cmd);
     }
     mCallbacks.clear();
 }

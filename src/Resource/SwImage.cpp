@@ -1,5 +1,6 @@
 #include <Renderer/SwHelper.h>
 #include <Renderer/SwRenderer.h>
+#include <Renderer/SwStagingRing.h>
 #include <Resource/SwImage.h>
 
 SwImage::SwImage() {}
@@ -492,7 +493,6 @@ void SwDepthImageCubemap::resize(vk::Extent3D newExtent) {
     *this = SwImageFactory::createDepthImageCubemap(mName, nullptr, mMainFormat, newExtent, mUsage, mMipmapped, mClearValue);
 }
 
-SwStagingBuffer SwImageFactory::sImageStaging;
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
 std::uint32_t SwImageFactory::getFormatTexelSize(vk::Format format) {
@@ -613,11 +613,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
     std::uint32_t bytesPerTexel = getFormatTexelSize(image.getMainFormat());
     const size_t faceSize = image.getExtent().depth * image.getExtent().width * image.getExtent().height * bytesPerTexel;
     const size_t dataSize = faceSize * numFaces;
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        sImageStaging.copyFrom(cmd, data, dataSize);
-        sImageStaging.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-        image.emitTransition(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eTransferDstOptimal);
-
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
         std::vector<vk::BufferImageCopy> copyRegions;
         copyRegions.reserve(numFaces);
         for (std::uint32_t face = 0; face < numFaces; face++) {
@@ -633,7 +629,7 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
             copyRegions.emplace_back(copyRegion);
         }
 
-        cmd.copyBufferToImage(sImageStaging.getHandle(), image.getHandle(), vk::ImageLayout::eTransferDstOptimal, copyRegions);
+        SwRenderer::sRendererContext.mStagingRing->upload(cmd, image, data, dataSize, copyRegions);
 
         if (image.isMipmapped()) image.generateMipmaps(cmd);
 
@@ -642,7 +638,6 @@ void SwImageFactory::fillImageData(SwImageType swImageType, const void* data, Sw
 }
 
 void SwImageFactory::init() {
-    sImageStaging = SwBufferFactory::createStagingBuffer("ImageStagingBuffer", IMAGE_STAGING_BUFFER_SIZE);
     constexpr std::uint32_t white = std::byteswap(0xFFFFFFFF);
     sDefaultImages.try_emplace(
         SwDefaultImageOption::White,
@@ -807,5 +802,4 @@ SwDepthImageCubemap SwImageFactory::createDepthImageCubemap(
 
 void SwImageFactory::cleanup() {
     sDefaultImages.clear();
-    sImageStaging.destroy();
 }

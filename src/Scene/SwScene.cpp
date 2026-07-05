@@ -664,8 +664,6 @@ void SwScene::draw() {
     commandBuffer.reset();
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
 
-    // Fold the accumulated per-frame uploads into the front of the render command buffer so they run
-    // before the passes that consume them, under the same submission and render fence.
     SwRenderer::sRendererContext.mImmSubmit->flushInto(commandBuffer.getHandle());
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);

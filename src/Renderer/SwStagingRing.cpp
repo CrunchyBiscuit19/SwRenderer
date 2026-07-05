@@ -1,8 +1,10 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwStagingRing.h>
+#include <Resource/SwImage.h>
 
 #include <algorithm>
 #include <memory>
+#include <vector>
 
 void SwStagingRing::initialize(std::uint64_t capacity) {
     const vk::PhysicalDeviceLimits& limits = SwRenderer::sRendererContext.mChosenGPU->getProperties().limits;
@@ -35,16 +37,13 @@ void SwStagingRing::grow(std::uint64_t requiredSize) {
     mInFlight.clear();
 }
 
-void SwStagingRing::upload(vk::CommandBuffer cmd, SwBuffer& dst, const void* src, std::uint64_t size, std::uint64_t dstOffset) {
-    if (size == 0) {
-        return;
-    }
+std::uint64_t SwStagingRing::reserve(std::uint64_t size) {
     std::uint64_t uploadSize = alignUp(size, mAlignment);
 
     std::uint64_t headOffset = mHead % mCapacity;
     bool skip = (headOffset + uploadSize > mCapacity);
     std::uint64_t skipSize = skip ? (mCapacity - headOffset) : 0;
-    
+
     std::uint64_t regionStart = mHead + skipSize;
     std::uint64_t regionEnd = mHead + skipSize + uploadSize;
     if (regionEnd - mTail > mCapacity) {
@@ -53,17 +52,41 @@ void SwStagingRing::upload(vk::CommandBuffer cmd, SwBuffer& dst, const void* src
         regionEnd = uploadSize;
     }
     mHead = regionEnd;
-    std::uint64_t regionStartOffset = regionStart % mCapacity;
 
-    mRing.copyFromUnchecked(src, uploadSize, regionStartOffset);
+    mInFlight.emplace_back(regionEnd, SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    return regionStart % mCapacity;
+}
+
+void SwStagingRing::upload(vk::CommandBuffer cmd, SwBuffer& dst, const void* src, std::uint64_t size, std::uint64_t dstOffset) {
+    if (size == 0) {
+        return;
+    }
+    std::uint64_t regionStartOffset = reserve(size);
+
+    mRing.copyFromUnchecked(src, size, regionStartOffset);
 
     vk::BufferCopy copy{};
     copy.srcOffset = regionStartOffset;
     copy.dstOffset = dstOffset;
-    copy.size = uploadSize;
+    copy.size = size;
     dst.copyFrom(cmd, mRing, copy);
+}
 
-    mInFlight.emplace_back(regionEnd, SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+void SwStagingRing::upload(vk::CommandBuffer cmd, SwImage& dst, const void* src, std::uint64_t size, vk::ArrayProxy<vk::BufferImageCopy> regions) {
+    if (size == 0) {
+        return;
+    }
+    std::uint64_t regionStartOffset = reserve(size);
+
+    mRing.copyFromUnchecked(src, size, regionStartOffset);
+    mRing.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+    dst.emitTransition(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferWrite, vk::ImageLayout::eTransferDstOptimal);
+
+    std::vector<vk::BufferImageCopy> shiftedRegions(regions.begin(), regions.end());
+    for (auto& region : shiftedRegions) {
+        region.bufferOffset += regionStartOffset;
+    }
+    cmd.copyBufferToImage(mRing.getHandle(), dst.getHandle(), vk::ImageLayout::eTransferDstOptimal, shiftedRegions);
 }
 
 void SwStagingRing::tick(std::uint64_t currentFrame) {
