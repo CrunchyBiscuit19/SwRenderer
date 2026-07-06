@@ -135,7 +135,7 @@ void SwIBL::System::initializeResources() {
 
     // --- Bake the environment-independent BRDF LUT once, and prime the env-dependent maps to a valid
     // sampled layout so the consume set is complete even before the first skybox bake. ---
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
         mResources.mBrdfLutImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite, vk::ImageLayout::eGeneral);
         cmd.bindPipeline(mResources.mBrdfLutPipelineBundle.getBindPoint(), mResources.mBrdfLutPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
@@ -153,8 +153,6 @@ void SwIBL::System::initializeResources() {
         mResources.mBrdfLutImage.emitTransition(
             cmd, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal
         );
-
-        // Placeholder transition until the first real environment bake fills these.
         mResources.mIrradianceImage.emitTransition(
             cmd, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal
         );
@@ -282,7 +280,9 @@ void SwIBL::System::initializePasses() {
 
 void SwIBL::System::initializePushConstants() { mResources.mSkyboxPushConstants.mDrawVertexBuffer = mResources.mSkyboxVertexBuffer.getDeviceAddress().value(); }
 
-void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampler environmentSampler) {
+void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler environmentSampler) {
+    vk::ImageView environmentView = environment.getMainImageViewHandle();
+
     // Bind the freshly-loaded environment as the input (binding 0) of every bake set.
     mResources.mIrradianceDescriptorSet.writeImage(0, environmentView, environmentSampler, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mIrradianceDescriptorSet.pushWrites();
@@ -291,7 +291,10 @@ void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampl
         mipSet.pushWrites();
     }
 
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
+        environment.emitTransition(
+            cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal
+        );
         mResources.mIrradianceImage.emitTransition(
             cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite, vk::ImageLayout::eGeneral
         );
@@ -434,7 +437,7 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
 
     // Bake with the equirect sampler (full LOD range) so the prefilter can read the environment's mip
     // chain for PDF-based mip selection; mDrawSampler clamps maxLod to 0 and would defeat that.
-    bakeFromEnvironment(mResources.mSkyboxImage.getMainImageViewHandle(), mResources.mEnvSampler.getHandle());
+    bakeFromEnvironment(mResources.mSkyboxImage, mResources.mEnvSampler.getHandle());
 }
 
 void SwIBL::System::refreshPushConstants() {

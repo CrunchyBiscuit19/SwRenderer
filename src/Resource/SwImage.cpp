@@ -52,8 +52,7 @@ vk::RenderingAttachmentInfo SwImage::generateRenderingAttachment(
     return renderingAttachment;
 }
 
-SwSwapchainImage::SwSwapchainImage()
-    : SwImage(), mImage(VK_NULL_HANDLE), mMainImageView(nullptr) {}
+SwSwapchainImage::SwSwapchainImage() : SwImage(), mImage(VK_NULL_HANDLE), mMainImageView(nullptr) {}
 
 SwSwapchainImage::SwSwapchainImage(
     std::string name, vk::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, SwSemaphore renderedSemaphore,
@@ -71,13 +70,8 @@ void SwSwapchainImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags
 
 void SwSwapchainImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) {
     static constexpr vk::AccessFlags2 kAnyWrite =
-        vk::AccessFlagBits2::eShaderWrite |
-        vk::AccessFlagBits2::eColorAttachmentWrite |
-        vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
-        vk::AccessFlagBits2::eTransferWrite |
-        vk::AccessFlagBits2::eHostWrite |
-        vk::AccessFlagBits2::eMemoryWrite |
-        vk::AccessFlagBits2::eShaderStorageWrite;
+        vk::AccessFlagBits2::eShaderWrite | vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
+        vk::AccessFlagBits2::eTransferWrite | vk::AccessFlagBits2::eHostWrite | vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eShaderStorageWrite;
     if (!(mCurrentAccess & kAnyWrite) && nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
@@ -141,9 +135,9 @@ void SwSwapchainImage::copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Ext
 SwAllocatedImage::SwAllocatedImage() : mImage(nullptr), mMainImageView(nullptr), mAllocation(nullptr), mAllocator(nullptr), mMipLevels(1), mMipmapped(false) {}
 
 SwAllocatedImage::SwAllocatedImage(
-    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
-    vk::ImageAspectFlags aspect, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
-    std::deque<vk::raii::ImageView> otherImageViews
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, vk::ImageAspectFlags aspect, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped,
+    std::vector<vk::Format> otherFormats, std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwImage(std::move(name), mainFormat, extent, aspect, std::move(otherFormats)),
       mImage(std::move(image)),
@@ -162,13 +156,8 @@ void SwAllocatedImage::emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags
 
 void SwAllocatedImage::emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) {
     static constexpr vk::AccessFlags2 kAnyWrite =
-        vk::AccessFlagBits2::eShaderWrite |
-        vk::AccessFlagBits2::eColorAttachmentWrite |
-        vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
-        vk::AccessFlagBits2::eTransferWrite |
-        vk::AccessFlagBits2::eHostWrite |
-        vk::AccessFlagBits2::eMemoryWrite |
-        vk::AccessFlagBits2::eShaderStorageWrite;
+        vk::AccessFlagBits2::eShaderWrite | vk::AccessFlagBits2::eColorAttachmentWrite | vk::AccessFlagBits2::eDepthStencilAttachmentWrite |
+        vk::AccessFlagBits2::eTransferWrite | vk::AccessFlagBits2::eHostWrite | vk::AccessFlagBits2::eMemoryWrite | vk::AccessFlagBits2::eShaderStorageWrite;
     if (!(mCurrentAccess & kAnyWrite) && nextLayout == mCurrentLayout && nextStage == mCurrentStage && nextAccess == mCurrentAccess) {
         return;
     }
@@ -360,11 +349,12 @@ void SwAllocatedImage::fillImageData(const void* data, bool immediateSubmit) {
         }
         SwRenderer::sRendererContext.mStagingRing->upload(cmd, *this, data, dataSize, copyRegions);
         if (isMipmapped()) generateMipmaps(cmd);
-
-        emitTransition(cmd, vk::PipelineStageFlagBits2KHR::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
     };
 
-    if (immediateSubmit) SwRenderer::sRendererContext.mImmSubmit->individualSubmit(std::move(recordUpload));
+    if (immediateSubmit)
+        SwRenderer::sRendererContext.mImmSubmit->individualSubmit(std::move(recordUpload));
+    else
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(std::move(recordUpload));
 }
 
 void SwAllocatedImage::addImageView(
@@ -427,25 +417,25 @@ SwAllocatedImage::~SwAllocatedImage() { destroy(); }
 SwColorImage::SwColorImage() {}
 
 SwColorImage::SwColorImage(
-    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
-    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwAllocatedImage(
-          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eColor, allocator, allocation, mipmapped,
-          std::move(otherFormats), std::move(otherImageViews)
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eColor, allocator,
+          allocation, mipmapped, std::move(otherFormats), std::move(otherImageViews)
       ) {}
 
 SwDepthImage::SwDepthImage() {}
 
 SwDepthImage::SwDepthImage(
-    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
-    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwAllocatedImage(
-          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eDepth, allocator, allocation, mipmapped,
-          std::move(otherFormats), std::move(otherImageViews)
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, vk::ImageAspectFlagBits::eDepth, allocator,
+          allocation, mipmapped, std::move(otherFormats), std::move(otherImageViews)
       ) {
     mClearValue.depthStencil.depth = 0.f;
 }
@@ -453,8 +443,8 @@ SwDepthImage::SwDepthImage(
 SwColorImage2D::SwColorImage2D() {}
 
 SwColorImage2D::SwColorImage2D(
-    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
-    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwColorImage(
@@ -467,8 +457,8 @@ void SwColorImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::
 SwDepthImage2D::SwDepthImage2D() {}
 
 SwDepthImage2D::SwDepthImage2D(
-    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
-    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwDepthImage(
@@ -481,8 +471,8 @@ void SwDepthImage2D::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::
 SwColorImageCubemap::SwColorImageCubemap() {}
 
 SwColorImageCubemap::SwColorImageCubemap(
-    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
-    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwColorImage(
@@ -497,8 +487,8 @@ std::uint32_t SwColorImageCubemap::getFaceCount() const { return SwImageFactory:
 SwDepthImageCubemap::SwDepthImageCubemap() {}
 
 SwDepthImageCubemap::SwDepthImageCubemap(
-    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage, vk::ClearValue clearValue,
-    const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
     std::deque<vk::raii::ImageView> otherImageViews
 )
     : SwDepthImage(
@@ -641,11 +631,17 @@ void SwImageFactory::init() {
         }
     }
     addDefault(SwDefaultImageOption::Checkerboard, "DefaultCheckerboardImage", vk::Format::eR8G8B8A8Srgb, vk::Extent3D{16, 16, 1}, pixels.data());
+
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([](vk::CommandBuffer cmd) {
+        for (auto& [option, image] : sDefaultImages) {
+            image.emitTransition(cmd, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
+        }
+    });
 }
 
 vk::raii::ImageView SwImageFactory::createImageView(
-    std::string name, vk::Image image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType, std::uint32_t baseMipLevel, std::uint32_t levelCount,
-    std::uint32_t baseArrayLayer, std::uint32_t layerCount
+    std::string name, vk::Image image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType, std::uint32_t baseMipLevel,
+    std::uint32_t levelCount, std::uint32_t baseArrayLayer, std::uint32_t layerCount
 ) {
     vk::ImageViewCreateInfo imageViewCreateInfo = {};
     imageViewCreateInfo.pNext = nullptr;
@@ -663,8 +659,7 @@ vk::raii::ImageView SwImageFactory::createImageView(
 SwColorImage2D SwImageFactory::createColorImage2D(
     std::string name, vk::Format format, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
 ) {
-    SwImageConstructionInfo imageConstructionInfo =
-        prepareImageConstructionInfo(SwImageType::SwColorImage2D, format, extent, usage, mipmapped, clearValue);
+    SwImageConstructionInfo imageConstructionInfo = prepareImageConstructionInfo(SwImageType::SwColorImage2D, format, extent, usage, mipmapped, clearValue);
     SwColorImage2D newImage = SwColorImage2D(
         name,
         std::move(imageConstructionInfo.mImage),
@@ -687,8 +682,7 @@ SwColorImage2D SwImageFactory::createColorImage2D(
 SwDepthImage2D SwImageFactory::createDepthImage2D(
     std::string name, vk::Format format, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
 ) {
-    SwImageConstructionInfo imageConstructionInfo =
-        prepareImageConstructionInfo(SwImageType::SwDepthImage2D, format, extent, usage, mipmapped, clearValue);
+    SwImageConstructionInfo imageConstructionInfo = prepareImageConstructionInfo(SwImageType::SwDepthImage2D, format, extent, usage, mipmapped, clearValue);
     SwDepthImage2D newImage = SwDepthImage2D(
         name,
         std::move(imageConstructionInfo.mImage),
@@ -756,6 +750,4 @@ SwDepthImageCubemap SwImageFactory::createDepthImageCubemap(
     return newImage;
 }
 
-void SwImageFactory::cleanup() {
-    sDefaultImages.clear();
-}
+void SwImageFactory::cleanup() { sDefaultImages.clear(); }

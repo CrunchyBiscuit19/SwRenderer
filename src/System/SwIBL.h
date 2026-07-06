@@ -140,7 +140,7 @@ private:
 
     // Reconvolve the irradiance + specular-prefilter maps from a freshly-loaded environment equirect.
     // Called whenever the environment changes.
-    void bakeFromEnvironment(vk::ImageView environmentView, vk::Sampler environmentSampler);
+    void bakeFromEnvironment(SwImage& environment, vk::Sampler environmentSampler);
 
 public:
     System(SwScene& scene);
