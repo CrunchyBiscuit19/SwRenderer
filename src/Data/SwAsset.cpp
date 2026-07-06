@@ -603,3 +603,11 @@ void SwAsset::markDelete() {
         scene->getInstance(instanceId).markDelete();
     }
 }
+
+void SwAsset::deferDestroyImages() {
+    for (auto& image : mImages) {
+        if (!image.has_value()) continue;
+        SwImageFactory::deferDestroy(std::make_unique<SwColorImage2D>(std::move(*image)));
+        image.reset();
+    }
+}

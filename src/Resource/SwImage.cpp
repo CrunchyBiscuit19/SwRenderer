@@ -3,6 +3,8 @@
 #include <Renderer/SwStagingRing.h>
 #include <Resource/SwImage.h>
 
+#include <algorithm>
+
 SwImage::SwImage() {}
 
 SwImage::SwImage(std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageAspectFlags aspect, std::vector<vk::Format> otherFormats)
@@ -502,6 +504,20 @@ std::uint32_t SwDepthImageCubemap::getFaceCount() const { return SwImageFactory:
 
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
+std::vector<SwImageFactory::DeferredImage> SwImageFactory::sDeletionQueue{};
+
+void SwImageFactory::deferDestroy(std::unique_ptr<SwImage> image) {
+    std::uint64_t currentFrame = SwRenderer::sRendererContext.mSwapchain->getFrameNumber();
+    sDeletionQueue.emplace_back(std::move(image), currentFrame);
+}
+
+void SwImageFactory::tick(std::uint64_t currentFrame) {
+    auto it = std::remove_if(sDeletionQueue.begin(), sDeletionQueue.end(), [currentFrame](const DeferredImage& entry) {
+        return currentFrame >= entry.mFrameQueued + SwSwapchain::NUM_FRAME_OVERLAP;
+    });
+    sDeletionQueue.erase(it, sDeletionQueue.end());
+}
+
 std::uint32_t SwImageFactory::getFormatTexelSize(vk::Format format) {
     std::uint32_t bytesPerTexel = -1;
     switch (format) {
@@ -750,4 +766,7 @@ SwDepthImageCubemap SwImageFactory::createDepthImageCubemap(
     return newImage;
 }
 
-void SwImageFactory::cleanup() { sDefaultImages.clear(); }
+void SwImageFactory::cleanup() {
+    sDeletionQueue.clear();
+    sDefaultImages.clear();
+}

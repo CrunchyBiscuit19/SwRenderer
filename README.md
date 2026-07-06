@@ -46,6 +46,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 * Tracks the current layout, pipeline stage, and access bits; convenience methods for barrier insertion and layout transitions (including via `SwDependency` types).
 * Holds a main image view plus optional additional views/formats; supports mipmap generation and resizing.
 * `SwImageFactory` creates images (uploading pixel data through a shared staging buffer), builds image views, and provides a set of default fallback textures (white, grey, black, blue, checkerboard).
+* `SwImageFactory::deferDestroy` + `tick(frameNumber)` mirror `SwBufferFactory`, holding a GPU-referenced image alive until its `NUM_FRAME_OVERLAP` frame window retires. Deleting an asset routes its material textures through this queue so an in-flight frame that still samples them finishes before their memory is freed.
 
 ### Samplers `SwSampler`
 

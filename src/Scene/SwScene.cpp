@@ -267,6 +267,7 @@ void SwScene::unloadAssetsAndInstances() {
         if (assetDeleted) {
             mAlreadyLoadedAssets.erase(asset.getName());
             mFlags.mAssetUnloaded = true;
+            asset.deferDestroyImages();  
         }
 
         // A standalone-light asset is shared by every light of its type, so removing one light deletes just that
@@ -655,6 +656,7 @@ void SwScene::draw() {
     auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, 1e9);
     SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getHandle());
     SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    SwImageFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
     SwRenderer::sRendererContext.mStagingRing->tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
     SwRenderer::sRendererContext.mSwapchain->acquireNextImage(1e9);
 

@@ -284,6 +284,14 @@ public:
 class SwImageFactory {
 private:
     enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap, SwDepthImageCubemap };
+
+    struct DeferredImage {
+        std::unique_ptr<SwImage> mImage;
+        std::uint64_t mFrameQueued;
+    };
+
+    static std::vector<DeferredImage> sDeletionQueue;
+
     struct SwImageConstructionInfo {
         vk::raii::Image mImage;
         vk::raii::ImageView mMainImageView;
@@ -336,6 +344,10 @@ public:
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
         vk::ClearValue clearValue = vk::ClearValue()
     );
+
+    static void deferDestroy(std::unique_ptr<SwImage> image);
+
+    static void tick(std::uint64_t currentFrame);
 
     static void cleanup();
 };

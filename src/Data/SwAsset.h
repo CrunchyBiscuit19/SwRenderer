@@ -93,6 +93,8 @@ public:
 
     void markDelete();
 
+    void deferDestroyImages();
+
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
     inline void setStandaloneLight(bool flag) { mStandaloneLight = flag; }
     inline bool isStandaloneLight() { return mStandaloneLight; }
