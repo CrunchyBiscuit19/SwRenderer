@@ -2,6 +2,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwLogger.h>
+#include <Renderer/SwStagingRing.h>
 #include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <quill/LogMacros.h>
@@ -251,8 +252,6 @@ void SwAsset::constructImages() {
 
 void SwAsset::constructMaterials() {
     mMaterials.reserve(mRawAsset.materials.size());
-    std::vector<SwMaterialConstants> materialConstants;
-    materialConstants.reserve(mRawAsset.materials.size());
 
     for (std::uint32_t i = 0; i < mRawAsset.materials.size(); i++) {
         fastgltf::Material& material = mRawAsset.materials[i];
@@ -278,7 +277,6 @@ void SwAsset::constructMaterials() {
             constants.mOcclusionStrength = material.occlusionTexture.value().strength;
         }
         constants.mAlphaCutoff = material.alphaMode == fastgltf::AlphaMode::Mask ? material.alphaCutoff : -1.f;
-        materialConstants.emplace_back(constants);
 
         auto resolveTexture = [&](auto& texInfo, SwMaterialTexture& fallback) -> SwMaterialTexture {
             if (texInfo.has_value()) {
@@ -303,18 +301,6 @@ void SwAsset::constructMaterials() {
 
         mMaterials.emplace_back(name, i, pipelineOptions, constants, std::move(resources));
     }
-
-    vk::BufferCopy materialConstantsCopy{};
-    materialConstantsCopy.dstOffset = 0;
-    materialConstantsCopy.srcOffset = 0;
-    materialConstantsCopy.size = materialConstants.size() * sizeof(SwMaterialConstants);
-
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, &materialConstants, materialConstantsCopy](vk::CommandBuffer cmd) {
-        if (materialConstantsCopy.size == 0) return;
-        SwMaterialConstants::sMaterialConstantsStaging.copyFrom(cmd, materialConstants.data(), materialConstantsCopy.size);
-        mMaterialConstantsBuffer.copyFrom(cmd, SwMaterialConstants::sMaterialConstantsStaging, materialConstantsCopy);
-        mMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-    });
 }
 
 void SwAsset::constructMeshes() {
@@ -421,48 +407,12 @@ void SwAsset::constructMeshes() {
             srcIndexVectorSize
         );
 
-        vk::BufferCopy vertexCopy{};
-        vertexCopy.dstOffset = 0;
-        vertexCopy.srcOffset = 0;
-        vertexCopy.size = srcVertexVectorSize;
-        vk::BufferCopy indexCopy{};
-        indexCopy.dstOffset = 0;
-        indexCopy.srcOffset = srcVertexVectorSize;
-        indexCopy.size = srcIndexVectorSize;
-
         mMeshes.emplace_back(
             mId, data.mName, data.mPrimitives, data.mBounds, meshIndex, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0
         );
 
-        SwMesh& createdMesh = mMeshes.back();
-        SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&createdMesh, &data, vertexCopy, indexCopy](vk::CommandBuffer cmd) {
-            if (vertexCopy.size == 0) return;
-            SwMesh::sMeshStaging.copyFrom(cmd, data.mVertices.data(), vertexCopy.size, 0);
-            createdMesh.getVertexBuffer().copyFrom(cmd, SwMesh::sMeshStaging, vertexCopy);
-            createdMesh.getVertexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-            if (indexCopy.size == 0) return;
-            SwMesh::sMeshStaging.copyFrom(cmd, data.mIndices.data(), indexCopy.size, indexCopy.srcOffset);
-            createdMesh.getIndexBuffer().copyFrom(cmd, SwMesh::sMeshStaging, indexCopy);
-            createdMesh.getIndexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-        });
+        mPendingMeshUploads.emplace_back(std::move(data.mVertices), std::move(data.mIndices));
     }
-
-    const vk::DeviceSize boundsSize = mMeshes.size() * sizeof(SwBounds);
-    std::vector<SwBounds> boundsVector;
-    for (const auto& mesh : mMeshes) {
-        boundsVector.emplace_back(mesh.getBounds());
-    }
-    vk::BufferCopy boundsCopy{};
-    boundsCopy.dstOffset = 0;
-    boundsCopy.srcOffset = 0;
-    boundsCopy.size = boundsSize;
-
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, &boundsVector, boundsCopy](vk::CommandBuffer cmd) {
-        if (boundsCopy.size == 0) return;
-        SwBounds::sBoundsStaging.copyFrom(cmd, boundsVector.data(), boundsCopy.size);
-        mBoundsBuffer.copyFrom(cmd, SwBounds::sBoundsStaging, boundsCopy);
-        mBoundsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-    });
 }
 
 void SwAsset::constructLights() {
@@ -533,20 +483,6 @@ void SwAsset::constructNodes() {
             node->refreshTransform(glm::mat4{1.f});
         }
     }
-
-    vk::BufferCopy nodeTransformsCopy{};
-    nodeTransformsCopy.dstOffset = 0;
-    nodeTransformsCopy.srcOffset = 0;
-    nodeTransformsCopy.size = mNodes.size() * sizeof(glm::mat4);
-
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, nodeTransformsCopy](vk::CommandBuffer cmd) {
-        for (std::uint32_t i = 0; i < mNodes.size(); i++) {
-            SwNode::sNodeTransformsStaging.copyFrom(cmd, glm::value_ptr(mNodes[i]->getWorldTransform()), sizeof(glm::mat4), i * sizeof(glm::mat4));
-        }
-        if (nodeTransformsCopy.size == 0) return;
-        mNodeTransformsBuffer.copyFrom(cmd, SwNode::sNodeTransformsStaging, nodeTransformsCopy);
-        mNodeTransformsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-    });
 }
 
 SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
@@ -559,7 +495,7 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     constructLights();
     constructNodes();
     SwRenderer::sRendererContext.mScene->mFlags.mAssetLoaded = true;
-    SwRenderer::sRendererContext.mScene->addAssetIdLoadedPrevFrame(mId);
+    SwRenderer::sRendererContext.mScene->registerLoadedAsset(mId);
 }
 
 void SwAsset::generateRcsAndRis() {
@@ -585,7 +521,7 @@ void SwAsset::reloadInstances() {
     }
 
     SwScene* scene = SwRenderer::sRendererContext.mScene;
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([this, scene](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, scene](vk::CommandBuffer cmd) {
         std::uint32_t dstOffset = 0;
         for (std::uint32_t instanceId : mInstanceIds) {
             mInstancesBuffer.copyFrom(cmd, &scene->getInstance(instanceId).getData(), sizeof(SwInstance::Data), dstOffset);
@@ -611,3 +547,49 @@ void SwAsset::deferDestroyImages() {
         image.reset();
     }
 }
+
+void SwAsset::fillBuffers() {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        SwStagingRing* ring = SwRenderer::sRendererContext.mStagingRing;
+
+        std::vector<SwMaterialConstants> materialConstants;
+        materialConstants.reserve(mMaterials.size());
+        for (auto& material : mMaterials) materialConstants.emplace_back(material.getConstants());
+        if (!materialConstants.empty()) {
+            ring->upload(cmd, mMaterialConstantsBuffer, materialConstants.data(), materialConstants.size() * sizeof(SwMaterialConstants));
+            mMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        }
+
+        for (std::uint32_t i = 0; i < mMeshes.size(); i++) {
+            PendingMeshUpload& pending = mPendingMeshUploads[i];
+            const std::uint64_t vertexSize = pending.mVertices.size() * sizeof(SwVertex);
+            const std::uint64_t indexSize = pending.mIndices.size() * sizeof(std::uint32_t);
+            if (vertexSize > 0) {
+                ring->upload(cmd, mMeshes[i].getVertexBuffer(), pending.mVertices.data(), vertexSize);
+                mMeshes[i].getVertexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+            }
+            if (indexSize > 0) {
+                ring->upload(cmd, mMeshes[i].getIndexBuffer(), pending.mIndices.data(), indexSize);
+                mMeshes[i].getIndexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+            }
+        }
+
+        std::vector<SwBounds> boundsVector;
+        boundsVector.reserve(mMeshes.size());
+        for (auto& mesh : mMeshes) boundsVector.emplace_back(mesh.getBounds());
+        if (!boundsVector.empty()) {
+            ring->upload(cmd, mBoundsBuffer, boundsVector.data(), boundsVector.size() * sizeof(SwBounds));
+            mBoundsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        }
+
+        std::vector<glm::mat4> nodeTransforms;
+        nodeTransforms.reserve(mNodes.size());
+        for (auto& node : mNodes) nodeTransforms.emplace_back(node->getWorldTransform());
+        if (!nodeTransforms.empty()) {
+            ring->upload(cmd, mNodeTransformsBuffer, nodeTransforms.data(), nodeTransforms.size() * sizeof(glm::mat4));
+            mNodeTransformsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        }
+    });
+}
+
+void SwAsset::clearPendingBufferData() { mPendingMeshUploads.clear(); }

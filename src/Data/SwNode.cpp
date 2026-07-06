@@ -5,8 +5,6 @@
 #include <Renderer/SwRendererContext.h>
 #include <Scene/SwScene.h>
 
-SwStagingBuffer SwNode::sNodeTransformsStaging{};
-
 void SwNode::refreshTransform(const glm::mat4& parentTransform) {
     mWorldTransform = parentTransform * mLocalTransform;
     for (const auto& child : mChildren) child->refreshTransform(mWorldTransform);
@@ -25,12 +23,6 @@ void SwNode::addChild(std::shared_ptr<SwNode> child) {
     mChildren.emplace_back(child);
     child->setParent(shared_from_this());
 }
-
-void SwNode::init() {
-    sNodeTransformsStaging = SwBufferFactory::createStagingBuffer("NodeTransformsStagingBuffer", NODE_TRANSFORMS_STAGING_BUFFER_SIZE);
-}
-
-void SwNode::cleanup() { sNodeTransformsStaging.destroy(); }
 
 SwMeshNode::SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh)
     : SwNode(name, relativeNodeIndex, localTransform), mMesh(mesh) {}

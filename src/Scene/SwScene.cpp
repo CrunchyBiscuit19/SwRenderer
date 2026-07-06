@@ -317,11 +317,11 @@ void SwScene::markAllAssetsDelete() {
     }
 }
 
-void SwScene::addAssetIdLoadedPrevFrame(std::uint32_t assetId) { mAssetsIdsLoadedThisFrame.insert(assetId); }
+void SwScene::registerLoadedAsset(std::uint32_t assetId) { mAssetsIdsToFill.insert(assetId); }
 
 void SwScene::fillAssetImages() {
     std::vector<SwColorImage2D*> uploadedImages;
-    for (std::uint32_t assetId : mAssetsIdsLoadedThisFrame) {
+    for (std::uint32_t assetId : mAssetsIdsToFill) {
         auto it = mAssets.find(assetId);
         if (it == mAssets.end()) continue;
         SwAsset& asset = it->second;
@@ -344,7 +344,7 @@ void SwScene::fillAssetImages() {
 }
 
 void SwScene::freeAssetImages() {
-    for (std::uint32_t assetId : mAssetsIdsLoadedThisFrame) {
+    for (std::uint32_t assetId : mAssetsIdsToFree) {
         auto it = mAssets.find(assetId);
         if (it == mAssets.end()) continue;
         SwAsset& asset = it->second;
@@ -354,7 +354,22 @@ void SwScene::freeAssetImages() {
         }
         asset.clearImageDataPtrs();
     }
-    mAssetsIdsLoadedThisFrame.clear();
+}
+
+void SwScene::fillAssetBuffers() {
+    for (std::uint32_t assetId : mAssetsIdsToFill) {
+        auto it = mAssets.find(assetId);
+        if (it == mAssets.end()) continue;
+        it->second.fillBuffers();
+    }
+}
+
+void SwScene::freeAssetBuffers() {
+    for (std::uint32_t assetId : mAssetsIdsToFree) {
+        auto it = mAssets.find(assetId);
+        if (it == mAssets.end()) continue;
+        it->second.clearPendingBufferData();
+    }
 }
 
 void SwScene::regenerateRcsAndRis() {
@@ -654,7 +669,10 @@ void SwScene::resetFlags() {
 void SwScene::perFrameUpdate() {
     const auto start = std::chrono::system_clock::now();
 
-    freeAssetImages();  // This one above anything that spawns in assets, because it needs to free data from previous frame's loaded assets
+    // Free last frame's uploaded CPU data before anything spawns new assets. Both frees consume mAssetsIdsToFree.
+    freeAssetImages();
+    freeAssetBuffers();
+    mAssetsIdsToFree.clear();
 
     mGui.refresh();
 
@@ -667,6 +685,10 @@ void SwScene::perFrameUpdate() {
             mFlags.mReloadMainInstancesBuffer = true;
         }
     }
+
+    // Upload newly loaded assets' per-buffer data before the scene consolidation reads those buffers below.
+    fillAssetBuffers();
+
     if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
         realignOffsets();
         reloadSceneBuffers();
@@ -690,6 +712,10 @@ void SwScene::perFrameUpdate() {
     resetFlags();
 
     fillAssetImages();
+
+    // Assets uploaded this frame become next frame's free set once the frame's draw has consumed their CPU data.
+    mAssetsIdsToFree = std::move(mAssetsIdsToFill);
+    mAssetsIdsToFill.clear();
 
     mCull.refresh();
     mLighting.refresh();

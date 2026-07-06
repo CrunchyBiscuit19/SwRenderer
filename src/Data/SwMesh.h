@@ -18,20 +18,11 @@ struct SwVertex {
 };
 
 struct SwBounds {
-private:
-    static constexpr std::uint32_t BOUNDS_STAGING_BUFFER_SIZE{1 << 20};  // 1 MB
-
-public:
-    static SwStagingBuffer sBoundsStaging;
-
     glm::vec3 mMin;
     glm::vec3 mMax;
 
     SwBounds() = default;
     SwBounds(glm::vec3 min, glm::vec3 max);
-
-    static void init();
-    static void cleanup();
 };
 
 struct SwPrimitive {
@@ -45,8 +36,6 @@ struct SwPrimitive {
 
 class SwMesh {
 private:
-    static constexpr std::uint32_t MESH_STAGING_BUFFER_SIZE{256 * 1024 * 1024};  // 256 MB
-
     static std::uint32_t sLatestMeshId;
     std::uint32_t mAssetid;
     std::uint32_t mId;
@@ -55,8 +44,6 @@ private:
     SwBounds mBounds;
 
 public:
-    static SwStagingBuffer sMeshStaging;
-
     std::uint32_t mRelativeFirstBounds;
     SwAllocatedBuffer mVertexBuffer;
     std::uint32_t mNumVertices{0};
@@ -76,7 +63,4 @@ public:
     inline SwBounds getBounds() const { return mBounds; }
     inline std::span<SwPrimitive> getPrimitives() { return mPrimitives; }
     inline std::uint32_t getAssetId() const { return mAssetid; }
-
-    static void init();
-    static void cleanup();
 };

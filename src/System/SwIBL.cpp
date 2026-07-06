@@ -1,6 +1,7 @@
 #include <Renderer/SwHelper.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
+#include <Renderer/SwStagingRing.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
@@ -235,16 +236,8 @@ void SwIBL::System::initializeResources() {
         "SkyboxDrawVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, skyboxVertexSize, true
     );
 
-    SwStagingBuffer skyboxVertexStaging = SwBufferFactory::createStagingBuffer("SkyboxDrawVertexStagingBuffer", skyboxVertexSize);
-
-    vk::BufferCopy skyboxVertexCopy{};
-    skyboxVertexCopy.dstOffset = 0;
-    skyboxVertexCopy.srcOffset = 0;
-    skyboxVertexCopy.size = skyboxVertexSize;
-
-    SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        skyboxVertexStaging.copyFromUnchecked(mResources.mSkyboxVertices.data(), skyboxVertexCopy.size);
-        mResources.mSkyboxVertexBuffer.copyFrom(cmd, skyboxVertexStaging, skyboxVertexCopy);
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, skyboxVertexSize](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mStagingRing->upload(cmd, mResources.mSkyboxVertexBuffer, mResources.mSkyboxVertices.data(), skyboxVertexSize);
     });
 
     reinitializeOnUpdate(SKYBOX_DEFAULT_HDR_PATH);

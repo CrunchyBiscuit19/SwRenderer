@@ -34,6 +34,12 @@ private:
 
     std::vector<SwMesh> mMeshes;
 
+    struct PendingMeshUpload {
+        std::vector<SwVertex> mVertices;
+        std::vector<std::uint32_t> mIndices;
+    };
+    std::vector<PendingMeshUpload> mPendingMeshUploads;
+
     std::vector<SwLight> mLights;
 
     static std::unordered_map<SwSamplerOptions, SwSampler> sSamplers;
@@ -95,6 +101,10 @@ public:
     void markDelete();
 
     void deferDestroyImages();
+
+    void fillBuffers();
+
+    void clearPendingBufferData();
 
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
 

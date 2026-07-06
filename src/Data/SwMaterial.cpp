@@ -29,14 +29,6 @@ SwMaterialTexture SwMaterialTexture::retrieveDefaultFlatNormalTexture() {
     return SwMaterialTexture(sDefaultFlatNormalTexture.mImage, sDefaultFlatNormalTexture.mSampler);
 }
 
-SwStagingBuffer SwMaterialConstants::sMaterialConstantsStaging{};
-
-void SwMaterialConstants::init() {
-    sMaterialConstantsStaging = SwBufferFactory::createStagingBuffer("MaterialConstantsStagingBuffer", MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE);
-}
-
-void SwMaterialConstants::cleanup() { sMaterialConstantsStaging.destroy(); }
-
 SwDescriptorLayout SwMaterialResources::sMaterialResourcesDescriptorLayout{};
 
 SwMaterialResources::SwMaterialResources(

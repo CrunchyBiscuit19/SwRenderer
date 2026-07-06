@@ -199,11 +199,7 @@ SwRenderer::SwRenderer()
     SwSamplerFactory::init();
     SwImageFactory::init();
 
-    SwMesh::init();
-    SwBounds::init();
-    SwNode::init();
     SwLight::init();
-    SwMaterialConstants::init();
 
     mSwapchain.initialize(window, std::move(surface), windowExtent, FULLSCREEN_ON_STARTUP);
     mLogger.setFrameNumber(mSwapchain.getFrameNumberPtr());
@@ -260,16 +256,12 @@ void SwRenderer::run() {
 
         auto end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;
+        if (mSwapchain.getFrameNumber() % 60 == 0) mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;
     }
 }
 
 SwRenderer::~SwRenderer() {
-    SwMesh::cleanup();
-    SwBounds::cleanup();
-    SwNode::cleanup();
     SwLight::cleanup();
-    SwMaterialConstants::cleanup();
     SwGeometry::Resources::cleanup();
     SwIBL::Resources::cleanup();
     SwLighting::Resources::cleanup();

@@ -46,7 +46,8 @@ private:
 
     std::unordered_map<std::uint32_t, SwAsset> mAssets;
     std::unordered_set<std::string> mAlreadyLoadedAssetsNames;
-    std::unordered_set<std::uint32_t> mAssetsIdsLoadedThisFrame;
+    std::unordered_set<std::uint32_t> mAssetsIdsToFill;  // loaded this frame
+    std::unordered_set<std::uint32_t> mAssetsIdsToFree;  // uploaded last frame
 
     std::unordered_map<std::uint32_t, SwInstance> mInstances;
 
@@ -156,9 +157,11 @@ public:
     void loadAssets(const std::vector<std::filesystem::path>& files);
     void unloadAssetsAndInstances();
     void markAllAssetsDelete();
-    void addAssetIdLoadedPrevFrame(std::uint32_t assetId);
+    void registerLoadedAsset(std::uint32_t assetId);
     void fillAssetImages();
     void freeAssetImages();
+    void fillAssetBuffers();
+    void freeAssetBuffers();
 
     void addInstanceLights(SwAsset& asset, std::uint32_t instanceId);
     void removeInstanceLights(std::uint32_t instanceId);

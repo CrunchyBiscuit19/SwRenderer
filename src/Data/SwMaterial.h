@@ -49,21 +49,12 @@ public:
 };
 
 struct SwMaterialConstants {
-private:
-    static constexpr std::uint32_t MATERIAL_CONSTANTS_STAGING_BUFFER_SIZE{1 << 20};  // 1 MB
-
-public:
-    static SwStagingBuffer sMaterialConstantsStaging;
-
     glm::vec4 mBaseFactor;
     glm::vec4 mEmissiveFactor;
     glm::vec2 mMetallicRoughnessFactor;
     float mNormalScale{1.f};
     float mOcclusionStrength{1.f};
     float mAlphaCutoff;
-
-    static void init();
-    static void cleanup();
 };
 
 struct SwMaterialResources {
@@ -148,4 +139,6 @@ public:
     inline bool isDoubleSided() { return mMaterialPipelineOptions.doubleSided; }
 
     inline SwMaterialResources& getResources() { return mMaterialResources; }
+
+    inline const SwMaterialConstants& getConstants() const { return mMaterialConstants; }
 };
