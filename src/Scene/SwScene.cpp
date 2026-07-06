@@ -1,5 +1,5 @@
-#include <Renderer/SwHelper.h>
 #include <Renderer/SwEvents.h>
+#include <Renderer/SwHelper.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwStagingRing.h>
@@ -9,8 +9,10 @@
 #include <Scene/SwScene.h>
 #include <fmt/core.h>
 #include <quill/LogMacros.h>
+#include <stb_image.h>
 
 #include <glm/glm.hpp>
+#include <optional>
 #include <ranges>
 
 void SwScene::initializeMiscPasses() {
@@ -57,31 +59,51 @@ void SwScene::initializeResources() {
     );
 
     mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneMaterialConstantsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants), true
+        "SceneMaterialConstantsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants),
+        true
     );
 
     mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneNodeTransformsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_NODES * sizeof(glm::mat4), true
+        "SceneNodeTransformsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_NODES * sizeof(glm::mat4),
+        true
     );
 
     mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneInstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_INSTANCES * sizeof(SwInstance::Data), true
+        "SceneInstancesBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_INSTANCES * sizeof(SwInstance::Data),
+        true
     );
 
     mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds), true
+        "SceneBoundsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds),
+        true
     );
 
     mSceneDrawRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneDrawRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t), true
+        "SceneDrawRisIndicesBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
+        true
     );
 
     mSceneLightsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_NUM_LIGHTS * sizeof(SwLight::Data), true
+        "SceneLightsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        SCENE_INITIAL_NUM_LIGHTS * sizeof(SwLight::Data),
+        true
     );
 
     for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
@@ -101,14 +123,10 @@ void SwScene::initializeResources() {
     // The normal slot of each material gets a flat (0,0,1) normal instead of white so unmapped surfaces keep their geometric normal.
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
-        SwMaterialTexture& seed = (i % SwMaterial::NUM_PBR_IMAGES == normalSlot) ? SwMaterialTexture::sDefaultFlatNormalTexture
-                                                                                : SwMaterialTexture::sDefaultWhiteTexture;
+        SwMaterialTexture& seed =
+            (i % SwMaterial::NUM_PBR_IMAGES == normalSlot) ? SwMaterialTexture::sDefaultFlatNormalTexture : SwMaterialTexture::sDefaultWhiteTexture;
         mSceneMaterialResourcesDescriptorSet.writeImage(
-            0,
-            seed.getImage().getMainImageViewHandle(),
-            seed.getSampler().getHandle(),
-            vk::ImageLayout::eShaderReadOnlyOptimal,
-            i
+            0, seed.getImage().getMainImageViewHandle(), seed.getSampler().getHandle(), vk::ImageLayout::eShaderReadOnlyOptimal, i
         );
     }
     mSceneMaterialResourcesDescriptorSet.pushWrites();
@@ -128,13 +146,10 @@ void SwScene::refreshDynamicDependencies() {
 void SwScene::refresh() { refreshDynamicDependencies(); }
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
-    SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(
-        commandBuffer.getHandle(), SwDependency::ImageDepType::PresentSrc
-    );
+    SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getHandle(), SwDependency::ImageDepType::PresentSrc);
 }
 
-SwScene::SwScene()
-    : mCull(*this), mPick(*this), mIBL(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
+SwScene::SwScene() : mCull(*this), mPick(*this), mIBL(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
 
 void SwScene::initialize() {
     mCamera.initialize();
@@ -215,7 +230,7 @@ void SwScene::refreshLightIndices() {
 void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
     for (const auto& path : paths) {
         auto shortPath = SwAsset::getNameFromFilePath(path);
-        if (mAlreadyLoadedAssets.contains(shortPath)) {
+        if (mAlreadyLoadedAssetsNames.contains(shortPath)) {
             continue;
         }
 
@@ -224,7 +239,7 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
         auto [it, inserted] = mAssets.try_emplace(loadedAsset.getId(), std::move(loadedAsset));
         if (inserted) {
             it->second.createInstance(mCamera);
-            mAlreadyLoadedAssets.insert(shortPath);
+            mAlreadyLoadedAssetsNames.insert(shortPath);
         }
     }
 
@@ -265,7 +280,7 @@ void SwScene::unloadAssetsAndInstances() {
         SwAsset& asset = pair.second;
         const bool assetDeleted = asset.isMarkedDelete();
         if (assetDeleted) {
-            mAlreadyLoadedAssets.erase(asset.getName());
+            mAlreadyLoadedAssetsNames.erase(asset.getName());
             mFlags.mAssetUnloaded = true;
             asset.deferDestroyImages();  
         }
@@ -300,6 +315,46 @@ void SwScene::markAllAssetsDelete() {
     for (auto& asset : mAssets | std::views::values) {
         asset.markDelete();
     }
+}
+
+void SwScene::addAssetIdLoadedPrevFrame(std::uint32_t assetId) { mAssetsIdsLoadedThisFrame.insert(assetId); }
+
+void SwScene::fillAssetImages() {
+    std::vector<SwColorImage2D*> uploadedImages;
+    for (std::uint32_t assetId : mAssetsIdsLoadedThisFrame) {
+        auto it = mAssets.find(assetId);
+        if (it == mAssets.end()) continue;
+        SwAsset& asset = it->second;
+        for (auto& imageInfo : asset.getImageDataPtrs()) {
+            std::uint32_t imageId = imageInfo.first;
+            void* imageDataPtr = imageInfo.second;
+            SwColorImage2D& image = *asset.getImages()[imageId];
+            image.fillImageData(imageDataPtr, false);  // fold the upload into the frame command buffer instead of a blocking submit
+            uploadedImages.emplace_back(&image);
+        }
+    }
+
+    if (uploadedImages.empty()) return;
+
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([images = std::move(uploadedImages)](vk::CommandBuffer cmd) {
+        for (SwColorImage2D* image : images) {
+            image->emitTransition(cmd, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
+        }
+    });
+}
+
+void SwScene::freeAssetImages() {
+    for (std::uint32_t assetId : mAssetsIdsLoadedThisFrame) {
+        auto it = mAssets.find(assetId);
+        if (it == mAssets.end()) continue;
+        SwAsset& asset = it->second;
+        for (auto& imageInfo : asset.getImageDataPtrs()) {
+            void* imageDataPtr = imageInfo.second;
+            stbi_image_free(imageDataPtr);
+        }
+        asset.clearImageDataPtrs();
+    }
+    mAssetsIdsLoadedThisFrame.clear();
 }
 
 void SwScene::regenerateRcsAndRis() {
@@ -597,21 +652,21 @@ void SwScene::resetFlags() {
 }
 
 void SwScene::perFrameUpdate() {
-    mGui.refresh();
-
     const auto start = std::chrono::system_clock::now();
+
+    freeAssetImages();  // This one above anything that spawns in assets, because it needs to free data from previous frame's loaded assets
+
+    mGui.refresh();
 
     mCamera.update(SwRenderer::sRendererContext.mStats->mFrameTime, static_cast<float>(SwRenderer::ONE_SECOND_IN_MS / SwRenderer::EXPECTED_FRAME_RATE));
 
     unloadAssetsAndInstances();
-
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getReloadInstancesFlag()) {
             asset.reloadInstances();
             mFlags.mReloadMainInstancesBuffer = true;
         }
     }
-
     if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
         realignOffsets();
         reloadSceneBuffers();
@@ -632,8 +687,9 @@ void SwScene::perFrameUpdate() {
             reloadSceneLightsBuffer();  // light params changed; re-upload without touching indices
         }
     }
-
     resetFlags();
+
+    fillAssetImages();
 
     mCull.refresh();
     mLighting.refresh();
@@ -688,7 +744,7 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryMasked]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);
-    if (mPick.isPicked()) { // This block always after geometry draws since it uses the same depth image
+    if (mPick.isPicked()) {  // This block always after geometry draws since it uses the same depth image
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);

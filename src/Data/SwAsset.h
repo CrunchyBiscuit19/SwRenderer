@@ -40,6 +40,7 @@ private:
     std::vector<SwSamplerOptions> mSamplerOptions;
     
     std::vector<std::optional<SwColorImage2D>> mImages;
+    std::unordered_map<std::uint32_t, void*> mImageDataPtrs;
 
     std::vector<SwMaterial> mMaterials;
     SwAllocatedBuffer mMaterialConstantsBuffer;
@@ -96,19 +97,29 @@ public:
     void deferDestroyImages();
 
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
+
     inline void setStandaloneLight(bool flag) { mStandaloneLight = flag; }
     inline bool isStandaloneLight() { return mStandaloneLight; }
+    
     inline std::string getName() { return mName; }
     inline std::uint32_t getId() { return mId; }
+    
     inline std::vector<std::uint32_t>& getInstanceIds() { return mInstanceIds; }
-    inline bool isMarkedDelete() { return mDelete; }
     inline bool getReloadInstancesFlag() { return mReloadInstancesFlag; }
+    
+    inline bool isMarkedDelete() { return mDelete; }
+    
+    inline std::span<std::optional<SwColorImage2D>> getImages() { return mImages; }
     inline std::span<SwMesh> getMeshes() { return mMeshes; }
     inline std::span<SwMaterial> getMaterials() { return mMaterials; }
     inline std::span<SwLight> getLights() { return mLights; }
     inline std::span<std::shared_ptr<SwNode>> getNodes() { return mNodes; }
+    
     inline SwAllocatedBuffer& getMaterialConstantsBuffer() { return mMaterialConstantsBuffer; }
     inline SwAllocatedBuffer& getNodeTransformsBuffer() { return mNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getInstancesBuffer() { return mInstancesBuffer; }
     inline SwAllocatedBuffer& getBoundsBuffer() { return mBoundsBuffer; }
+
+    inline std::unordered_map<std::uint32_t, void*>& getImageDataPtrs() { return mImageDataPtrs; }
+    inline void clearImageDataPtrs() { return mImageDataPtrs.clear(); }
 };

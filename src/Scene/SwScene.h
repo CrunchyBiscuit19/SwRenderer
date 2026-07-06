@@ -45,12 +45,13 @@ private:
     SwCamera mCamera;
 
     std::unordered_map<std::uint32_t, SwAsset> mAssets;
+    std::unordered_set<std::string> mAlreadyLoadedAssetsNames;
+    std::unordered_set<std::uint32_t> mAssetsIdsLoadedThisFrame;
+
     std::unordered_map<std::uint32_t, SwInstance> mInstances;
-    std::unordered_set<std::string> mAlreadyLoadedAssets;
 
     std::unordered_map<std::uint32_t, SwLight> mLights;     
     std::vector<std::uint32_t> mLightIds;             
-
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
 
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
@@ -153,13 +154,16 @@ public:
     inline SwRenderGraph& getRenderGraph() { return mRenderGraph; }
 
     void loadAssets(const std::vector<std::filesystem::path>& files);
-    void spawnStandaloneLight(SwLight::Type type);
     void unloadAssetsAndInstances();
     void markAllAssetsDelete();
+    void addAssetIdLoadedPrevFrame(std::uint32_t assetId);
+    void fillAssetImages();
+    void freeAssetImages();
 
     void addInstanceLights(SwAsset& asset, std::uint32_t instanceId);
     void removeInstanceLights(std::uint32_t instanceId);
     void refreshLightIndices();
+    void spawnStandaloneLight(SwLight::Type type);
 
     void regenerateRcsAndRis();
 

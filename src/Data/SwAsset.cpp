@@ -245,8 +245,7 @@ void SwAsset::constructImages() {
             fmt::format("{}_Image{:0>4}", mName, i), formats[i].value(), extent,
             vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc, true
         );
-        mImages[i]->fillImageData(decodedImage.mData);
-        stbi_image_free(decodedImage.mData);
+        mImageDataPtrs[i] = decodedImage.mData;
     }
 }
 
@@ -560,6 +559,7 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     constructLights();
     constructNodes();
     SwRenderer::sRendererContext.mScene->mFlags.mAssetLoaded = true;
+    SwRenderer::sRendererContext.mScene->addAssetIdLoadedPrevFrame(mId);
 }
 
 void SwAsset::generateRcsAndRis() {
