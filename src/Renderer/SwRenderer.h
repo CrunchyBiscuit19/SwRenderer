@@ -73,8 +73,9 @@ public:
 #endif
     static constexpr std::uint32_t ONE_SECOND_IN_MS{1000};
     static constexpr std::uint32_t EXPECTED_FRAME_RATE{60};
-    static constexpr std::uint32_t MAX_1D_WORKGROUP_THREADS{1 << 10};
-    static constexpr std::uint32_t MAX_2D_WORKGROUP_THREADS{1 << 5};
+    static constexpr std::uint32_t MAX_1D_WORKGROUP_THREADS{64};
+    static constexpr std::uint32_t MAX_2D_WORKGROUP_THREADS{8};
+    static constexpr std::uint32_t MAX_3D_WORKGROUP_THREADS{4};
     static constexpr std::uint32_t MAX_DESCRIPTOR_SETS{1 << 12};
 
     SwRenderer();
