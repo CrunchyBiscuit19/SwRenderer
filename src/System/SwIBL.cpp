@@ -136,6 +136,9 @@ void SwIBL::System::initializeResources() {
     // --- Bake the environment-independent BRDF LUT once, and prime the env-dependent maps to a valid
     // sampled layout so the consume set is complete even before the first skybox bake. ---
     SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
+        mResources.mIrradianceImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+        mResources.mPrefilterImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+
         mResources.mBrdfLutImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite, vk::ImageLayout::eGeneral);
         cmd.bindPipeline(mResources.mBrdfLutPipelineBundle.getBindPoint(), mResources.mBrdfLutPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(

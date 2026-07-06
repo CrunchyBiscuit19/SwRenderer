@@ -91,6 +91,13 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowMapsDescriptorSet.writeSampler(2, mResources.mShadowMapsSampler.getHandle());
     mResources.mShadowMapsDescriptorSet.pushWrites();
 
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+        for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
+            mResources.mShadow2DMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+            mResources.mShadowCubeMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+        }
+    });
+
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
         mResources.mShadowDrawRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightRcsBuffer{}", i),
