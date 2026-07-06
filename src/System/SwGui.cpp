@@ -10,6 +10,7 @@
 
 #include <glm/gtc/type_ptr.hpp>
 #include <magic_enum.hpp>
+#include <numeric>
 #include <ranges>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -244,9 +245,38 @@ void SwGui::System::initializeResources() {
 
     mResources.mGuiComponents[SwGuiComponent::Effects] = [this]() { ImGui::Checkbox("Toggle FXAA", mScene.getPostProcessSystem().getFXAAActivePtr()); };
     mResources.mGuiComponents[SwGuiComponent::Stats] = [this]() {
+        const float frameTime = SwRenderer::sRendererContext.mStats->mFrameTime;
+
+        const float fps = 1000.f / frameTime;
+
+        constexpr std::size_t frameTimeHistorySize = 120;
+        static std::array<float, frameTimeHistorySize> frameTimeHistory{};
+        static std::array<float, frameTimeHistorySize> fpsHistory{};
+        static std::size_t frameTimeHistoryOffset = 0;
+        frameTimeHistory[frameTimeHistoryOffset] = frameTime;
+        fpsHistory[frameTimeHistoryOffset] = fps;
+        frameTimeHistoryOffset = (frameTimeHistoryOffset + 1) % frameTimeHistorySize;
+
+        const float maxFrameTime = *std::ranges::max_element(frameTimeHistory);
+        const float maxFps = *std::ranges::max_element(fpsHistory);
+
+        // Averaging over the history smooths the per-frame jitter so the readout stays legible at runtime.
+        const float avgFrameTime = std::reduce(frameTimeHistory.begin(), frameTimeHistory.end()) / frameTimeHistorySize;
+        const float avgFps = std::reduce(fpsHistory.begin(), fpsHistory.end()) / frameTimeHistorySize;
+        const std::string frameTimeOverlay = fmt::format("Avg {:.2f} ms", avgFrameTime);
+        const std::string fpsOverlay = fmt::format("Avg {:.0f} FPS", avgFps);
+
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());
-        ImGui::Text("FPS:  %.2f", 1000.f / SwRenderer::sRendererContext.mStats->mFrameTime);
-        ImGui::Text("Frame Time:  %.2fms", SwRenderer::sRendererContext.mStats->mFrameTime);
+        ImGui::Text("Frame Time");
+        ImGui::PlotLines(
+            "##FrameTimeGraph", frameTimeHistory.data(), static_cast<int>(frameTimeHistorySize), static_cast<int>(frameTimeHistoryOffset),
+            frameTimeOverlay.c_str(), 0.f, maxFrameTime * 1.2f, ImVec2(0.f, 60.f)
+        );
+        ImGui::Text("FPS");
+        ImGui::PlotLines(
+            "##FpsGraph", fpsHistory.data(), static_cast<int>(frameTimeHistorySize), static_cast<int>(frameTimeHistoryOffset), fpsOverlay.c_str(), 0.f,
+            maxFps * 1.2f, ImVec2(0.f, 60.f)
+        );
         ImGui::Text("Draw Time:  %.2fms", SwRenderer::sRendererContext.mStats->mDrawTime);
         ImGui::Text("Update Time: %.2fms", SwRenderer::sRendererContext.mStats->mSceneUpdateTime);
         ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall);

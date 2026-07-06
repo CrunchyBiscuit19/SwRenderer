@@ -329,7 +329,7 @@ void SwScene::fillAssetImages() {
             std::uint32_t imageId = imageInfo.first;
             void* imageDataPtr = imageInfo.second;
             SwColorImage2D& image = *asset.getImages()[imageId];
-            image.fillImageData(imageDataPtr, false);  // fold the upload into the frame command buffer instead of a blocking submit
+            image.fillImageData(imageDataPtr, false);  
             uploadedImages.emplace_back(&image);
         }
     }
