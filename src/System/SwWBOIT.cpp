@@ -79,7 +79,6 @@ void SwWBOIT::System::initializePasses() {
 void SwWBOIT::System::reInitializeOnResize() {
     mResources.mAccumImage = SwImageFactory::createColorImage2D(
         "AccumImage",
-        nullptr,
         SwSwapchain::DRAW_FORMAT,
         SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D(),
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
@@ -87,7 +86,6 @@ void SwWBOIT::System::reInitializeOnResize() {
     );
     mResources.mRvlImage = SwImageFactory::createColorImage2D(
         "RvlImage",
-        nullptr,
         SwWBOIT::RVL_FORMAT,
         SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D(),
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,

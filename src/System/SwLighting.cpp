@@ -59,7 +59,6 @@ void SwLighting::System::initializeResources() {
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
         mResources.mShadow2DMaps[i] = SwImageFactory::createDepthImage2D(
             std::format("Shadow2DMap{}", i),
-            nullptr,
             SHADOW_MAP_FORMAT,
             vk::Extent3D{SHADOW_MAP_WIDTH_HEIGHT, SHADOW_MAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
@@ -69,7 +68,6 @@ void SwLighting::System::initializeResources() {
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
         mResources.mShadowCubeMaps[i] = SwImageFactory::createDepthImageCubemap(
             std::format("ShadowCubeMap{}", i),
-            nullptr,
             SHADOW_MAP_FORMAT,
             vk::Extent3D{SHADOW_CUBE_MAP_WIDTH_HEIGHT, SHADOW_CUBE_MAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,

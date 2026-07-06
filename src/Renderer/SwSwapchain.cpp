@@ -123,7 +123,6 @@ void SwSwapchain::onResizeInitialize() {
 
     mDrawImage = SwImageFactory::createColorImage2D(
         "SwapchainDrawImage",
-        nullptr,
         DRAW_FORMAT,
         vk::Extent3D{mWindowExtent, 1},
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eColorAttachment |
@@ -133,7 +132,6 @@ void SwSwapchain::onResizeInitialize() {
     );
     mDepthImage = SwImageFactory::createDepthImage2D(
         "SwapchainDepthImage",
-        nullptr,
         DEPTH_FORMAT,
         mDrawImage.getExtent(),
         vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled |

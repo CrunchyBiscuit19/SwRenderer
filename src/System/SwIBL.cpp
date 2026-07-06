@@ -69,9 +69,9 @@ void SwIBL::System::initializeResources() {
 
     // --- Baked maps (storage for the compute bakes, sampled by the geometry shaders) ---
     const vk::ImageUsageFlags iblUsage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-    mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradianceImage", nullptr, IBL_FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
-    mResources.mPrefilterImage = SwImageFactory::createColorImage2D("IBLPrefilterImage", nullptr, IBL_FORMAT, PREFILTER_EXTENT, iblUsage, true);
-    mResources.mBrdfLutImage = SwImageFactory::createColorImage2D("IBLBrdfLutImage", nullptr, BRDF_LUT_FORMAT, BRDF_LUT_EXTENT, iblUsage, false);
+    mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradianceImage", IBL_FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
+    mResources.mPrefilterImage = SwImageFactory::createColorImage2D("IBLPrefilterImage", IBL_FORMAT, PREFILTER_EXTENT, iblUsage, true);
+    mResources.mBrdfLutImage = SwImageFactory::createColorImage2D("IBLBrdfLutImage", BRDF_LUT_FORMAT, BRDF_LUT_EXTENT, iblUsage, false);
 
     mPrefilterMipLevels = SwHelper::calculateMipMapLevels(PREFILTER_EXTENT);
     // One single-mip storage view per prefilter mip level (the main view spans all mips and is used for sampling).
@@ -185,16 +185,16 @@ void SwIBL::System::initializeResources() {
     mResources.mConsumeDescriptorSet.pushWrites();
 
     // --- Skybox draw: cube + equirect sampler that rasterizes the environment behind the geometry. ---
-    mResources.mDrawSampler = SwSamplerFactory::createSampler("SkyboxDrawSampler", vk::SamplerCreateInfo());
+    mResources.mSkyboxSampler = SwSamplerFactory::createSampler("SkyboxDrawSampler", vk::SamplerCreateInfo());
 
-    mResources.mDrawDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    mResources.mSkyboxDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "SkyboxDrawDescriptorSetLayout", {{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment
     );
-    mResources.mDrawDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SkyboxDrawDescriptorSet", mResources.mDrawDescriptorLayout);
+    mResources.mSkyboxDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SkyboxDrawDescriptorSet", mResources.mSkyboxDescriptorLayout);
 
-    mResources.mDrawPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("SkyboxDrawPipelineLayout", mResources.mDrawDescriptorLayout.getHandle(), SwIBL::DrawPC::getRange());
+    mResources.mSkyboxPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("SkyboxDrawPipelineLayout", mResources.mSkyboxDescriptorLayout.getHandle(), SwIBL::SkyboxPC::getRange());
 
     SwShader skyboxVertexShader = SwShaderFactory::createShader("SkyboxVertexShaderModule", SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader skyboxFragmentShader =
@@ -214,7 +214,7 @@ void SwIBL::System::initializeResources() {
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions skyboxPipelineOptions;
     skyboxPipelineOptions.mVertexShader = skyboxVertexShader.getHandle();
     skyboxPipelineOptions.mFragmentShader = skyboxFragmentShader.getHandle();
-    skyboxPipelineOptions.mLayout = mResources.mDrawPipelineLayout.getHandle();
+    skyboxPipelineOptions.mLayout = mResources.mSkyboxPipelineLayout.getHandle();
     skyboxPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     skyboxPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     skyboxPipelineOptions.mCullMode = vk::CullModeFlagBits::eBack;
@@ -227,10 +227,10 @@ void SwIBL::System::initializeResources() {
     skyboxPipelineOptions.mDepthTestEnabled = false;
     skyboxPipelineOptions.mDepthWriteEnabled = false;
     skyboxPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mResources.mDrawPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("SkyboxDrawPipeline", skyboxPipelineOptions);
+    mResources.mSkyboxPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("SkyboxDrawPipeline", skyboxPipelineOptions);
 
-    const std::uint32_t skyboxVertexSize = static_cast<std::uint32_t>(mResources.mDrawVertices.size() * sizeof(float));
-    mResources.mDrawVertexBuffer = SwBufferFactory::createAllocatedBuffer(
+    const std::uint32_t skyboxVertexSize = static_cast<std::uint32_t>(mResources.mSkyboxVertices.size() * sizeof(float));
+    mResources.mSkyboxVertexBuffer = SwBufferFactory::createAllocatedBuffer(
         "SkyboxDrawVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, skyboxVertexSize, true
     );
 
@@ -242,8 +242,8 @@ void SwIBL::System::initializeResources() {
     skyboxVertexCopy.size = skyboxVertexSize;
 
     SwRenderer::sRendererContext.mImmSubmit->individualSubmit([&](vk::CommandBuffer cmd) {
-        skyboxVertexStaging.copyFromUnchecked(mResources.mDrawVertices.data(), skyboxVertexCopy.size);
-        mResources.mDrawVertexBuffer.copyFrom(cmd, skyboxVertexStaging, skyboxVertexCopy);
+        skyboxVertexStaging.copyFromUnchecked(mResources.mSkyboxVertices.data(), skyboxVertexCopy.size);
+        mResources.mSkyboxVertexBuffer.copyFrom(cmd, skyboxVertexStaging, skyboxVertexCopy);
     });
 
     reinitializeOnUpdate(SKYBOX_DEFAULT_HDR_PATH);
@@ -255,8 +255,8 @@ void SwIBL::System::initializePasses() {
     deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
     deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
     deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&mResources.mDrawImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    deps.mReadBuffers.emplace_back(&mResources.mDrawVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    deps.mReadImages.emplace_back(&mResources.mSkyboxImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+    deps.mReadBuffers.emplace_back(&mResources.mSkyboxVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
 
     mScene.insertPass(SwPass::Type::IBLSkybox, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
@@ -266,12 +266,12 @@ void SwIBL::System::initializePasses() {
 
         cmd.beginRendering(renderInfo);
 
-        cmd.bindPipeline(mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getPipelineHandle());
+        cmd.bindPipeline(mResources.mSkyboxPipelineBundle.getBindPoint(), mResources.mSkyboxPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
-            mResources.mDrawPipelineBundle.getBindPoint(), mResources.mDrawPipelineBundle.getLayoutHandle(), 0, mResources.mDrawDescriptorSet.getHandle(), nullptr
+            mResources.mSkyboxPipelineBundle.getBindPoint(), mResources.mSkyboxPipelineBundle.getLayoutHandle(), 0, mResources.mSkyboxDescriptorSet.getHandle(), nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
-        cmd.pushConstants<SwIBL::DrawPC>(mResources.mDrawPipelineBundle.getLayoutHandle(), SwIBL::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.pushConstants<SwIBL::SkyboxPC>(mResources.mSkyboxPipelineBundle.getLayoutHandle(), SwIBL::SkyboxPC::sStages, 0, mResources.mSkyboxPushConstants);
         cmd.draw(SwIBL::NUM_SKYBOX_VERTICES, 1, 0, 0);
         SwRenderer::sRendererContext.mStats->mNumDrawCall++;
 
@@ -280,7 +280,7 @@ void SwIBL::System::initializePasses() {
     deps.clear();
 }
 
-void SwIBL::System::initializePushConstants() { mResources.mDrawPushConstants.mDrawVertexBuffer = mResources.mDrawVertexBuffer.getDeviceAddress().value(); }
+void SwIBL::System::initializePushConstants() { mResources.mSkyboxPushConstants.mDrawVertexBuffer = mResources.mSkyboxVertexBuffer.getDeviceAddress().value(); }
 
 void SwIBL::System::bakeFromEnvironment(vk::ImageView environmentView, vk::Sampler environmentSampler) {
     // Bind the freshly-loaded environment as the input (binding 0) of every bake set.
@@ -412,14 +412,14 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
     const double average = totalWeight > 0.0 ? weightedLuminance / totalWeight : 1.0;
     mEnvAvgLuminance = std::max(static_cast<float>(average), 1e-4f);
 
-    mResources.mDrawImage = SwImageFactory::createColorImage2D(
-        "SkyboxDrawImage",
-        data,
+    mResources.mSkyboxImage = SwImageFactory::createColorImage2D(
+        "IBLSkyboxImage",
         vk::Format::eR32G32B32A32Sfloat,
         vk::Extent3D{static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height), 1},
-        vk::ImageUsageFlagBits::eSampled,
+        vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc,
         true
     );
+    mResources.mSkyboxImage.fillImageData(data);
 
     if (isExr) {
         std::free(data);  // tinyexr allocates the RGBA buffer with malloc
@@ -427,16 +427,16 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
         stbi_image_free(data);
     }
 
-    mResources.mDrawDescriptorSet.writeImage(
-        0, mResources.mDrawImage.getMainImageViewHandle(), mResources.mDrawSampler.getHandle(), vk::ImageLayout::eShaderReadOnlyOptimal
+    mResources.mSkyboxDescriptorSet.writeImage(
+        0, mResources.mSkyboxImage.getMainImageViewHandle(), mResources.mSkyboxSampler.getHandle(), vk::ImageLayout::eShaderReadOnlyOptimal
     );
-    mResources.mDrawDescriptorSet.pushWrites();
+    mResources.mSkyboxDescriptorSet.pushWrites();
 
     // Bake with the equirect sampler (full LOD range) so the prefilter can read the environment's mip
     // chain for PDF-based mip selection; mDrawSampler clamps maxLod to 0 and would defeat that.
-    bakeFromEnvironment(mResources.mDrawImage.getMainImageViewHandle(), mResources.mEnvSampler.getHandle());
+    bakeFromEnvironment(mResources.mSkyboxImage.getMainImageViewHandle(), mResources.mEnvSampler.getHandle());
 }
 
 void SwIBL::System::refreshPushConstants() {
-    mResources.mDrawPushConstants.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
+    mResources.mSkyboxPushConstants.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
 }

@@ -127,6 +127,8 @@ protected:
 
     void generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces);
 
+    virtual std::uint32_t getFaceCount() const { return 1; }
+
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
     using SwImage::emitTransition;
@@ -137,6 +139,8 @@ public:
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
 
     virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
+
+    void fillImageData(const void* data, bool immediateSubmit = true);
 
     inline vk::Image getHandle() override { return *mImage; }
     inline vk::ImageView getMainImageViewHandle() override { return *mMainImageView; }
@@ -149,8 +153,6 @@ public:
         std::string name,vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType = vk::ImageViewType::e2D, std::uint32_t baseMipLevel = 0,
         std::uint32_t levelCount = 1, std::uint32_t baseArrayLayer = 0, std::uint32_t layerCount = 1
     );
-
-    virtual void resize(vk::Extent3D newExtent) = 0;
 
     void destroy();
 
@@ -211,8 +213,6 @@ public:
 
     void generateMipmaps(vk::CommandBuffer cmd) override;
 
-    void resize(vk::Extent3D newExtent) override;
-
     SwColorImage2D(SwColorImage2D&&) noexcept = default;
     SwColorImage2D& operator=(SwColorImage2D&&) noexcept = default;
 
@@ -231,8 +231,6 @@ public:
     );
 
     void generateMipmaps(vk::CommandBuffer cmd) override;
-
-    void resize(vk::Extent3D newExtent) override;
 
     SwDepthImage2D(SwDepthImage2D&&) noexcept = default;
     SwDepthImage2D& operator=(SwDepthImage2D&&) noexcept = default;
@@ -253,7 +251,7 @@ public:
 
     void generateMipmaps(vk::CommandBuffer cmd) override;
 
-    void resize(vk::Extent3D newExtent) override;
+    std::uint32_t getFaceCount() const override;
 
     SwColorImageCubemap(SwColorImageCubemap&&) noexcept = default;
     SwColorImageCubemap& operator=(SwColorImageCubemap&&) noexcept = default;
@@ -274,7 +272,7 @@ public:
 
     void generateMipmaps(vk::CommandBuffer cmd) override;
 
-    void resize(vk::Extent3D newExtent) override;
+    std::uint32_t getFaceCount() const override;
 
     SwDepthImageCubemap(SwDepthImageCubemap&&) noexcept = default;
     SwDepthImageCubemap& operator=(SwDepthImageCubemap&&) noexcept = default;
@@ -298,16 +296,13 @@ private:
         VmaAllocation mAllocation;
     };
 
-    static std::uint32_t getFormatTexelSize(vk::Format format);
-
     static SwImageConstructionInfo prepareImageConstructionInfo(
-        SwImageType swImageType, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
-        vk::ClearValue clearValue
+        SwImageType swImageType, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
     );
 
-    static void fillImageData(SwImageType swImageType, const void* data, SwAllocatedImage& image);
-
 public:
+    static std::uint32_t getFormatTexelSize(vk::Format format);
+
     enum class SwDefaultImageOption { White, Grey, Black, Blue, Checkerboard, FlatNormal };
 
     static std::unordered_map<SwDefaultImageOption, SwColorImage2D> sDefaultImages;
@@ -323,22 +318,22 @@ public:
     );
 
     static SwColorImage2D createColorImage2D(
-        std::string name, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
+        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
         vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f)
     );
 
     static SwDepthImage2D createDepthImage2D(
-        std::string name, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
+        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
         vk::ClearValue clearValue = vk::ClearValue()
     );
 
     static SwColorImageCubemap createColorImageCubemap(
-        std::string name, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
+        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
         vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f)
     );
 
     static SwDepthImageCubemap createDepthImageCubemap(
-        std::string name, const void* data, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
+        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
         vk::ClearValue clearValue = vk::ClearValue()
     );
 

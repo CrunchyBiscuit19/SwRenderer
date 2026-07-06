@@ -469,8 +469,7 @@ void SwCull::System::reInitializeOnResize() {
     
     mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(depthPyramidExtent);
     mResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
-        "DepthPyramidImage",
-        nullptr, vk::Format::eR32Sfloat, depthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
+        "DepthPyramidImage", vk::Format::eR32Sfloat, depthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidImage.addImageView(

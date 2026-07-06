@@ -211,7 +211,6 @@ void SwPick::System::reInitializeOnResize() {
     vk::Extent3D imageExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
     mResources.mReadbackImage = SwImageFactory::createColorImage2D(
         "ReadbackImage",
-        nullptr,
         vk::Format::eR32G32Uint,
         imageExtent,
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled,

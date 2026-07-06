@@ -242,8 +242,10 @@ void SwAsset::constructImages() {
         }
         const vk::Extent3D extent{static_cast<std::uint32_t>(decodedImage.mWidth), static_cast<std::uint32_t>(decodedImage.mHeight), 1};
         mImages[i] = SwImageFactory::createColorImage2D(
-            fmt::format("{}_Image{:0>4}", mName, i), decodedImage.mData, formats[i].value(), extent, vk::ImageUsageFlagBits::eSampled, true
+            fmt::format("{}_Image{:0>4}", mName, i), formats[i].value(), extent,
+            vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc, true
         );
+        mImages[i]->fillImageData(decodedImage.mData);
         stbi_image_free(decodedImage.mData);
     }
 }

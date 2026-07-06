@@ -50,7 +50,7 @@ struct PrefilterPC : SwPC<PrefilterPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct DrawPC : SwPC<DrawPC> {
+struct SkyboxPC : SwPC<SkyboxPC> {
     vk::DeviceAddress mDrawVertexBuffer;
     vk::DeviceAddress mCameraBuffer;
 
@@ -85,11 +85,10 @@ struct Resources {
 
     SwDescriptorSet mConsumeDescriptorSet;
 
-    SwColorImage2D mDrawImage;
+    SwColorImage2D mSkyboxImage;
+    SwSampler mSkyboxSampler;
 
-    SwSampler mDrawSampler;
-
-    const std::vector<float> mDrawVertices = {
+    const std::vector<float> mSkyboxVertices = {
         -1.0f, 1.0f,  -1.0f, 1.0f, -1.0f, -1.0f, -1.0f, 1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
         1.0f,  -1.0f, -1.0f, 1.0f, 1.0f,  1.0f,  -1.0f, 1.0f, -1.0f, 1.0f,  -1.0f, 1.0f,
 
@@ -108,15 +107,15 @@ struct Resources {
         -1.0f, -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  1.0f, 1.0f,  -1.0f, -1.0f, 1.0f,
         1.0f,  -1.0f, -1.0f, 1.0f, -1.0f, -1.0f, 1.0f,  1.0f, 1.0f,  -1.0f, 1.0f,  1.0f,
     };
-    SwAllocatedBuffer mDrawVertexBuffer;
+    SwAllocatedBuffer mSkyboxVertexBuffer;
 
-    SwGraphicsPipelineBundle mDrawPipelineBundle;
-    SwPipelineLayout mDrawPipelineLayout;
+    SwGraphicsPipelineBundle mSkyboxPipelineBundle;
+    SwPipelineLayout mSkyboxPipelineLayout;
 
-    SwDescriptorSet mDrawDescriptorSet;
-    SwDescriptorLayout mDrawDescriptorLayout;
+    SwDescriptorSet mSkyboxDescriptorSet;
+    SwDescriptorLayout mSkyboxDescriptorLayout;
 
-    DrawPC mDrawPushConstants;
+    SkyboxPC mSkyboxPushConstants;
 
     static void init();
     static void cleanup();
