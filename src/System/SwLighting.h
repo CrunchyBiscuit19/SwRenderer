@@ -63,7 +63,7 @@ struct MarkActiveClustersPC : SwPC<MarkActiveClustersPC> {
 };
 
 struct LightsCullPC : SwPC<LightsCullPC> {
-    vk::DeviceAddress mCameraBuffer;
+    vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;

@@ -39,7 +39,7 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float3 sampledNormal = materialResources[NonUniformResourceIndex(base + SwGeometry::NORMAL_TEXTURE_OFFSET)].Sample(in.mUv).rgb;
     float3 normal = SwGeometry::applyNormalMap(in.mNormal, in.mTangent, sampledNormal, mc.mNormalScale);
 
-    float3 view = normalize(workPc.mCameraBuffer->mWorldPos - in.mWorldPos);
+    float3 view = normalize(workPc.mFrameBuffer->mCameraBuffer->mWorldPos - in.mWorldPos);
 
     float3 litColor = SwLighting::shadeLit(
         baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mVisibleLightsBuffer, workPc.mSceneLightsBuffer,

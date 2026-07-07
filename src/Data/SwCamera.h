@@ -1,7 +1,7 @@
 #pragma once
 
+#include <Renderer/SwSwapchain.h>
 #include <Data/SwFrustum.h>
-#include <Data/SwLight.h>
 #include <Renderer/SwRendererContext.h>
 #include <Resource/SwBuffer.h>
 #include <SDL3/SDL_events.h>
@@ -31,6 +31,13 @@ public:
 struct SwRendererContext;
 
 class SwCamera {
+public:
+    struct Data {
+        SwPerspective mPerspective;
+        glm::vec3 mWorldPos;
+        SwFrustum mFrustum;
+    };
+
 private:
     static constexpr float FOVY{70.f};
     static constexpr float NEAR_PLANE{.1f};
@@ -50,8 +57,8 @@ private:
     bool mRelativeMode{false};
     SwMovementMode mMovementMode;
     std::unordered_map<SwMovementMode, std::function<void()>> mMovementFunctions;
-    SwAllocatedBuffer mFrustumBuffer;
     SwFrustum mFrustum;
+    std::array<SwAllocatedBuffer, SwSwapchain::NUM_FRAME_OVERLAP> mCameraBuffers;
 
 public:
     static constexpr float MAX_CAMERA_SPEED{10.f};
@@ -71,7 +78,7 @@ public:
     void update(float deltaTime, float expectedDeltaTime);
 
     inline SwFrustum& getFrustum() { return mFrustum; }
-    inline SwAllocatedBuffer& getFrustumBuffer() { return mFrustumBuffer; }
+    SwAllocatedBuffer& getCameraBuffer();
     inline bool getRelativeMode() const { return mRelativeMode; }
     inline SwMovementMode getMovementMode() const { return mMovementMode; }
     inline glm::vec3 getPosition() const { return mPosition; }

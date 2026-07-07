@@ -2,6 +2,7 @@ module SwGeometry;
 
 __exported import Data.SwBatch;
 __exported import Data.SwCamera;
+__exported import Data.SwFrame;
 __exported import Data.SwInstance;
 __exported import Data.SwLight;
 __exported import System.Lighting.SwLighting;
@@ -24,7 +25,7 @@ namespace SwGeometry {
         public SwInstance::Data* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
         public SwBatch::RenderCommand* mDrawRcsBuffer;
-        public SwCamera::Data* mCameraBuffer;
+        public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwLighting::VisibleLights* mVisibleLightsBuffer;
         public float mMaxPrefilterMip;   // highest mip index of the specular prefilter chain

@@ -42,7 +42,7 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     float3 sampledNormal = materialResources[NonUniformResourceIndex(base + SwGeometry::NORMAL_TEXTURE_OFFSET)].Sample(in.mUv).rgb;
     float3 normal = SwGeometry::applyNormalMap(in.mNormal, in.mTangent, sampledNormal, mc.mNormalScale);
 
-    float3 view = normalize(workPc.mCameraBuffer->mWorldPos - in.mWorldPos);
+    float3 view = normalize(workPc.mFrameBuffer->mCameraBuffer->mWorldPos - in.mWorldPos);
 
     float3 lit = SwLighting::shadeLit(
         color.rgb,

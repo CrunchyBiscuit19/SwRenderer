@@ -21,7 +21,7 @@ SwPick::VSOutput computeVertex(SwPick::VSInput in) {
     SwMaterial::Constant materialConstant = pickDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     out.mPosition =
-        mul(mul(mul(mul(pickDrawPc.mCameraBuffer->mPerspective.mProj, pickDrawPc.mCameraBuffer->mPerspective.mView), instanceTransformMatrix),
+        mul(mul(mul(mul(pickDrawPc.mFrameBuffer->mCameraBuffer->mPerspective.mProj, pickDrawPc.mFrameBuffer->mCameraBuffer->mPerspective.mView), instanceTransformMatrix),
                 nodeTransformMatrix),
             position);
     out.mUv = v.mUv;

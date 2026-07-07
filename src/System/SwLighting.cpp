@@ -205,7 +205,7 @@ void SwLighting::System::initializePasses() {
 
     // Lights Cull
     staticDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer(), SwDependency::BufferDepType::ComputeStorageRead
+        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -275,7 +275,7 @@ void SwLighting::System::regenerateShadowRcs() {
 void SwLighting::System::refreshDynamicDependencies() {}
 
 void SwLighting::System::refreshPushConstants() {
-    mResources.mLightsCullPc.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
+    mResources.mLightsCullPc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mLightsCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
     mResources.mLightsCullPc.mSceneNodeTransformsBuffer =
         SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();

@@ -1,7 +1,5 @@
 #pragma once
 
-#include <Data/SwCamera.h>
-#include <Data/SwLight.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwCommandBuffer.h>
 #include <Resource/SwCommandPool.h>
@@ -22,18 +20,17 @@ struct SwRendererContext;
 class SwFrame {
 public:
     struct Data {
-        SwPerspective mPerspective;
-        glm::vec3 mWorldPos;
+        vk::DeviceAddress mCameraBuffer;
     };
 
 private:
-    static constexpr std::uint32_t CAMERA_BUFFER_SIZE{sizeof(Data)};
+    static constexpr std::uint32_t DATA_BUFFER_SIZE{sizeof(Data)};
 
     SwCommandPool mCommandPool;
     SwCommandBuffer mCommandBuffer;
     SwFence mRenderFence;
     SwSemaphore mAvailableSemaphore;
-    SwAllocatedBuffer mCameraBuffer;
+    SwAllocatedBuffer mDataBuffer;
 
 public:
     SwFrame();
@@ -47,7 +44,7 @@ public:
     inline SwCommandBuffer& getCommandBuffer() { return mCommandBuffer; };
     inline SwFence& getRenderFence() { return mRenderFence; };
     inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };
-    inline SwAllocatedBuffer& getCameraBuffer() { return mCameraBuffer; };
+    inline SwAllocatedBuffer& getDataBuffer() { return mDataBuffer; };
 };
 
 class SwSwapchain {

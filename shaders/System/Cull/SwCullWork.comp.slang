@@ -125,8 +125,8 @@ void main(SwCull::CSInput in) {
     SwMesh::Bounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     SwNode::Transform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
     SwInstance::Data* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
-    SwFrustum::Data* frustum = workPc.mFrustumBuffer;
-    SwCamera::Perspective* perspective = &workPc.mCameraBuffer.mPerspective;
+    SwFrustum::Data* frustum = &workPc.mFrameBuffer->mCameraBuffer->mFrustum;
+    SwCamera::Perspective* perspective = &workPc.mFrameBuffer->mCameraBuffer->mPerspective;
     float4[SwMesh::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMax.z, 1.f),

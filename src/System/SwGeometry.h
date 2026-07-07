@@ -16,7 +16,7 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneDrawRisIndicesBuffer;
     vk::DeviceAddress mDrawRcsBuffer;
-    vk::DeviceAddress mCameraBuffer;
+    vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mVisibleLightsBuffer;
     float mMaxPrefilterMip;       // highest mip index of the SwIBL specular prefilter chain

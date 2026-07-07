@@ -11,19 +11,18 @@ void SwFrame::initialize(std::uint32_t frameIndex) {
     mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(fmt::format("Frame{}CommandBuffer", frameIndex), mCommandPool);
     mRenderFence = SwFenceFactory::createFence(fmt::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore(fmt::format("Frame{}AvailableSemaphore", frameIndex));
-    mCameraBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("Frame{}CameraBuffer", frameIndex), vk::BufferUsageFlagBits::eUniformBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        CAMERA_BUFFER_SIZE, true
+    mDataBuffer = SwBufferFactory::createAllocatedBuffer(
+        fmt::format("Frame{}DataBuffer", frameIndex), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        DATA_BUFFER_SIZE, true
     );
 }
 
 void SwFrame::update() {
     SwScene& scene = *SwRenderer::sRendererContext.mScene;
-    Data cameraData{
-        .mPerspective = scene.getCamera().getPerspective(),
-        .mWorldPos = scene.getCamera().getPosition(),
+    Data data{
+        .mCameraBuffer = scene.getCamera().getCameraBuffer().getDeviceAddress().value(),
     };
-    mCameraBuffer.copyFromUnchecked(&cameraData, sizeof(Data));
+    mDataBuffer.copyFromUnchecked(&data, sizeof(Data));
 }
 
 vk::ClearColorValue SwSwapchain::DRAW_CLEAR_VALUE{.463f, .616f, .859f, 0.f};

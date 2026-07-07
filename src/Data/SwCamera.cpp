@@ -75,9 +75,15 @@ void SwCamera::initialize() {
         }
     });
 
-    mFrustumBuffer = SwBufferFactory::createAllocatedBuffer(
-        "CameraFrustumBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, sizeof(SwFrustum), true
-    );
+    for (std::uint32_t i = 0; i < SwSwapchain::NUM_FRAME_OVERLAP; i++) {
+        mCameraBuffers[i] = SwBufferFactory::createAllocatedBuffer(
+            "CameraBuffer" + std::to_string(i), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, sizeof(Data), true
+        );
+    }
+}
+
+SwAllocatedBuffer& SwCamera::getCameraBuffer() {
+    return mCameraBuffers[SwRenderer::sRendererContext.mSwapchain->getFrameNumber() % SwSwapchain::NUM_FRAME_OVERLAP];
 }
 
 glm::mat4 SwCamera::getViewMatrix() const {
@@ -133,6 +139,13 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
     const float halfHSide = halfVSide * SwRenderer::sRendererContext.mSwapchain->getAspectRatio();
 
     mFrustum = SwFrustum::calculateFrustum(mPosition, forward, right, up, halfHSide, halfVSide, NEAR_PLANE, FAR_PLANE);
+
+    Data cameraData{
+        .mPerspective = getPerspective(),
+        .mWorldPos = mPosition,
+        .mFrustum = mFrustum,
+    };
+    getCameraBuffer().copyFromUnchecked(&cameraData, sizeof(Data));
 }
 
 SwPerspective SwCamera::getPerspective() const {

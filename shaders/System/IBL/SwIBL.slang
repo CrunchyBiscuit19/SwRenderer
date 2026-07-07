@@ -1,6 +1,7 @@
 module SwIBL;
 
 __exported import Data.SwCamera;
+__exported import Data.SwFrame;
 __exported import Data.SwConstants;
 import System.BRDF.SwBRDF;
 
@@ -72,7 +73,7 @@ namespace SwIBL {
 
     public struct SkyboxPC {
         public SwIBL::Vertex* mWorkVertexBuffer;
-        public SwCamera::Data* mCameraBuffer;
+        public SwFrame::Data* mFrameBuffer;
     };
 
     public struct Vertex {

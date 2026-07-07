@@ -429,5 +429,5 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
 }
 
 void SwIBL::System::refreshPushConstants() {
-    mResources.mSkyboxPushConstants.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
+    mResources.mSkyboxPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }

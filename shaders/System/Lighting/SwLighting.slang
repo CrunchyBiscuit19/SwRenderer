@@ -2,6 +2,7 @@ module SwLighting;
 
 __exported import Data.SwBatch;
 __exported import Data.SwCamera;
+__exported import Data.SwFrame;
 __exported import Data.SwFrustum;
 __exported import Data.SwInstance;
 __exported import Data.SwLight;
@@ -43,7 +44,7 @@ namespace SwLighting {
     };
 
     public struct LightsCullPC {
-        public SwCamera::Data* mCameraBuffer;
+        public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;

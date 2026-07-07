@@ -15,14 +15,12 @@ void SwCull::System::initializeOtherPasses() {
     // Reset
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::TransferWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
-    staticDeps.mWriteBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::HostWrite);
 
     mScene.insertPass(SwPass::Type::CullReset, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
 
         cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneDrawRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
-        mScene.getCamera().getFrustumBuffer().copyFromUnchecked(&mScene.getCamera().getFrustum(), sizeof(SwFrustum));
         cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getHandle(), 0, vk::WholeSize, 0);
 
         for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
@@ -66,7 +64,6 @@ void SwCull::System::initializeEarlyPasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
@@ -203,7 +200,6 @@ void SwCull::System::initializeLatePasses() {
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getCamera().getFrustumBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
     staticDeps.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
 
@@ -371,7 +367,7 @@ void SwCull::System::refreshEarlyDynamicDependencies() {
 
     // EarlyWork
     dynamicDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer(), SwDependency::BufferDepType::ComputeStorageRead
+        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
     dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
@@ -407,7 +403,7 @@ void SwCull::System::refreshLateDynamicDependencies() {
 
     // LateWork
     dynamicDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer(), SwDependency::BufferDepType::ComputeStorageRead
+        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
     );
     dynamicDeps.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     dynamicDeps.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
@@ -437,8 +433,7 @@ void SwCull::System::refreshDynamicDependencies() {
 }
 
 void SwCull::System::refreshPushConstants() {
-    mResources.mWorkPushConstants.mFrustumBuffer = mScene.getCamera().getFrustumBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mCameraBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getCameraBuffer().getDeviceAddress().value();
+    mResources.mWorkPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();

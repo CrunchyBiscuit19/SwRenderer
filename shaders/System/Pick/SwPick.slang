@@ -2,6 +2,7 @@ module SwPick;
 
 __exported import Data.SwBatch;
 __exported import Data.SwCamera;
+__exported import Data.SwFrame;
 __exported import Data.SwInstance;
 __exported import Data.SwMaterial;
 __exported import Data.SwMesh;
@@ -15,7 +16,7 @@ namespace SwPick {
         public SwInstance::Data* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
         public SwBatch::RenderCommand *mDrawRcsBuffer;
-        public SwCamera::Data *mCameraBuffer;
+        public SwFrame::Data *mFrameBuffer;
     };
 
     public struct VSInput {

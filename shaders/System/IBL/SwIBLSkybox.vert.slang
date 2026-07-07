@@ -8,9 +8,9 @@ SwIBL::VSOutput main(SwIBL::VSInput in) {
 
     float4 position = skyboxPc.mWorkVertexBuffer[in.mVertexIndex].mPosition;
     float4x4 viewWithoutTranslation =
-        float4x4(float4(skyboxPc.mCameraBuffer->mPerspective.mView[0].xyz, 0), float4(skyboxPc.mCameraBuffer->mPerspective.mView[1].xyz, 0),
-                 float4(skyboxPc.mCameraBuffer->mPerspective.mView[2].xyz, 0), float4(0, 0, 0, 1));
-    out.mPosition = mul(mul(skyboxPc.mCameraBuffer->mPerspective.mProj, viewWithoutTranslation), position);
+        float4x4(float4(skyboxPc.mFrameBuffer->mCameraBuffer->mPerspective.mView[0].xyz, 0), float4(skyboxPc.mFrameBuffer->mCameraBuffer->mPerspective.mView[1].xyz, 0),
+                 float4(skyboxPc.mFrameBuffer->mCameraBuffer->mPerspective.mView[2].xyz, 0), float4(0, 0, 0, 1));
+    out.mPosition = mul(mul(skyboxPc.mFrameBuffer->mCameraBuffer->mPerspective.mProj, viewWithoutTranslation), position);
     out.mUvw = position.xyz;
 
     return out;

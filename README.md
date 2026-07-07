@@ -95,7 +95,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Camera
 
-* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed, computes the six frustum planes, and keeps them in a GPU buffer (`SwCull::Plane`) for the cull pass. Offers a spawn transform helper for placing new instances in front of the camera.
+* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed and computes the six frustum planes. It owns and writes the camera GPU buffers (`SwCamera::Data`: perspective, world position, and the frustum) that the frame's data buffer points at, consumed by the cull and geometry passes. One buffer per frame-in-flight (indexed by frame number) so the CPU write for the next frame never races an in-flight frame's GPU read. Offers a spawn transform helper for placing new instances in front of the camera.
 * **`SwPerspective`** — a view + projection matrix pair (reversed-Z, Y-flipped Vulkan projection); produced by `SwCamera::getPerspective()`.
 
 ### Asset
@@ -257,9 +257,9 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Swapchain `SwSwapchain`
 
 * **`SwSwapchain`** — owns the SDL window + surface, the `VkSwapchainKHR` and its `SwSwapchainImage`s, the HDR draw image and depth image rendered into, and the frames-in-flight. Triple-buffered (3 swapchain images) with 2 frames of overlap. Handles image acquire / queue submit / present and window resize.
-* **`SwFrame`** — per-frame-in-flight state: its own command pool + command buffer, render fence, image-available semaphore, and a per-frame uniform buffer.
-* **`SwFrame::Data`** — the per-frame uniform payload uploaded each frame: the camera `SwPerspective`, the `SwSunlight`, and the camera world position.
-* **Relations** — owns the draw/depth images the systems render into; `getCurrentFrame()` indexes by frame number; the per-frame buffer's device address is fed into systems' push constants (e.g. `mPerFrameBuffer` in cull/geometry).
+* **`SwFrame`** — per-frame-in-flight state: its own command pool + command buffer, render fence, image-available semaphore, and a per-frame data buffer.
+* **`SwFrame::Data`** — the per-frame data payload: a table of `vk::DeviceAddress`es pointing at other GPU buffers (currently just the camera buffer). Each frame `update()` writes the current addresses into the data buffer, decoupling the pointed-to buffers from the frame's lifetime.
+* **Relations** — owns the draw/depth images the systems render into; `getCurrentFrame()` indexes by frame number; the data buffer's device address is fed into systems' push constants as `mFrameBuffer`, and shaders chase the addresses inside it (e.g. `mFrameBuffer->mCameraBuffer`). The camera buffer it points to (holding the `SwPerspective`, camera world position, and the six frustum planes) is owned and written by `SwCamera`, which keeps one per frame-in-flight and hands back the current frame's buffer.
 
 ### Renderer Context `SwRendererContext`
 
