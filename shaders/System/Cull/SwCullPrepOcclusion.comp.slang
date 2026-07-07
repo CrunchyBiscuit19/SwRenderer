@@ -22,12 +22,16 @@
             // texels per axis (pyramidExtent = previousPow2(depthExtent) so invRatio < 2).
             // A min-reduction sampler would not cover all source texels reliably at non-2:1
             // ratios, so the source region is sampled explicitly.
-            if (any(writePos >= prepOcclusionPc.mDepthPyramidExtent))
+            uint2 pyramidExtent;
+            depthPyramidWrite[0].GetDimensions(pyramidExtent.x, pyramidExtent.y);
+            if (any(writePos >= pyramidExtent))
                 return;
 
-            float2 invRatio = float2(prepOcclusionPc.mDepthFullExtent) / float2(prepOcclusionPc.mDepthPyramidExtent);
+            uint2 fullExtent;
+            depthFullImage.GetDimensions(fullExtent.x, fullExtent.y);
+            float2 invRatio = float2(fullExtent) / float2(pyramidExtent);
             uint2 srcMin = uint2(float2(writePos) * invRatio);
-            uint2 srcMax = min(uint2(float2(writePos + 1u) * invRatio), prepOcclusionPc.mDepthFullExtent - 1u);
+            uint2 srcMax = min(uint2(float2(writePos + 1u) * invRatio), fullExtent - 1u);
 
             float minDepth = 1.0f;
             for (uint sy = srcMin.y; sy <= srcMax.y; sy++) {
@@ -44,11 +48,13 @@
             uint readLevel = prepOcclusionPc.mLevel;
             uint writeLevel = readLevel + 1u;
 
-            uint2 writeLevelExtent = max(prepOcclusionPc.mDepthPyramidExtent >> writeLevel, uint2(1u, 1u));
-            if (any(writePos >= writeLevelExtent))
+            uint2 writeExtent;
+            depthPyramidWrite[writeLevel].GetDimensions(writeExtent.x, writeExtent.y);
+            if (any(writePos >= writeExtent))
                 return;
 
-            uint2 readExtent = max(prepOcclusionPc.mDepthPyramidExtent >> readLevel, uint2(1u, 1u));
+            uint2 readExtent;
+            depthPyramidRead[readLevel].GetDimensions(readExtent.x, readExtent.y);
             float2 uv = (float2(writePos) * 2.0f + 1.0f) / float2(readExtent);
             float minDepth = depthPyramidRead[readLevel].SampleLevel(minSampler, uv, 0.0f);
 

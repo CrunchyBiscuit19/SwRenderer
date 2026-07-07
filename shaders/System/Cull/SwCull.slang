@@ -31,8 +31,6 @@ namespace SwCull {
         public bool* mSceneVisibilityRisReadBuffer;
         public bool* mSceneVisibilityRisWriteBuffer;
         public uint mRisLimit;
-        public float2 mDrawExtents;
-        public uint2 mDepthPyramidExtents;
         public Phase mPhase;
         public bool mHasEarlyDraw;
     };
@@ -45,9 +43,6 @@ namespace SwCull {
     };
 
     public struct PrepOcclusionPC {
-        public uint2 mDepthPyramidExtent;
-        public uint2 mDepthFullExtent;
-        public float2 mDepthFullRatio;
         public int mLevel;
     };
 

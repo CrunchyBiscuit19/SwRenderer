@@ -50,9 +50,7 @@ bool frustumTest(SwFrustum::Data* frustum, float4[SwMesh::NUM_AABB_CORNERS] aabb
     return visible;
 }
 
-bool occlusionCull(
-    inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwCamera::Perspective* perspective, Texture2D<float> depthPyramidImage, float2 drawExtents
-) {
+bool occlusionCull(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwCamera::Perspective* perspective, Texture2D<float> depthPyramidImage) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
     float closestDepthInRi = 0.f;
@@ -76,15 +74,13 @@ bool occlusionCull(
         closestDepthInRi = max(closestDepthInRi, ndc.z);
     }
 
-    // Convert NDC XY from [-1,1] to [0, drawExtents]
-    float2 aabbMinScreen = ((aabbMinNdc.xy * float2(0.5f)) + 0.5f) * drawExtents;
-    float2 aabbMaxScreen = ((aabbMaxNdc.xy * float2(0.5f)) + 0.5f) * drawExtents;
-
-    // Convert from draw space to pyramid level-0 space before indexing.
-    // The pyramid has pow2-floor dimensions which differ from the draw extent.
-    float2 pyramidRatio = float2(workPc.mDepthPyramidExtents) / drawExtents;
-    float2 aabbMinPyramid = aabbMinScreen * pyramidRatio;
-    float2 aabbMaxPyramid = aabbMaxScreen * pyramidRatio;
+    // Map NDC XY [-1,1] straight into pyramid level-0 texel space.
+    // The NDC-to-screen scale and the screen-to-pyramid rescale cancel, so only the pyramid extent is needed.
+    uint2 pyramidExtentTexels;
+    depthPyramidImage.GetDimensions(pyramidExtentTexels.x, pyramidExtentTexels.y);
+    float2 pyramidExtent = float2(pyramidExtentTexels);
+    float2 aabbMinPyramid = ((aabbMinNdc.xy * float2(0.5f)) + 0.5f) * pyramidExtent;
+    float2 aabbMaxPyramid = ((aabbMaxNdc.xy * float2(0.5f)) + 0.5f) * pyramidExtent;
 
     // Pick the mip where the footprint spans at most one level-0 texel (1.f guard avoids a
     // negative level when the footprint is sub-texel). At this level a single bilinear fetch
@@ -96,7 +92,7 @@ bool occlusionCull(
     // furthest, in reverse-Z) depth across the covered texels — the furthest occluder.
     // Clamp the UV to [0,1] since the center can fall off-screen (negative) for items at the edge.
     float2 centerPyramid = (aabbMinPyramid + aabbMaxPyramid) * 0.5f;
-    float2 uv = clamp(centerPyramid / float2(workPc.mDepthPyramidExtents), float2(0.f), float2(1.f));
+    float2 uv = clamp(centerPyramid / pyramidExtent, float2(0.f), float2(1.f));
 
     // Visible if the nearest point is closer-or-equal than the furthest occluder.
     // The depth pre-pass renders the instances being tested here, so frontmost surface finds its own depth in the pyramid
@@ -154,7 +150,7 @@ void main(SwCull::CSInput in) {
         }
     } else {
         bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&
-                           (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage, workPc.mDrawExtents));
+                           (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage));
         workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible;
 
         bool drawnEarly = workPc.mHasEarlyDraw && workPc.mSceneVisibilityRisReadBuffer[riVisIndex];

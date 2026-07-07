@@ -482,15 +482,7 @@ void SwCull::System::reInitializeOnResize() {
     }
     mResources.mPrepOcclusionDescriptorSet.pushWrites();
 
-    mResources.mPrepOcclusionPushConstants.mDepthPyramidExtent = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
-    mResources.mPrepOcclusionPushConstants.mDepthFullExtent = glm::uvec2(depthImageExtent.width, depthImageExtent.height);
-    mResources.mPrepOcclusionPushConstants.mDepthFullRatio =
-        glm::vec2(depthPyramidExtent.width / static_cast<float>(depthImageExtent.width), depthPyramidExtent.height / static_cast<float>(depthImageExtent.height));
-
     // Work*
     mResources.mWorkDescriptorSet.writeImage(0, mResources.mDepthPyramidImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mWorkDescriptorSet.pushWrites();
-    vk::Extent2D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D();
-    mResources.mWorkPushConstants.mDrawExtents = glm::vec2(drawExtent.width, drawExtent.height);
-    mResources.mWorkPushConstants.mDepthPyramidExtents = glm::uvec2(depthPyramidExtent.width, depthPyramidExtent.height);
 }

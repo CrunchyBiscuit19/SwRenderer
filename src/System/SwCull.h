@@ -6,7 +6,6 @@
 #include <Resource/SwPushConstant.h>
 #include <Resource/SwSampler.h>
 #include <Scene/SwSystem.h>
-#include <glm/glm.hpp>
 #include <filesystem>
 
 namespace SwCull {
@@ -38,8 +37,6 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneVisibilityRisReadBuffer;  
     vk::DeviceAddress mSceneVisibilityRisWriteBuffer;  
     std::uint32_t mRisLimit;
-    glm::vec2 mDrawExtents;
-    glm::uvec2 mDepthPyramidExtents;
     Phase mPhase;
     vk::Bool32 mHasEarlyDraw;  // late phase: true if this batch was drawn by the early geometry pass (opaque only)
 
@@ -56,9 +53,6 @@ struct CompactPC : SwPC<CompactPC> {
 };
 
 struct PrepOcclusionPC : SwPC<PrepOcclusionPC> {
-    glm::uvec2 mDepthPyramidExtent;
-    glm::uvec2 mDepthFullExtent;
-    glm::vec2 mDepthFullRatio;
     std::int32_t mLevel;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
