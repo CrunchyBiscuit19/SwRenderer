@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swdispatch1d - 1D fastDivCeil dispatch</Title>
+      <Shortcut>swdispatch1d</Shortcut>
+      <Description>cmd.dispatch call sized with SwHelper::fastDivCeil against MAX_1D_WORKGROUP_THREADS</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>count</ID>
+          <ToolTip>Element count driving the dispatch</ToolTip>
+          <Default>count</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[cmd.dispatch(SwHelper::fastDivCeil($count$, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

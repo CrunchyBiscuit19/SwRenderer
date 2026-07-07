@@ -103,21 +103,21 @@ void SwLighting::System::initializeResources() {
             std::format("Shadow2DLightRcsBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,  
-            SHADOW_INITIAL_RENDER_COMMANDS * sizeof(SwRenderCommand),
+            SHADOW_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
             true
         );
         mResources.mShadowDrawRisBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightRisBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SwScene::SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(SwRenderItem),
+            SwScene::SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE,
             true
         );
         mResources.mShadowDrawRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightDrawRisIndicesBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SwScene::SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
+            SwScene::SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,
             true
         );
     }

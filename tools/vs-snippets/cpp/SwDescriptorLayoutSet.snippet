@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swdescset - Descriptor layout and set pair</Title>
+      <Shortcut>swdescset</Shortcut>
+      <Description>Creates a single-binding descriptor layout and the descriptor set built from it</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Member name fragment, e.g. Readback</ToolTip>
+          <Default>Readback</Default>
+        </Literal>
+        <Literal>
+          <ID>type</ID>
+          <ToolTip>vk::DescriptorType value</ToolTip>
+          <Default>eStorageImage</Default>
+        </Literal>
+        <Literal>
+          <ID>stage</ID>
+          <ToolTip>vk::ShaderStageFlagBits value</ToolTip>
+          <Default>eCompute</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[mResources.m$name$DescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    "$name$DescriptorSetLayout", {{0, vk::DescriptorType::$type$, 1}}, vk::ShaderStageFlagBits::$stage$
+);
+mResources.m$name$DescriptorSet =
+    SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("$name$DescriptorSet", mResources.m$name$DescriptorLayout);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

@@ -27,7 +27,7 @@ static constexpr std::string_view SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
-constexpr std::uint32_t SHADOW_INITIAL_RENDER_COMMANDS{1 << 10};
+constexpr std::uint64_t SHADOW_INITIAL_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
 constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
 constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};
 constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};

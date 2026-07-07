@@ -62,7 +62,7 @@ void SwScene::initializeResources() {
         "SceneMaterialConstantsBuffer",
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants),
+        SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE,
         true
     );
 
@@ -70,7 +70,7 @@ void SwScene::initializeResources() {
         "SceneNodeTransformsBuffer",
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_NODES * sizeof(glm::mat4),
+        SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE,
         true
     );
 
@@ -78,7 +78,7 @@ void SwScene::initializeResources() {
         "SceneInstancesBuffer",
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_INSTANCES * sizeof(SwInstance::Data),
+        SCENE_INITIAL_INSTANCES_BUFFER_SIZE,
         true
     );
 
@@ -86,7 +86,7 @@ void SwScene::initializeResources() {
         "SceneBoundsBuffer",
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_BOUNDS * sizeof(SwBounds),
+        SCENE_INITIAL_BOUNDS_BUFFER_SIZE,
         true
     );
 
@@ -94,7 +94,7 @@ void SwScene::initializeResources() {
         "SceneDrawRisIndicesBuffer",
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
+        SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,
         true
     );
 
@@ -102,7 +102,7 @@ void SwScene::initializeResources() {
         "SceneLightsBuffer",
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NUM_LIGHTS * sizeof(SwLight::Data),
+        SCENE_INITIAL_LIGHTS_BUFFER_SIZE,
         true
     );
 
@@ -111,7 +111,7 @@ void SwScene::initializeResources() {
             fmt::format("SceneVisibilityRisBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t),
+            SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,
             true
         );
     }
@@ -473,8 +473,8 @@ void SwScene::realignOffsets() {
 }
 
 void SwScene::reloadSceneVertexBuffer() {
-    std::uint32_t dstOffset = 0;
-    std::uint32_t maxPos = 0;
+    vk::DeviceSize dstOffset = 0;
+    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
         for (auto& mesh : asset.getMeshes()) {
@@ -495,8 +495,8 @@ void SwScene::reloadSceneVertexBuffer() {
 }
 
 void SwScene::reloadSceneIndexBuffer() {
-    std::uint32_t dstOffset = 0;
-    std::uint32_t maxPos = 0;
+    vk::DeviceSize dstOffset = 0;
+    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
         for (auto& mesh : asset.getMeshes()) {
@@ -517,8 +517,8 @@ void SwScene::reloadSceneIndexBuffer() {
 }
 
 void SwScene::reloadSceneMaterialConstantsBuffer() {
-    std::uint32_t dstOffset = 0;
-    std::uint32_t maxPos = 0;
+    vk::DeviceSize dstOffset = 0;
+    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
         vk::BufferCopy materialConstantCopy{};
@@ -537,8 +537,8 @@ void SwScene::reloadSceneMaterialConstantsBuffer() {
 }
 
 void SwScene::reloadSceneNodeTransformsBuffer() {
-    std::uint32_t dstOffset = 0;
-    std::uint32_t maxPos = 0;
+    vk::DeviceSize dstOffset = 0;
+    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
         vk::BufferCopy nodeTransformsCopy{};
@@ -557,8 +557,8 @@ void SwScene::reloadSceneNodeTransformsBuffer() {
 }
 
 void SwScene::reloadSceneBoundsBuffer() {
-    std::uint32_t dstOffset = 0;
-    std::uint32_t maxPos = 0;
+    vk::DeviceSize dstOffset = 0;
+    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
         vk::BufferCopy boundsCopy{};
@@ -577,8 +577,8 @@ void SwScene::reloadSceneBoundsBuffer() {
 }
 
 void SwScene::reloadSceneInstancesBuffer() {
-    std::uint32_t dstOffset = 0;
-    std::uint32_t maxPos = 0;
+    vk::DeviceSize dstOffset = 0;
+    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
         if (asset.getInstanceIds().empty()) {

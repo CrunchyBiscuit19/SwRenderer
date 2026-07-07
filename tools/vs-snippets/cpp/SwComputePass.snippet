@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swcomputepass - insertPass compute skeleton</Title>
+      <Shortcut>swcomputepass</Shortcut>
+      <Description>mScene.insertPass compute dispatch skeleton bind pipeline, descriptor set, push constants, dispatch</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>pass</ID>
+          <ToolTip>SwPass::Type value</ToolTip>
+          <Default>Work</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Resource member name fragment</ToolTip>
+          <Default>Work</Default>
+        </Literal>
+        <Literal>
+          <ID>pc</ID>
+          <ToolTip>Push constant type</ToolTip>
+          <Default>WorkPC</Default>
+        </Literal>
+        <Literal>
+          <ID>count</ID>
+          <ToolTip>Element count driving the dispatch</ToolTip>
+          <Default>count</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[mScene.insertPass(SwPass::Type::$pass$, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    cmd.bindPipeline(mResources.m$name$PipelineBundle.getBindPoint(), mResources.m$name$PipelineBundle.getPipelineHandle());
+
+    cmd.bindDescriptorSets(
+        mResources.m$name$PipelineBundle.getBindPoint(),
+        mResources.m$name$PipelineBundle.getLayoutHandle(),
+        0,
+        mResources.m$name$DescriptorSet.getHandle(),
+        nullptr
+    );
+
+    cmd.pushConstants<$pc$>(mResources.m$name$PipelineBundle.getLayoutHandle(), $pc$::sStages, 0, mResources.m$name$PushConstants);
+
+    cmd.dispatch(SwHelper::fastDivCeil($count$, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);$end$
+});
+staticDeps.clear();]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

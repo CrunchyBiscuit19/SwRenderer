@@ -103,25 +103,25 @@ void SwAsset::constructBuffers() {
         fmt::format("{}MaterialConstantsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        NUM_ASSET_MATERIALS * sizeof(SwMaterialConstants)
+        ASSET_MATERIALS_BUFFER_SIZE
     );
     mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
         fmt::format("{}BoundsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        NUM_ASSET_BOUNDS * sizeof(SwBounds)
+        ASSET_BOUNDS_BUFFER_SIZE
     );
     mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
         fmt::format("{}NodeTransformsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        NUM_ASSET_NODES * sizeof(glm::mat4)
+        ASSET_NODE_TRANSFORMS_BUFFER_SIZE
     );
     mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
         fmt::format("{}InstancesBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        NUM_ASSET_INSTANCES * sizeof(SwInstance::Data)
+        ASSET_INSTANCES_BUFFER_SIZE
     );
 };
 
@@ -522,7 +522,7 @@ void SwAsset::reloadInstances() {
 
     SwScene* scene = SwRenderer::sRendererContext.mScene;
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this, scene](vk::CommandBuffer cmd) {
-        std::uint32_t dstOffset = 0;
+        vk::DeviceSize dstOffset = 0;
         for (std::uint32_t instanceId : mInstanceIds) {
             mInstancesBuffer.copyFrom(cmd, &scene->getInstance(instanceId).getData(), sizeof(SwInstance::Data), dstOffset);
             dstOffset += sizeof(SwInstance::Data);

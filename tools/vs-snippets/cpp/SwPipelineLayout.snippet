@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swpipelinelayout - Pipeline layout creation</Title>
+      <Shortcut>swpipelinelayout</Shortcut>
+      <Description>SwPipelineFactory::createPipelineLayout call bound to a descriptor layout and a push constant range</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Member name fragment, e.g. Work</ToolTip>
+          <Default>Work</Default>
+        </Literal>
+        <Literal>
+          <ID>pc</ID>
+          <ToolTip>Push constant type</ToolTip>
+          <Default>WorkPC</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[mResources.m$name$PipelineLayout = SwPipelineFactory::createPipelineLayout(
+    "$name$PipelineLayout", mResources.m$name$DescriptorLayout.getHandle(), $pc$::getRange()
+);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swdepimg - SwDependency image entry</Title>
+      <Shortcut>swdepimg</Shortcut>
+      <Description>Adds a read or write image dependency entry to a SwDependency</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>deps</ID>
+          <ToolTip>Dependency object name</ToolTip>
+          <Default>staticDeps</Default>
+        </Literal>
+        <Literal>
+          <ID>rw</ID>
+          <ToolTip>Read or Write</ToolTip>
+          <Default>Write</Default>
+        </Literal>
+        <Literal>
+          <ID>resource</ID>
+          <ToolTip>Image expression</ToolTip>
+          <Default>mResources.mReadbackImage</Default>
+        </Literal>
+        <Literal>
+          <ID>type</ID>
+          <ToolTip>SwDependency::ImageDepType value</ToolTip>
+          <Default>ColorAttachmentReadWrite</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[$deps$.m$rw$Images.emplace_back(&$resource$, SwDependency::ImageDepType::$type$);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

@@ -17,3 +17,6 @@ src/includes*
 conv/
 thirdParty/fmt/support/.gradle/
 docs/.obsidian/
+/docs/vs-snippets-guide.md
+/docs/integer-type-audit.md
+/docs/buffer-size-constant-consistency.md

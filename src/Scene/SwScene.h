@@ -94,14 +94,20 @@ private:
     void finalPresentTransition(SwCommandBuffer& commandBuffer);
 
 public:
-    static constexpr std::uint32_t SCENE_INITIAL_VERTEX_BUFFER_SIZE{1 << 28};
-    static constexpr std::uint32_t SCENE_INITIAL_INDEX_BUFFER_SIZE{1 << 28};
+    static constexpr std::uint64_t SCENE_INITIAL_VERTEX_BUFFER_SIZE{1ull << 28};
+    static constexpr std::uint64_t SCENE_INITIAL_INDEX_BUFFER_SIZE{1ull << 28};
+
     static constexpr std::uint32_t SCENE_INITIAL_NUM_MATERIALS{1 << 8};
-    static constexpr std::uint32_t SCENE_INITIAL_NUM_NODES{1 << 12};
-    static constexpr std::uint32_t SCENE_INITIAL_NUM_INSTANCES{1 << 8};
-    static constexpr std::uint32_t SCENE_INITIAL_NUM_BOUNDS{1 << 12};
+    static constexpr std::uint64_t SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE{SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants)};
+    static constexpr std::uint64_t SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE{(1 << 12) * sizeof(glm::mat4)};
+    static constexpr std::uint64_t SCENE_INITIAL_INSTANCES_BUFFER_SIZE{(1 << 8) * sizeof(SwInstance::Data)};
+    static constexpr std::uint64_t SCENE_INITIAL_BOUNDS_BUFFER_SIZE{(1 << 12) * sizeof(SwBounds)};
+
     static constexpr std::uint32_t SCENE_INITIAL_NUM_RENDER_ITEMS{1 << 18};
-    static constexpr std::uint32_t SCENE_INITIAL_NUM_LIGHTS{1 << 6};
+    static constexpr std::uint64_t SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
+    static constexpr std::uint64_t SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t)};
+
+    static constexpr std::uint64_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
 
     Flags mFlags;
 

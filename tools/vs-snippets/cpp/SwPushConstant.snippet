@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swpc - Sw push constant struct</Title>
+      <Shortcut>swpc</Shortcut>
+      <Description>Push constant struct deriving from SwPC&lt;T&gt; with a shader stage mask</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Struct name without the PC suffix</ToolTip>
+          <Default>Work</Default>
+        </Literal>
+        <Literal>
+          <ID>stage</ID>
+          <ToolTip>vk::ShaderStageFlagBits value</ToolTip>
+          <Default>eCompute</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[struct $name$PC : SwPC<$name$PC> {
+    vk::DeviceAddress m$end$;
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::$stage$;
+};]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

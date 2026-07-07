@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swdepbuf - SwDependency buffer entry</Title>
+      <Shortcut>swdepbuf</Shortcut>
+      <Description>Adds a read or write buffer dependency entry to a SwDependency</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>deps</ID>
+          <ToolTip>Dependency object name</ToolTip>
+          <Default>staticDeps</Default>
+        </Literal>
+        <Literal>
+          <ID>rw</ID>
+          <ToolTip>Read or Write</ToolTip>
+          <Default>Read</Default>
+        </Literal>
+        <Literal>
+          <ID>resource</ID>
+          <ToolTip>Buffer expression</ToolTip>
+          <Default>mScene.getSceneVertexBuffer()</Default>
+        </Literal>
+        <Literal>
+          <ID>type</ID>
+          <ToolTip>SwDependency::BufferDepType value</ToolTip>
+          <Default>VertexShaderStorageRead</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[$deps$.m$rw$Buffers.emplace_back(&$resource$, SwDependency::BufferDepType::$type$);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

@@ -224,7 +224,7 @@ void SwIBL::System::initializeResources() {
     skyboxPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
     mResources.mSkyboxPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("SkyboxDrawPipeline", skyboxPipelineOptions);
 
-    const std::uint32_t skyboxVertexSize = static_cast<std::uint32_t>(mResources.mSkyboxVertices.size() * sizeof(float));
+    const std::uint64_t skyboxVertexSize = mResources.mSkyboxVertices.size() * sizeof(float);
     mResources.mSkyboxVertexBuffer = SwBufferFactory::createAllocatedBuffer(
         "SkyboxDrawVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, skyboxVertexSize, true
     );

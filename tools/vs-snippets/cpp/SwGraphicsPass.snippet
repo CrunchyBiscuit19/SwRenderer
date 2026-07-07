@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swgraphicspass - insertPass draw skeleton</Title>
+      <Shortcut>swgraphicspass</Shortcut>
+      <Description>mScene.insertPass draw skeleton with beginRendering, viewport scissors, and endRendering</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>pass</ID>
+          <ToolTip>SwPass::Type value</ToolTip>
+          <Default>Draw</Default>
+        </Literal>
+        <Literal>
+          <ID>color</ID>
+          <ToolTip>Color image expression</ToolTip>
+          <Default>mResources.mDrawImage</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Resource member name fragment</ToolTip>
+          <Default>Draw</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[mScene.insertPass(SwPass::Type::$pass$, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    vk::RenderingAttachmentInfo colorAttachment = $color$.generateRenderingAttachment();
+    const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment);
+
+    cmd.beginRendering(renderInfo);
+    SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
+
+    cmd.bindPipeline(mResources.m$name$PipelineBundle.getBindPoint(), mResources.m$name$PipelineBundle.getPipelineHandle());
+
+    $end$
+
+    cmd.endRendering();
+});
+staticDeps.clear();]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

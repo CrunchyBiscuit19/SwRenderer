@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swcsmain - Compute shader entry point</Title>
+      <Shortcut>swcsmain</Shortcut>
+      <Description>Module import, push constant declaration, numthreads entry point with a bounds check, matching the SwCull/SwLighting/SwPick compute shaders</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>system</ID>
+          <ToolTip>System module name, e.g. Cull</ToolTip>
+          <Default>Cull</Default>
+        </Literal>
+        <Literal>
+          <ID>pc</ID>
+          <ToolTip>Push constant type</ToolTip>
+          <Default>WorkPC</Default>
+        </Literal>
+        <Literal>
+          <ID>pcvar</ID>
+          <ToolTip>Push constant variable name</ToolTip>
+          <Default>workPc</Default>
+        </Literal>
+        <Literal>
+          <ID>limit</ID>
+          <ToolTip>Push constant field bounding the dispatch</ToolTip>
+          <Default>mLimit</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[import System.$system$.Sw$system$;
+import Data.SwConstants;
+
+[[vk::push_constant]]
+Sw$system$::$pc$ $pcvar$;
+
+[numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
+void main(Sw$system$::CSInput in) {
+    uint index = in.mDispatchThreadID.x;
+    if (index >= $pcvar$.$limit$)
+        return;
+
+    $end$
+}]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

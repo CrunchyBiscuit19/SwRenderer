@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swdispatch2d - 2D fastDivCeil dispatch</Title>
+      <Shortcut>swdispatch2d</Shortcut>
+      <Description>cmd.dispatch call sized with SwHelper::fastDivCeil against MAX_2D_WORKGROUP_THREADS on width and height</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>width</ID>
+          <ToolTip>Extent width expression</ToolTip>
+          <Default>extent.width</Default>
+        </Literal>
+        <Literal>
+          <ID>height</ID>
+          <ToolTip>Extent height expression</ToolTip>
+          <Default>extent.height</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[cmd.dispatch(
+    SwHelper::fastDivCeil($width$, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+    SwHelper::fastDivCeil($height$, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+    1
+);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

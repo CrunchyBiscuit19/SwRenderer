@@ -41,8 +41,8 @@ private:
     SwAllocatedBuffer mRisBuffer;
 
 public:
-    static constexpr std::uint32_t RENDER_COMMANDS_INITIAL_BUFFER_SIZE{sizeof(SwRenderCommand) * (1 << 10)};
-    static constexpr std::uint32_t RENDER_ITEMS_INITIAL_BUFFER_SIZE{sizeof(SwRenderItem) * (1 << 13)};
+    static constexpr std::size_t RENDER_COMMANDS_INITIAL_BUFFER_SIZE{sizeof(SwRenderCommand) * (1 << 10)};
+    static constexpr std::size_t RENDER_ITEMS_INITIAL_BUFFER_SIZE{sizeof(SwRenderItem) * (1 << 13)};
 
     static std::uint32_t sFirstRiOffset;
 

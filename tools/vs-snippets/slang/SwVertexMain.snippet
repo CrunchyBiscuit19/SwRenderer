@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swvsmain - Vertex shader entry point</Title>
+      <Shortcut>swvsmain</Shortcut>
+      <Description>Module import, push constant declaration, and VSInput to VSOutput entry point matching SwGeometry/SwPick/SwIBL vertex shaders</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>system</ID>
+          <ToolTip>System module name, e.g. Geometry</ToolTip>
+          <Default>Geometry</Default>
+        </Literal>
+        <Literal>
+          <ID>pc</ID>
+          <ToolTip>Push constant type</ToolTip>
+          <Default>WorkPC</Default>
+        </Literal>
+        <Literal>
+          <ID>pcvar</ID>
+          <ToolTip>Push constant variable name</ToolTip>
+          <Default>workPc</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[import System.$system$.Sw$system$;
+
+[[vk::push_constant]]
+Sw$system$::$pc$ $pcvar$;
+
+Sw$system$::VSOutput main(Sw$system$::VSInput in) {
+    Sw$system$::VSOutput out;
+
+    $end$
+
+    return out;
+}]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

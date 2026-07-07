@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swpcmodule - Module-side push constant struct</Title>
+      <Shortcut>swpcmodule</Shortcut>
+      <Description>Public push constant struct with pointer members, as declared in the shared .slang module file (SwCull.slang, SwPick.slang, etc.)</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Struct name without the PC suffix</ToolTip>
+          <Default>Work</Default>
+        </Literal>
+        <Literal>
+          <ID>type</ID>
+          <ToolTip>Pointee type of the first member</ToolTip>
+          <Default>SwBatch::RenderCommand</Default>
+        </Literal>
+        <Literal>
+          <ID>field</ID>
+          <ToolTip>First member name without the leading m</ToolTip>
+          <Default>RcsBuffer</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[public struct $name$PC {
+    public $type$* m$field$;$end$
+};]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>
