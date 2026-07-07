@@ -42,6 +42,23 @@ file(GLOB_RECURSE SLANG_ENTRY_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SHADER_DIR}/**/*.comp.slang"
 )
 
+# slangd drops precompiled *.slang-module binaries next to module sources for IDE intellisense. slangc
+# prefers a precompiled module over its .slang source when both are on the include path and does not
+# check whether the source is newer, so a stale module silently shadows an edited one (a constant added
+# to SwConstants.slang goes unseen). Purge them before every shader build so slangc reads source.
+set(SLANG_MODULE_PURGE_SCRIPT "${CMAKE_BINARY_DIR}/purgeSlangModules.cmake")
+file(WRITE "${SLANG_MODULE_PURGE_SCRIPT}"
+    "file(GLOB_RECURSE _slangModules \"${CMAKE_SHADER_DIR}/*.slang-module\")\n"
+    "if(_slangModules)\n"
+    "    file(REMOVE \${_slangModules})\n"
+    "endif()\n"
+)
+add_custom_target(PurgeSlangModules
+    COMMAND ${CMAKE_COMMAND} -P "${SLANG_MODULE_PURGE_SCRIPT}"
+    COMMENT "Purging stale Slang precompiled modules"
+    VERBATIM
+)
+
 set(SPV_OUTPUTS "")
 foreach(SHADER IN LISTS SLANG_ENTRY_SOURCES)
     if(SHADER MATCHES "\\.vert\\.slang$")
@@ -78,7 +95,7 @@ foreach(SHADER IN LISTS SLANG_ENTRY_SOURCES)
                 ${SHADER_STAGE_ARGS} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout
                 -depfile "${SHADER_DEPFILE}"
         DEPFILE "${SHADER_DEPFILE}"
-        DEPENDS "${SHADER}"
+        DEPENDS "${SHADER}" PurgeSlangModules
         COMMENT "Compiling shader ${SHADER_REL}"
         VERBATIM
     )

@@ -62,12 +62,6 @@ void SwCull::System::initializeEarlyPasses() {
     SwDependency staticDeps;
 
     // EarlyWork
-    // The shared Work pipeline statically samples the depth pyramid (occlusionCull is in the entry
-    // point's call graph even though it only runs in the Late phase), so the descriptor requires the
-    // pyramid in eShaderReadOnlyOptimal here too. Declaring the read makes the graph transition it
-    // (this frame it holds frame N-1's pyramid) and orders EarlyWork before CullPrepOcclusion rebuilds
-    // it (WAR). Without it the layout is only correct by luck from the previous frame's LateWork, which
-    // breaks on the first frame and after every resize (the pyramid is left in eGeneral).
     staticDeps.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
     staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -216,10 +210,8 @@ void SwCull::System::initializeLatePasses() {
     mScene.insertPass(SwPass::Type::CullLateWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
 
-        // Opaque batches are partially drawn by the early geometry pass, so the late pass only emits
-        // the newly-visible delta (mHasEarlyDraw = 1). Masked/transparent have no early geometry pass
-        // and are drawn solely from the late list, so they must emit the full visible set
-        // (mHasEarlyDraw = 0).
+        // Opaque batches are partially drawn by the early geometry pass, so the late pass only emits the newly-visible delta (mHasEarlyDraw = 1). 
+        // Masked/transparent have no early geometry pass and are drawn solely from the late list, so they must emit the full visible set (mHasEarlyDraw = 0).
         auto dispatchBatches = [&](auto&& batches, bool hasEarlyDraw) {
             for (auto& batch : batches) {
                 if (batch.getRcs().empty()) {

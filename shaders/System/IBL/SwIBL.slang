@@ -8,6 +8,10 @@ namespace SwIBL {
     public static const uint IBL_DIFFUSE = 1u;
     public static const uint IBL_SPECULAR = 2u;
 
+    public static const uint MAX_PREFILTER_MIP_LEVELS = 1 << 4;
+
+    public static const uint PREFILTER_SAMPLE_COUNT = 1024u;
+
     public float radicalInverseVdC(uint bits) {
         bits = (bits << 16u) | (bits >> 16u);
         bits = ((bits & 0x55555555u) << 1u) | ((bits & 0xAAAAAAAAu) >> 1u);
@@ -62,8 +66,9 @@ namespace SwIBL {
     }
 
     public struct PrefilterPC {
-        public float mRoughness;
-    };
+        public uint mTotalMipLevels;
+        public uint2 mBaseExtent;
+    }
 
     public struct SkyboxPC {
         public SwIBL::Vertex* mWorkVertexBuffer;

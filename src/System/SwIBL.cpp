@@ -43,7 +43,6 @@ void SwIBL::System::initializeResources() {
         vk::ShaderStageFlagBits::eFragment
     );
 
-    // --- Samplers ---
     vk::SamplerCreateInfo envSamplerInfo{};
     envSamplerInfo.setMagFilter(vk::Filter::eLinear);
     envSamplerInfo.setMinFilter(vk::Filter::eLinear);
@@ -64,28 +63,29 @@ void SwIBL::System::initializeResources() {
     lutSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
     mResources.mLutSampler = SwSamplerFactory::createSampler("IBLLutSampler", lutSamplerInfo);
 
-    // --- The set-1 descriptor set the geometry shaders bind ---
     mResources.mConsumeDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLConsumeDescriptorSet", SwIBL::Resources::sConsumeDescriptorLayout);
 
-    // --- Baked maps (storage for the compute bakes, sampled by the geometry shaders) ---
     const vk::ImageUsageFlags iblUsage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
     mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradianceImage", IBL_FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
     mResources.mPrefilterImage = SwImageFactory::createColorImage2D("IBLPrefilterImage", IBL_FORMAT, PREFILTER_EXTENT, iblUsage, true);
     mResources.mBrdfLutImage = SwImageFactory::createColorImage2D("IBLBrdfLutImage", BRDF_LUT_FORMAT, BRDF_LUT_EXTENT, iblUsage, false);
 
     mPrefilterMipLevels = SwHelper::calculateMipMapLevels(PREFILTER_EXTENT);
-    // One single-mip storage view per prefilter mip level (the main view spans all mips and is used for sampling).
     for (std::uint32_t mip = 0; mip < mPrefilterMipLevels; mip++) {
         mResources.mPrefilterImage.addImageView(
             "IBLPrefilterMip" + std::to_string(mip), IBL_FORMAT, vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, mip, 1
         );
     }
 
-    // --- Bake pipelines ---
-    mResources.mBakeInputDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    mResources.mIrradianceDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLBakeInputDescriptorSetLayout",
         {{0, vk::DescriptorType::eCombinedImageSampler, 1}, {1, vk::DescriptorType::eStorageImage, 1}},
+        vk::ShaderStageFlagBits::eCompute
+    );
+    mResources.mPrefilterDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "IBLPrefilterDescriptorSetLayout",
+        {{0, vk::DescriptorType::eCombinedImageSampler, 1}, {1, vk::DescriptorType::eStorageImage, MAX_PREFILTER_MIP_LEVELS}},
         vk::ShaderStageFlagBits::eCompute
     );
     mResources.mBrdfLutDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -93,9 +93,9 @@ void SwIBL::System::initializeResources() {
     );
 
     mResources.mIrradiancePipelineLayout =
-        SwPipelineFactory::createPipelineLayout("IBLIrradiancePipelineLayout", mResources.mBakeInputDescriptorLayout.getHandle(), {});
+        SwPipelineFactory::createPipelineLayout("IBLIrradiancePipelineLayout", mResources.mIrradianceDescriptorLayout.getHandle(), {});
     mResources.mPrefilterPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "IBLPrefilterPipelineLayout", mResources.mBakeInputDescriptorLayout.getHandle(), SwIBL::PrefilterPC::getRange()
+        "IBLPrefilterPipelineLayout", mResources.mPrefilterDescriptorLayout.getHandle(), SwIBL::PrefilterPC::getRange()
     );
     mResources.mBrdfLutPipelineLayout =
         SwPipelineFactory::createPipelineLayout("IBLBrdfLutPipelineLayout", mResources.mBrdfLutDescriptorLayout.getHandle(), {});
@@ -107,35 +107,32 @@ void SwIBL::System::initializeResources() {
     mResources.mIrradiancePipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "IBLIrradiancePipeline", {irradianceShader.getHandle(), mResources.mIrradiancePipelineLayout.getHandle()}
     );
-    mResources.mPrefilterPipelineBundle = SwComputePipelineFactory::createComputePipeline(
-        "IBLPrefilterPipeline", {prefilterShader.getHandle(), mResources.mPrefilterPipelineLayout.getHandle()}
-    );
+    mResources.mPrefilterPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline("IBLPrefilterPipeline", {prefilterShader.getHandle(), mResources.mPrefilterPipelineLayout.getHandle()});
     mResources.mBrdfLutPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("IBLBrdfLutPipeline", {brdfLutShader.getHandle(), mResources.mBrdfLutPipelineLayout.getHandle()});
 
-    // --- Bake descriptor sets: storage outputs bound once here, environment input bound per bake ---
     mResources.mIrradianceDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLIrradianceDescriptorSet", mResources.mBakeInputDescriptorLayout);
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLIrradianceDescriptorSet", mResources.mIrradianceDescriptorLayout);
     mResources.mIrradianceDescriptorSet.writeImage(1, mResources.mIrradianceImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eGeneral);
     mResources.mIrradianceDescriptorSet.pushWrites();
 
-    mResources.mPrefilterMipDescriptorSets.reserve(mPrefilterMipLevels);
-    for (std::uint32_t mip = 0; mip < mPrefilterMipLevels; mip++) {
-        SwDescriptorSet mipSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
-            "IBLPrefilterDescriptorSet" + std::to_string(mip), mResources.mBakeInputDescriptorLayout
+    mResources.mPrefilterMipDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLPrefilterDescriptorSet", mResources.mPrefilterDescriptorLayout);
+    for (std::uint32_t slot = 0; slot < MAX_PREFILTER_MIP_LEVELS; slot++) {
+        const std::uint32_t mip = std::min(slot, mPrefilterMipLevels - 1);
+        mResources.mPrefilterMipDescriptorSet.writeImage(
+            1, mResources.mPrefilterImage.getOtherImageViewHandle(mip), nullptr, vk::ImageLayout::eGeneral, slot
         );
-        mipSet.writeImage(1, mResources.mPrefilterImage.getOtherImageViewHandle(mip), nullptr, vk::ImageLayout::eGeneral);
-        mipSet.pushWrites();
-        mResources.mPrefilterMipDescriptorSets.emplace_back(std::move(mipSet));
     }
+    mResources.mPrefilterMipDescriptorSet.pushWrites();
 
     mResources.mBrdfLutDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLBrdfLutDescriptorSet", mResources.mBrdfLutDescriptorLayout);
     mResources.mBrdfLutDescriptorSet.writeImage(0, mResources.mBrdfLutImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eGeneral);
     mResources.mBrdfLutDescriptorSet.pushWrites();
 
-    // --- Bake the environment-independent BRDF LUT once, and prime the env-dependent maps to a valid
-    // sampled layout so the consume set is complete even before the first skybox bake. ---
+    // Bake the environment-independent BRDF LUT once
     SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
         mResources.mIrradianceImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
         mResources.mPrefilterImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
@@ -165,7 +162,6 @@ void SwIBL::System::initializeResources() {
         );
     });
 
-    // Consume set: irradiance + prefilter use the equirect sampler; the LUT uses the clamp sampler.
     mResources.mConsumeDescriptorSet.writeImage(
         CONSUME_IRRADIANCE_BINDING,
         mResources.mIrradianceImage.getMainImageViewHandle(),
@@ -179,14 +175,11 @@ void SwIBL::System::initializeResources() {
         vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.writeImage(
-        CONSUME_BRDF_LUT_BINDING,
-        mResources.mBrdfLutImage.getMainImageViewHandle(),
-        mResources.mLutSampler.getHandle(),
-        vk::ImageLayout::eShaderReadOnlyOptimal
+        CONSUME_BRDF_LUT_BINDING, mResources.mBrdfLutImage.getMainImageViewHandle(), mResources.mLutSampler.getHandle(), vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.pushWrites();
 
-    // --- Skybox draw: cube + equirect sampler that rasterizes the environment behind the geometry. ---
+    // Skybox
     mResources.mSkyboxSampler = SwSamplerFactory::createSampler("SkyboxDrawSampler", vk::SamplerCreateInfo());
 
     mResources.mSkyboxDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -262,7 +255,11 @@ void SwIBL::System::initializePasses() {
 
         cmd.bindPipeline(mResources.mSkyboxPipelineBundle.getBindPoint(), mResources.mSkyboxPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
-            mResources.mSkyboxPipelineBundle.getBindPoint(), mResources.mSkyboxPipelineBundle.getLayoutHandle(), 0, mResources.mSkyboxDescriptorSet.getHandle(), nullptr
+            mResources.mSkyboxPipelineBundle.getBindPoint(),
+            mResources.mSkyboxPipelineBundle.getLayoutHandle(),
+            0,
+            mResources.mSkyboxDescriptorSet.getHandle(),
+            nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.pushConstants<SwIBL::SkyboxPC>(mResources.mSkyboxPipelineBundle.getLayoutHandle(), SwIBL::SkyboxPC::sStages, 0, mResources.mSkyboxPushConstants);
@@ -282,15 +279,11 @@ void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler enviro
     // Bind the freshly-loaded environment as the input (binding 0) of every bake set.
     mResources.mIrradianceDescriptorSet.writeImage(0, environmentView, environmentSampler, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mIrradianceDescriptorSet.pushWrites();
-    for (auto& mipSet : mResources.mPrefilterMipDescriptorSets) {
-        mipSet.writeImage(0, environmentView, environmentSampler, vk::ImageLayout::eShaderReadOnlyOptimal);
-        mipSet.pushWrites();
-    }
+    mResources.mPrefilterMipDescriptorSet.writeImage(0, environmentView, environmentSampler, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mPrefilterMipDescriptorSet.pushWrites();
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
-        environment.emitTransition(
-            cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal
-        );
+        environment.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
         mResources.mIrradianceImage.emitTransition(
             cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite, vk::ImageLayout::eGeneral
         );
@@ -313,26 +306,25 @@ void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler enviro
             1
         );
 
-        // Specular prefilter: one dispatch per mip, roughness rising with mip level.
+        // Specular prefilter: roughness rising with mip level.
         cmd.bindPipeline(mResources.mPrefilterPipelineBundle.getBindPoint(), mResources.mPrefilterPipelineBundle.getPipelineHandle());
-        for (std::uint32_t mip = 0; mip < mPrefilterMipLevels; mip++) {
-            cmd.bindDescriptorSets(
-                mResources.mPrefilterPipelineBundle.getBindPoint(),
-                mResources.mPrefilterPipelineBundle.getLayoutHandle(),
-                0,
-                mResources.mPrefilterMipDescriptorSets[mip].getHandle(),
-                nullptr
-            );
-            SwIBL::PrefilterPC pc{};
-            pc.mRoughness = mPrefilterMipLevels > 1 ? static_cast<float>(mip) / static_cast<float>(mPrefilterMipLevels - 1) : 0.f;
-            cmd.pushConstants<SwIBL::PrefilterPC>(mResources.mPrefilterPipelineBundle.getLayoutHandle(), SwIBL::PrefilterPC::sStages, 0, pc);
-
-            const std::uint32_t mipWidth = std::max(1u, PREFILTER_EXTENT.width >> mip);
-            const std::uint32_t mipHeight = std::max(1u, PREFILTER_EXTENT.height >> mip);
-            cmd.dispatch(
-                SwHelper::fastDivCeil(mipWidth, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(mipHeight, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1
-            );
-        }
+        cmd.bindDescriptorSets(
+            mResources.mPrefilterPipelineBundle.getBindPoint(),
+            mResources.mPrefilterPipelineBundle.getLayoutHandle(),
+            0,
+            mResources.mPrefilterMipDescriptorSet.getHandle(),
+            nullptr
+        );
+        mResources.mPrefilterPushConstants.mTotalMipLevels = mPrefilterMipLevels;
+        mResources.mPrefilterPushConstants.mBaseExtent = {PREFILTER_EXTENT.width, PREFILTER_EXTENT.height};
+        cmd.pushConstants<SwIBL::PrefilterPC>(
+            mResources.mPrefilterPipelineBundle.getLayoutHandle(), SwIBL::PrefilterPC::sStages, 0, mResources.mPrefilterPushConstants
+        );
+        cmd.dispatch(
+            SwHelper::fastDivCeil(PREFILTER_EXTENT.width, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(PREFILTER_EXTENT.height, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(mPrefilterMipLevels, SwRenderer::MAX_3D_WORKGROUP_THREADS)
+        );
     });
 
     // The image views are unchanged, but re-point the consume set so the equirect sampler stays attached.
