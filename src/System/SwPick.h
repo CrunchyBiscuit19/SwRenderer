@@ -65,7 +65,7 @@ private:
     Resources mResources;
 
     ImGuizmo::OPERATION mImguizmoOperation{ImGuizmo::TRANSLATE};
-    SwInstance* mSelectedInstance{nullptr};
+    std::optional<std::uint32_t> mSelectedInstanceId;
 
     void initializeResources() override;
     void initializePasses() override;
@@ -82,8 +82,8 @@ public:
 
     inline Resources& getResources() { return mResources; }
     inline ImGuizmo::OPERATION getImguizmoOperation() { return mImguizmoOperation; }
-    inline SwInstance* getSelectedInstancePtr() { return mSelectedInstance; }
-    inline void setSelectedInstancePtr(SwInstance* selectedInstancePtr) { mSelectedInstance = selectedInstancePtr; }
+    inline const std::optional<std::uint32_t>& getSelectedInstanceId() const { return mSelectedInstanceId; }
+    inline void clearSelection() { mSelectedInstanceId.reset(); }
 
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;

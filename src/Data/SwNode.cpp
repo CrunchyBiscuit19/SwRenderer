@@ -10,8 +10,8 @@ void SwNode::refreshTransform(const glm::mat4& parentTransform) {
     for (const auto& child : mChildren) child->refreshTransform(mWorldTransform);
 }
 
-void SwNode::generateRcsAndRis() {
-    for (const auto& child : mChildren) child->generateRcsAndRis();
+void SwNode::generateRcsAndRis(SwAsset& asset) {
+    for (const auto& child : mChildren) child->generateRcsAndRis(asset);
 }
 
 SwNode::SwNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform)
@@ -24,43 +24,43 @@ void SwNode::addChild(std::shared_ptr<SwNode> child) {
     child->setParent(shared_from_this());
 }
 
-SwMeshNode::SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh)
-    : SwNode(name, relativeNodeIndex, localTransform), mMesh(mesh) {}
+SwMeshNode::SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, std::uint32_t meshIndex)
+    : SwNode(name, relativeNodeIndex, localTransform), mMeshIndex(meshIndex) {}
 
-void SwMeshNode::generateRcsAndRis() {
-    for (auto& primitive : mMesh.getPrimitives()) {
-        std::uint32_t pipelineId = primitive.mMaterial.getPipelineBundle().getID();
+void SwMeshNode::generateRcsAndRis(SwAsset& asset) {
+    SwMesh& mesh = asset.getMeshes()[mMeshIndex];
+    for (auto& primitive : mesh.getPrimitives()) {
+        SwMaterial& material = asset.getMaterials()[primitive.mMaterialIndex];
+        std::uint32_t pipelineId = material.getPipelineBundle().getID();
+        SwMaterial::Type materialType = material.getType();
 
-        SwAsset& workingAsset = SwRenderer::sRendererContext.mScene->getAsset(mMesh.getAssetId());
-        std::unordered_map<std::uint32_t, SwBatch>& workingBatchMap =
-            SwRenderer::sRendererContext.mScene->getBatchMap(SwMaterial::getMaterialTypeFromAlphaMode(primitive.mMaterial.getAlphaMode()));
+        auto [it, _] = SwRenderer::sRendererContext.mScene->getBatchMap(materialType).try_emplace(pipelineId, material);
+        SwBatch& batch = it->second;
 
-        auto [it, inserted] = workingBatchMap.try_emplace(pipelineId, primitive);
-        SwBatch& workingBatch = it->second;
-        workingBatch.getRcs().emplace_back(
+        batch.getRcs().emplace_back(
             primitive.mIndexCount,
             0,  // Instance count set to 0, incremented inside culling compute shader
-            mMesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
-            mMesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
+            mesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
+            mesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
             SwBatch::sFirstRiOffset,
-            workingAsset.mFirstMaterialInScene + primitive.mMaterial.mRelativeMaterialIndex,
-            workingAsset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
-            workingAsset.getId(),
-            workingAsset.mFirstInstanceInScene,
-            workingAsset.mFirstBoundInScene + mMesh.mRelativeFirstBounds
+            asset.mFirstMaterialInScene + material.mRelativeMaterialIndex,
+            asset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
+            asset.getId(),
+            asset.mFirstInstanceInScene,
+            asset.mFirstBoundInScene + mesh.mRelativeFirstBounds
         );
 
-        std::uint32_t rcIndex = static_cast<std::uint32_t>(workingBatch.getRcs().size() - 1);
-        std::uint32_t instanceIndex = workingAsset.mFirstInstanceInScene;
-        for (std::uint32_t i = 0; i < workingAsset.getInstanceIds().size(); i++) {
-            workingBatch.getRis().emplace_back(rcIndex, instanceIndex + i);
+        std::uint32_t rcIndex = static_cast<std::uint32_t>(batch.getRcs().size() - 1);
+        std::uint32_t instanceIndex = asset.mFirstInstanceInScene;
+        for (std::uint32_t i = 0; i < asset.getInstanceIds().size(); i++) {
+            batch.getRis().emplace_back(rcIndex, instanceIndex + i);
         }
 
-        SwBatch::sFirstRiOffset += workingAsset.getInstanceIds().size();
+        SwBatch::sFirstRiOffset += asset.getInstanceIds().size();
     }
 
-    SwNode::generateRcsAndRis();
+    SwNode::generateRcsAndRis(asset);
 }
 
-SwLightNode::SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwLight& light, std::uint32_t assetId)
-    : SwNode(name, relativeNodeIndex, localTransform), mLight(light), mAssetId(assetId) {}
+SwLightNode::SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, std::uint32_t lightIndex, std::uint32_t assetId)
+    : SwNode(name, relativeNodeIndex, localTransform), mLightIndex(lightIndex), mAssetId(assetId) {}

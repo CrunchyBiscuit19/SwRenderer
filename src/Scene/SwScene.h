@@ -17,6 +17,7 @@
 
 #include <algorithm>
 #include <array>
+#include <set>
 #include <concepts>
 #include <ranges>
 #include <unordered_set>
@@ -56,8 +57,6 @@ private:
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
 
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
-    //std::unordered_map<SwMaterial::Type, std::vector<std::uint32_t>> mMaterialTypesPipelines;
-    //std::unordered_map<std::uint32_t, SwBatch> mPipelinesBatch;
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
 

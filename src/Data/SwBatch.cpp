@@ -5,11 +5,11 @@
 
 std::uint32_t SwBatch::sFirstRiOffset = 0;
 
-SwBatch::SwBatch(SwPrimitive& primitive) {
-    mGraphicsPipelineBundle = &primitive.mMaterial.getPipelineBundle();
-    mDoubleSided = primitive.mMaterial.isDoubleSided();
+SwBatch::SwBatch(SwMaterial& material) {
+    mPipelineId = material.getPipelineBundle().getID();
+    mDoubleSided = material.isDoubleSided();
 
-    const std::uint32_t batchId = mGraphicsPipelineBundle->getID();
+    const std::uint32_t batchId = mPipelineId;
 
     mInitialRcsBuffer = SwBufferFactory::createAllocatedBuffer(
         std::format("Batch{:<03}InitialRcsBuffer", batchId),

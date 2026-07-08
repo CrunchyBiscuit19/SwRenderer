@@ -36,24 +36,24 @@ public:
 
     void refreshTransform(const glm::mat4& parentTransform);
 
-    virtual void generateRcsAndRis();
+    virtual void generateRcsAndRis(SwAsset& asset);
 };
 
 class SwMeshNode : public SwNode {
-    SwMesh& mMesh;
+    std::uint32_t mMeshIndex;
 
 public:
-    SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwMesh& mesh);
+    SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, std::uint32_t meshIndex);
 
-    void generateRcsAndRis() override;
+    void generateRcsAndRis(SwAsset& asset) override;
 };
 
 class SwLightNode : public SwNode {
-    SwLight& mLight;
+    std::uint32_t mLightIndex;
     std::uint32_t mAssetId;
 
 public:
-    SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, SwLight& light, std::uint32_t assetId);
+    SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, std::uint32_t lightIndex, std::uint32_t assetId);
 
-    inline SwLight& getLight() { return mLight; }
+    inline std::uint32_t getLightIndex() const { return mLightIndex; }
 };

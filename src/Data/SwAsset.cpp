@@ -325,7 +325,7 @@ void SwAsset::constructMeshes() {
                 static_cast<std::uint32_t>(data.mIndices.size()),
                 static_cast<std::uint32_t>(mRawAsset.accessors[p.indicesAccessor.value()].count),
                 static_cast<std::uint32_t>(data.mVertices.size()),
-                p.materialIndex.has_value() ? mMaterials[p.materialIndex.value()] : mMaterials[0]
+                p.materialIndex.has_value() ? static_cast<std::uint32_t>(p.materialIndex.value()) : 0u
             );
 
             size_t vertexStartOffset = data.mVertices.size();
@@ -409,7 +409,7 @@ void SwAsset::constructMeshes() {
 }
 
 void SwAsset::constructLights() {
-    mLights.reserve(mRawAsset.lights.size());  // reserve once so SwLightNode references stay valid
+    mLights.reserve(mRawAsset.lights.size());
 
     for (const fastgltf::Light& rawLight : mRawAsset.lights) {
         SwLight::Params params;
@@ -452,9 +452,9 @@ void SwAsset::constructNodes() {
 
         std::shared_ptr<SwNode> localNode = std::make_shared<SwNode>(name, relativeNodeIndex, localTransform);
         if (rawNode.meshIndex.has_value()) {
-            localNode = std::make_shared<SwMeshNode>(name, relativeNodeIndex, localTransform, mMeshes[*rawNode.meshIndex]);
+            localNode = std::make_shared<SwMeshNode>(name, relativeNodeIndex, localTransform, static_cast<std::uint32_t>(*rawNode.meshIndex));
         } else if (rawNode.lightIndex.has_value()) {
-            localNode = std::make_shared<SwLightNode>(name, relativeNodeIndex, localTransform, mLights[*rawNode.lightIndex], mId);
+            localNode = std::make_shared<SwLightNode>(name, relativeNodeIndex, localTransform, static_cast<std::uint32_t>(*rawNode.lightIndex), mId);
         }
 
         mNodes.emplace_back(localNode);
@@ -494,7 +494,7 @@ SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
 void SwAsset::generateRcsAndRis() {
     if (mDelete) return;
     for (auto& topNode : mTopNodes) {
-        topNode->generateRcsAndRis();
+        topNode->generateRcsAndRis(*this);
     }
 }
 

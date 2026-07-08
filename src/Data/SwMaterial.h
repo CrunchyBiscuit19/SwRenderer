@@ -100,9 +100,10 @@ private:
     SwMaterialPipelineOptions mMaterialPipelineOptions;
     SwMaterialConstants mMaterialConstants;
     SwMaterialResources mMaterialResources;
-    SwGraphicsPipelineBundle* mMaterialPipelineBundle{nullptr};
+    std::uint32_t mMaterialPipelineId{0};
 
-    static std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> sMaterialPipelineBundles;
+    static std::unordered_map<SwMaterialPipelineOptions, std::uint32_t> sMaterialPipelinesCreated;
+    static std::unordered_map<std::uint32_t, SwGraphicsPipelineBundle> sMaterialPipelineBundles;
     static SwPipelineLayout sOpaquePipelineLayout;
     static SwPipelineLayout sTransparentPipelineLayout;
     static const std::filesystem::path GEOMETRY_VERTEX_SHADER_PATH;
@@ -114,7 +115,7 @@ private:
     static const std::filesystem::path GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH;
     static SwShader sTransparentFragmentShader;
 
-    void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const;
+    std::uint32_t constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const;
 
 public:
     enum class Type { Opaque, Mask, Transparent };
@@ -133,9 +134,12 @@ public:
 
     static Type getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode);
 
-    inline SwGraphicsPipelineBundle& getPipelineBundle() { return *mMaterialPipelineBundle; }
+    inline SwGraphicsPipelineBundle& getPipelineBundle() { return sMaterialPipelineBundles.at(mMaterialPipelineId); }
+
+    static SwGraphicsPipelineBundle& getPipelineBundleById(std::uint32_t pipelineId) { return sMaterialPipelineBundles.at(pipelineId); }
 
     inline fastgltf::AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
+    inline Type getType() { return getMaterialTypeFromAlphaMode(mMaterialPipelineOptions.alphaMode); }
 
     inline bool isDoubleSided() { return mMaterialPipelineOptions.doubleSided; }
 

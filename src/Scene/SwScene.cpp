@@ -182,7 +182,7 @@ void SwScene::addInstanceLights(SwAsset& asset, std::uint32_t instanceId) {
         if (lightNode == nullptr) {
             continue;
         }
-        SwLight light(lightNode->getLight().getParams());
+        SwLight light(asset.getLights()[lightNode->getLightIndex()].getParams());
         light.setInstanceContext(asset.getId(), instanceId, lightNode->getRelativeNodeIndex());
         mLights.emplace(light.getId(), std::move(light));
     }
@@ -281,8 +281,8 @@ void SwScene::unloadAssetsAndInstances() {
             if (!instanceDeleted) {
                 return false;
             }
-            if (&instance == getPickSystem().getSelectedInstancePtr()) {
-                getPickSystem().setSelectedInstancePtr(nullptr);
+            if (getPickSystem().getSelectedInstanceId() == instanceId) {
+                getPickSystem().clearSelection();
             }
             if (!asset.getLights().empty()) {
                 removeInstanceLights(instanceId);

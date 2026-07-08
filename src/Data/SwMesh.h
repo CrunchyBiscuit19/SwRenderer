@@ -29,9 +29,9 @@ struct SwPrimitive {
     std::uint32_t mRelativeFirstIndex;
     std::uint32_t mIndexCount;
     std::uint32_t mRelativeVertexOffset;
-    SwMaterial& mMaterial;
+    std::uint32_t mMaterialIndex;
 
-    SwPrimitive(std::uint32_t relativeFirstIndex, std::uint32_t indexCount, std::uint32_t relativeVertexOffset, SwMaterial& material);
+    SwPrimitive(std::uint32_t relativeFirstIndex, std::uint32_t indexCount, std::uint32_t relativeVertexOffset, std::uint32_t materialIndex);
 };
 
 class SwMesh {

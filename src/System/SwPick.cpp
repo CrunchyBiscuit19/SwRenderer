@@ -68,8 +68,9 @@ void SwPick::System::initializeResources() {
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const bool* keyState = SDL_GetKeyboardState(nullptr);
-        if (keyState[SDL_SCANCODE_DELETE] && mSelectedInstance != nullptr && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
-            mSelectedInstance->markDelete();
+        if (keyState[SDL_SCANCODE_DELETE] && mSelectedInstanceId.has_value() && mScene.getInstances().contains(*mSelectedInstanceId) &&
+            e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
+            mScene.getInstance(*mSelectedInstanceId).markDelete();
         }
     });
 
@@ -184,18 +185,18 @@ void SwPick::System::initializePasses() {
             );
 
             if (read.x == 0 || read.y == 0) {
-                mSelectedInstance = nullptr;
+                mSelectedInstanceId.reset();
                 return;
             }
             std::uint32_t assetId = read.x - 1;
             if (!mScene.getAssets().contains(assetId)) {
-                mSelectedInstance = nullptr;
+                mSelectedInstanceId.reset();
                 return;
             }
             SwAsset& selectedAsset = mScene.getAssets()[assetId];
 
             std::uint32_t localInstanceIndex = (read.y - 1) - selectedAsset.mFirstInstanceInScene;
-            mSelectedInstance = &mScene.getInstance(selectedAsset.getInstanceIds()[localInstanceIndex]);
+            mSelectedInstanceId = selectedAsset.getInstanceIds()[localInstanceIndex];
         },
         true
     );
@@ -265,7 +266,8 @@ void SwPick::System::changePickOperation() {
 }
 
 void SwPick::System::generatePickFrame() {
-    if (mSelectedInstance == nullptr) return;
+    if (!mSelectedInstanceId.has_value() || !mScene.getInstances().contains(*mSelectedInstanceId)) return;
+    SwInstance& selectedInstance = mScene.getInstance(*mSelectedInstanceId);
 
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
@@ -283,11 +285,11 @@ void SwPick::System::generatePickFrame() {
         glm::value_ptr(mScene.getCamera().getPerspective().getProjGL()),
         mImguizmoOperation,
         ImGuizmo::WORLD,
-        glm::value_ptr(mSelectedInstance->getData().mTransformMatrix)
+        glm::value_ptr(selectedInstance.getData().mTransformMatrix)
     );
 
     if (ImGuizmo::IsUsing()) {
-        mScene.getAsset(mSelectedInstance->getAssetId()).setReloadInstancesFlag(true);
+        mScene.getAsset(selectedInstance.getAssetId()).setReloadInstancesFlag(true);
     }
 }
 

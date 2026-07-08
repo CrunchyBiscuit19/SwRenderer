@@ -58,7 +58,8 @@ void SwMaterialResources::init() {
 void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
 
 std::uint32_t SwMaterial::sLatestMaterialId{0};
-std::unordered_map<SwMaterialPipelineOptions, SwGraphicsPipelineBundle> SwMaterial::sMaterialPipelineBundles{};
+std::unordered_map<SwMaterialPipelineOptions, std::uint32_t> SwMaterial::sMaterialPipelinesCreated{};
+std::unordered_map<std::uint32_t, SwGraphicsPipelineBundle> SwMaterial::sMaterialPipelineBundles{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
 SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
 static const std::filesystem::path GEOMETRY_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Geometry"};
@@ -78,14 +79,13 @@ SwMaterial::SwMaterial(
       mMaterialPipelineOptions(materialPipelineOptions),
       mMaterialConstants(materialConstants),
       mMaterialResources(std::move(materialResources)) {
-    if (auto it = sMaterialPipelineBundles.find(materialPipelineOptions); it != sMaterialPipelineBundles.end()) {
-        mMaterialPipelineBundle = &it->second;
+
+    if (auto it = sMaterialPipelinesCreated.find(materialPipelineOptions); it != sMaterialPipelinesCreated.end()) {
+        mMaterialPipelineId = it->second;
         return;
     }
 
-    constructMaterialPipeline(materialPipelineOptions);
-
-    mMaterialPipelineBundle = &sMaterialPipelineBundles[materialPipelineOptions];
+    mMaterialPipelineId = constructMaterialPipeline(materialPipelineOptions);
 
     sLatestMaterialId++;
 }
@@ -105,7 +105,7 @@ void SwMaterial::init() {
         SwShaderFactory::createShader("GeometryTransparentFragmentShaderModule", GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
 
-void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
+std::uint32_t SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
     vk::CullModeFlags cullMode = materialPipelineOptions.doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack;
 
     vk::PipelineColorBlendAttachmentState noBlendState{};
@@ -176,9 +176,11 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
     const std::string pipelineName = std::format(
         "Geometry{}{}Pipeline", magic_enum::enum_name(materialPipelineOptions.alphaMode), materialPipelineOptions.doubleSided ? "DoubleSided" : "SingleSided"
     );
-    auto [it, _] = sMaterialPipelineBundles.try_emplace(
-        materialPipelineOptions, std::move(SwGraphicsPipelineFactory::createGraphicsPipeline(pipelineName, graphicsPipelineOptions))
-    );
+    SwGraphicsPipelineBundle bundle = SwGraphicsPipelineFactory::createGraphicsPipeline(pipelineName, graphicsPipelineOptions);
+    const std::uint32_t pipelineId = bundle.getID();
+    sMaterialPipelineBundles.try_emplace(pipelineId, std::move(bundle));
+    sMaterialPipelinesCreated.emplace(materialPipelineOptions, pipelineId);
+    return pipelineId;
 }
 
 void SwMaterial::cleanup() {

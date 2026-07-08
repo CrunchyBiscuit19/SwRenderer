@@ -1,11 +1,10 @@
 #pragma once
 
+#include <Data/SwMaterial.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwPipeline.h>
 
 #include <vector>
-
-struct SwPrimitive;
 
 struct SwRenderCommand {
     std::uint32_t mIndexCount;
@@ -27,7 +26,7 @@ struct SwRenderItem {
 
 class SwBatch {
 private:
-    SwGraphicsPipelineBundle* mGraphicsPipelineBundle{nullptr};
+    std::uint32_t mPipelineId{0};
     bool mDoubleSided{false};
 
     std::vector<SwRenderCommand> mRcs;
@@ -47,7 +46,7 @@ public:
     static std::uint32_t sFirstRiOffset;
 
     SwBatch() = default;
-    SwBatch(SwPrimitive& primitive);
+    SwBatch(SwMaterial& material);
 
     SwBatch(SwBatch&&) noexcept = default;
     SwBatch& operator=(SwBatch&&) noexcept = default;
@@ -55,7 +54,7 @@ public:
     SwBatch(const SwBatch&) = delete;
     SwBatch& operator=(const SwBatch&) = delete;
 
-    inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return *mGraphicsPipelineBundle; }
+    inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return SwMaterial::getPipelineBundleById(mPipelineId); }
     inline bool isDoubleSided() const { return mDoubleSided; }
 
     inline std::vector<SwRenderCommand>& getRcs() { return mRcs; }
