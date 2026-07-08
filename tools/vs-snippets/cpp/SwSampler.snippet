@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swsampler - Sampler creation</Title>
+      <Shortcut>swsampler</Shortcut>
+      <Description>vk::SamplerCreateInfo populated field by field, then SwSamplerFactory::createSampler</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>info</ID>
+          <ToolTip>Local SamplerCreateInfo variable name</ToolTip>
+          <Default>samplerInfo</Default>
+        </Literal>
+        <Literal>
+          <ID>member</ID>
+          <ToolTip>Destination member expression</ToolTip>
+          <Default>mResources.mSampler</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Debug name string</ToolTip>
+          <Default>"Sampler"</Default>
+        </Literal>
+        <Literal>
+          <ID>address</ID>
+          <ToolTip>vk::SamplerAddressMode value applied to all three axes</ToolTip>
+          <Default>eClampToEdge</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[vk::SamplerCreateInfo $info${};
+$info$.setMagFilter(vk::Filter::eLinear);
+$info$.setMinFilter(vk::Filter::eLinear);
+$info$.setMipmapMode(vk::SamplerMipmapMode::eLinear);
+$info$.setAddressModeU(vk::SamplerAddressMode::$address$);
+$info$.setAddressModeV(vk::SamplerAddressMode::$address$);
+$info$.setAddressModeW(vk::SamplerAddressMode::$address$);
+$member$ = SwSamplerFactory::createSampler($name$, $info$);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

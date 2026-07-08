@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swcolorimage2d - Color image 2D creation</Title>
+      <Shortcut>swcolorimage2d</Shortcut>
+      <Description>SwImageFactory::createColorImage2D call</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>member</ID>
+          <ToolTip>Destination member expression</ToolTip>
+          <Default>mResources.mImage</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Debug name string</ToolTip>
+          <Default>"Image"</Default>
+        </Literal>
+        <Literal>
+          <ID>format</ID>
+          <ToolTip>vk::Format value</ToolTip>
+          <Default>vk::Format::eR16G16B16A16Sfloat</Default>
+        </Literal>
+        <Literal>
+          <ID>extent</ID>
+          <ToolTip>vk::Extent3D expression</ToolTip>
+          <Default>imageExtent</Default>
+        </Literal>
+        <Literal>
+          <ID>usage</ID>
+          <ToolTip>vk::ImageUsageFlagBits value(s)</ToolTip>
+          <Default>vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled</Default>
+        </Literal>
+        <Literal>
+          <ID>mipmapped</ID>
+          <ToolTip>Whether the image is mipmapped</ToolTip>
+          <Default>false</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[$member$ = SwImageFactory::createColorImage2D($name$, $format$, $extent$, $usage$, $mipmapped$);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

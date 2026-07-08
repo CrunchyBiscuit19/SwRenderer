@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swcomputeshaderpipeline - Compute shader plus pipeline</Title>
+      <Shortcut>swcomputeshaderpipeline</Shortcut>
+      <Description>Loads a compute SwShader module and creates the SwComputePipelineBundle from it in one go</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Name fragment shared by the shader variable, pipeline layout member, and pipeline bundle member</ToolTip>
+          <Default>Work</Default>
+        </Literal>
+        <Literal>
+          <ID>path</ID>
+          <ToolTip>Compute shader .spv path constant</ToolTip>
+          <Default>WORK_SHADER_PATH</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[SwShader $name$Shader = SwShaderFactory::createShader("$name$ShaderModule", $path$, vk::ShaderStageFlagBits::eCompute);
+mResources.m$name$PipelineBundle =
+    SwComputePipelineFactory::createComputePipeline("$name$Pipeline", {$name$Shader.getHandle(), mResources.m$name$PipelineLayout.getHandle()});$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

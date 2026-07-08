@@ -3,5 +3,5 @@
         "."
     ],
     "slang.predefinedMacros": [],
-    "slang.format.clangFormatStyle": "Google"
+	"slang.format.clangFormatLocation": "./clang-format"
 }

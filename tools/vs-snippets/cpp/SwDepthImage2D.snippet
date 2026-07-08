@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swdepthimage2d - Depth image 2D creation</Title>
+      <Shortcut>swdepthimage2d</Shortcut>
+      <Description>SwImageFactory::createDepthImage2D call</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>member</ID>
+          <ToolTip>Destination member expression</ToolTip>
+          <Default>mResources.mDepthImage</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Debug name string</ToolTip>
+          <Default>"DepthImage"</Default>
+        </Literal>
+        <Literal>
+          <ID>format</ID>
+          <ToolTip>vk::Format value</ToolTip>
+          <Default>vk::Format::eD32Sfloat</Default>
+        </Literal>
+        <Literal>
+          <ID>extent</ID>
+          <ToolTip>vk::Extent3D expression</ToolTip>
+          <Default>imageExtent</Default>
+        </Literal>
+        <Literal>
+          <ID>usage</ID>
+          <ToolTip>vk::ImageUsageFlagBits value(s)</ToolTip>
+          <Default>vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[$member$ = SwImageFactory::createDepthImage2D($name$, $format$, $extent$, $usage$);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

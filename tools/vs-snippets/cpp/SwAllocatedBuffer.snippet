@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swbuffer - Allocated buffer creation</Title>
+      <Shortcut>swbuffer</Shortcut>
+      <Description>SwBufferFactory::createAllocatedBuffer call with the name/usage/flags/size argument order</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>member</ID>
+          <ToolTip>Destination member expression</ToolTip>
+          <Default>mResources.mBuffer</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Debug name string</ToolTip>
+          <Default>"Buffer"</Default>
+        </Literal>
+        <Literal>
+          <ID>usage</ID>
+          <ToolTip>vk::BufferUsageFlagBits value(s)</ToolTip>
+          <Default>vk::BufferUsageFlagBits::eStorageBuffer</Default>
+        </Literal>
+        <Literal>
+          <ID>flags</ID>
+          <ToolTip>VmaAllocationCreateFlags value</ToolTip>
+          <Default>VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT</Default>
+        </Literal>
+        <Literal>
+          <ID>size</ID>
+          <ToolTip>Buffer size in bytes</ToolTip>
+          <Default>size</Default>
+        </Literal>
+        <Literal>
+          <ID>addressable</ID>
+          <ToolTip>Pass true if the buffer needs a device address</ToolTip>
+          <Default>true</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[$member$ = SwBufferFactory::createAllocatedBuffer($name$, $usage$, $flags$, $size$, $addressable$);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

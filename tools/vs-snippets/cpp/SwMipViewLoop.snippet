@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swmipviews - Per-mip image view loop</Title>
+      <Shortcut>swmipviews</Shortcut>
+      <Description>Adds one image view per mip level, matching the depth pyramid / prefilter chain pattern</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>image</ID>
+          <ToolTip>Image expression the views are added to</ToolTip>
+          <Default>mResources.mImage</Default>
+        </Literal>
+        <Literal>
+          <ID>levels</ID>
+          <ToolTip>Mip level count expression</ToolTip>
+          <Default>mMipLevels</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Base name used in fmt::format for each view</ToolTip>
+          <Default>"ImageMip{:0&gt;4}"</Default>
+        </Literal>
+        <Literal>
+          <ID>aspect</ID>
+          <ToolTip>vk::ImageAspectFlagBits value</ToolTip>
+          <Default>eColor</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[for (std::uint32_t i = 0; i < $levels$; i++) {
+    $image$.addImageView(fmt::format($name$, i), $image$.getMainFormat(), vk::ImageAspectFlagBits::$aspect$, vk::ImageViewType::e2D, i, 1);$end$
+}]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

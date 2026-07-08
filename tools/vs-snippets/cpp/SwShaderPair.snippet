@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swshaderpair - Vertex and fragment shader modules</Title>
+      <Shortcut>swshaderpair</Shortcut>
+      <Description>Loads a vertex and fragment SwShader module pair from their .spv paths</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Name fragment shared by both variables and debug names</ToolTip>
+          <Default>Draw</Default>
+        </Literal>
+        <Literal>
+          <ID>vertpath</ID>
+          <ToolTip>Vertex shader .spv path constant</ToolTip>
+          <Default>DRAW_VERTEX_SHADER_PATH</Default>
+        </Literal>
+        <Literal>
+          <ID>fragpath</ID>
+          <ToolTip>Fragment shader .spv path constant</ToolTip>
+          <Default>DRAW_FRAGMENT_SHADER_PATH</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[SwShader $name$VertexShader = SwShaderFactory::createShader("$name$VertexShaderModule", $vertpath$, vk::ShaderStageFlagBits::eVertex);
+SwShader $name$FragmentShader = SwShaderFactory::createShader("$name$FragmentShaderModule", $fragpath$, vk::ShaderStageFlagBits::eFragment);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

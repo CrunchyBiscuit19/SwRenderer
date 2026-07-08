@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swimgtransition - Deferred image transition on immediate submit</Title>
+      <Shortcut>swimgtransition</Shortcut>
+      <Description>Queues an emitTransition call for a freshly created image via mImmSubmit-&gt;addCallback, the pattern every reInitializeOnResize uses</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>image</ID>
+          <ToolTip>Image expression to transition</ToolTip>
+          <Default>mResources.mImage</Default>
+        </Literal>
+        <Literal>
+          <ID>deptype</ID>
+          <ToolTip>SwDependency::ImageDepType value</ToolTip>
+          <Default>ComputeStorageReadWrite</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    $image$.emitTransition(cmd, SwDependency::ImageDepType::$deptype$);$end$
+});]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>

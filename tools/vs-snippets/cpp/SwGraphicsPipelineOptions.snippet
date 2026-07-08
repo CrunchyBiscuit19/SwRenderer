@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CodeSnippets xmlns="http://schemas.microsoft.com/VisualStudio/2005/CodeSnippet">
+  <CodeSnippet Format="1.0.0">
+    <Header>
+      <Title>swgfxpipelineopts - Graphics pipeline options</Title>
+      <Shortcut>swgfxpipelineopts</Shortcut>
+      <Description>Populates a SwGraphicsPipelineFactory::SwGraphicsPipelineOptions with the fifteen fields it needs, then creates the pipeline</Description>
+      <Author>SwRenderer</Author>
+      <SnippetTypes>
+        <SnippetType>Expansion</SnippetType>
+      </SnippetTypes>
+    </Header>
+    <Snippet>
+      <Declarations>
+        <Literal>
+          <ID>opts</ID>
+          <ToolTip>Local options variable name</ToolTip>
+          <Default>pipelineOptions</Default>
+        </Literal>
+        <Literal>
+          <ID>vert</ID>
+          <ToolTip>Vertex shader module expression</ToolTip>
+          <Default>vertexShader.getHandle()</Default>
+        </Literal>
+        <Literal>
+          <ID>frag</ID>
+          <ToolTip>Fragment shader module expression</ToolTip>
+          <Default>fragmentShader.getHandle()</Default>
+        </Literal>
+        <Literal>
+          <ID>layout</ID>
+          <ToolTip>Pipeline layout expression</ToolTip>
+          <Default>mResources.mPipelineLayout.getHandle()</Default>
+        </Literal>
+        <Literal>
+          <ID>cullmode</ID>
+          <ToolTip>vk::CullModeFlagBits value</ToolTip>
+          <Default>eBack</Default>
+        </Literal>
+        <Literal>
+          <ID>colorformat</ID>
+          <ToolTip>vk::Format value for the color attachment</ToolTip>
+          <Default>vk::Format::eR16G16B16A16Sfloat</Default>
+        </Literal>
+        <Literal>
+          <ID>blendstate</ID>
+          <ToolTip>vk::PipelineColorBlendAttachmentState expression</ToolTip>
+          <Default>noBlendState</Default>
+        </Literal>
+        <Literal>
+          <ID>depthformat</ID>
+          <ToolTip>Depth format expression</ToolTip>
+          <Default>SwSwapchain::DEPTH_FORMAT</Default>
+        </Literal>
+        <Literal>
+          <ID>name</ID>
+          <ToolTip>Debug name for the resulting pipeline</ToolTip>
+          <Default>"Pipeline"</Default>
+        </Literal>
+        <Literal>
+          <ID>member</ID>
+          <ToolTip>Destination pipeline bundle member expression</ToolTip>
+          <Default>mResources.mPipelineBundle</Default>
+        </Literal>
+      </Declarations>
+      <Code Language="cpp"><![CDATA[SwGraphicsPipelineFactory::SwGraphicsPipelineOptions $opts$;
+$opts$.mVertexShader = $vert$;
+$opts$.mFragmentShader = $frag$;
+$opts$.mLayout = $layout$;
+$opts$.mTopology = vk::PrimitiveTopology::eTriangleList;
+$opts$.mPolygonMode = vk::PolygonMode::eFill;
+$opts$.mCullMode = vk::CullModeFlagBits::$cullmode$;
+$opts$.mFrontFace = vk::FrontFace::eCounterClockwise;
+$opts$.mMultisamplingEnabled = false;
+$opts$.mSampleShadingEnabled = false;
+$opts$.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{$colorformat$, $blendstate$}};
+$opts$.mDepthFormat = $depthformat$;
+$opts$.mDepthTestEnabled = true;
+$opts$.mDepthWriteEnabled = true;
+$opts$.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+
+$member$ = SwGraphicsPipelineFactory::createGraphicsPipeline($name$, $opts$);$end$]]></Code>
+    </Snippet>
+  </CodeSnippet>
+</CodeSnippets>
