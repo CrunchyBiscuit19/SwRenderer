@@ -26,9 +26,7 @@ void SwLighting::Resources::init() {
     );
 }
 
-void SwLighting::Resources::cleanup() {
-    sShadowConsumeDescriptorLayout.destroy();
-}
+void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy(); }
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -102,7 +100,7 @@ void SwLighting::System::initializeResources() {
         mResources.mShadowDrawRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightRcsBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,  
+            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             SHADOW_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
             true
         );
@@ -122,15 +120,13 @@ void SwLighting::System::initializeResources() {
         );
     }
 
-    mResources.mLightsCullPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("LightsCullPipelineLayout", nullptr, SwLighting::LightsCullPC::getRange());
-    SwShader lightsCullShader =
-        SwShaderFactory::createShader("LightsCullShaderModule", SwLighting::LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mResources.mLightsCullPipelineBundle = SwComputePipelineFactory::createComputePipeline(
-        "LightsCullPipeline", {lightsCullShader.getHandle(), mResources.mLightsCullPipelineLayout.getHandle()}
-    );
+    mResources.mLightsCullPipelineLayout = SwPipelineFactory::createPipelineLayout("LightsCullPipelineLayout", nullptr, SwLighting::LightsCullPC::getRange());
+    SwShader lightsCullShader = SwShaderFactory::createShader("LightsCullShaderModule", SwLighting::LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mLightsCullPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline("LightsCullPipeline", {lightsCullShader.getHandle(), mResources.mLightsCullPipelineLayout.getHandle()});
 
-    mResources.mShadowResetPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowResetPipelineLayout", nullptr, SwLighting::ShadowResetPC::getRange());
+    mResources.mShadowResetPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("ShadowResetPipelineLayout", nullptr, SwLighting::ShadowResetPC::getRange());
     SwShader resetShader = SwShaderFactory::createShader("ShadowResetShaderModule", SwLighting::SHADOW_RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowResetPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("ShadowResetPipeline", {resetShader.getHandle(), mResources.mShadowResetPipelineLayout.getHandle()});
@@ -186,8 +182,6 @@ void SwLighting::System::initializePasses() {
         const std::uint32_t rcsCount = static_cast<std::uint32_t>(mResources.mInitialShadowDrawRcs.size());
         if (rcsCount == 0) return;
 
-
-
         auto& resetPipeline = mResources.mShadowResetPipelineBundle;
         cmd.bindPipeline(resetPipeline.getBindPoint(), resetPipeline.getPipelineHandle());
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
@@ -214,9 +208,7 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingLightsCull, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         auto& pipeline = mResources.mLightsCullPipelineBundle;
         cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::LightsCullPC>(
-            pipeline.getLayoutHandle(), SwLighting::LightsCullPC::sStages, 0, mResources.mLightsCullPc
-        );
+        cmd.pushConstants<SwLighting::LightsCullPC>(pipeline.getLayoutHandle(), SwLighting::LightsCullPC::sStages, 0, mResources.mLightsCullPc);
         cmd.dispatch(SwHelper::fastDivCeil(MAX_NUM_SHADOW_CASTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
     staticDeps.clear();
@@ -277,8 +269,7 @@ void SwLighting::System::refreshDynamicDependencies() {}
 void SwLighting::System::refreshPushConstants() {
     mResources.mLightsCullPc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mLightsCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mLightsCullPc.mSceneNodeTransformsBuffer =
-        SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mLightsCullPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mLightsCullPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mLightsCullPc.mVisibleLightsBuffer = mResources.mVisibleLightsBuffer.getDeviceAddress().value();
 

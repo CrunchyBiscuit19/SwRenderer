@@ -11,9 +11,9 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwSemaphore.h>
 #include <Resource/SwShader.h>
+#include <SDL3/SDL_vulkan.h>
 #include <System/SwIBL.h>
 #include <System/SwLighting.h>
-#include <SDL3/SDL_vulkan.h>
 #include <Vkbootstrap.h>
 #include <fmt/core.h>
 #include <imgui_impl_sdl3.h>
@@ -241,7 +241,7 @@ void SwRenderer::run() {
 
             mSwapchain.resize();
             mScene.resize();
-            
+
             mSwapchain.setResizeRequested(false);
             mDevice.waitIdle();
         }

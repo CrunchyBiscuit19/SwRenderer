@@ -1,7 +1,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwPipeline.h>
 
-SwPipelineLayout::SwPipelineLayout(): mLayout(nullptr) {}
+SwPipelineLayout::SwPipelineLayout() : mLayout(nullptr) {}
 
 SwPipelineLayout::SwPipelineLayout(vk::raii::PipelineLayout layout) : mLayout(std::move(layout)) {}
 
@@ -9,7 +9,7 @@ void SwPipelineLayout::destroy() { mLayout.clear(); }
 
 std::uint32_t SwPipelineBundle::sLatestPipelineID{0};
 
-SwPipelineBundle::SwPipelineBundle(): mPipeline(nullptr) {}
+SwPipelineBundle::SwPipelineBundle() : mPipeline(nullptr) {}
 
 SwPipelineBundle::SwPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout)
     : mId{sLatestPipelineID++}, mPipeline(std::move(pipeline)), mLayout(layout) {}
@@ -17,8 +17,6 @@ SwPipelineBundle::SwPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayo
 SwGraphicsPipelineBundle::SwGraphicsPipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(std::move(pipeline), layout) {}
 
 SwComputePipelineBundle::SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout) : SwPipelineBundle(std::move(pipeline), layout) {}
-
-
 
 SwPipelineLayout SwPipelineFactory::createPipelineLayout(
     std::string name, vk::ArrayProxy<vk::DescriptorSetLayout> layouts, vk::ArrayProxy<vk::PushConstantRange> pushConstantRanges

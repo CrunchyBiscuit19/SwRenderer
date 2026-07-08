@@ -1,6 +1,7 @@
 #include <Renderer/SwHelper.h>
-#include <cmath>
+
 #include <algorithm>
+#include <cmath>
 
 vk::Extent2D SwHelper::extent3dTo2d(vk::Extent3D extent3d) { return vk::Extent2D(extent3d.width, extent3d.height); }
 

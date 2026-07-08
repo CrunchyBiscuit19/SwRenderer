@@ -121,9 +121,7 @@ void SwIBL::System::initializeResources() {
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLPrefilterDescriptorSet", mResources.mPrefilterDescriptorLayout);
     for (std::uint32_t slot = 0; slot < MAX_PREFILTER_MIP_LEVELS; slot++) {
         const std::uint32_t mip = std::min(slot, mPrefilterMipLevels - 1);
-        mResources.mPrefilterMipDescriptorSet.writeImage(
-            1, mResources.mPrefilterImage.getOtherImageViewHandle(mip), nullptr, vk::ImageLayout::eGeneral, slot
-        );
+        mResources.mPrefilterMipDescriptorSet.writeImage(1, mResources.mPrefilterImage.getOtherImageViewHandle(mip), nullptr, vk::ImageLayout::eGeneral, slot);
     }
     mResources.mPrefilterMipDescriptorSet.pushWrites();
 

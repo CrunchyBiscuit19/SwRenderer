@@ -309,7 +309,10 @@ void SwRenderGraph::exportRenderGraph() {
         fmt::print(mExportStream.value(), "\n  // Execution order\n");
         for (size_t i = 0; i + 1 < mSortedPasses.size(); ++i) {
             fmt::print(
-                mExportStream.value(), "  {} -> {} [style=dashed, color=\"#888888\", constraint=false, label=\"next\"];\n", passId(mSortedPasses[i]), passId(mSortedPasses[i + 1])
+                mExportStream.value(),
+                "  {} -> {} [style=dashed, color=\"#888888\", constraint=false, label=\"next\"];\n",
+                passId(mSortedPasses[i]),
+                passId(mSortedPasses[i + 1])
             );
         }
     }
@@ -352,13 +355,13 @@ void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
         }
         pass->execute(commandBuffer.getHandle());
     }
-    
+
     if (mExportStream.has_value()) {
         exportRenderGraph();
         mExportStream->flush();
         mExportStream.reset();
     }
-    
+
     mPasses.clear();
     mOutputs.clear();
     mSortedPasses.clear();

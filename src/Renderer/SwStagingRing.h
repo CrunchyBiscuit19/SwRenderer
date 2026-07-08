@@ -11,15 +11,15 @@ class SwImage;
 class SwStagingRing {
 private:
     struct Region {
-        std::uint64_t mEnd;  
-        std::uint64_t mFrame;    
+        std::uint64_t mEnd;
+        std::uint64_t mFrame;
     };
 
     SwStagingBuffer mRing;
     std::uint64_t mCapacity{0};
-    std::uint64_t mHead{0};   
-    std::uint64_t mTail{0};       
-    std::uint64_t mAlignment{1}; 
+    std::uint64_t mHead{0};
+    std::uint64_t mTail{0};
+    std::uint64_t mAlignment{1};
     std::deque<Region> mInFlight;
 
     void grow(std::uint64_t requiredSize);

@@ -49,7 +49,6 @@ public:
 
 class SwSwapchain {
 private:
-
     SDL_Window* mWindow{nullptr};
     vk::raii::SurfaceKHR mSurface;
 

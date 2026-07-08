@@ -3,7 +3,7 @@
 
 SwSampler SwSampler::sDefaultSampler{};
 
-SwSampler::SwSampler(): mSampler(nullptr) {}
+SwSampler::SwSampler() : mSampler(nullptr) {}
 
 SwSampler::SwSampler(vk::raii::Sampler sampler) : mSampler(std::move(sampler)) {}
 
@@ -22,9 +22,7 @@ void SwSamplerFactory::init() {
     SwSampler::sDefaultSampler = createSampler("DefaultSampler", defaultSamplerCreateInfo);
 }
 
-float SwSamplerFactory::getMaxSamplerAnisotropy() {
-    return SwRenderer::sRendererContext.mChosenGPU->getProperties().limits.maxSamplerAnisotropy;
-}
+float SwSamplerFactory::getMaxSamplerAnisotropy() { return SwRenderer::sRendererContext.mChosenGPU->getProperties().limits.maxSamplerAnisotropy; }
 
 void SwSamplerFactory::cleanup() { SwSampler::sDefaultSampler = SwSampler{}; }
 

@@ -27,8 +27,7 @@ static std::string convertSegment(std::string_view seg) {
             std::size_t j = i;
             while (j < seg.size() && std::isalpha(static_cast<unsigned char>(seg[j]))) ++j;
             out += static_cast<char>(std::toupper(static_cast<unsigned char>(seg[i])));
-            for (std::size_t k = i + 1; k < j; ++k)
-                out += static_cast<char>(std::tolower(static_cast<unsigned char>(seg[k])));
+            for (std::size_t k = i + 1; k < j; ++k) out += static_cast<char>(std::tolower(static_cast<unsigned char>(seg[k])));
             i = j;
         } else if (std::isdigit(static_cast<unsigned char>(seg[i]))) {
             std::size_t j = i;
@@ -54,117 +53,130 @@ static std::string tryConvertVkName(std::string_view token) {
     // preventing VK_FORMAT_ from matching before VK_FORMAT_FEATURE_ etc.
     static constexpr Entry kPrefixes[] = {
         // length 38
-        {"VK_BUILD_ACCELERATION_STRUCTURE_MODE_",    "vk::BuildAccelerationStructureModeKHR"},
+        {"VK_BUILD_ACCELERATION_STRUCTURE_MODE_", "vk::BuildAccelerationStructureModeKHR"},
         // length 33
-        {"VK_DEBUG_UTILS_MESSAGE_SEVERITY_",         "vk::DebugUtilsMessageSeverityFlagBitsEXT"},
+        {"VK_DEBUG_UTILS_MESSAGE_SEVERITY_", "vk::DebugUtilsMessageSeverityFlagBitsEXT"},
         // length 32
-        {"VK_ACCELERATION_STRUCTURE_TYPE_",          "vk::AccelerationStructureTypeKHR"},
+        {"VK_ACCELERATION_STRUCTURE_TYPE_", "vk::AccelerationStructureTypeKHR"},
         // length 31
-        {"VK_VALIDATION_FEATURE_DISABLE_",           "vk::ValidationFeatureDisableEXT"},
+        {"VK_VALIDATION_FEATURE_DISABLE_", "vk::ValidationFeatureDisableEXT"},
         // length 30
-        {"VK_VALIDATION_FEATURE_ENABLE_",            "vk::ValidationFeatureEnableEXT"},
-        {"VK_TESSELLATION_DOMAIN_ORIGIN_",           "vk::TessellationDomainOrigin"},
+        {"VK_VALIDATION_FEATURE_ENABLE_", "vk::ValidationFeatureEnableEXT"},
+        {"VK_TESSELLATION_DOMAIN_ORIGIN_", "vk::TessellationDomainOrigin"},
         // length 29
-        {"VK_DEBUG_UTILS_MESSAGE_TYPE_",             "vk::DebugUtilsMessageTypeFlagBitsEXT"},
+        {"VK_DEBUG_UTILS_MESSAGE_TYPE_", "vk::DebugUtilsMessageTypeFlagBitsEXT"},
         // length 27
-        {"VK_LINE_RASTERIZATION_MODE_",              "vk::LineRasterizationModeEXT"},
+        {"VK_LINE_RASTERIZATION_MODE_", "vk::LineRasterizationModeEXT"},
         // length 26
-        {"VK_PROVOKING_VERTEX_MODE_",                "vk::ProvokingVertexModeEXT"},
+        {"VK_PROVOKING_VERTEX_MODE_", "vk::ProvokingVertexModeEXT"},
         // length 25
-        {"VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_",      "vk::DescriptorUpdateTemplateType"},
+        {"VK_DESCRIPTOR_UPDATE_TEMPLATE_TYPE_", "vk::DescriptorUpdateTemplateType"},
         // length 24
-        {"VK_COMMAND_BUFFER_LEVEL_",                 "vk::CommandBufferLevel"},
-        {"VK_COMMAND_BUFFER_USAGE_",                 "vk::CommandBufferUsageFlagBits"},
-        {"VK_COMMAND_BUFFER_RESET_",                 "vk::CommandBufferResetFlagBits"},
-        {"VK_SAMPLER_ADDRESS_MODE_",                 "vk::SamplerAddressMode"},
-        {"VK_PHYSICAL_DEVICE_TYPE_",                 "vk::PhysicalDeviceType"},
+        {"VK_COMMAND_BUFFER_LEVEL_", "vk::CommandBufferLevel"},
+        {"VK_COMMAND_BUFFER_USAGE_", "vk::CommandBufferUsageFlagBits"},
+        {"VK_COMMAND_BUFFER_RESET_", "vk::CommandBufferResetFlagBits"},
+        {"VK_SAMPLER_ADDRESS_MODE_", "vk::SamplerAddressMode"},
+        {"VK_PHYSICAL_DEVICE_TYPE_", "vk::PhysicalDeviceType"},
         // length 23
-        {"VK_COMMAND_POOL_CREATE_",                  "vk::CommandPoolCreateFlagBits"},
-        {"VK_SAMPLER_MIPMAP_MODE_",                  "vk::SamplerMipmapMode"},
-        {"VK_ATTACHMENT_STORE_OP_",                  "vk::AttachmentStoreOp"},
-        {"VK_PIPELINE_BIND_POINT_",                  "vk::PipelineBindPoint"},
+        {"VK_COMMAND_POOL_CREATE_", "vk::CommandPoolCreateFlagBits"},
+        {"VK_SAMPLER_MIPMAP_MODE_", "vk::SamplerMipmapMode"},
+        {"VK_ATTACHMENT_STORE_OP_", "vk::AttachmentStoreOp"},
+        {"VK_PIPELINE_BIND_POINT_", "vk::PipelineBindPoint"},
         // length 22
-        {"VK_COMMAND_POOL_RESET_",                   "vk::CommandPoolResetFlagBits"},
-        {"VK_COMPONENT_SWIZZLE_",                    "vk::ComponentSwizzle"},
-        {"VK_DESCRIPTOR_BINDING_",                   "vk::DescriptorBindingFlagBits"},
-        {"VK_ATTACHMENT_LOAD_OP_",                   "vk::AttachmentLoadOp"},
-        {"VK_PRIMITIVE_TOPOLOGY_",                   "vk::PrimitiveTopology"},
+        {"VK_COMMAND_POOL_RESET_", "vk::CommandPoolResetFlagBits"},
+        {"VK_COMPONENT_SWIZZLE_", "vk::ComponentSwizzle"},
+        {"VK_DESCRIPTOR_BINDING_", "vk::DescriptorBindingFlagBits"},
+        {"VK_ATTACHMENT_LOAD_OP_", "vk::AttachmentLoadOp"},
+        {"VK_PRIMITIVE_TOPOLOGY_", "vk::PrimitiveTopology"},
         // length 21
-        {"VK_VERTEX_INPUT_RATE_",                    "vk::VertexInputRate"},
-        {"VK_SWAPCHAIN_CREATE_",                     "vk::SwapchainCreateFlagBitsKHR"},
-        {"VK_SURFACE_TRANSFORM_",                    "vk::SurfaceTransformFlagBitsKHR"},
+        {"VK_VERTEX_INPUT_RATE_", "vk::VertexInputRate"},
+        {"VK_SWAPCHAIN_CREATE_", "vk::SwapchainCreateFlagBitsKHR"},
+        {"VK_SURFACE_TRANSFORM_", "vk::SurfaceTransformFlagBitsKHR"},
         // length 20
-        {"VK_PIPELINE_STAGE_2_",                     "vk::PipelineStageFlagBits2"},
-        {"VK_COMPOSITE_ALPHA_",                      "vk::CompositeAlphaFlagBitsKHR"},
-        {"VK_SUBPASS_CONTENTS_",                     "vk::SubpassContents"},
-        {"VK_SUBGROUP_FEATURE_",                     "vk::SubgroupFeatureFlagBits"},
+        {"VK_PIPELINE_STAGE_2_", "vk::PipelineStageFlagBits2"},
+        {"VK_COMPOSITE_ALPHA_", "vk::CompositeAlphaFlagBitsKHR"},
+        {"VK_SUBPASS_CONTENTS_", "vk::SubpassContents"},
+        {"VK_SUBGROUP_FEATURE_", "vk::SubgroupFeatureFlagBits"},
         // length 19
-        {"VK_PIPELINE_CREATE_",                      "vk::PipelineCreateFlagBits"},
-        {"VK_IMAGE_VIEW_TYPE_",                      "vk::ImageViewType"},
-        {"VK_MEMORY_PROPERTY_",                      "vk::MemoryPropertyFlagBits"},
-        {"VK_DESCRIPTOR_TYPE_",                      "vk::DescriptorType"},
-        {"VK_COLOR_COMPONENT_",                      "vk::ColorComponentFlagBits"},
+        {"VK_PIPELINE_CREATE_", "vk::PipelineCreateFlagBits"},
+        {"VK_IMAGE_VIEW_TYPE_", "vk::ImageViewType"},
+        {"VK_MEMORY_PROPERTY_", "vk::MemoryPropertyFlagBits"},
+        {"VK_DESCRIPTOR_TYPE_", "vk::DescriptorType"},
+        {"VK_COLOR_COMPONENT_", "vk::ColorComponentFlagBits"},
         // length 18
-        {"VK_PIPELINE_STAGE_",                       "vk::PipelineStageFlagBits"},
-        {"VK_FORMAT_FEATURE_",                       "vk::FormatFeatureFlagBits"},
-        {"VK_BUFFER_USAGE_2_",                       "vk::BufferUsageFlagBits2"},
-        {"VK_STRUCTURE_TYPE_",                       "vk::StructureType"},
-        {"VK_SEMAPHORE_TYPE_",                       "vk::SemaphoreType"},
-        {"VK_SEMAPHORE_WAIT_",                       "vk::SemaphoreWaitFlagBits"},
+        {"VK_PIPELINE_STAGE_", "vk::PipelineStageFlagBits"},
+        {"VK_FORMAT_FEATURE_", "vk::FormatFeatureFlagBits"},
+        {"VK_BUFFER_USAGE_2_", "vk::BufferUsageFlagBits2"},
+        {"VK_STRUCTURE_TYPE_", "vk::StructureType"},
+        {"VK_SEMAPHORE_TYPE_", "vk::SemaphoreType"},
+        {"VK_SEMAPHORE_WAIT_", "vk::SemaphoreWaitFlagBits"},
         // length 17
-        {"VK_DYNAMIC_STATE_",                        "vk::DynamicState"},
-        {"VK_BUFFER_CREATE_",                        "vk::BufferCreateFlagBits"},
-        {"VK_GEOMETRY_TYPE_",                        "vk::GeometryTypeKHR"},
+        {"VK_DYNAMIC_STATE_", "vk::DynamicState"},
+        {"VK_BUFFER_CREATE_", "vk::BufferCreateFlagBits"},
+        {"VK_GEOMETRY_TYPE_", "vk::GeometryTypeKHR"},
         // length 16
-        {"VK_IMAGE_LAYOUT_",                         "vk::ImageLayout"},
-        {"VK_IMAGE_ASPECT_",                         "vk::ImageAspectFlagBits"},
-        {"VK_IMAGE_CREATE_",                         "vk::ImageCreateFlagBits"},
-        {"VK_IMAGE_TILING_",                         "vk::ImageTiling"},
-        {"VK_BUFFER_USAGE_",                         "vk::BufferUsageFlagBits"},
-        {"VK_SHADER_STAGE_",                         "vk::ShaderStageFlagBits"},
-        {"VK_SAMPLE_COUNT_",                         "vk::SampleCountFlagBits"},
-        {"VK_SHARING_MODE_",                         "vk::SharingMode"},
-        {"VK_POLYGON_MODE_",                         "vk::PolygonMode"},
-        {"VK_BLEND_FACTOR_",                         "vk::BlendFactor"},
-        {"VK_PRESENT_MODE_",                         "vk::PresentModeKHR"},
-        {"VK_FENCE_CREATE_",                         "vk::FenceCreateFlagBits"},
-        {"VK_QUERY_RESULT_",                         "vk::QueryResultFlagBits"},
-        {"VK_RESOLVE_MODE_",                         "vk::ResolveModeFlags"},
-        {"VK_BORDER_COLOR_",                         "vk::BorderColor"},
+        {"VK_IMAGE_LAYOUT_", "vk::ImageLayout"},
+        {"VK_IMAGE_ASPECT_", "vk::ImageAspectFlagBits"},
+        {"VK_IMAGE_CREATE_", "vk::ImageCreateFlagBits"},
+        {"VK_IMAGE_TILING_", "vk::ImageTiling"},
+        {"VK_BUFFER_USAGE_", "vk::BufferUsageFlagBits"},
+        {"VK_SHADER_STAGE_", "vk::ShaderStageFlagBits"},
+        {"VK_SAMPLE_COUNT_", "vk::SampleCountFlagBits"},
+        {"VK_SHARING_MODE_", "vk::SharingMode"},
+        {"VK_POLYGON_MODE_", "vk::PolygonMode"},
+        {"VK_BLEND_FACTOR_", "vk::BlendFactor"},
+        {"VK_PRESENT_MODE_", "vk::PresentModeKHR"},
+        {"VK_FENCE_CREATE_", "vk::FenceCreateFlagBits"},
+        {"VK_QUERY_RESULT_", "vk::QueryResultFlagBits"},
+        {"VK_RESOLVE_MODE_", "vk::ResolveModeFlags"},
+        {"VK_BORDER_COLOR_", "vk::BorderColor"},
         // length 15
-        {"VK_IMAGE_USAGE_",                          "vk::ImageUsageFlagBits"},
-        {"VK_MEMORY_HEAP_",                          "vk::MemoryHeapFlagBits"},
-        {"VK_COLOR_SPACE_",                          "vk::ColorSpaceKHR"},
-        {"VK_OBJECT_TYPE_",                          "vk::ObjectType"},
+        {"VK_IMAGE_USAGE_", "vk::ImageUsageFlagBits"},
+        {"VK_MEMORY_HEAP_", "vk::MemoryHeapFlagBits"},
+        {"VK_COLOR_SPACE_", "vk::ColorSpaceKHR"},
+        {"VK_OBJECT_TYPE_", "vk::ObjectType"},
         // length 14
-        {"VK_IMAGE_TYPE_",                           "vk::ImageType"},
-        {"VK_FRONT_FACE_",                           "vk::FrontFace"},
-        {"VK_COMPARE_OP_",                           "vk::CompareOp"},
-        {"VK_STENCIL_OP_",                           "vk::StencilOp"},
-        {"VK_INDEX_TYPE_",                           "vk::IndexType"},
-        {"VK_QUERY_TYPE_",                           "vk::QueryType"},
-        {"VK_DEPENDENCY_",                           "vk::DependencyFlagBits"},
+        {"VK_IMAGE_TYPE_", "vk::ImageType"},
+        {"VK_FRONT_FACE_", "vk::FrontFace"},
+        {"VK_COMPARE_OP_", "vk::CompareOp"},
+        {"VK_STENCIL_OP_", "vk::StencilOp"},
+        {"VK_INDEX_TYPE_", "vk::IndexType"},
+        {"VK_QUERY_TYPE_", "vk::QueryType"},
+        {"VK_DEPENDENCY_", "vk::DependencyFlagBits"},
         // length 13
-        {"VK_CULL_MODE_",                            "vk::CullModeFlagBits"},
-        {"VK_RENDERING_",                            "vk::RenderingFlagBits"},
+        {"VK_CULL_MODE_", "vk::CullModeFlagBits"},
+        {"VK_RENDERING_", "vk::RenderingFlagBits"},
         // length 12
-        {"VK_BLEND_OP_",                             "vk::BlendOp"},
-        {"VK_LOGIC_OP_",                             "vk::LogicOp"},
-        {"VK_ACCESS_2_",                             "vk::AccessFlagBits2"},
+        {"VK_BLEND_OP_", "vk::BlendOp"},
+        {"VK_LOGIC_OP_", "vk::LogicOp"},
+        {"VK_ACCESS_2_", "vk::AccessFlagBits2"},
         // length 10
-        {"VK_FORMAT_",                               "vk::Format"},
-        {"VK_FILTER_",                               "vk::Filter"},
-        {"VK_RESULT_",                               "vk::Result"},
-        {"VK_ACCESS_",                               "vk::AccessFlagBits"},
-        {"VK_SUBMIT_",                               "vk::SubmitFlagBits"},
+        {"VK_FORMAT_", "vk::Format"},
+        {"VK_FILTER_", "vk::Filter"},
+        {"VK_RESULT_", "vk::Result"},
+        {"VK_ACCESS_", "vk::AccessFlagBits"},
+        {"VK_SUBMIT_", "vk::SubmitFlagBits"},
         // length 9
-        {"VK_QUEUE_",                                "vk::QueueFlagBits"},
+        {"VK_QUEUE_", "vk::QueueFlagBits"},
     };
 
     // Vendor suffixes to strip from the value portion (must strip before _BIT)
     static constexpr std::string_view kVendorSuffixes[] = {
-        "_KHR", "_EXT", "_NV", "_NVX", "_AMD", "_INTEL", "_GOOGLE",
-        "_QCOM", "_HUAWEI", "_ARM", "_VALVE", "_MESA", "_FB", "_AMDX", "_ANDROID",
+        "_KHR",
+        "_EXT",
+        "_NV",
+        "_NVX",
+        "_AMD",
+        "_INTEL",
+        "_GOOGLE",
+        "_QCOM",
+        "_HUAWEI",
+        "_ARM",
+        "_VALVE",
+        "_MESA",
+        "_FB",
+        "_AMDX",
+        "_ANDROID",
     };
 
     for (const auto& e : kPrefixes) {
@@ -175,16 +187,14 @@ static std::string tryConvertVkName(std::string_view token) {
 
         // Strip vendor suffix from value
         for (std::string_view vendor : kVendorSuffixes) {
-            if (value.size() > vendor.size() &&
-                std::string_view{value}.substr(value.size() - vendor.size()) == vendor) {
+            if (value.size() > vendor.size() && std::string_view{value}.substr(value.size() - vendor.size()) == vendor) {
                 value.resize(value.size() - vendor.size());
                 break;
             }
         }
 
         // Strip _BIT suffix
-        if (value.size() >= 4 && std::string_view{value}.substr(value.size() - 4) == "_BIT")
-            value.resize(value.size() - 4);
+        if (value.size() >= 4 && std::string_view{value}.substr(value.size() - 4) == "_BIT") value.resize(value.size() - 4);
 
         // Split by '_' and convert each segment, prepend 'e'
         std::string enumValue = "e";
@@ -192,15 +202,14 @@ static std::string tryConvertVkName(std::string_view token) {
         while (start < value.size()) {
             std::size_t sep = value.find('_', start);
             if (sep == std::string::npos) sep = value.size();
-            if (sep > start)
-                enumValue += convertSegment(std::string_view{value}.substr(start, sep - start));
+            if (sep > start) enumValue += convertSegment(std::string_view{value}.substr(start, sep - start));
             start = sep + 1;
         }
 
         return std::string{e.cppType} + "::" + enumValue;
     }
 
-    return {}; // no match
+    return {};  // no match
 }
 
 // Walks through the message and replaces every all-caps VK_ token it can
@@ -224,8 +233,10 @@ static std::string translateVkNames(const std::string& msg) {
         std::size_t end = vkPos + 3;
         while (end < msg.size()) {
             unsigned char c = static_cast<unsigned char>(msg[end]);
-            if (std::isupper(c) || std::isdigit(c) || c == '_') ++end;
-            else break;
+            if (std::isupper(c) || std::isdigit(c) || c == '_')
+                ++end;
+            else
+                break;
         }
         // Trim trailing underscores from the candidate token
         while (end > vkPos + 3 && msg[end - 1] == '_') --end;
@@ -298,7 +309,7 @@ SwLogger::SwLogger() {
     mBreakMessages.insert("VUID-VkBufferCopy-size-01988");
     mBreakMessages.insert("VUID-vkCmdCopyBuffer-size-00115");
     mBreakMessages.insert("VUID-vkCmdBeginRendering-pRenderingInfo-09592");
-    //mBreakMessages.insert("VUID-vkCmdDraw-None-09600");
+    // mBreakMessages.insert("VUID-vkCmdDraw-None-09600");
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(

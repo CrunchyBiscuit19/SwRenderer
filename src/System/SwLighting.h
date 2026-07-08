@@ -1,17 +1,22 @@
 #pragma once
 
 #include <Data/SwBatch.h>
-#include <Data/SwLight.h>
-#include <Data/SwCamera.h>
-#include <Scene/SwSystem.h>
-#include <System/SwCull.h>
+#include <Resource/SwBuffer.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
+#include <Resource/SwPushConstant.h>
+#include <Resource/SwSampler.h>
+#include <Scene/SwScene.h>
+#include <Scene/SwSystem.h>
 
 #include <array>
-#include <unordered_map>
+#include <cstdint>
+#include <filesystem>
+#include <string_view>
 #include <vector>
+#include <vulkan/vulkan.hpp>
+#include <vulkan/vulkan_enums.hpp>
 
 class SwInstance;
 
@@ -81,7 +86,7 @@ struct ShadowCullPC : SwPC<ShadowCullPC> {
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mVisibleLightsBuffer; 
+    vk::DeviceAddress mVisibleLightsBuffer;
     std::uint32_t mShadowRisLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -107,7 +112,7 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    SwAllocatedBuffer mVisibleLightsBuffer; 
+    SwAllocatedBuffer mVisibleLightsBuffer;
 
     std::array<SwDepthImage2D, MAX_NUM_SHADOW_CASTERS> mShadow2DMaps;
     std::array<SwDepthImageCubemap, MAX_NUM_SHADOW_CASTERS> mShadowCubeMaps;
@@ -115,9 +120,9 @@ struct Resources {
     SwDescriptorSet mShadowMapsDescriptorSet;
 
     std::vector<SwRenderCommand> mInitialShadowDrawRcs;
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRcsBuffer; 
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisBuffer; 
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisIndicesBuffer; 
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRcsBuffer;
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisBuffer;
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisIndicesBuffer;
 
     ShadowResetPC mShadowResetPc;
     SwPipelineLayout mShadowResetPipelineLayout;
@@ -138,7 +143,7 @@ struct Resources {
     ShadowCullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
     SwComputePipelineBundle mShadowCullPipelineBundle;
-    
+
     ShadowDrawPC mShadowDrawPc;
     SwPipelineLayout mShadowDrawPipelineLayout;
     SwGraphicsPipelineBundle mShadowDrawOpaquePipelineBundle;

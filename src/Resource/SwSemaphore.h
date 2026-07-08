@@ -20,7 +20,6 @@ public:
 
 class SwSemaphoreFactory {
 private:
-
 public:
     static void init();
 

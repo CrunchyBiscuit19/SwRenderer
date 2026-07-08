@@ -180,8 +180,7 @@ void SwGui::System::initializeResources() {
                 SwAsset& owningAsset = mScene.getAsset(light.getAssetId());
                 const bool standalone = owningAsset.isStandaloneLight();
 
-                const std::string label =
-                    fmt::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), light.getId());
+                const std::string label = fmt::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), light.getId());
                 ImGui::PushID(label.c_str());
                 if (ImGui::TreeNode(label.c_str())) {
                     bool edited = false;
@@ -269,13 +268,25 @@ void SwGui::System::initializeResources() {
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());
         ImGui::Text("Frame Time");
         ImGui::PlotLines(
-            "##FrameTimeGraph", frameTimeHistory.data(), static_cast<int>(frameTimeHistorySize), static_cast<int>(frameTimeHistoryOffset),
-            frameTimeOverlay.c_str(), 0.f, maxFrameTime * 1.2f, ImVec2(0.f, 60.f)
+            "##FrameTimeGraph",
+            frameTimeHistory.data(),
+            static_cast<int>(frameTimeHistorySize),
+            static_cast<int>(frameTimeHistoryOffset),
+            frameTimeOverlay.c_str(),
+            0.f,
+            maxFrameTime * 1.2f,
+            ImVec2(0.f, 60.f)
         );
         ImGui::Text("FPS");
         ImGui::PlotLines(
-            "##FpsGraph", fpsHistory.data(), static_cast<int>(frameTimeHistorySize), static_cast<int>(frameTimeHistoryOffset), fpsOverlay.c_str(), 0.f,
-            maxFps * 1.2f, ImVec2(0.f, 60.f)
+            "##FpsGraph",
+            fpsHistory.data(),
+            static_cast<int>(frameTimeHistorySize),
+            static_cast<int>(frameTimeHistoryOffset),
+            fpsOverlay.c_str(),
+            0.f,
+            maxFps * 1.2f,
+            ImVec2(0.f, 60.f)
         );
         ImGui::Text("Draw Time:  %.2fms", SwRenderer::sRendererContext.mStats->mDrawTime);
         ImGui::Text("Update Time: %.2fms", SwRenderer::sRendererContext.mStats->mSceneUpdateTime);

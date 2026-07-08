@@ -1,7 +1,7 @@
 #include <Data/SwAsset.h>
-#include <Renderer/SwRenderer.h>
 #include <Renderer/SwImmSubmit.h>
 #include <Renderer/SwLogger.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwStagingRing.h>
 #include <Scene/SwScene.h>
 #include <fmt/core.h>
@@ -9,12 +9,11 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <execution>
 #include <fastgltf/glm_element_traits.hpp>
 #include <glm/glm.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <magic_enum.hpp>
-
-#include <execution>
 
 std::uint32_t SwAsset::sLatestAssetId{0};
 std::unordered_map<SwSamplerOptions, SwSampler> SwAsset::sSamplers{};
@@ -106,10 +105,7 @@ void SwAsset::constructBuffers() {
         ASSET_MATERIALS_BUFFER_SIZE
     );
     mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("{}BoundsBuffer", mName),
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        ASSET_BOUNDS_BUFFER_SIZE
+        fmt::format("{}BoundsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, ASSET_BOUNDS_BUFFER_SIZE
     );
     mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
         fmt::format("{}NodeTransformsBuffer", mName),
@@ -243,8 +239,11 @@ void SwAsset::constructImages() {
         }
         const vk::Extent3D extent{static_cast<std::uint32_t>(decodedImage.mWidth), static_cast<std::uint32_t>(decodedImage.mHeight), 1};
         mImages[i] = SwImageFactory::createColorImage2D(
-            fmt::format("{}_Image{:0>4}", mName, i), formats[i].value(), extent,
-            vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc, true
+            fmt::format("{}_Image{:0>4}", mName, i),
+            formats[i].value(),
+            extent,
+            vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc,
+            true
         );
         mImageDataPtrs[i] = decodedImage.mData;
     }
@@ -395,16 +394,10 @@ void SwAsset::constructMeshes() {
         const vk::DeviceSize srcVertexVectorSize = data.mVertices.size() * sizeof(SwVertex);
         const vk::DeviceSize srcIndexVectorSize = data.mIndices.size() * sizeof(std::uint32_t);
         SwAllocatedBuffer vertexBuffer = SwBufferFactory::createAllocatedBuffer(
-            fmt::format("{}VertexBuffer", data.mName),
-            vk::BufferUsageFlagBits::eStorageBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            srcVertexVectorSize
+            fmt::format("{}VertexBuffer", data.mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcVertexVectorSize
         );
         SwAllocatedBuffer indexBuffer = SwBufferFactory::createAllocatedBuffer(
-            fmt::format("{}IndexBuffer", data.mName),
-            vk::BufferUsageFlagBits::eIndexBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            srcIndexVectorSize
+            fmt::format("{}IndexBuffer", data.mName), vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcIndexVectorSize
         );
 
         mMeshes.emplace_back(

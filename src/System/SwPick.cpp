@@ -4,8 +4,8 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
-#include <System/SwPick.h>
 #include <Scene/SwScene.h>
+#include <System/SwPick.h>
 #include <quill/LogMacros.h>
 
 SwPick::System::System(SwScene& scene) : SwSystem(scene) {}
@@ -26,7 +26,8 @@ void SwPick::System::initializeResources() {
     );
 
     SwShader drawVertexShader = SwShaderFactory::createShader("PickDrawVertexShaderModule", PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    SwShader drawFragmentShader = SwShaderFactory::createShader("PickDrawFragmentShaderModule", PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    SwShader drawFragmentShader =
+        SwShaderFactory::createShader("PickDrawFragmentShaderModule", PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.colorWriteMask =
@@ -51,7 +52,8 @@ void SwPick::System::initializeResources() {
 
     drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
     drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
-    mResources.mDrawOpaqueTransparentPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawOpaqueTransparentPipeline", drawPipelineOptions);
+    mResources.mDrawOpaqueTransparentPipelineBundle =
+        SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawOpaqueTransparentPipeline", drawPipelineOptions);
 
     drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
     drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
@@ -106,7 +108,7 @@ void SwPick::System::initializePasses() {
             nullptr
         );
 
-        // Draw only the culled commands, mirroring what the geometry pass put in the shared depth image. 
+        // Draw only the culled commands, mirroring what the geometry pass put in the shared depth image.
         // Opaque / transparent share one pipeline, while masked uses the discard one.
         auto drawBatches = [&](auto&& batches, SwGraphicsPipelineBundle& pipeline, bool early) {
             cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
@@ -123,12 +125,7 @@ void SwPick::System::initializePasses() {
                 cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
                 cmd.drawIndexedIndirectCount(
-                    rcBuffer.getHandle(),
-                    0,
-                    countBuffer.getHandle(),
-                    0,
-                    static_cast<std::uint32_t>(batch.getRcs().size()),
-                    sizeof(SwRenderCommand)
+                    rcBuffer.getHandle(), 0, countBuffer.getHandle(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
                 );
             }
         };
@@ -247,8 +244,7 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneDrawRisIndicesBuffer =
-        mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }
 

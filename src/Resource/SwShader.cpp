@@ -10,8 +10,6 @@ SwShader::SwShader(vk::raii::ShaderModule module, vk::ShaderStageFlagBits shader
 
 void SwShader::destroy() { mModule.clear(); }
 
-
-
 SwShader SwShaderFactory::createShader(std::string name, const std::filesystem::path& filePath, vk::ShaderStageFlagBits shaderStageFlag) {
     std::ifstream file(filePath, std::ios::ate | std::ios::binary);
     const size_t fileSize = file.tellg();

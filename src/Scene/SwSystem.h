@@ -5,13 +5,13 @@
 class SwScene;
 
 class SwSystem {
-public:    
+public:
     class Resizable {
     protected:
         virtual void reInitializeOnResize() = 0;
 
     public:
-        virtual void resize();  
+        virtual void resize();
     };
 
 protected:
@@ -22,7 +22,6 @@ protected:
     virtual void initializePushConstants();
 
 public:
-
     SwSystem(SwScene& scene);
 
     void initialize();

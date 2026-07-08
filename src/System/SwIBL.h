@@ -30,7 +30,7 @@ constexpr vk::Format IBL_FORMAT{vk::Format::eR16G16B16A16Sfloat};
 constexpr vk::Format BRDF_LUT_FORMAT{vk::Format::eR16G16Sfloat};
 
 constexpr vk::Extent3D IRRADIANCE_EXTENT{64, 32, 1};
-constexpr vk::Extent3D PREFILTER_EXTENT{128, 64, 1};  
+constexpr vk::Extent3D PREFILTER_EXTENT{128, 64, 1};
 constexpr vk::Extent3D BRDF_LUT_EXTENT{512, 512, 1};
 
 constexpr std::uint32_t MAX_PREFILTER_MIP_LEVELS{1 << 4};
@@ -81,7 +81,7 @@ struct Resources {
     SwComputePipelineBundle mPrefilterPipelineBundle;
     SwPipelineLayout mPrefilterPipelineLayout;
     SwDescriptorLayout mPrefilterDescriptorLayout;
-    SwDescriptorSet mPrefilterMipDescriptorSet;  
+    SwDescriptorSet mPrefilterMipDescriptorSet;
 
     SwDescriptorSet mConsumeDescriptorSet;
 

@@ -1,7 +1,8 @@
 #pragma once
 
-#include <Scene/SwPass.h>
 #include <Renderer/SwRendererContext.h>
+#include <Scene/SwPass.h>
+
 #include <filesystem>
 #include <fstream>
 #include <optional>
@@ -13,13 +14,13 @@ class SwCommandBuffer;
 
 class SwRenderGraph {
 private:
-    static const std::filesystem::path RENDER_GRAPH_EXPORT_PATH; 
+    static const std::filesystem::path RENDER_GRAPH_EXPORT_PATH;
 
     std::optional<std::ofstream> mExportStream{std::nullopt};
 
     std::vector<SwPass*> mPasses;
     std::vector<SwImage*> mOutputs;
-    std::vector<SwPass*> mSortedPasses; 
+    std::vector<SwPass*> mSortedPasses;
 
     void pruneUnreachablePasses();
     void sortTopological();

@@ -7,12 +7,12 @@
 #include <vulkan/vulkan.hpp>
 
 #if defined(_MSC_VER)
-    #define SW_DEBUG_BREAK() __debugbreak()
+#define SW_DEBUG_BREAK() __debugbreak()
 #elif defined(__has_builtin) && __has_builtin(__builtin_debugtrap)
-    #define SW_DEBUG_BREAK() __builtin_debugtrap()
+#define SW_DEBUG_BREAK() __builtin_debugtrap()
 #else
-    #include <csignal>
-    #define SW_DEBUG_BREAK() raise(SIGTRAP)
+#include <csignal>
+#define SW_DEBUG_BREAK() raise(SIGTRAP)
 #endif
 
 class SwLogger {

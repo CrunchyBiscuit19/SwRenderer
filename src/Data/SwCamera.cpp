@@ -1,6 +1,6 @@
 #include <Data/SwCamera.h>
-#include <Renderer/SwRenderer.h>
 #include <Renderer/SwEvents.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwSwapchain.h>
 
@@ -77,7 +77,11 @@ void SwCamera::initialize() {
 
     for (std::uint32_t i = 0; i < SwSwapchain::NUM_FRAME_OVERLAP; i++) {
         mCameraBuffers[i] = SwBufferFactory::createAllocatedBuffer(
-            "CameraBuffer" + std::to_string(i), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT, sizeof(Data), true
+            "CameraBuffer" + std::to_string(i),
+            vk::BufferUsageFlagBits::eStorageBuffer,
+            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+            sizeof(Data),
+            true
         );
     }
 }

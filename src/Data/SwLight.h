@@ -1,12 +1,11 @@
 #pragma once
 
-#include <Resource/SwBuffer.h>
 #include <Data/SwInstance.h>
+#include <Resource/SwBuffer.h>
 
+#include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
-#include <cstdint>
-
 
 class SwLight {
 public:

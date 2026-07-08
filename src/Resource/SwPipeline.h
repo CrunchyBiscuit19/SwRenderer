@@ -66,7 +66,7 @@ class SwComputePipelineBundle : public SwPipelineBundle {
 public:
     SwComputePipelineBundle() = default;
 
-    SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout); 
+    SwComputePipelineBundle(vk::raii::Pipeline pipeline, vk::PipelineLayout layout);
 
     inline vk::PipelineBindPoint getBindPoint() override { return vk::PipelineBindPoint::eCompute; }
 };

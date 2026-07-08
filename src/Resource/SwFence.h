@@ -20,7 +20,6 @@ public:
 
 class SwFenceFactory {
 private:
-
 public:
     static void init();
 

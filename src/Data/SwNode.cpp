@@ -1,7 +1,7 @@
 #include <Data/SwBatch.h>
-#include <Renderer/SwRenderer.h>
 #include <Data/SwMesh.h>
 #include <Data/SwNode.h>
+#include <Renderer/SwRenderer.h>
 #include <Renderer/SwRendererContext.h>
 #include <Scene/SwScene.h>
 

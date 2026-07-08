@@ -78,7 +78,6 @@ public:
 
 class SwSamplerFactory {
 private:
-
 public:
     static void init();
 

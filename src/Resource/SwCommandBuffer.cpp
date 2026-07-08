@@ -1,8 +1,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwCommandBuffer.h>
 
-
-SwCommandBuffer::SwCommandBuffer(): mCommandBuffer(nullptr) {}
+SwCommandBuffer::SwCommandBuffer() : mCommandBuffer(nullptr) {}
 
 SwCommandBuffer::SwCommandBuffer(vk::raii::CommandBuffer commandBuffer) : mCommandBuffer(std::move(commandBuffer)) {}
 
@@ -18,12 +17,7 @@ void SwCommandBuffer::begin(vk::CommandBufferUsageFlags commandBufferUsageFlags)
 
 void SwCommandBuffer::end() { mCommandBuffer.end(); }
 
-vk::CommandBufferSubmitInfo SwCommandBuffer::generateSubmitInfo() {
-    return vk::CommandBufferSubmitInfo{
-        *mCommandBuffer, 0
-    };
-}
-
+vk::CommandBufferSubmitInfo SwCommandBuffer::generateSubmitInfo() { return vk::CommandBufferSubmitInfo{*mCommandBuffer, 0}; }
 
 SwCommandBuffer SwCommandBufferFactory::createCommandBuffer(std::string name, SwCommandPool& pool) {
     return createCommandBuffer(std::move(name), pool.getHandle());

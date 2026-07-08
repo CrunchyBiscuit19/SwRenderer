@@ -27,8 +27,11 @@ SwBatch::SwBatch(SwPrimitive& primitive) {
         true
     );
     mEarlyRcsCount = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("Batch{:<03}EarlyRcsCountBuffer", batchId), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, sizeof(uint32_t), true
+        fmt::format("Batch{:<03}EarlyRcsCountBuffer", batchId),
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        sizeof(uint32_t),
+        true
     );
 
     mLateRcsBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -39,12 +42,18 @@ SwBatch::SwBatch(SwPrimitive& primitive) {
         true
     );
     mLateRcsCount = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("Batch{:<03}LateRcsCountBuffer", batchId), vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, sizeof(uint32_t), true
+        fmt::format("Batch{:<03}LateRcsCountBuffer", batchId),
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        sizeof(uint32_t),
+        true
     );
 
     mRisBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("Batch{:<03}RisBuffer", batchId), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        RENDER_ITEMS_INITIAL_BUFFER_SIZE, true
+        fmt::format("Batch{:<03}RisBuffer", batchId),
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+        RENDER_ITEMS_INITIAL_BUFFER_SIZE,
+        true
     );
 }

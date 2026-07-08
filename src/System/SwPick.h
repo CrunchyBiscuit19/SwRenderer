@@ -1,7 +1,6 @@
 #pragma once
 
 #include <Data/SwInstance.h>
-#include <imgui.h>
 #include <ImGuizmo.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwDescriptor.h>
@@ -9,6 +8,7 @@
 #include <Resource/SwPipeline.h>
 #include <Resource/SwPushConstant.h>
 #include <Scene/SwSystem.h>
+#include <imgui.h>
 
 #include <filesystem>
 #include <glm/glm.hpp>

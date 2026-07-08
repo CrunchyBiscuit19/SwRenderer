@@ -1,14 +1,15 @@
 #pragma once
 
+#include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
-#include <Resource/SwDescriptor.h>
 #include <Scene/SwSystem.h>
+
 #include <filesystem>
 
 namespace SwWBOIT {
 
-constexpr vk::ClearColorValue RVL_CLEAR_VALUE{1.f, 0.f, 0.f, 0.f};    
+constexpr vk::ClearColorValue RVL_CLEAR_VALUE{1.f, 0.f, 0.f, 0.f};
 constexpr vk::Format RVL_FORMAT{vk::Format::eR16Sfloat};
 static const std::filesystem::path WBOIT_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "WBOIT"};
 static const std::filesystem::path WBOIT_VERTEX_SHADER_PATH{WBOIT_SHADERS_DIR / "SwWBOITComposite.vert.spv"};

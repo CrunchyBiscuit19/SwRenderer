@@ -18,7 +18,7 @@ protected:
     VmaAllocationCreateFlags mFlags;
     vk::BufferUsageFlags mUsage;
     std::uint64_t mSize;
-    std::uint32_t mGeneration{0}; 
+    std::uint32_t mGeneration{0};
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
     VmaAllocator mAllocator;
@@ -28,12 +28,12 @@ protected:
     SwBuffer();
 
     SwBuffer(
-        std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-        vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+        std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
+        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
-    // Allocates new bigger buffer, copies old content, restores pipeline stage/access on the new buffer 
-    // Defers destruction of the old VkBuffer until no longer in-flight. 
+    // Allocates new bigger buffer, copies old content, restores pipeline stage/access on the new buffer
+    // Defers destruction of the old VkBuffer until no longer in-flight.
     // Descriptor sets referencing this buffer must be rewritten wheb getGeneration() changes.
     virtual void resize(vk::CommandBuffer cmd, std::uint64_t newSize) = 0;
 
@@ -76,8 +76,8 @@ public:
     SwAllocatedBuffer();
 
     SwAllocatedBuffer(
-        std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info,
-        vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+        std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
+        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
     using SwBuffer::copyFrom;

@@ -4,9 +4,7 @@
 #include <Resource/SwCommandPool.h>
 #include <Resource/SwFence.h>
 
-
 SwImmSubmit::SwImmSubmit() {}
-
 
 void SwImmSubmit::initialize() {
     mCommandPool = SwCommandPoolFactory::createCommandPool("ImmSubmitCommandPool", vk::CommandPoolCreateFlagBits::eResetCommandBuffer);

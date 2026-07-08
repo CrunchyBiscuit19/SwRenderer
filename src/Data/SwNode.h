@@ -49,7 +49,7 @@ public:
 };
 
 class SwLightNode : public SwNode {
-    SwLight& mLight;  
+    SwLight& mLight;
     std::uint32_t mAssetId;
 
 public:

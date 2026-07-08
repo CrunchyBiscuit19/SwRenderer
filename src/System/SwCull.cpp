@@ -4,8 +4,8 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <System/SwCull.h>
-#include <quill/LogMacros.h>
 #include <fmt/core.h>
+#include <quill/LogMacros.h>
 
 SwCull::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -206,7 +206,7 @@ void SwCull::System::initializeLatePasses() {
     mScene.insertPass(SwPass::Type::CullLateWork, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
 
-        // Opaque batches are partially drawn by the early geometry pass, so the late pass only emits the newly-visible delta (mHasEarlyDraw = 1). 
+        // Opaque batches are partially drawn by the early geometry pass, so the late pass only emits the newly-visible delta (mHasEarlyDraw = 1).
         // Masked/transparent have no early geometry pass and are drawn solely from the late list, so they must emit the full visible set (mHasEarlyDraw = 0).
         auto dispatchBatches = [&](auto&& batches, bool hasEarlyDraw) {
             for (auto& batch : batches) {
@@ -302,7 +302,8 @@ void SwCull::System::initializeResources() {
     mResources.mPrepOcclusionPipelineLayout = SwPipelineFactory::createPipelineLayout(
         "CullPrepOcclusionPipelineLayout", mResources.mPrepOcclusionDescriptorLayout.getHandle(), SwCull::PrepOcclusionPC::getRange()
     );
-    SwShader depthPyramidShader = SwShaderFactory::createShader("CullPrepOcclusionShaderModule", CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader depthPyramidShader =
+        SwShaderFactory::createShader("CullPrepOcclusionShaderModule", CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mPrepOcclusionPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "CullPrepOcclusionPipeline", {depthPyramidShader.getHandle(), mResources.mPrepOcclusionPipelineLayout.getHandle()}
     );
@@ -311,7 +312,8 @@ void SwCull::System::initializeResources() {
     mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "CullWorkDescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}}, vk::ShaderStageFlagBits::eCompute
     );
-    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("CullWorkDescriptorSet", mResources.mWorkDescriptorLayout);
+    mResources.mWorkDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("CullWorkDescriptorSet", mResources.mWorkDescriptorLayout);
 
     vk::SamplerReductionModeCreateInfo workReductionInfo{vk::SamplerReductionMode::eMin};
     vk::SamplerCreateInfo workSamplerInfo{};
@@ -453,7 +455,7 @@ void SwCull::System::reInitializeOnResize() {
     vk::Extent3D depthPyramidExtent = depthImageExtent;
     depthPyramidExtent.width = SwHelper::previousPow2(depthPyramidExtent.width);
     depthPyramidExtent.height = SwHelper::previousPow2(depthPyramidExtent.height);
-    
+
     mResources.mDepthPyramidLevels = SwHelper::calculateMipMapLevels(depthPyramidExtent);
     mResources.mDepthPyramidImage = SwImageFactory::createColorImage2D(
         "DepthPyramidImage", vk::Format::eR32Sfloat, depthPyramidExtent, vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eStorage, true
@@ -461,7 +463,11 @@ void SwCull::System::reInitializeOnResize() {
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidImage.addImageView(
             fmt::format("DepthPyramidImage_Level{:0>4}", i),
-            mResources.mDepthPyramidImage.getMainFormat(), vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, i, 1
+            mResources.mDepthPyramidImage.getMainFormat(),
+            vk::ImageAspectFlagBits::eColor,
+            vk::ImageViewType::e2D,
+            i,
+            1
         );
     }
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
@@ -472,7 +478,7 @@ void SwCull::System::reInitializeOnResize() {
         0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     for (std::uint32_t i = 0; i < CULL_MAX_DEPTH_PYRAMID_LEVELS; i++) {
-        const std::uint32_t viewIndex = std::min(i, mResources.mDepthPyramidLevels - 1); // Write over later slots with the last level view
+        const std::uint32_t viewIndex = std::min(i, mResources.mDepthPyramidLevels - 1);  // Write over later slots with the last level view
         mResources.mPrepOcclusionDescriptorSet.writeImage(
             1, mResources.mDepthPyramidImage.getOtherImageViewHandle(viewIndex), nullptr, vk::ImageLayout::eGeneral, i
         );

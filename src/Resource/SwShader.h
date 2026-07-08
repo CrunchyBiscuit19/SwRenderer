@@ -24,7 +24,6 @@ public:
 
 class SwShaderFactory {
 private:
-
 public:
     static void init();
 

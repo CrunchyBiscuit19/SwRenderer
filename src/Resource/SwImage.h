@@ -133,7 +133,9 @@ public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
     using SwImage::emitTransition;
     void emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout) override;
-    void emitTransition(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout, std::uint32_t mipLevel);
+    void emitTransition(
+        vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess, vk::ImageLayout nextLayout, std::uint32_t mipLevel
+    );
 
     using SwImage::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
@@ -150,7 +152,7 @@ public:
     inline bool isReady() const { return mAllocation != nullptr; }
 
     void addImageView(
-        std::string name,vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType = vk::ImageViewType::e2D, std::uint32_t baseMipLevel = 0,
+        std::string name, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType = vk::ImageViewType::e2D, std::uint32_t baseMipLevel = 0,
         std::uint32_t levelCount = 1, std::uint32_t baseArrayLayer = 0, std::uint32_t layerCount = 1
     );
 
@@ -321,8 +323,7 @@ public:
 
     static vk::raii::ImageView createImageView(
         std::string name, vk::Image image, vk::Format format, vk::ImageAspectFlags aspect, vk::ImageViewType viewType = vk::ImageViewType::e2D,
-        std::uint32_t baseMipLevel = 0,
-        std::uint32_t levelCount = 1, std::uint32_t baseArrayLayer = 0, std::uint32_t layerCount = 1
+        std::uint32_t baseMipLevel = 0, std::uint32_t levelCount = 1, std::uint32_t baseArrayLayer = 0, std::uint32_t layerCount = 1
     );
 
     static SwColorImage2D createColorImage2D(

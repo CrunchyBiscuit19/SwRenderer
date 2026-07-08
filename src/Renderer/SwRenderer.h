@@ -5,9 +5,9 @@
 #include <Renderer/SwLogger.h>
 #include <Renderer/SwRendererContext.h>
 #include <Renderer/SwStagingRing.h>
-#include <Scene/SwScene.h>
 #include <Renderer/SwStats.h>
 #include <Renderer/SwSwapchain.h>
+#include <Scene/SwScene.h>
 #define SDL_MAIN_HANDLED
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_events.h>

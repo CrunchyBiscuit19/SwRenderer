@@ -3,8 +3,8 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
-#include <System/SwPostProcess.h>
 #include <Scene/SwScene.h>
+#include <System/SwPostProcess.h>
 #include <quill/LogMacros.h>
 
 SwPostProcess::System::System(SwScene& scene) : SwSystem(scene) {}
@@ -25,10 +25,12 @@ void SwPostProcess::System::initializeResources() {
 
     // --- FXAA: binding 0 the draw image sampled, binding 1 a bilinear sampler, binding 2 the same image as storage (in-place resolve). ---
     mResources.mFXAADescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "FXAADescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}, {2, vk::DescriptorType::eStorageImage, 1}},
+        "FXAADescriptorSetLayout",
+        {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}, {2, vk::DescriptorType::eStorageImage, 1}},
         vk::ShaderStageFlagBits::eCompute
     );
-    mResources.mFXAADescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("FXAADescriptorSet", mResources.mFXAADescriptorLayout);
+    mResources.mFXAADescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("FXAADescriptorSet", mResources.mFXAADescriptorLayout);
 
     vk::SamplerCreateInfo samplerInfo{};
     samplerInfo.setMagFilter(vk::Filter::eLinear);
@@ -57,7 +59,10 @@ void SwPostProcess::System::initializePasses() {
         cmd.bindPipeline(mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getLayoutHandle(), 0, mResources.mTonemapDescriptorSet.getHandle(),
+            mResources.mTonemapPipelineBundle.getBindPoint(),
+            mResources.mTonemapPipelineBundle.getLayoutHandle(),
+            0,
+            mResources.mTonemapDescriptorSet.getHandle(),
             nullptr
         );
 
@@ -79,7 +84,11 @@ void SwPostProcess::System::initializePasses() {
         cmd.bindPipeline(mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getLayoutHandle(), 0, mResources.mFXAADescriptorSet.getHandle(), nullptr
+            mResources.mFXAAPipelineBundle.getBindPoint(),
+            mResources.mFXAAPipelineBundle.getLayoutHandle(),
+            0,
+            mResources.mFXAADescriptorSet.getHandle(),
+            nullptr
         );
 
         cmd.pushConstants<SwPostProcess::FXAAPC>(

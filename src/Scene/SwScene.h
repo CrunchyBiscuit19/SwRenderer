@@ -3,16 +3,16 @@
 #include <Data/SwAsset.h>
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
-#include <System/SwGui.h>
 #include <Resource/SwDescriptor.h>
-#include <System/SwCull.h>
-#include <System/SwIBL.h>
 #include <Scene/SwPass.h>
-#include <System/SwPick.h>
-#include <System/SwGeometry.h>
-#include <System/SwPostProcess.h>
-#include <System/SwLighting.h>
 #include <Scene/SwRenderGraph.h>
+#include <System/SwCull.h>
+#include <System/SwGeometry.h>
+#include <System/SwGui.h>
+#include <System/SwIBL.h>
+#include <System/SwLighting.h>
+#include <System/SwPick.h>
+#include <System/SwPostProcess.h>
 #include <System/SwWBOIT.h>
 
 #include <algorithm>
@@ -29,7 +29,7 @@ public:
         bool mInstanceLoaded;
         bool mInstanceUnloaded;
         bool mReloadMainInstancesBuffer;
-        bool mLightEdited;  
+        bool mLightEdited;
     };
 
 private:
@@ -51,8 +51,8 @@ private:
 
     std::unordered_map<std::uint32_t, SwInstance> mInstances;
 
-    std::unordered_map<std::uint32_t, SwLight> mLights;     
-    std::vector<std::uint32_t> mLightIds;             
+    std::unordered_map<std::uint32_t, SwLight> mLights;
+    std::vector<std::uint32_t> mLightIds;
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
 
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
@@ -127,7 +127,7 @@ public:
                std::views::values | std::views::join | std::views::values;
     }
     inline std::unordered_map<std::uint32_t, SwBatch>& getBatchMap(SwMaterial::Type type) { return mBatchTypes[type]; }
-    
+
     inline SwCamera& getCamera() { return mCamera; }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
     inline std::unordered_map<std::uint32_t, SwAsset>& getAssets() { return mAssets; }
@@ -139,7 +139,7 @@ public:
     inline std::unordered_map<std::uint32_t, SwLight>& getLights() { return mLights; }
     inline SwLight& getLight(const std::uint32_t lightId) { return mLights.at(lightId); }
     inline const std::vector<std::uint32_t>& getLightIds() const { return mLightIds; }
-    
+
     inline SwDescriptorSet& getSceneMaterialResourcesDescriptorSet() { return mSceneMaterialResourcesDescriptorSet; }
     inline SwAllocatedBuffer& getSceneVertexBuffer() { return mSceneVertexBuffer; }
     inline SwAllocatedBuffer& getSceneIndexBuffer() { return mSceneIndexBuffer; }

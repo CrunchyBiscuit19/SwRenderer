@@ -21,7 +21,7 @@ private:
     std::uint32_t mId{0};
     bool mDelete{false};
     bool mReloadInstancesFlag{true};
-    bool mStandaloneLight{false};  
+    bool mStandaloneLight{false};
 
     fastgltf::Asset mRawAsset;
 
@@ -29,7 +29,7 @@ private:
         unsigned char* mData{nullptr};
         std::int32_t mWidth{0};
         std::int32_t mHeight{0};
-        std::string mError;  
+        std::string mError;
     };
 
     std::vector<SwMesh> mMeshes;
@@ -44,13 +44,13 @@ private:
 
     static std::unordered_map<SwSamplerOptions, SwSampler> sSamplers;
     std::vector<SwSamplerOptions> mSamplerOptions;
-    
+
     std::vector<std::optional<SwColorImage2D>> mImages;
     std::unordered_map<std::uint32_t, void*> mImageDataPtrs;
 
     std::vector<SwMaterial> mMaterials;
     SwAllocatedBuffer mMaterialConstantsBuffer;
-    
+
     std::vector<std::shared_ptr<SwNode>> mTopNodes;
     std::vector<std::shared_ptr<SwNode>> mNodes;
     SwAllocatedBuffer mNodeTransformsBuffer;
@@ -110,21 +110,21 @@ public:
 
     inline void setStandaloneLight(bool flag) { mStandaloneLight = flag; }
     inline bool isStandaloneLight() { return mStandaloneLight; }
-    
+
     inline std::string getName() { return mName; }
     inline std::uint32_t getId() { return mId; }
-    
+
     inline std::vector<std::uint32_t>& getInstanceIds() { return mInstanceIds; }
     inline bool getReloadInstancesFlag() { return mReloadInstancesFlag; }
-    
+
     inline bool isMarkedDelete() { return mDelete; }
-    
+
     inline std::span<std::optional<SwColorImage2D>> getImages() { return mImages; }
     inline std::span<SwMesh> getMeshes() { return mMeshes; }
     inline std::span<SwMaterial> getMaterials() { return mMaterials; }
     inline std::span<SwLight> getLights() { return mLights; }
     inline std::span<std::shared_ptr<SwNode>> getNodes() { return mNodes; }
-    
+
     inline SwAllocatedBuffer& getMaterialConstantsBuffer() { return mMaterialConstantsBuffer; }
     inline SwAllocatedBuffer& getNodeTransformsBuffer() { return mNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getInstancesBuffer() { return mInstancesBuffer; }

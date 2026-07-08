@@ -6,6 +6,7 @@
 #include <Resource/SwPushConstant.h>
 #include <Resource/SwSampler.h>
 #include <Scene/SwSystem.h>
+
 #include <filesystem>
 
 namespace SwCull {
@@ -34,8 +35,8 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
     vk::DeviceAddress mSceneDrawRisIndicesBuffer;
-    vk::DeviceAddress mSceneVisibilityRisReadBuffer;  
-    vk::DeviceAddress mSceneVisibilityRisWriteBuffer;  
+    vk::DeviceAddress mSceneVisibilityRisReadBuffer;
+    vk::DeviceAddress mSceneVisibilityRisWriteBuffer;
     std::uint32_t mRisLimit;
     Phase mPhase;
     vk::Bool32 mHasEarlyDraw;  // late phase: true if this batch was drawn by the early geometry pass (opaque only)

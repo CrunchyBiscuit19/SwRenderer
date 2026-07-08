@@ -38,10 +38,8 @@ void SwDescriptorSet::clearWrites() { mWrites.clear(); }
 
 SwDescriptorPool::SwDescriptorPool(vk::raii::DescriptorPool descriptorPool) : mPool(std::move(descriptorPool)) {}
 
-
 SwDescriptorAllocator::SwDescriptorAllocator(std::vector<SwPoolSizeRatio> ratios, std::uint32_t setsPerPool)
     : mRatios(std::move(ratios)), mSetsPerPool(setsPerPool) {}
-
 
 SwDescriptorPool SwDescriptorAllocator::createPool(std::uint32_t setCount) const {
     std::vector<vk::DescriptorPoolSize> sizes;

@@ -1,11 +1,9 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwFence.h>
 
-
 SwFence::SwFence() : mFence(nullptr) {}
 
 SwFence::SwFence(vk::raii::Fence fence) : mFence(std::move(fence)) {}
-
 
 SwFence SwFenceFactory::createFence(std::string name, vk::FenceCreateFlags fenceCreateFlags) {
     vk::FenceCreateInfo fenceCreateInfo = {};

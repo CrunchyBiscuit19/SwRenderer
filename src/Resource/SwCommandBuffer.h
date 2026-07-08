@@ -28,7 +28,6 @@ public:
 
 class SwCommandBufferFactory {
 private:
-
 public:
     static void init();
 

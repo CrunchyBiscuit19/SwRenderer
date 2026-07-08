@@ -1,9 +1,9 @@
-#include <Renderer/SwSwapchain.h>
 #include <Renderer/SwRenderer.h>
+#include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
+#include <Scene/SwScene.h>
 #include <System/SwGeometry.h>
 #include <System/SwLighting.h>
-#include <Scene/SwScene.h>
 
 template <typename BatchRange>
 void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBuffer cmd, BatchRange&& batches, bool early) {
@@ -23,7 +23,8 @@ void drawBatches(SwScene& scene, SwGeometry::Resources& resources, vk::CommandBu
             pipeline.getBindPoint(),
             pipeline.getLayoutHandle(),
             0,
-            {scene.getSceneMaterialResourcesDescriptorSet().getHandle(), scene.getIBLSystem().getConsumeDescriptorSet().getHandle(),
+            {scene.getSceneMaterialResourcesDescriptorSet().getHandle(),
+             scene.getIBLSystem().getConsumeDescriptorSet().getHandle(),
              scene.getLightingSystem().getShadowMapsDescriptorSet().getHandle()},
             nullptr
         );

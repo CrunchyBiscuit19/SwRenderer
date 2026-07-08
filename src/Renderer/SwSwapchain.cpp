@@ -12,8 +12,11 @@ void SwFrame::initialize(std::uint32_t frameIndex) {
     mRenderFence = SwFenceFactory::createFence(fmt::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore(fmt::format("Frame{}AvailableSemaphore", frameIndex));
     mDataBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("Frame{}DataBuffer", frameIndex), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        DATA_BUFFER_SIZE, true
+        fmt::format("Frame{}DataBuffer", frameIndex),
+        vk::BufferUsageFlagBits::eStorageBuffer,
+        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+        DATA_BUFFER_SIZE,
+        true
     );
 }
 
@@ -28,7 +31,6 @@ void SwFrame::update() {
 vk::ClearColorValue SwSwapchain::DRAW_CLEAR_VALUE{.463f, .616f, .859f, 0.f};
 
 SwSwapchain::SwSwapchain() : mSwapchain(nullptr), mSurface(nullptr) {}
-
 
 void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, vk::Extent2D windowExtent, bool windowFullScreen) {
     mFrames.reserve(NUM_FRAME_OVERLAP);
@@ -116,9 +118,7 @@ void SwSwapchain::onResizeInitialize() {
             std::move(otherImageViews)
         );
         mSwapchainImages.emplace_back(std::move(swapchainImage));
-
     }
-
 
     mDrawImage = SwImageFactory::createColorImage2D(
         "SwapchainDrawImage",
@@ -146,9 +146,7 @@ void SwSwapchain::onResizeInitialize() {
     });
 }
 
-void SwSwapchain::resize() {
-    onResizeInitialize();
-}
+void SwSwapchain::resize() { onResizeInitialize(); }
 
 void SwSwapchain::acquireNextImage(uint64_t timeout) {
     try {

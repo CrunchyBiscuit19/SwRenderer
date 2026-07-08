@@ -7,11 +7,11 @@
 
 #include <cstdint>
 #include <fastgltf/types.hpp>
+#include <filesystem>
 #include <glm/glm.hpp>
 #include <optional>
 #include <string>
 #include <unordered_map>
-#include <filesystem>
 
 class SwDescriptorLayout;
 struct SwRendererContext;
@@ -59,7 +59,6 @@ struct SwMaterialConstants {
 
 struct SwMaterialResources {
 private:
-
 public:
     SwMaterialTexture mBase;
     SwMaterialTexture mMetallicRoughness;
@@ -69,7 +68,9 @@ public:
 
     static SwDescriptorLayout sMaterialResourcesDescriptorLayout;
 
-    SwMaterialResources(SwMaterialTexture base, SwMaterialTexture metallicRoughness, SwMaterialTexture normal, SwMaterialTexture occlusion, SwMaterialTexture emissive);
+    SwMaterialResources(
+        SwMaterialTexture base, SwMaterialTexture metallicRoughness, SwMaterialTexture normal, SwMaterialTexture occlusion, SwMaterialTexture emissive
+    );
 
     static void init();
 
@@ -113,7 +114,7 @@ private:
     static const std::filesystem::path GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH;
     static SwShader sTransparentFragmentShader;
 
-    void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const; 
+    void constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const;
 
 public:
     enum class Type { Opaque, Mask, Transparent };

@@ -32,8 +32,8 @@ private:
 
     std::vector<SwRenderCommand> mRcs;
     SwAllocatedBuffer mInitialRcsBuffer;
-    SwAllocatedBuffer mEarlyRcsBuffer; // Compacted early draw list 
-    SwAllocatedBuffer mEarlyRcsCount;   
+    SwAllocatedBuffer mEarlyRcsBuffer;  // Compacted early draw list
+    SwAllocatedBuffer mEarlyRcsCount;
     SwAllocatedBuffer mLateRcsBuffer;
     SwAllocatedBuffer mLateRcsCount;
 
@@ -57,7 +57,7 @@ public:
 
     inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return *mGraphicsPipelineBundle; }
     inline bool isDoubleSided() const { return mDoubleSided; }
-    
+
     inline std::vector<SwRenderCommand>& getRcs() { return mRcs; }
     inline SwAllocatedBuffer& getInitialRcsBuffer() { return mInitialRcsBuffer; }
     inline SwAllocatedBuffer& getEarlyRcsBuffer() { return mEarlyRcsBuffer; }
@@ -65,7 +65,7 @@ public:
     inline SwAllocatedBuffer& getLateRcsBuffer() { return mLateRcsBuffer; }
     inline SwAllocatedBuffer& getLateRcsCount() { return mLateRcsCount; }
     inline SwAllocatedBuffer& getFinalRcsBuffer() { return mLateRcsBuffer; }  // Return whatever is the last one for future-proofing
-    inline SwAllocatedBuffer& getFinalRcsCount() { return mLateRcsCount; }  // Return whatever is the last one for future-proofing
+    inline SwAllocatedBuffer& getFinalRcsCount() { return mLateRcsCount; }    // Return whatever is the last one for future-proofing
 
     inline std::vector<SwRenderItem>& getRis() { return mRis; }
     inline SwAllocatedBuffer& getRisBuffer() { return mRisBuffer; }

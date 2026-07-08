@@ -75,19 +75,11 @@ void SwScene::initializeResources() {
     );
 
     mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneInstancesBuffer",
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_INSTANCES_BUFFER_SIZE,
-        true
+        "SceneInstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_INSTANCES_BUFFER_SIZE, true
     );
 
     mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneBoundsBuffer",
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_BOUNDS_BUFFER_SIZE,
-        true
+        "SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_BOUNDS_BUFFER_SIZE, true
     );
 
     mSceneDrawRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -99,11 +91,7 @@ void SwScene::initializeResources() {
     );
 
     mSceneLightsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneLightsBuffer",
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_LIGHTS_BUFFER_SIZE,
-        true
+        "SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true
     );
 
     for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
@@ -282,7 +270,7 @@ void SwScene::unloadAssetsAndInstances() {
         if (assetDeleted) {
             mAlreadyLoadedAssetsNames.erase(asset.getName());
             mFlags.mAssetUnloaded = true;
-            asset.deferDestroyImages();  
+            asset.deferDestroyImages();
         }
 
         // A standalone-light asset is shared by every light of its type, so removing one light deletes just that
@@ -329,7 +317,7 @@ void SwScene::fillAssetImages() {
             std::uint32_t imageId = imageInfo.first;
             void* imageDataPtr = imageInfo.second;
             SwColorImage2D& image = *asset.getImages()[imageId];
-            image.fillImageData(imageDataPtr, false);  
+            image.fillImageData(imageDataPtr, false);
             uploadedImages.emplace_back(&image);
         }
     }

@@ -1,10 +1,9 @@
-#include <Scene/SwSystem.h>
 #include <Renderer/SwRenderer.h>
+#include <Scene/SwSystem.h>
 
 class SwScene;
 
 void SwSystem::Resizable::resize() { reInitializeOnResize(); }
-
 
 SwSystem::SwSystem(SwScene& scene) : mScene(scene) {}
 

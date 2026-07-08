@@ -9,9 +9,12 @@ SwWBOIT::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwWBOIT::System::initializeResources() {
     mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "WBOITWorkDescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eFragment
+        "WBOITWorkDescriptorSetLayout",
+        {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}},
+        vk::ShaderStageFlagBits::eFragment
     );
-    mResources.mWorkDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("WBOITWorkDescriptorSet", mResources.mWorkDescriptorLayout);
+    mResources.mWorkDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("WBOITWorkDescriptorSet", mResources.mWorkDescriptorLayout);
 
     mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITWorkPipelineLayout", mResources.mWorkDescriptorLayout.getHandle(), nullptr);
 
@@ -59,13 +62,18 @@ void SwWBOIT::System::initializePasses() {
     deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
     mScene.insertPass(SwPass::Type::WBOITComposite, std::move(deps), [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
-        const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, nullptr);
+        const vk::RenderingInfo renderInfo =
+            SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, nullptr);
 
         cmd.beginRendering(renderInfo);
 
         cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
-            mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getLayoutHandle(), 0, mResources.mWorkDescriptorSet.getHandle(), nullptr
+            mResources.mWorkPipelineBundle.getBindPoint(),
+            mResources.mWorkPipelineBundle.getLayoutHandle(),
+            0,
+            mResources.mWorkDescriptorSet.getHandle(),
+            nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
@@ -98,11 +106,7 @@ void SwWBOIT::System::reInitializeOnResize() {
         mResources.mRvlImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     });
 
-    mResources.mWorkDescriptorSet.writeImage(
-        0, mResources.mAccumImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
-    );
-    mResources.mWorkDescriptorSet.writeImage(
-        1, mResources.mRvlImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
-    );
+    mResources.mWorkDescriptorSet.writeImage(0, mResources.mAccumImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mWorkDescriptorSet.writeImage(1, mResources.mRvlImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mWorkDescriptorSet.pushWrites();
 }

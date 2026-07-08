@@ -18,7 +18,6 @@ public:
 
 class SwCommandPoolFactory {
 private:
-
 public:
     static void init();
 

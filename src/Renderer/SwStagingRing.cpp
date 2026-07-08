@@ -26,7 +26,7 @@ void SwStagingRing::grow(std::uint64_t requiredSize) {
 
     SwStagingBuffer newRing = SwBufferFactory::createStagingBuffer("StagingRingBuffer", newCapacity, false);
 
-    // Already-recorded copies in the current frame still read the old buffer, 
+    // Already-recorded copies in the current frame still read the old buffer,
     // Defer destruction until every in-flight frame that references it has completed.
     SwBufferFactory::deferDestroy(std::make_unique<SwStagingBuffer>(std::move(mRing)));
 

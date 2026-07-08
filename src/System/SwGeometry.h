@@ -3,9 +3,8 @@
 #include <Resource/SwPushConstant.h>
 #include <Scene/SwSystem.h>
 
-#include <vulkan/vulkan.hpp>
-
 #include <filesystem>
+#include <vulkan/vulkan.hpp>
 
 namespace SwGeometry {
 
@@ -19,9 +18,9 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mVisibleLightsBuffer;
-    float mMaxPrefilterMip;       // highest mip index of the SwIBL specular prefilter chain
-    float mIblIntensity;          // scales the image-based ambient term (GUI-controlled)
-    std::uint32_t mIblComponents; // IBL diffuse / specular bit mask (GUI-controlled)
+    float mMaxPrefilterMip;        // highest mip index of the SwIBL specular prefilter chain
+    float mIblIntensity;           // scales the image-based ambient term (GUI-controlled)
+    std::uint32_t mIblComponents;  // IBL diffuse / specular bit mask (GUI-controlled)
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 };
@@ -37,7 +36,6 @@ struct Resources {
 
 class System : public SwSystem {
 private:
-
     Resources mResources;
 
     void initializeResources() override;

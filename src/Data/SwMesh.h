@@ -54,8 +54,8 @@ public:
 
     SwMesh(
         std::uint32_t assetId, std::string name, std::vector<SwPrimitive> primitives, SwBounds bounds, std::uint32_t relativeFirstBounds,
-        SwAllocatedBuffer vertexBuffer,
-        std::uint32_t numVertices, std::uint32_t vertexOffsetInScene, SwAllocatedBuffer indexBuffer, std::uint32_t numIndices, std::uint32_t firstIndexInScene
+        SwAllocatedBuffer vertexBuffer, std::uint32_t numVertices, std::uint32_t vertexOffsetInScene, SwAllocatedBuffer indexBuffer, std::uint32_t numIndices,
+        std::uint32_t firstIndexInScene
     );
 
     inline SwAllocatedBuffer& getVertexBuffer() { return mVertexBuffer; }
