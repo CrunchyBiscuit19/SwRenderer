@@ -4,8 +4,9 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwStagingRing.h>
 #include <Scene/SwScene.h>
-#include <format>
 #include <quill/LogMacros.h>
+
+#include <format>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
@@ -99,19 +100,12 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
 
 void SwAsset::constructBuffers() {
     mMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        std::format("{}MaterialConstantsBuffer", mName),
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        ASSET_MATERIALS_BUFFER_SIZE
+        std::format("{}MaterialConstantsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, ASSET_MATERIALS_BUFFER_SIZE
     );
-    mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        std::format("{}BoundsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, ASSET_BOUNDS_BUFFER_SIZE
-    );
+    mBoundsBuffer =
+        SwBufferFactory::createAllocatedBuffer(std::format("{}BoundsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, ASSET_BOUNDS_BUFFER_SIZE);
     mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        std::format("{}NodeTransformsBuffer", mName),
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        ASSET_NODE_TRANSFORMS_BUFFER_SIZE
+        std::format("{}NodeTransformsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, ASSET_NODE_TRANSFORMS_BUFFER_SIZE
     );
     mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
         std::format("{}InstancesBuffer", mName),
@@ -393,12 +387,10 @@ void SwAsset::constructMeshes() {
 
         const vk::DeviceSize srcVertexVectorSize = data.mVertices.size() * sizeof(SwVertex);
         const vk::DeviceSize srcIndexVectorSize = data.mIndices.size() * sizeof(std::uint32_t);
-        SwAllocatedBuffer vertexBuffer = SwBufferFactory::createAllocatedBuffer(
-            std::format("{}VertexBuffer", data.mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcVertexVectorSize
-        );
-        SwAllocatedBuffer indexBuffer = SwBufferFactory::createAllocatedBuffer(
-            std::format("{}IndexBuffer", data.mName), vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcIndexVectorSize
-        );
+        SwAllocatedBuffer vertexBuffer =
+            SwBufferFactory::createAllocatedBuffer(std::format("{}VertexBuffer", data.mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, srcVertexVectorSize);
+        SwAllocatedBuffer indexBuffer =
+            SwBufferFactory::createAllocatedBuffer(std::format("{}IndexBuffer", data.mName), vk::BufferUsageFlagBits::eIndexBuffer, 0, srcIndexVectorSize);
 
         mMeshes.emplace_back(
             mId, data.mName, data.mPrimitives, data.mBounds, meshIndex, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0

@@ -1,5 +1,4 @@
 #include <Renderer/SwLogger.h>
-#include <format>
 #include <quill/Backend.h>
 #include <quill/Frontend.h>
 #include <quill/LogMacros.h>
@@ -7,6 +6,7 @@
 #include <quill/sinks/FileSink.h>
 
 #include <cctype>
+#include <format>
 #include <string>
 #include <string_view>
 
@@ -309,7 +309,7 @@ SwLogger::SwLogger() {
     mBreakMessages.insert("VUID-VkBufferCopy-size-01988");
     mBreakMessages.insert("VUID-vkCmdCopyBuffer-size-00115");
     mBreakMessages.insert("VUID-vkCmdBeginRendering-pRenderingInfo-09592");
-    // mBreakMessages.insert("VUID-vkCmdDraw-None-09600");
+    mBreakMessages.insert("VUID-vkCmdDraw-None-09600");
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(

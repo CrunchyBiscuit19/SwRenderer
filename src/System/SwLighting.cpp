@@ -31,9 +31,8 @@ void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy()
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwLighting::System::initializeResources() {
-    mResources.mVisibleLightsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "VisibleLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, INITIAL_ACTIVE_LIGHTS_BUFFER_SIZE, true
-    );
+    mResources.mVisibleLightsBuffer =
+        SwBufferFactory::createAllocatedBuffer("VisibleLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, INITIAL_ACTIVE_LIGHTS_BUFFER_SIZE, true);
 
     // Linear filtering gives hardware 2x2 PCF per SampleCmp tap.
     // Opaque-black border so 2D taps outside a frustum read as lit; harmless for seamless cube sampling.
@@ -100,21 +99,17 @@ void SwLighting::System::initializeResources() {
         mResources.mShadowDrawRcsBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightRcsBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            0,
             SHADOW_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
             true
         );
         mResources.mShadowDrawRisBuffer[i] = SwBufferFactory::createAllocatedBuffer(
-            std::format("Shadow2DLightRisBuffer{}", i),
-            vk::BufferUsageFlagBits::eStorageBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SwScene::SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE,
-            true
+            std::format("Shadow2DLightRisBuffer{}", i), vk::BufferUsageFlagBits::eStorageBuffer, 0, SwScene::SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true
         );
         mResources.mShadowDrawRisIndicesBuffer[i] = SwBufferFactory::createAllocatedBuffer(
             std::format("Shadow2DLightDrawRisIndicesBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            0,
             SwScene::SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,
             true
         );

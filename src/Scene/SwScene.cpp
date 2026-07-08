@@ -7,10 +7,10 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
-#include <format>
 #include <quill/LogMacros.h>
 #include <stb_image.h>
 
+#include <format>
 #include <glm/glm.hpp>
 #include <optional>
 #include <ranges>
@@ -50,57 +50,35 @@ void SwScene::initializeMiscPasses() {
 }
 
 void SwScene::initializeResources() {
-    mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_VERTEX_BUFFER_SIZE, true
-    );
+    mSceneVertexBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_VERTEX_BUFFER_SIZE, true);
 
-    mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneIndexBuffer", vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_INDEX_BUFFER_SIZE
-    );
+    mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer("SceneIndexBuffer", vk::BufferUsageFlagBits::eIndexBuffer, 0, SCENE_INITIAL_INDEX_BUFFER_SIZE);
 
     mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneMaterialConstantsBuffer",
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE,
-        true
+        "SceneMaterialConstantsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE, true
     );
 
     mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneNodeTransformsBuffer",
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE,
-        true
+        "SceneNodeTransformsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE, true
     );
 
-    mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneInstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_INSTANCES_BUFFER_SIZE, true
-    );
+    mSceneInstancesBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneInstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_INSTANCES_BUFFER_SIZE, true);
 
-    mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_BOUNDS_BUFFER_SIZE, true
-    );
+    mSceneBoundsBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_BOUNDS_BUFFER_SIZE, true);
 
     mSceneDrawRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneDrawRisIndicesBuffer",
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-        SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,
-        true
+        "SceneDrawRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE, true
     );
 
-    mSceneLightsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true
-    );
+    mSceneLightsBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true);
 
     for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
         mSceneVisibilityRisBuffers[i] = SwBufferFactory::createAllocatedBuffer(
-            std::format("SceneVisibilityRisBuffer{}", i),
-            vk::BufferUsageFlagBits::eStorageBuffer,
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
-            SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,
-            true
+            std::format("SceneVisibilityRisBuffer{}", i), vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE, true
         );
     }
 

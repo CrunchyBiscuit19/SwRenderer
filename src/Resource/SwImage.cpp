@@ -575,7 +575,6 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
 
     VmaAllocationCreateInfo vmaAllocInfo = {};
     vmaAllocInfo.usage = VMA_MEMORY_USAGE_AUTO;
-    vmaAllocInfo.flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
 
     VkImage tempImage;
     VmaAllocation tempAllocation;

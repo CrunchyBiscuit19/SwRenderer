@@ -223,9 +223,8 @@ void SwIBL::System::initializeResources() {
     mResources.mSkyboxPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("SkyboxDrawPipeline", skyboxPipelineOptions);
 
     const std::uint64_t skyboxVertexSize = mResources.mSkyboxVertices.size() * sizeof(float);
-    mResources.mSkyboxVertexBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SkyboxDrawVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, skyboxVertexSize, true
-    );
+    mResources.mSkyboxVertexBuffer =
+        SwBufferFactory::createAllocatedBuffer("SkyboxDrawVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, skyboxVertexSize, true);
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([this, skyboxVertexSize](vk::CommandBuffer cmd) {
         SwRenderer::sRendererContext.mStagingRing->upload(cmd, mResources.mSkyboxVertexBuffer, mResources.mSkyboxVertices.data(), skyboxVertexSize);
