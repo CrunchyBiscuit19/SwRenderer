@@ -164,7 +164,6 @@ find_package(Vulkan REQUIRED)
 # Third-party libraries with their own CMakeLists
 # ---------------------------------------------------------------------------
 add_subdirectory(thirdParty/fastgltf)
-add_subdirectory(thirdParty/fmt)
 
 # Build SDL3 as a DLL (+ import lib) only: skip the static lib, test lib, tests,
 # examples and install rules. Must be set before add_subdirectory.
@@ -257,7 +256,6 @@ target_link_libraries(SwRenderer PUBLIC
     imgui-filebrowser
     vma
     quill
-    fmt
     Vulkan::Vulkan
     SDL3::SDL3
     fastgltf::fastgltf

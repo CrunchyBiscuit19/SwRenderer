@@ -4,7 +4,7 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwStagingRing.h>
 #include <Scene/SwScene.h>
-#include <fmt/core.h>
+#include <format>
 #include <quill/LogMacros.h>
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
@@ -99,22 +99,22 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
 
 void SwAsset::constructBuffers() {
     mMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("{}MaterialConstantsBuffer", mName),
+        std::format("{}MaterialConstantsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         ASSET_MATERIALS_BUFFER_SIZE
     );
     mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("{}BoundsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, ASSET_BOUNDS_BUFFER_SIZE
+        std::format("{}BoundsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, ASSET_BOUNDS_BUFFER_SIZE
     );
     mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("{}NodeTransformsBuffer", mName),
+        std::format("{}NodeTransformsBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
         ASSET_NODE_TRANSFORMS_BUFFER_SIZE
     );
     mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("{}InstancesBuffer", mName),
+        std::format("{}InstancesBuffer", mName),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         ASSET_INSTANCES_BUFFER_SIZE
@@ -132,7 +132,7 @@ void SwAsset::constructSamplerAndSamplerOptions() {
     defaultSamplerCreateInfo.anisotropyEnable = vk::True;
     defaultSamplerCreateInfo.maxAnisotropy = maxAnisotropy;
     SwSamplerOptions defaultSamplerOptions(defaultSamplerCreateInfo);
-    sSamplers.emplace(defaultSamplerOptions, SwSamplerFactory::createSampler(fmt::format("{}DefaultSampler", mName), defaultSamplerCreateInfo));
+    sSamplers.emplace(defaultSamplerOptions, SwSamplerFactory::createSampler(std::format("{}DefaultSampler", mName), defaultSamplerCreateInfo));
 
     sSamplers.reserve(mRawAsset.samplers.size());
     for (std::uint32_t i = 0; i < mRawAsset.samplers.size(); i++) {
@@ -150,7 +150,7 @@ void SwAsset::constructSamplerAndSamplerOptions() {
         samplerCreateInfo.anisotropyEnable = vk::True;
         samplerCreateInfo.maxAnisotropy = maxAnisotropy;
         SwSamplerOptions samplerOptions(samplerCreateInfo);
-        sSamplers.emplace(samplerOptions, SwSamplerFactory::createSampler(fmt::format("{}Sampler{:0>2}", mName, i), samplerCreateInfo));
+        sSamplers.emplace(samplerOptions, SwSamplerFactory::createSampler(std::format("{}Sampler{:0>2}", mName, i), samplerCreateInfo));
         mSamplerOptions.emplace_back(samplerOptions);
     }
 }
@@ -235,11 +235,11 @@ void SwAsset::constructImages() {
     for (std::uint32_t i : indices) {
         DecodedImage& decodedImage = decoded[i];
         if (!decodedImage.mData) {
-            throw std::runtime_error(fmt::format("{} failed to read image {}: {}", mName, i, decodedImage.mError.empty() ? "Unknown" : decodedImage.mError));
+            throw std::runtime_error(std::format("{} failed to read image {}: {}", mName, i, decodedImage.mError.empty() ? "Unknown" : decodedImage.mError));
         }
         const vk::Extent3D extent{static_cast<std::uint32_t>(decodedImage.mWidth), static_cast<std::uint32_t>(decodedImage.mHeight), 1};
         mImages[i] = SwImageFactory::createColorImage2D(
-            fmt::format("{}_Image{:0>4}", mName, i),
+            std::format("{}_Image{:0>4}", mName, i),
             formats[i].value(),
             extent,
             vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eTransferSrc,
@@ -257,9 +257,9 @@ void SwAsset::constructMaterials() {
 
         std::string name = std::string(material.name);
         if (name.empty()) {
-            name = fmt::format("{}", i);
+            name = std::format("{}", i);
         }
-        name = fmt::format("{}_mat{}", mName, name);
+        name = std::format("{}_mat{}", mName, name);
 
         SwMaterialPipelineOptions pipelineOptions(material.doubleSided, material.alphaMode);
 
@@ -318,7 +318,7 @@ void SwAsset::constructMeshes() {
     std::for_each(std::execution::par, meshIndices.begin(), meshIndices.end(), [&](std::uint32_t meshIndex) {
         fastgltf::Mesh& mesh = mRawAsset.meshes[meshIndex];
         MeshData& data = meshData[meshIndex];
-        data.mName = fmt::format("{}{}", mName, mesh.name);
+        data.mName = std::format("{}{}", mName, mesh.name);
 
         for (auto&& p : mesh.primitives) {
             data.mPrimitives.emplace_back(
@@ -394,10 +394,10 @@ void SwAsset::constructMeshes() {
         const vk::DeviceSize srcVertexVectorSize = data.mVertices.size() * sizeof(SwVertex);
         const vk::DeviceSize srcIndexVectorSize = data.mIndices.size() * sizeof(std::uint32_t);
         SwAllocatedBuffer vertexBuffer = SwBufferFactory::createAllocatedBuffer(
-            fmt::format("{}VertexBuffer", data.mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcVertexVectorSize
+            std::format("{}VertexBuffer", data.mName), vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcVertexVectorSize
         );
         SwAllocatedBuffer indexBuffer = SwBufferFactory::createAllocatedBuffer(
-            fmt::format("{}IndexBuffer", data.mName), vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcIndexVectorSize
+            std::format("{}IndexBuffer", data.mName), vk::BufferUsageFlagBits::eIndexBuffer, VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT, srcIndexVectorSize
         );
 
         mMeshes.emplace_back(
@@ -430,7 +430,7 @@ void SwAsset::constructNodes() {
     for (std::uint32_t i = 0; i < mRawAsset.nodes.size(); i++) {
         fastgltf::Node& rawNode = mRawAsset.nodes[i];
 
-        std::string name = fmt::format("{}_node{}", mName, rawNode.name);
+        std::string name = std::format("{}_node{}", mName, rawNode.name);
         std::uint32_t relativeNodeIndex = i;
         // First function if it's a mat4 transform, second function if it's separate transform / rotate / scale quaternion or vec3
         glm::mat4 localTransform(1.f);

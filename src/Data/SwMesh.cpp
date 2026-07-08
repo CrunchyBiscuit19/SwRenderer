@@ -1,6 +1,5 @@
 #include <Data/SwAsset.h>
 #include <Data/SwMesh.h>
-#include <fmt/core.h>
 
 SwVertex::SwVertex(glm::vec3 position, glm::vec3 normal, glm::vec4 color, glm::vec2 uv) : mPosition(position), mNormal(normal), mColor(color), mUv(uv) {}
 

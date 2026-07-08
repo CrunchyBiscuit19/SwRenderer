@@ -24,7 +24,7 @@
         </Literal>
         <Literal>
           <ID>name</ID>
-          <ToolTip>Base name used in fmt::format for each view</ToolTip>
+          <ToolTip>Base name used in std::format for each view</ToolTip>
           <Default>"ImageMip{:0&gt;4}"</Default>
         </Literal>
         <Literal>
@@ -34,7 +34,7 @@
         </Literal>
       </Declarations>
       <Code Language="cpp"><![CDATA[for (std::uint32_t i = 0; i < $levels$; i++) {
-    $image$.addImageView(fmt::format($name$, i), $image$.getMainFormat(), vk::ImageAspectFlagBits::$aspect$, vk::ImageViewType::e2D, i, 1);$end$
+    $image$.addImageView(std::format($name$, i), $image$.getMainFormat(), vk::ImageAspectFlagBits::$aspect$, vk::ImageViewType::e2D, i, 1);$end$
 }]]></Code>
     </Snippet>
   </CodeSnippet>

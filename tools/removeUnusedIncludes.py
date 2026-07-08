@@ -13,7 +13,7 @@ the real compiler.
 
 C++ mode (--cpp) is best-effort only. It shells out to cl.exe with include paths
 scraped from CMakeLists.txt plus a forced include of SwPch.h, but it cannot
-perfectly reproduce the MSVC/CMake build (fastgltf/fmt add_subdirectory include
+perfectly reproduce the MSVC/CMake build (fastgltf add_subdirectory include
 dirs, config-specific defines, etc). Always review the diff and let the project
 rebuild afterward rather than trusting this blindly.
 
@@ -162,7 +162,6 @@ def run_cpp(apply: bool) -> None:
         third_party / "vma",
         third_party,  # quill is included as quill/...
         third_party / "fastgltf" / "include",
-        third_party / "fmt" / "include",
     ]
     pch = SRC_DIR / "SwPch.h"
     if not pch.exists():

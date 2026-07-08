@@ -7,7 +7,7 @@
 #include <Resource/SwSampler.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
-#include <fmt/core.h>
+#include <format>
 #include <quill/LogMacros.h>
 #include <stb_image.h>
 
@@ -96,7 +96,7 @@ void SwScene::initializeResources() {
 
     for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
         mSceneVisibilityRisBuffers[i] = SwBufferFactory::createAllocatedBuffer(
-            fmt::format("SceneVisibilityRisBuffer{}", i),
+            std::format("SceneVisibilityRisBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
             VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
             SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,

@@ -443,7 +443,6 @@ All dependencies are vendored under `thirdParty/`:
 | VMA              | GPU memory allocation   |
 | ImGui + ImGuizmo | In-engine UI and gizmos |
 | Quill            | Async logging           |
-| fmt              | String formatting       |
 | stb_image        | Texture loading         |
 | magic_enum       | Enum reflection         |
 

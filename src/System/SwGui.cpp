@@ -3,7 +3,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Scene/SwScene.h>
 #include <System/SwGui.h>
-#include <fmt/core.h>
+#include <format>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #include <imgui_internal.h>
@@ -85,20 +85,20 @@ void SwGui::System::initializeResources() {
             const auto name = asset.getName();
             ImGui::PushStyleColor(ImGuiCol_Header, static_cast<ImVec4>(IMGUI_HEADER_GREEN));
             if (ImGui::CollapsingHeader(name.c_str(), ImGuiTreeNodeFlags_DefaultOpen)) {
-                if (ImGui::Button(fmt::format("Add Instance##{}", name).c_str())) {
+                if (ImGui::Button(std::format("Add Instance##{}", name).c_str())) {
                     asset.createInstance(mScene.getCamera().getSpawnTransform());
                 }
                 ImGui::SameLine();
                 ImGui::PushStyleColor(ImGuiCol_Button, static_cast<ImVec4>(IMGUI_BUTTON_RED));
-                if (ImGui::Button(fmt::format("Delete Asset##{}", name).c_str())) {
+                if (ImGui::Button(std::format("Delete Asset##{}", name).c_str())) {
                     asset.markDelete();
                 }
                 ImGui::PopStyleColor();
 
                 for (std::uint32_t instanceId : asset.getInstanceIds()) {
                     SwInstance& instance = mScene.getInstance(instanceId);
-                    if (ImGui::TreeNode(fmt::format("{}-{}", name, instance.getId()).c_str())) {
-                        ImGui::PushID(fmt::format("{}-{}", name, instance.getId()).c_str());
+                    if (ImGui::TreeNode(std::format("{}-{}", name, instance.getId()).c_str())) {
+                        ImGui::PushID(std::format("{}-{}", name, instance.getId()).c_str());
                         glm::vec3 translation, rotation, scale;
                         ImGuizmo::DecomposeMatrixToComponents(
                             glm::value_ptr(instance.getData().mTransformMatrix), glm::value_ptr(translation), glm::value_ptr(rotation), glm::value_ptr(scale)
@@ -180,7 +180,7 @@ void SwGui::System::initializeResources() {
                 SwAsset& owningAsset = mScene.getAsset(light.getAssetId());
                 const bool standalone = owningAsset.isStandaloneLight();
 
-                const std::string label = fmt::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), light.getId());
+                const std::string label = std::format("{}{} Light {}", standalone ? "" : "[Asset] ", magic_enum::enum_name(params.mType), light.getId());
                 ImGui::PushID(label.c_str());
                 if (ImGui::TreeNode(label.c_str())) {
                     bool edited = false;
@@ -262,8 +262,8 @@ void SwGui::System::initializeResources() {
         // Averaging over the history smooths the per-frame jitter so the readout stays legible at runtime.
         const float avgFrameTime = std::reduce(frameTimeHistory.begin(), frameTimeHistory.end()) / frameTimeHistorySize;
         const float avgFps = std::reduce(fpsHistory.begin(), fpsHistory.end()) / frameTimeHistorySize;
-        const std::string frameTimeOverlay = fmt::format("Avg {:.2f} ms", avgFrameTime);
-        const std::string fpsOverlay = fmt::format("Avg {:.0f} FPS", avgFps);
+        const std::string frameTimeOverlay = std::format("Avg {:.2f} ms", avgFrameTime);
+        const std::string fpsOverlay = std::format("Avg {:.0f} FPS", avgFps);
 
         ImGui::Text("VALIDATION MODE: %s", magic_enum::enum_name(SwRenderer::VALIDATION_MODE).data());
         ImGui::Text("Frame Time");

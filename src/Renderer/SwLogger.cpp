@@ -1,5 +1,5 @@
 #include <Renderer/SwLogger.h>
-#include <fmt/core.h>
+#include <format>
 #include <quill/Backend.h>
 #include <quill/Frontend.h>
 #include <quill/LogMacros.h>
@@ -258,7 +258,7 @@ SwLogger::SwLogger() {
     quill::Backend::start();
 
     auto fileSink = quill::Frontend::create_or_get_sink<quill::FileSink>(
-        fmt::format("{}Run.log", LOGS_PATH).c_str(),
+        std::format("{}Run.log", LOGS_PATH).c_str(),
         []() {
             quill::FileSinkConfig cfg;
             cfg.set_open_mode('w');
@@ -268,7 +268,7 @@ SwLogger::SwLogger() {
         quill::FileEventNotifier{}
     );
     auto latestFileSink = quill::Frontend::create_or_get_sink<quill::FileSink>(
-        fmt::format("{}Latest.log", LOGS_PATH).c_str(),
+        std::format("{}Latest.log", LOGS_PATH).c_str(),
         []() {
             quill::FileSinkConfig cfg;
             cfg.set_open_mode('w');
@@ -343,26 +343,26 @@ VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
 
     std::string queueLabels;
     for (std::uint32_t i = 0; i < pCallbackData->queueLabelCount; ++i) {
-        queueLabels += fmt::format("LabelName = <{}>\n", pCallbackData->pQueueLabels[i].pLabelName);
+        queueLabels += std::format("LabelName = <{}>\n", pCallbackData->pQueueLabels[i].pLabelName);
     }
 
     std::string cmdBufLabels;
     for (std::uint32_t i = 0; i < pCallbackData->cmdBufLabelCount; ++i) {
-        cmdBufLabels += fmt::format("LabelName = <{}>\n", pCallbackData->pCmdBufLabels[i].pLabelName);
+        cmdBufLabels += std::format("LabelName = <{}>\n", pCallbackData->pCmdBufLabels[i].pLabelName);
     }
 
     std::string resources;
     for (std::uint32_t i = 0; i < pCallbackData->objectCount; ++i) {
         const auto& object = pCallbackData->pObjects[i];
-        resources += fmt::format(
+        resources += std::format(
             "Resource {} -> [ ResourceType = {}, ResourceHandle = {}]\n", i, vk::to_string(static_cast<vk::ObjectType>(object.objectType)), object.objectHandle
         );
         if (object.pObjectName) {
-            resources += fmt::format("ResourceName   = <{}>\n", object.pObjectName);
+            resources += std::format("ResourceName   = <{}>\n", object.pObjectName);
         }
     }
 
-    std::string message = fmt::format(
+    std::string message = std::format(
         "\n{} <{}> Frame {}\n{}\nQueue Labels: {}\nCommandBuffer Labels: {}\n{}",
         severity,
         pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "",

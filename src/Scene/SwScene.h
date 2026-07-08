@@ -56,6 +56,8 @@ private:
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
 
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
+    //std::unordered_map<SwMaterial::Type, std::vector<std::uint32_t>> mMaterialTypesPipelines;
+    //std::unordered_map<std::uint32_t, SwBatch> mPipelinesBatch;
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
 
@@ -79,8 +81,7 @@ private:
     SwAllocatedBuffer mSceneDrawRisIndicesBuffer;
     std::array<SwAllocatedBuffer, 2> mSceneVisibilityRisBuffers;
     std::uint32_t mSceneVisibilityRisBufferReadIndex{0};
-
-    SwAllocatedBuffer mSceneLightsBuffer;  // fed from mLighting's light lists in reloadSceneLightsBuffer()
+    SwAllocatedBuffer mSceneLightsBuffer;  
 
     SwRenderGraph mRenderGraph;
 

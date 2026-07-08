@@ -10,7 +10,7 @@
 #include <System/SwGeometry.h>
 #include <System/SwIBL.h>
 #include <System/SwLighting.h>
-#include <fmt/core.h>
+#include <format>
 #include <quill/LogMacros.h>
 
 #include <magic_enum.hpp>
@@ -173,7 +173,7 @@ void SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPip
             break;
     }
 
-    const std::string pipelineName = fmt::format(
+    const std::string pipelineName = std::format(
         "Geometry{}{}Pipeline", magic_enum::enum_name(materialPipelineOptions.alphaMode), materialPipelineOptions.doubleSided ? "DoubleSided" : "SingleSided"
     );
     auto [it, _] = sMaterialPipelineBundles.try_emplace(

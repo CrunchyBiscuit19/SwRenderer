@@ -4,7 +4,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <System/SwCull.h>
-#include <fmt/core.h>
+#include <format>
 #include <quill/LogMacros.h>
 
 SwCull::System::System(SwScene& scene) : SwSystem(scene) {}
@@ -462,7 +462,7 @@ void SwCull::System::reInitializeOnResize() {
     );
     for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels; i++) {
         mResources.mDepthPyramidImage.addImageView(
-            fmt::format("DepthPyramidImage_Level{:0>4}", i),
+            std::format("DepthPyramidImage_Level{:0>4}", i),
             mResources.mDepthPyramidImage.getMainFormat(),
             vk::ImageAspectFlagBits::eColor,
             vk::ImageViewType::e2D,

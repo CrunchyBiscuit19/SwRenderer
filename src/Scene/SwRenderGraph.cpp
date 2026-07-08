@@ -2,13 +2,13 @@
 #include <Renderer/SwRenderer.h>
 #include <Resource/SwCommandBuffer.h>
 #include <Scene/SwRenderGraph.h>
-#include <fmt/format.h>
-#include <fmt/ostream.h>  // for fmt::print to a std::ostream
 #include <quill/LogMacros.h>
 
+#include <format>
 #include <fstream>
 #include <magic_enum.hpp>
 #include <ostream>
+#include <print>
 #include <queue>
 #include <stdexcept>
 #include <unordered_map>
@@ -206,7 +206,7 @@ void SwRenderGraph::sortTopological() {
         std::string msg = "Cycle detected in render graph — passes stuck:";
         for (auto& [p, deg] : inDegree) {
             if (deg > 0) {
-                msg += fmt::format("\n  - {} (unsatisfied incoming edges: {})", magic_enum::enum_name(p->getPassType()).data(), deg);
+                msg += std::format("\n  - {} (unsatisfied incoming edges: {})", magic_enum::enum_name(p->getPassType()).data(), deg);
             }
         }
         throw std::runtime_error(msg);
@@ -218,7 +218,7 @@ void SwRenderGraph::sortTopological() {
 void SwRenderGraph::requestRenderGraph(std::filesystem::path path) {
     mExportStream = std::ofstream(path);
     if (!mExportStream) {
-        throw std::runtime_error(fmt::format("Failed to open Graphviz output file: {}", path.string()));
+        throw std::runtime_error(std::format("Failed to open Graphviz output file: {}", path.string()));
     }
 }
 
@@ -239,17 +239,17 @@ void SwRenderGraph::exportRenderGraph() {
         sortIndex[mSortedPasses[i]] = i;
     }
 
-    auto passId = [](const SwPass* p) { return fmt::format("pass_{}", reinterpret_cast<uintptr_t>(p)); };
-    auto imageId = [](const SwImage* i) { return fmt::format("img_{}", reinterpret_cast<uintptr_t>(i)); };
-    auto bufferId = [](const SwBuffer* b) { return fmt::format("buf_{}", reinterpret_cast<uintptr_t>(b)); };
+    auto passId = [](const SwPass* p) { return std::format("pass_{}", reinterpret_cast<uintptr_t>(p)); };
+    auto imageId = [](const SwImage* i) { return std::format("img_{}", reinterpret_cast<uintptr_t>(i)); };
+    auto bufferId = [](const SwBuffer* b) { return std::format("buf_{}", reinterpret_cast<uintptr_t>(b)); };
 
-    fmt::print(mExportStream.value(), "digraph RenderGraph {{\n");
-    fmt::print(mExportStream.value(), "  rankdir=LR;\n");
-    fmt::print(mExportStream.value(), "  node [fontname=\"Helvetica\"];\n");
-    fmt::print(mExportStream.value(), "  edge [fontname=\"Helvetica\", fontsize=10];\n\n");
+    std::print(mExportStream.value(), "digraph RenderGraph {{\n");
+    std::print(mExportStream.value(), "  rankdir=LR;\n");
+    std::print(mExportStream.value(), "  node [fontname=\"Helvetica\"];\n");
+    std::print(mExportStream.value(), "  edge [fontname=\"Helvetica\", fontsize=10];\n\n");
 
-    fmt::print(mExportStream.value(), "  // Passes\n");
-    fmt::print(mExportStream.value(), "  node [shape=box, style=\"rounded,filled\"];\n");
+    std::print(mExportStream.value(), "  // Passes\n");
+    std::print(mExportStream.value(), "  node [shape=box, style=\"rounded,filled\"];\n");
     for (auto& p : mPasses) {
         const bool pruned = p->isPruned();
         const auto fillColor = pruned ? "#eeeeee" : "#cce5ff";
@@ -259,11 +259,11 @@ void SwRenderGraph::exportRenderGraph() {
         if (pruned) {
             suffix = "\\n(pruned)";
         } else {
-            suffix = fmt::format("\\n[{}]", sortIndex[p]);
+            suffix = std::format("\\n[{}]", sortIndex[p]);
         }
         if (p->isMustRun()) suffix += "\\nmust-run";
 
-        fmt::print(
+        std::print(
             mExportStream.value(),
             "  {} [label=\"{}{}\", fillcolor=\"{}\", color=\"{}\"];\n",
             passId(p),
@@ -274,41 +274,41 @@ void SwRenderGraph::exportRenderGraph() {
         );
     }
 
-    fmt::print(mExportStream.value(), "\n  // Resources\n");
+    std::print(mExportStream.value(), "\n  // Resources\n");
     std::unordered_set<SwImage*> outputSet(mOutputs.begin(), mOutputs.end());
     for (SwImage* img : allImages) {
         const bool isOutput = outputSet.count(img) > 0;
         const auto fill = isOutput ? "#ffd966" : "#f4f4f4";
         const auto label = isOutput ? "image\\n(output)" : "image";
 
-        fmt::print(mExportStream.value(), "  {} [shape=ellipse, style=filled, fillcolor=\"{}\", label=\"{}\"];\n", imageId(img), fill, label);
+        std::print(mExportStream.value(), "  {} [shape=ellipse, style=filled, fillcolor=\"{}\", label=\"{}\"];\n", imageId(img), fill, label);
     }
     for (SwBuffer* buf : allBuffers) {
-        fmt::print(mExportStream.value(), "  {} [shape=cylinder, style=filled, fillcolor=\"#f4f4f4\", label=\"buffer\"];\n", bufferId(buf));
+        std::print(mExportStream.value(), "  {} [shape=cylinder, style=filled, fillcolor=\"#f4f4f4\", label=\"buffer\"];\n", bufferId(buf));
     }
 
-    fmt::print(mExportStream.value(), "\n  // Reads and writes\n");
+    std::print(mExportStream.value(), "\n  // Reads and writes\n");
     for (auto& p : mPasses) {
         for (const SwDependency* deps : {&p->getStaticDeps(), &p->getDynamicDeps()}) {
             for (auto& d : deps->mWriteImages) {
-                fmt::print(mExportStream.value(), "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), imageId(d.mImage));
+                std::print(mExportStream.value(), "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), imageId(d.mImage));
             }
             for (auto& d : deps->mReadImages) {
-                fmt::print(mExportStream.value(), "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", imageId(d.mImage), passId(p));
+                std::print(mExportStream.value(), "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", imageId(d.mImage), passId(p));
             }
             for (auto& d : deps->mWriteBuffers) {
-                fmt::print(mExportStream.value(), "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), bufferId(d.mBuffer));
+                std::print(mExportStream.value(), "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), bufferId(d.mBuffer));
             }
             for (auto& d : deps->mReadBuffers) {
-                fmt::print(mExportStream.value(), "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", bufferId(d.mBuffer), passId(p));
+                std::print(mExportStream.value(), "  {} -> {} [color=\"#2a9d8f\", label=\"R\"];\n", bufferId(d.mBuffer), passId(p));
             }
         }
     }
 
     if (mSortedPasses.size() >= 2) {
-        fmt::print(mExportStream.value(), "\n  // Execution order\n");
+        std::print(mExportStream.value(), "\n  // Execution order\n");
         for (size_t i = 0; i + 1 < mSortedPasses.size(); ++i) {
-            fmt::print(
+            std::print(
                 mExportStream.value(),
                 "  {} -> {} [style=dashed, color=\"#888888\", constraint=false, label=\"next\"];\n",
                 passId(mSortedPasses[i]),
@@ -325,11 +325,11 @@ void SwRenderGraph::exportRenderGraph() {
     }
     if (executionOrder.empty()) executionOrder = "(none)";
 
-    fmt::print(mExportStream.value(), "\n  // Executed passes: {}\n", executionOrder);
-    fmt::print(mExportStream.value(), "  labelloc=\"b\";\n");
-    fmt::print(mExportStream.value(), "  label=\"Executed passes: {}\";\n", executionOrder);
+    std::print(mExportStream.value(), "\n  // Executed passes: {}\n", executionOrder);
+    std::print(mExportStream.value(), "  labelloc=\"b\";\n");
+    std::print(mExportStream.value(), "  label=\"Executed passes: {}\";\n", executionOrder);
 
-    fmt::print(mExportStream.value(), "}}\n");
+    std::print(mExportStream.value(), "}}\n");
 }
 
 void SwRenderGraph::compile() {

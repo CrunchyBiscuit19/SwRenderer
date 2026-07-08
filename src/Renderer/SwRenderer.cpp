@@ -15,7 +15,6 @@
 #include <System/SwIBL.h>
 #include <System/SwLighting.h>
 #include <Vkbootstrap.h>
-#include <fmt/core.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #define VMA_IMPLEMENTATION

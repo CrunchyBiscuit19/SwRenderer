@@ -2,17 +2,17 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <VkBootstrap.h>
-#include <fmt/core.h>
+#include <format>
 
 SwFrame::SwFrame() : mCommandPool(nullptr), mCommandBuffer(nullptr), mRenderFence(nullptr), mAvailableSemaphore(nullptr) {}
 
 void SwFrame::initialize(std::uint32_t frameIndex) {
-    mCommandPool = SwCommandPoolFactory::createCommandPool(fmt::format("Frame{}CommandPool", frameIndex), vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
-    mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(fmt::format("Frame{}CommandBuffer", frameIndex), mCommandPool);
-    mRenderFence = SwFenceFactory::createFence(fmt::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);
-    mAvailableSemaphore = SwSemaphoreFactory::createSemaphore(fmt::format("Frame{}AvailableSemaphore", frameIndex));
+    mCommandPool = SwCommandPoolFactory::createCommandPool(std::format("Frame{}CommandPool", frameIndex), vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+    mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}CommandBuffer", frameIndex), mCommandPool);
+    mRenderFence = SwFenceFactory::createFence(std::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);
+    mAvailableSemaphore = SwSemaphoreFactory::createSemaphore(std::format("Frame{}AvailableSemaphore", frameIndex));
     mDataBuffer = SwBufferFactory::createAllocatedBuffer(
-        fmt::format("Frame{}DataBuffer", frameIndex),
+        std::format("Frame{}DataBuffer", frameIndex),
         vk::BufferUsageFlagBits::eStorageBuffer,
         VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
         DATA_BUFFER_SIZE,
@@ -108,12 +108,12 @@ void SwSwapchain::onResizeInitialize() {
         otherImageViews.emplace_back(SwRenderer::sRendererContext.mDevice->createImageView(unormImageViewCreateInfo));
 
         SwSwapchainImage swapchainImage(
-            fmt::format("SwapchainImage{}", i),
+            std::format("SwapchainImage{}", i),
             vkbSwapchain.get_images().value()[i],
             formats[0],
             vk::Extent3D(vkbSwapchain.extent, 1),
             SwRenderer::sRendererContext.mDevice->createImageView(srgbImageViewCreateInfo),
-            SwSemaphoreFactory::createSemaphore(fmt::format("SwapchainImage{}RenderedSemaphore", i)),
+            SwSemaphoreFactory::createSemaphore(std::format("SwapchainImage{}RenderedSemaphore", i)),
             {formats[1]},
             std::move(otherImageViews)
         );

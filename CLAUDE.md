@@ -51,7 +51,6 @@ This is a **Vulkan 1.4** GPU renderer (the "Sw" prefix is a project name, not "s
 - **VMA** — GPU memory allocation
 - **ImGui + ImGuizmo** — in-engine UI and gizmos
 - **Quill** — async logging
-- **fmt** — string formatting
 - **stb_image** — texture loading
 - **magic_enum** — enum-to-string reflection
 
