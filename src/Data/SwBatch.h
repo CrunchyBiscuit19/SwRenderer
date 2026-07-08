@@ -70,3 +70,38 @@ public:
     inline std::vector<SwRenderItem>& getRis() { return mRis; }
     inline SwAllocatedBuffer& getRisBuffer() { return mRisBuffer; }
 };
+
+
+/*
+class SwBatch {
+    std::uint32_t mGraphicsPipelineBundleId;
+    SwMaterial::Type mMaterialType;
+    bool mDoubleSided{false};
+
+    std::size_t mRcsOffset;
+    std::size_t mRcsSize;
+    std::size_t mRisOffset;
+    std::size_t mRisSize;
+    vk::DeviceSize mInitialRcsBufferOffset;
+    vk::DeviceSize mInitialRcsBufferSize;
+    vk::DeviceSize mInitialRcsLimitsBufferOffset;
+    vk::DeviceSize mEarlyRcsBufferOffset;
+    vk::DeviceSize mEarlyRcsBufferSize;
+    vk::DeviceSize mEarlyRcsCountOffset;
+    vk::DeviceSize mLateRcsBufferOffset;
+    vk::DeviceSize mLateRcsBufferSize;
+    vk::DeviceSize mLateRcsCountOffset;
+    vk::DeviceSize mRisLimitsBufferOffset;
+}
+
+class SwScene {
+    std::vector<SwRenderCommand> mSceneRcs;
+    std::vector<SwRenderItem> mSceneRis;
+    SwAllocatedBuffer mSceneInitialRcsBuffer;
+    SwAllocatedBuffer mSceneEarlyRcsBuffer;
+    SwAllocatedBuffer mSceneEarlyRcsCount;
+    SwAllocatedBuffer mSceneLateRcsBuffer;
+    SwAllocatedBuffer mSceneLateRcsCount;
+    SwAllocatedBuffer mSceneRisBuffer;
+}
+*/

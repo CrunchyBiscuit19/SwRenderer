@@ -13,7 +13,7 @@ public:
     enum class Type {
         ClearImages,
         IBLSkybox,
-        CullReset,
+        CullEarlyReset,
         CullEarlyWork,
         CullEarlyCompact,
         GeometryEarlyOpaque,
