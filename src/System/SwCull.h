@@ -108,7 +108,5 @@ public:
 
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;
-
-    void refresh() override;
 };
 };  // namespace SwCull

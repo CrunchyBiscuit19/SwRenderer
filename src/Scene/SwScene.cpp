@@ -747,6 +747,9 @@ void SwScene::perFrameUpdate() {
     mAssetsIdsToFree = std::move(mAssetsIdsToFill);
     mAssetsIdsToFill.clear();
 
+    // Ping-pong the visibility buffers once per frame before the cull reads last frame's and writes this frame's.
+    toggleSceneVisibilityRisBuffer();
+
     mCull.refresh();
     mLighting.refresh();
     mPick.refresh();

@@ -341,11 +341,6 @@ void SwCull::System::refreshPushConstants() {
     mResources.mCompactPushConstants.mPreRcsLimit = static_cast<std::uint32_t>(mScene.getSceneRcs().size());
 }
 
-void SwCull::System::refresh() {
-    mScene.toggleSceneVisibilityRisBuffer();
-    SwSystem::refresh();
-}
-
 void SwCull::System::reInitializeOnResize() {
     // PrepOcclusion
     vk::Extent3D depthImageExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
