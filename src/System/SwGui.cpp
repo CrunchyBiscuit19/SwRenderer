@@ -288,8 +288,6 @@ void SwGui::System::initializeResources() {
             maxFps * 1.2f,
             ImVec2(0.f, 60.f)
         );
-        ImGui::Text("Draw Time:  %.2fms", SwRenderer::sRendererContext.mStats->mDrawTime);
-        ImGui::Text("Update Time: %.2fms", SwRenderer::sRendererContext.mStats->mSceneUpdateTime);
         ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall);
         ImGui::Text("Pre-Cull Render Items: %i", SwRenderer::sRendererContext.mStats->mNumInitialRis);
         ImGui::Text("Post-Cull Render Items: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRisPublishedCount.getMappedPtr()));
@@ -359,6 +357,18 @@ void SwGui::System::refresh() {
     }
 
     ImGui::Render();
+
+    SwSystem::refresh();
+}
+
+void SwGui::System::refreshDependencies() {
+    // Gui
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::Gui].getDeps();
+        d.clear();
+        d.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisPublishedCount, SwDependency::BufferDepType::HostRead);
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+    }
 }
 
 void SwGui::System::createDockSpace() {

@@ -220,6 +220,7 @@ public:
 
     void resetFlags();
 
+    void startNextFrame();
     void perFrameUpdate();
     void draw();
 };

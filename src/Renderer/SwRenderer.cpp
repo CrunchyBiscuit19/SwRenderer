@@ -245,7 +245,10 @@ void SwRenderer::run() {
             mDevice.waitIdle();
         }
 
+        mScene.startNextFrame();
+
         mScene.perFrameUpdate();
+
         mStats.perFrameReset();
         mSwapchain.getCurrentFrame().update();
 

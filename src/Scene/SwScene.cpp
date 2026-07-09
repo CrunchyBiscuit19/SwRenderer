@@ -136,14 +136,6 @@ void SwScene::refreshDependencies() {
         d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
         d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
     }
-
-    // Gui writes the acquired swapchain image too, so its dependency must be built here, after acquireNextImage().
-    {
-        SwDependency& d = mPasses[SwPass::Type::Gui].getDeps();
-        d.clear();
-        d.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisPublishedCount, SwDependency::BufferDepType::HostRead);
-        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    }
 }
 
 void SwScene::refresh() { refreshDependencies(); }
@@ -704,9 +696,17 @@ void SwScene::resetFlags() {
     mFlags.mLightEdited = false;
 }
 
-void SwScene::perFrameUpdate() {
-    const auto start = std::chrono::system_clock::now();
+void SwScene::startNextFrame() {
+    SwFrame& currentFrame = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame();
+    auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, 1e9);
+    SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getHandle());
+    SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    SwImageFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    SwRenderer::sRendererContext.mStagingRing->tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
+    SwRenderer::sRendererContext.mSwapchain->acquireNextImage(1e9);
+}
 
+void SwScene::perFrameUpdate() {
     // Free last frame's uploaded CPU data before anything spawns new assets. Both frees consume mAssetsIdsToFree.
     freeAssetImages();
     freeAssetBuffers();
@@ -765,26 +765,11 @@ void SwScene::perFrameUpdate() {
     mWBOIT.refresh();
     mGeometry.refresh();
     mPostProcess.refresh();
-
-    const auto end = std::chrono::system_clock::now();
-    const auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    SwRenderer::sRendererContext.mStats->mSceneUpdateTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
+    refresh();
 }
 
 void SwScene::draw() {
-    auto start = std::chrono::system_clock::now();
-
     SwFrame& currentFrame = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame();
-
-    auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, 1e9);
-    SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getHandle());
-    SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
-    SwImageFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
-    SwRenderer::sRendererContext.mStagingRing->tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
-    SwRenderer::sRendererContext.mSwapchain->acquireNextImage(1e9);
-
-    refresh();
-
     SwCommandBuffer& commandBuffer = currentFrame.getCommandBuffer();
     commandBuffer.reset();
     commandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
@@ -840,8 +825,4 @@ void SwScene::draw() {
     );
     SwRenderer::sRendererContext.mSwapchain->submit(commandBufferSubmitInfo, waitInfo, signalInfo, currentFrame.getRenderFence().getHandle());
     SwRenderer::sRendererContext.mSwapchain->present();
-
-    auto end = std::chrono::system_clock::now();
-    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-    SwRenderer::sRendererContext.mStats->mDrawTime = static_cast<float>(elapsed.count()) / SwRenderer::ONE_SECOND_IN_MS;
 }
