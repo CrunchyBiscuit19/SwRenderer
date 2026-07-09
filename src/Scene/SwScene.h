@@ -56,7 +56,7 @@ private:
     std::vector<std::uint32_t> mLightIds;
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
 
-    std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatchTypes;
+    std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatches;
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
 
@@ -80,7 +80,21 @@ private:
     SwAllocatedBuffer mSceneDrawRisIndicesBuffer;
     std::array<SwAllocatedBuffer, 2> mSceneVisibilityRisBuffers;
     std::uint32_t mSceneVisibilityRisBufferReadIndex{0};
-    SwAllocatedBuffer mSceneLightsBuffer;  
+    SwAllocatedBuffer mSceneLightsBuffer;
+    struct PendingRenderCommand {
+        SwRenderCommand mRc;
+        std::uint32_t mPipelineId;
+        std::uint32_t mInstanceCount;
+    };
+    std::vector<PendingRenderCommand> mPendingRcs;
+    std::vector<SwRenderCommand> mSceneRcs;
+    std::vector<SwRenderItem> mSceneRis;
+    SwAllocatedBuffer mSceneInitialRcsBuffer;
+    SwAllocatedBuffer mSceneEarlyRcsBuffer;
+    SwAllocatedBuffer mSceneEarlyRcsCount;
+    SwAllocatedBuffer mSceneLateRcsBuffer;
+    SwAllocatedBuffer mSceneLateRcsCount;
+    SwAllocatedBuffer mSceneRisBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -94,18 +108,19 @@ private:
     void finalPresentTransition(SwCommandBuffer& commandBuffer);
 
 public:
-    static constexpr std::uint64_t SCENE_INITIAL_VERTEX_BUFFER_SIZE{1ull << 28};
-    static constexpr std::uint64_t SCENE_INITIAL_INDEX_BUFFER_SIZE{1ull << 28};
-
-    static constexpr std::uint32_t SCENE_INITIAL_NUM_MATERIALS{1 << 8};
-    static constexpr std::uint64_t SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE{SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants)};
-    static constexpr std::uint64_t SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE{(1 << 12) * sizeof(glm::mat4)};
-    static constexpr std::uint64_t SCENE_INITIAL_INSTANCES_BUFFER_SIZE{(1 << 8) * sizeof(SwInstance::Data)};
-    static constexpr std::uint64_t SCENE_INITIAL_BOUNDS_BUFFER_SIZE{(1 << 12) * sizeof(SwBounds)};
-
-    static constexpr std::uint32_t SCENE_INITIAL_NUM_RENDER_ITEMS{1 << 18};
-    static constexpr std::uint64_t SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
-    static constexpr std::uint64_t SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t)};
+    static constexpr std::size_t SCENE_INITIAL_VERTEX_BUFFER_SIZE{1ull << 28};
+    static constexpr std::size_t SCENE_INITIAL_INDEX_BUFFER_SIZE{1ull << 28};
+    static constexpr std::size_t SCENE_INITIAL_NUM_MATERIALS{1 << 8};
+    static constexpr std::size_t SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE{SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants)};
+    static constexpr std::size_t SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE{(1 << 12) * sizeof(glm::mat4)};
+    static constexpr std::size_t SCENE_INITIAL_INSTANCES_BUFFER_SIZE{(1 << 8) * sizeof(SwInstance::Data)};
+    static constexpr std::size_t SCENE_INITIAL_BOUNDS_BUFFER_SIZE{(1 << 12) * sizeof(SwBounds)};
+    static constexpr std::size_t SCENE_INITIAL_NUM_RENDER_ITEMS{1 << 12};
+    static constexpr std::size_t SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t)};
+    static constexpr std::size_t SCENE_INITIAL_NUM_RENDER_COMMANDS{1 << 10};
+    static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(SwRenderCommand)};
+    static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(std::uint32_t)};
+    static constexpr std::size_t SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
 
     static constexpr std::uint64_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
 
@@ -123,10 +138,9 @@ public:
     template <std::same_as<SwMaterial::Type>... Types>
     auto getBatchIt(Types... types) {
         std::array<SwMaterial::Type, sizeof...(Types)> requested{types...};
-        return mBatchTypes | std::views::filter([requested](const auto& pair) { return std::ranges::find(requested, pair.first) != requested.end(); }) |
+        return mBatches | std::views::filter([requested](const auto& pair) { return std::ranges::find(requested, pair.first) != requested.end(); }) |
                std::views::values | std::views::join | std::views::values;
     }
-    inline std::unordered_map<std::uint32_t, SwBatch>& getBatchMap(SwMaterial::Type type) { return mBatchTypes[type]; }
 
     inline SwCamera& getCamera() { return mCamera; }
     inline SwAsset& getAsset(const std::uint32_t assetId) { return mAssets[assetId]; }
@@ -174,6 +188,7 @@ public:
     void refreshLightIndices();
     void spawnStandaloneLight(SwLight::Type type);
 
+    void recordPendingDraw(SwMaterial& material, const SwRenderCommand& rc, std::uint32_t instanceCount);
     void regenerateRcsAndRis();
 
     void realignVertexIndexOffset();

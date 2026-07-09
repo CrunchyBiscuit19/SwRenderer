@@ -31,32 +31,23 @@ void SwMeshNode::generateRcsAndRis(SwAsset& asset) {
     SwMesh& mesh = asset.getMeshes()[mMeshIndex];
     for (auto& primitive : mesh.getPrimitives()) {
         SwMaterial& material = asset.getMaterials()[primitive.mMaterialIndex];
-        std::uint32_t pipelineId = material.getPipelineBundle().getID();
-        SwMaterial::Type materialType = material.getType();
 
-        auto [it, _] = SwRenderer::sRendererContext.mScene->getBatchMap(materialType).try_emplace(pipelineId, material);
-        SwBatch& batch = it->second;
-
-        batch.getRcs().emplace_back(
+        // mFirstRi assigned during the scene-wide flatten in SwScene::regenerateRcsAndRis.
+        SwRenderCommand rc{
             primitive.mIndexCount,
-            0,  // Instance count set to 0, incremented inside culling compute shader
+            0,
             mesh.mFirstIndexInScene + primitive.mRelativeFirstIndex,
             mesh.mVertexOffsetInScene + primitive.mRelativeVertexOffset,
-            SwBatch::sFirstRiOffset,
+            0,
             asset.mFirstMaterialInScene + material.mRelativeMaterialIndex,
             asset.mFirstNodeTransformInScene + this->mRelativeNodeIndex,
             asset.getId(),
             asset.mFirstInstanceInScene,
-            asset.mFirstBoundInScene + mesh.mRelativeFirstBounds
-        );
+            asset.mFirstBoundInScene + mesh.mRelativeFirstBounds,
+            material.getType()
+        };
 
-        std::uint32_t rcIndex = static_cast<std::uint32_t>(batch.getRcs().size() - 1);
-        std::uint32_t instanceIndex = asset.mFirstInstanceInScene;
-        for (std::uint32_t i = 0; i < asset.getInstanceIds().size(); i++) {
-            batch.getRis().emplace_back(rcIndex, instanceIndex + i);
-        }
-
-        SwBatch::sFirstRiOffset += asset.getInstanceIds().size();
+        SwRenderer::sRendererContext.mScene->recordPendingDraw(material, rc, static_cast<std::uint32_t>(asset.getInstanceIds().size()));
     }
 
     SwNode::generateRcsAndRis(asset);

@@ -11,4 +11,6 @@ namespace SwMaterial {
         public float mOcclusionStrength;
         public float mAlphaCutoff;
     };
+
+    public enum Type { Opaque, Mask, Transparent };
 }

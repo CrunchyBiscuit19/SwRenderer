@@ -110,7 +110,7 @@ void SwLighting::System::initializeResources() {
             std::format("Shadow2DLightDrawRisIndicesBuffer{}", i),
             vk::BufferUsageFlagBits::eStorageBuffer,
             0,
-            SwScene::SCENE_INITIAL_RIS_INDICES_BUFFER_SIZE,
+            SwScene::SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE,
             true
         );
     }

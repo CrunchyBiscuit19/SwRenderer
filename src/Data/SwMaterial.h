@@ -100,7 +100,7 @@ private:
     SwMaterialPipelineOptions mMaterialPipelineOptions;
     SwMaterialConstants mMaterialConstants;
     SwMaterialResources mMaterialResources;
-    std::uint32_t mMaterialPipelineId{0};
+    std::uint32_t mPipelineId{0};
 
     static std::unordered_map<SwMaterialPipelineOptions, std::uint32_t> sMaterialPipelinesCreated;
     static std::unordered_map<std::uint32_t, SwGraphicsPipelineBundle> sMaterialPipelineBundles;
@@ -134,7 +134,7 @@ public:
 
     static Type getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode);
 
-    inline SwGraphicsPipelineBundle& getPipelineBundle() { return sMaterialPipelineBundles.at(mMaterialPipelineId); }
+    inline SwGraphicsPipelineBundle& getPipelineBundle() { return sMaterialPipelineBundles.at(mPipelineId); }
 
     static SwGraphicsPipelineBundle& getPipelineBundleById(std::uint32_t pipelineId) { return sMaterialPipelineBundles.at(pipelineId); }
 

@@ -1,5 +1,7 @@
 module SwBatch;
 
+import Data.SwMaterial;
+
 namespace SwBatch {
     public struct RenderCommand {
         public uint mIndexCount;
@@ -12,6 +14,7 @@ namespace SwBatch {
         public uint mModelIndex;
         public uint mFirstInstance;
         public uint mBoundsIndex;
+        public SwMaterial::Type mMaterialType;
 
         [mutating]
         public void copyFrom(RenderCommand* src) {
@@ -25,6 +28,7 @@ namespace SwBatch {
             this.mModelIndex = src.mModelIndex;
             this.mFirstInstance = src.mFirstInstance;
             this.mBoundsIndex = src.mBoundsIndex;
+            this.mMaterialType = src.mMaterialType;
         }
     };
 

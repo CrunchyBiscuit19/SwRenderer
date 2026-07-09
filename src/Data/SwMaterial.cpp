@@ -81,11 +81,11 @@ SwMaterial::SwMaterial(
       mMaterialResources(std::move(materialResources)) {
 
     if (auto it = sMaterialPipelinesCreated.find(materialPipelineOptions); it != sMaterialPipelinesCreated.end()) {
-        mMaterialPipelineId = it->second;
+        mPipelineId = it->second;
         return;
     }
 
-    mMaterialPipelineId = constructMaterialPipeline(materialPipelineOptions);
+    mPipelineId = constructMaterialPipeline(materialPipelineOptions);
 
     sLatestMaterialId++;
 }

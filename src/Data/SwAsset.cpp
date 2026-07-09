@@ -492,7 +492,7 @@ void SwAsset::generateRcsAndRis() {
 
 void SwAsset::createInstance(SwInstance::Data instanceData) {
     SwScene* scene = SwRenderer::sRendererContext.mScene;
-    mInstanceIds.push_back(scene->registerInstance(mId, instanceData));
+    mInstanceIds.emplace_back(scene->registerInstance(mId, instanceData));
     mReloadInstancesFlag = true;
     scene->mFlags.mInstanceLoaded = true;
 }
