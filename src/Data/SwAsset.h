@@ -33,12 +33,12 @@ private:
     };
 
     std::vector<SwMesh> mMeshes;
-
-    struct PendingMeshUpload {
-        std::vector<SwVertex> mVertices;
-        std::vector<std::uint32_t> mIndices;
-    };
-    std::vector<PendingMeshUpload> mPendingMeshUploads;
+    std::vector<SwVertex> mVertices;
+    std::vector<std::uint32_t> mIndices;
+    std::uint32_t mNumVertices{0};
+    std::uint32_t mNumIndices{0};
+    SwAllocatedBuffer mVertexBuffer;
+    SwAllocatedBuffer mIndexBuffer;
 
     std::vector<SwLight> mLights;
 
@@ -104,7 +104,7 @@ public:
 
     void fillBuffers();
 
-    void clearPendingBufferData();
+    void clearVerticesAndIndicesVectors();
 
     inline void setReloadInstancesFlag(bool flag) { mReloadInstancesFlag = flag; }
 
@@ -125,6 +125,11 @@ public:
     inline std::span<SwLight> getLights() { return mLights; }
     inline std::span<std::shared_ptr<SwNode>> getNodes() { return mNodes; }
 
+    inline std::uint32_t getNumVertices() { return mNumVertices; }
+    inline std::uint32_t getNumIndices() { return mNumIndices; }
+
+    inline SwAllocatedBuffer& getVertexBuffer() { return mVertexBuffer; }
+    inline SwAllocatedBuffer& getIndexBuffer() { return mIndexBuffer; }
     inline SwAllocatedBuffer& getMaterialConstantsBuffer() { return mMaterialConstantsBuffer; }
     inline SwAllocatedBuffer& getNodeTransformsBuffer() { return mNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getInstancesBuffer() { return mInstancesBuffer; }

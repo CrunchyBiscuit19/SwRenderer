@@ -10,20 +10,24 @@ SwPrimitive::SwPrimitive(std::uint32_t relativeFirstIndex, std::uint32_t indexCo
 
 std::uint32_t SwMesh::sLatestMeshId{0};
 
+SwMesh::SwMesh() : mId(sLatestMeshId++) {}
+
 SwMesh::SwMesh(
-    std::uint32_t assetId, std::string name, std::vector<SwPrimitive> primitives, SwBounds bounds, std::uint32_t relativeFirstBounds,
-    SwAllocatedBuffer vertexBuffer, std::uint32_t numVertices, std::uint32_t vertexOffsetInScene, SwAllocatedBuffer indexBuffer, std::uint32_t numIndices,
-    std::uint32_t firstIndexInScene
+    std::uint32_t assetId, std::string name, std::vector<SwPrimitive> primitives, std::vector<SwVertex> vertices, std::vector<std::uint32_t> indices,
+    SwBounds bounds, std::uint32_t relativeFirstBounds, std::uint32_t numVertices, std::uint32_t vertexOffsetInAsset, std::uint32_t vertexOffsetInScene,
+    std::uint32_t numIndices, std::uint32_t firstIndexInAsset, std::uint32_t firstIndexInScene
 )
     : mId(sLatestMeshId++),
-      mAssetid(assetId),
+      mAssetId(assetId),
       mName(name),
-      mPrimitives(primitives),
+      mPrimitives(std::move(primitives)),
+      mVertices(std::move(vertices)),
+      mIndices(std::move(indices)),
       mBounds(bounds),
       mRelativeFirstBounds(relativeFirstBounds),
-      mVertexBuffer(std::move(vertexBuffer)),
       mNumVertices(numVertices),
+      mVertexOffsetInAsset(vertexOffsetInAsset),
       mVertexOffsetInScene(vertexOffsetInScene),
-      mIndexBuffer(std::move(indexBuffer)),
       mNumIndices(numIndices),
+      mFirstIndexInAsset(firstIndexInAsset),
       mFirstIndexInScene(firstIndexInScene) {}

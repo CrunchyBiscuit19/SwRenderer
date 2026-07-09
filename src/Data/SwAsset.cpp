@@ -297,52 +297,46 @@ void SwAsset::constructMaterials() {
 }
 
 void SwAsset::constructMeshes() {
-    struct MeshData {
-        std::string mName;
-        std::vector<SwPrimitive> mPrimitives;
-        std::vector<SwVertex> mVertices;
-        std::vector<std::uint32_t> mIndices;
-        SwBounds mBounds;
-    };
-    std::vector<MeshData> meshData(mRawAsset.meshes.size());
-
     std::vector<std::uint32_t> meshIndices(mRawAsset.meshes.size());
     for (std::uint32_t i = 0; i < meshIndices.size(); i++) meshIndices[i] = i;
 
+    mMeshes.resize(mRawAsset.meshes.size());
     std::for_each(std::execution::par, meshIndices.begin(), meshIndices.end(), [&](std::uint32_t meshIndex) {
-        fastgltf::Mesh& mesh = mRawAsset.meshes[meshIndex];
-        MeshData& data = meshData[meshIndex];
-        data.mName = std::format("{}{}", mName, mesh.name);
+        fastgltf::Mesh& rawMesh = mRawAsset.meshes[meshIndex];
 
-        for (auto&& p : mesh.primitives) {
-            data.mPrimitives.emplace_back(
-                static_cast<std::uint32_t>(data.mIndices.size()),
+        auto& mesh = mMeshes[meshIndex];
+        mesh.setAssetId(mId);
+        mesh.setName(std::format("{}{}", mName, rawMesh.name));
+
+        for (auto&& p : rawMesh.primitives) {
+            mesh.getPrimitives().emplace_back(
+                static_cast<std::uint32_t>(mesh.getIndices().size()),
                 static_cast<std::uint32_t>(mRawAsset.accessors[p.indicesAccessor.value()].count),
-                static_cast<std::uint32_t>(data.mVertices.size()),
+                static_cast<std::uint32_t>(mesh.getVertices().size()),
                 p.materialIndex.has_value() ? static_cast<std::uint32_t>(p.materialIndex.value()) : 0u
             );
 
-            size_t vertexStartOffset = data.mVertices.size();
+            size_t vertexStartOffset = mesh.getVertices().size();
 
             // Load indexes
             fastgltf::Accessor& indexAccessor = mRawAsset.accessors[p.indicesAccessor.value()];
-            data.mIndices.reserve(data.mIndices.size() + indexAccessor.count);
-            fastgltf::iterateAccessor<std::uint32_t>(mRawAsset, indexAccessor, [&](std::uint32_t index) { data.mIndices.emplace_back(index); });
+            mesh.getIndices().reserve(mesh.getIndices().size() + indexAccessor.count);
+            fastgltf::iterateAccessor<std::uint32_t>(mRawAsset, indexAccessor, [&](std::uint32_t index) { mesh.getIndices().emplace_back(index); });
 
             // Load vertex positions
             fastgltf::Accessor& posAccessor = mRawAsset.accessors[p.findAttribute("POSITION")->second];
-            data.mVertices.resize(data.mVertices.size() + posAccessor.count);
+            mesh.getVertices().resize(mesh.getVertices().size() + posAccessor.count);
             fastgltf::iterateAccessorWithIndex<glm::vec3>(mRawAsset, posAccessor, [&](glm::vec3 v, size_t pos) {
                 SwVertex vertex;
                 vertex.mPosition = v;
-                data.mVertices[vertexStartOffset + pos] = vertex;
+                mesh.getVertices()[vertexStartOffset + pos] = vertex;
             });
 
             // Load vertex normals
             auto normals = p.findAttribute("NORMAL");
             if (normals != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec3>(mRawAsset, mRawAsset.accessors[normals->second], [&](glm::vec3 n, size_t pos) {
-                    data.mVertices[vertexStartOffset + pos].mNormal = n;
+                    mesh.getVertices()[vertexStartOffset + pos].mNormal = n;
                 });
             }
 
@@ -350,7 +344,7 @@ void SwAsset::constructMeshes() {
             auto uv = p.findAttribute("TEXCOORD_0");
             if (uv != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec2>(mRawAsset, mRawAsset.accessors[uv->second], [&](glm::vec2 uv, size_t pos) {
-                    data.mVertices[vertexStartOffset + pos].mUv = glm::vec2(uv.x, uv.y);
+                    mesh.getVertices()[vertexStartOffset + pos].mUv = glm::vec2(uv.x, uv.y);
                 });
             }
 
@@ -358,7 +352,7 @@ void SwAsset::constructMeshes() {
             auto colors = p.findAttribute("COLOR_0");
             if (colors != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec4>(mRawAsset, mRawAsset.accessors[colors->second], [&](glm::vec4 c, size_t pos) {
-                    data.mVertices[vertexStartOffset + pos].mColor = c;
+                    mesh.getVertices()[vertexStartOffset + pos].mColor = c;
                 });
             }
 
@@ -366,37 +360,49 @@ void SwAsset::constructMeshes() {
             auto tangents = p.findAttribute("TANGENT");
             if (tangents != p.attributes.end()) {
                 fastgltf::iterateAccessorWithIndex<glm::vec4>(mRawAsset, mRawAsset.accessors[tangents->second], [&](glm::vec4 t, size_t pos) {
-                    data.mVertices[vertexStartOffset + pos].mTangent = t;
+                    mesh.getVertices()[vertexStartOffset + pos].mTangent = t;
                 });
             }
         }
 
-        data.mBounds = SwBounds(data.mVertices[0].mPosition, data.mVertices[0].mPosition);
-        for (auto& vertex : data.mVertices) {
-            data.mBounds.mMin = glm::min(data.mBounds.mMin, vertex.mPosition);
-            data.mBounds.mMax = glm::max(data.mBounds.mMax, vertex.mPosition);
+        mesh.getBounds() = SwBounds(mesh.getVertices()[0].mPosition, mesh.getVertices()[0].mPosition);
+        for (auto& vertex : mesh.getVertices()) {
+            mesh.setBounds(glm::min(mesh.getBounds().mMin, vertex.mPosition), glm::max(mesh.getBounds().mMax, vertex.mPosition));
         }
     });
 
-    mMeshes.reserve(mRawAsset.meshes.size());
-    for (std::uint32_t meshIndex = 0; meshIndex < meshData.size(); meshIndex++) {
-        MeshData& data = meshData[meshIndex];
+    for (auto& mesh : mMeshes) {
+        mNumVertices += static_cast<std::uint32_t>(mesh.getVertices().size());
+        mNumIndices += static_cast<std::uint32_t>(mesh.getIndices().size());
+    }
+    mVertices.reserve(mNumVertices);
+    mIndices.reserve(mNumIndices);
 
-        std::uint32_t numVertices = data.mVertices.size();
-        std::uint32_t numIndices = data.mIndices.size();
+    for (std::uint32_t meshIndex = 0; meshIndex < mMeshes.size(); meshIndex++) {
+        auto& mesh = mMeshes[meshIndex];
 
-        const vk::DeviceSize srcVertexVectorSize = data.mVertices.size() * sizeof(SwVertex);
-        const vk::DeviceSize srcIndexVectorSize = data.mIndices.size() * sizeof(std::uint32_t);
-        SwAllocatedBuffer vertexBuffer =
-            SwBufferFactory::createAllocatedBuffer(std::format("{}VertexBuffer", data.mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, srcVertexVectorSize);
-        SwAllocatedBuffer indexBuffer =
-            SwBufferFactory::createAllocatedBuffer(std::format("{}IndexBuffer", data.mName), vk::BufferUsageFlagBits::eIndexBuffer, 0, srcIndexVectorSize);
+        mesh.mRelativeFirstBounds = meshIndex;
+        mesh.mNumVertices = static_cast<std::uint32_t>(mesh.getVertices().size());
+        mesh.mNumIndices = static_cast<std::uint32_t>(mesh.getIndices().size());
+        mesh.mVertexOffsetInAsset = static_cast<std::uint32_t>(mVertices.size());
+        mesh.mFirstIndexInAsset = static_cast<std::uint32_t>(mIndices.size());
 
-        mMeshes.emplace_back(
-            mId, data.mName, data.mPrimitives, data.mBounds, meshIndex, std::move(vertexBuffer), numVertices, 0, std::move(indexBuffer), numIndices, 0
+        mVertices.insert(mVertices.end(), mesh.getVertices().begin(), mesh.getVertices().end());
+        mIndices.insert(mIndices.end(), mesh.getIndices().begin(), mesh.getIndices().end());
+    
+        mesh.getVertices().clear();
+        mesh.getIndices().clear();
+    }
+
+    if (mNumVertices > 0) {
+        mVertexBuffer = SwBufferFactory::createAllocatedBuffer(
+            std::format("{}VertexBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, mVertices.size() * sizeof(SwVertex)
         );
-
-        mPendingMeshUploads.emplace_back(std::move(data.mVertices), std::move(data.mIndices));
+    }
+    if (mNumIndices > 0) {
+        mIndexBuffer = SwBufferFactory::createAllocatedBuffer(
+            std::format("{}IndexBuffer", mName), vk::BufferUsageFlagBits::eIndexBuffer, 0, mIndices.size() * sizeof(std::uint32_t)
+        );
     }
 }
 
@@ -545,18 +551,13 @@ void SwAsset::fillBuffers() {
             mMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         }
 
-        for (std::uint32_t i = 0; i < mMeshes.size(); i++) {
-            PendingMeshUpload& pending = mPendingMeshUploads[i];
-            const std::uint64_t vertexSize = pending.mVertices.size() * sizeof(SwVertex);
-            const std::uint64_t indexSize = pending.mIndices.size() * sizeof(std::uint32_t);
-            if (vertexSize > 0) {
-                ring->upload(cmd, mMeshes[i].getVertexBuffer(), pending.mVertices.data(), vertexSize);
-                mMeshes[i].getVertexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-            }
-            if (indexSize > 0) {
-                ring->upload(cmd, mMeshes[i].getIndexBuffer(), pending.mIndices.data(), indexSize);
-                mMeshes[i].getIndexBuffer().emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
-            }
+        if (!mVertices.empty()) {
+            ring->upload(cmd, mVertexBuffer, mVertices.data(), mVertices.size() * sizeof(SwVertex));
+            mVertexBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
+        }
+        if (!mIndices.empty()) {
+            ring->upload(cmd, mIndexBuffer, mIndices.data(), mIndices.size() * sizeof(std::uint32_t));
+            mIndexBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         }
 
         std::vector<SwBounds> boundsVector;
@@ -577,4 +578,7 @@ void SwAsset::fillBuffers() {
     });
 }
 
-void SwAsset::clearPendingBufferData() { mPendingMeshUploads.clear(); }
+void SwAsset::clearVerticesAndIndicesVectors() {
+    mVertices.clear();
+    mIndices.clear();
+}

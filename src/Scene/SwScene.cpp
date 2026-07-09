@@ -363,7 +363,7 @@ void SwScene::freeAssetBuffers() {
     for (std::uint32_t assetId : mAssetsIdsToFree) {
         auto it = mAssets.find(assetId);
         if (it == mAssets.end()) continue;
-        it->second.clearPendingBufferData();
+        it->second.clearVerticesAndIndicesVectors();
     }
 }
 
@@ -504,45 +504,37 @@ void SwScene::realignOffsets() {
 
 void SwScene::reloadSceneVertexBuffer() {
     vk::DeviceSize dstOffset = 0;
-    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
-        for (auto& mesh : asset.getMeshes()) {
-            vk::BufferCopy meshVertexCopy{};
-            meshVertexCopy.dstOffset = dstOffset;
-            meshVertexCopy.srcOffset = 0;
-            meshVertexCopy.size = mesh.mNumVertices * sizeof(SwVertex);
+        vk::BufferCopy vertexCopy{};
+        vertexCopy.dstOffset = dstOffset;
+        vertexCopy.srcOffset = 0;
+        vertexCopy.size = asset.getNumVertices() * sizeof(SwVertex);
 
-            dstOffset += meshVertexCopy.size;
-            maxPos = dstOffset;
+        dstOffset += vertexCopy.size;
 
-            SwRenderer::sRendererContext.mImmSubmit->addCallback([&mesh, this, meshVertexCopy, maxPos](vk::CommandBuffer cmd) {
-                if (meshVertexCopy.size == 0) return;
-                mSceneVertexBuffer.copyFrom(cmd, mesh.getVertexBuffer(), meshVertexCopy);
-            });
-        }
+        SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, vertexCopy](vk::CommandBuffer cmd) {
+            if (vertexCopy.size == 0) return;
+            mSceneVertexBuffer.copyFrom(cmd, asset.getVertexBuffer(), vertexCopy);
+        });
     }
 }
 
 void SwScene::reloadSceneIndexBuffer() {
     vk::DeviceSize dstOffset = 0;
-    vk::DeviceSize maxPos = 0;
 
     for (auto& asset : mAssets | std::views::values) {
-        for (auto& mesh : asset.getMeshes()) {
-            vk::BufferCopy meshIndexCopy{};
-            meshIndexCopy.dstOffset = dstOffset;
-            meshIndexCopy.srcOffset = 0;
-            meshIndexCopy.size = mesh.mNumIndices * sizeof(std::uint32_t);
+        vk::BufferCopy indexCopy{};
+        indexCopy.dstOffset = dstOffset;
+        indexCopy.srcOffset = 0;
+        indexCopy.size = asset.getNumIndices() * sizeof(std::uint32_t);
 
-            dstOffset += meshIndexCopy.size;
-            maxPos = dstOffset;
+        dstOffset += indexCopy.size;
 
-            SwRenderer::sRendererContext.mImmSubmit->addCallback([&mesh, this, meshIndexCopy, maxPos](vk::CommandBuffer cmd) {
-                if (meshIndexCopy.size == 0) return;
-                mSceneIndexBuffer.copyFrom(cmd, mesh.getIndexBuffer(), meshIndexCopy);
-            });
-        }
+        SwRenderer::sRendererContext.mImmSubmit->addCallback([&asset, this, indexCopy](vk::CommandBuffer cmd) {
+            if (indexCopy.size == 0) return;
+            mSceneIndexBuffer.copyFrom(cmd, asset.getIndexBuffer(), indexCopy);
+        });
     }
 }
 

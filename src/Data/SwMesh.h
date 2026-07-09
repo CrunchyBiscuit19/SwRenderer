@@ -37,30 +37,36 @@ struct SwPrimitive {
 class SwMesh {
 private:
     static std::uint32_t sLatestMeshId;
-    std::uint32_t mAssetid;
-    std::uint32_t mId;
+    std::uint32_t mId{0};
+    std::uint32_t mAssetId{0};
     std::string mName;
     std::vector<SwPrimitive> mPrimitives;
+    std::vector<SwVertex> mVertices;
+    std::vector<std::uint32_t> mIndices;
     SwBounds mBounds;
 
 public:
-    std::uint32_t mRelativeFirstBounds;
-    SwAllocatedBuffer mVertexBuffer;
+    std::uint32_t mRelativeFirstBounds{0};
     std::uint32_t mNumVertices{0};
+    std::uint32_t mVertexOffsetInAsset{0};
     std::uint32_t mVertexOffsetInScene{0};
-    SwAllocatedBuffer mIndexBuffer;
     std::uint32_t mNumIndices{0};
+    std::uint32_t mFirstIndexInAsset{0};
     std::uint32_t mFirstIndexInScene{0};
 
+    SwMesh();
     SwMesh(
-        std::uint32_t assetId, std::string name, std::vector<SwPrimitive> primitives, SwBounds bounds, std::uint32_t relativeFirstBounds,
-        SwAllocatedBuffer vertexBuffer, std::uint32_t numVertices, std::uint32_t vertexOffsetInScene, SwAllocatedBuffer indexBuffer, std::uint32_t numIndices,
-        std::uint32_t firstIndexInScene
+        std::uint32_t assetId, std::string name, std::vector<SwPrimitive> primitives, std::vector<SwVertex> vertices, std::vector<std::uint32_t> indices,
+        SwBounds bounds, std::uint32_t relativeFirstBounds, std::uint32_t numVertices, std::uint32_t vertexOffsetInAsset, std::uint32_t vertexOffsetInScene,
+        std::uint32_t numIndices, std::uint32_t firstIndexInAsset, std::uint32_t firstIndexInScene
     );
 
-    inline SwAllocatedBuffer& getVertexBuffer() { return mVertexBuffer; }
-    inline SwAllocatedBuffer& getIndexBuffer() { return mIndexBuffer; }
+    inline void setAssetId(std::uint32_t assetId) { mAssetId = assetId; }
+    inline void setName(std::string name) { mName = name; }
+    inline std::vector<SwPrimitive>& getPrimitives() { return mPrimitives; }
+    inline std::vector<SwVertex>& getVertices() { return mVertices; }
+    inline std::vector<std::uint32_t>& getIndices() { return mIndices; }
+    inline void setBounds(glm::vec3 min, glm::vec3 max) { mBounds = {min, max}; }
     inline SwBounds getBounds() const { return mBounds; }
-    inline std::span<SwPrimitive> getPrimitives() { return mPrimitives; }
-    inline std::uint32_t getAssetId() const { return mAssetid; }
+    inline std::uint32_t getAssetId() const { return mAssetId; }
 };
