@@ -159,7 +159,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### System `SwSystem`
 
-* **`SwSystem`** — the base class every system's `System` derives from. Holds a reference to the owning `SwScene` and defines the lifecycle hooks: `initializeResources()` / `initializePasses()` / `initializePushConstants()`, plus per-frame `refreshDynamicDependencies()` / `refreshPushConstants()` / `refresh()`.
+* **`SwSystem`** — the base class every system's `System` derives from. Holds a reference to the owning `SwScene` and defines the lifecycle hooks: `initializeResources()` / `initializePasses()`, plus per-frame `refreshDependencies()` / `refreshPushConstants()` / `refresh()`.
 * **`SwSystem::Resizable`** — mix-in for systems whose resources depend on the swapchain size; provides `resize()` driving a `reInitializeOnResize()` override.
 
 ### Scene `SwScene`
@@ -171,7 +171,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Passes and Dependencies `SwPass` / `SwDependency`
 
-* **`SwPass`** — one unit of GPU work: a `SwPass::Type` (the fixed enum of all passes, e.g. `CullEarlyWork`, `GeometryLateOpaque`, `Tonemap`, `Gui`), a command-buffer callback, static + dynamic `SwDependency`s, and `mustRun` / `pruned` flags. Provides helpers for dynamic-rendering info and viewport/scissor setup.
+* **`SwPass`** — one unit of GPU work: a `SwPass::Type` (the fixed enum of all passes, e.g. `CullEarlyWork`, `GeometryLateOpaque`, `Tonemap`, `Gui`), a command-buffer callback, a single `SwDependency` set rebuilt each frame by the owning system, and `mustRun` / `pruned` flags. Provides helpers for dynamic-rendering info and viewport/scissor setup.
 * **`SwDependency`** — the read/write image and buffer dependencies of a pass. `ImageDep` / `BufferDep` pair a resource with an `ImageDepDesc` / `BufferDepDesc` (stage + access + layout), derived from the high-level `ImageDepType` / `BufferDepType` enums (e.g. `ColorAttachmentReadWrite`, `ComputeStorageRead`, `IndirectRead`).
 * **Relations** — passes are created by systems (via `SwScene::insertPass(...)`) and consumed by the render graph; their declared dependencies are what the graph uses to insert barriers and prune.
 
@@ -367,7 +367,7 @@ transform          = mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix
 
 1. Refresh the [GUI](#gui-swgui) and update the [camera](#camera).
 2. Apply pending asset/instance loads and unloads. If anything changed, `realign*` the scene-wide offsets, `reloadScene*Buffer` the affected [global buffers](#scene-swscene), and `regenerateRcsAndRis()` to rebuild the [batches](#batch).
-3. `refresh()` each system (recomputing push constants and dynamic dependencies). Per-frame uploads are accumulated on [`SwImmSubmit`](#immediate-submit-swimmsubmit) here and folded into the frame command buffer during the draw, rather than flushed by a blocking submit.
+3. `refresh()` each system (recomputing push constants and rebuilding its passes' dependencies). Per-frame uploads are accumulated on [`SwImmSubmit`](#immediate-submit-swimmsubmit) here and folded into the frame command buffer during the draw, rather than flushed by a blocking submit.
 
 ### GPU Draw — `SwScene::draw()`
 

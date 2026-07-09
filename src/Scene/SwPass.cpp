@@ -1,8 +1,8 @@
 #include <Renderer/SwHelper.h>
 #include <Scene/SwPass.h>
 
-SwPass::SwPass(Type passType, SwDependency staticDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun)
-    : mPassType(passType), mStaticDeps(std::move(staticDeps)), mCallback(std::move(callback)), mMustRun(mustRun) {}
+SwPass::SwPass(Type passType, std::function<void(vk::CommandBuffer)> callback, bool mustRun)
+    : mPassType(passType), mCallback(std::move(callback)), mMustRun(mustRun) {}
 
 void SwPass::execute(vk::CommandBuffer cmd) { mCallback(cmd); }
 

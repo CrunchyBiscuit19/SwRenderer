@@ -103,7 +103,7 @@ private:
     void initializeResources();
     void loadStandaloneLightAssets();
 
-    void refreshDynamicDependencies();
+    void refreshDependencies();
     void refresh();
 
     void finalPresentTransition(SwCommandBuffer& commandBuffer);
@@ -135,7 +135,7 @@ public:
     void initialize();
     void resize();
 
-    void insertPass(SwPass::Type type, SwDependency deps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
+    void insertPass(SwPass::Type type, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
 
     template <std::same_as<SwMaterial::Type>... Types>
     auto getBatchIt(Types... types) {

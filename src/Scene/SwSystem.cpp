@@ -9,19 +9,16 @@ SwSystem::SwSystem(SwScene& scene) : mScene(scene) {}
 
 void SwSystem::initialize() {
     initializeResources();
-    initializePushConstants();
     refreshPushConstants();
     initializePasses();
-    refreshDynamicDependencies();
+    refreshDependencies();
 }
 
 void SwSystem::refresh() {
     refreshPushConstants();
-    refreshDynamicDependencies();
+    refreshDependencies();
 }
 
-void SwSystem::initializePushConstants() {}
-
-void SwSystem::refreshDynamicDependencies() {}
+void SwSystem::refreshDependencies() {}
 
 void SwSystem::refreshPushConstants() {}

@@ -78,19 +78,8 @@ void SwPick::System::initializeResources() {
 }
 
 void SwPick::System::initializePasses() {
-    SwDependency staticDeps;
-
     // Pick Draw
-    staticDeps.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    staticDeps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    mScene.insertPass(SwPass::Type::PickDraw, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::PickDraw, [&](vk::CommandBuffer cmd) {
         vk::RenderingAttachmentInfo colorAttachment = mResources.mReadbackImage.generateRenderingAttachment();
         vk::RenderingAttachmentInfo depthAttachment = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo =
@@ -137,14 +126,10 @@ void SwPick::System::initializePasses() {
 
         cmd.endRendering();
     });
-    staticDeps.clear();
 
     // Pick Readback
-    staticDeps.mReadImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    staticDeps.mWriteBuffers.emplace_back(&mResources.mReadbackBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     mScene.insertPass(
         SwPass::Type::PickReadback,
-        std::move(staticDeps),
         [&](vk::CommandBuffer cmd) {
             glm::vec2 mousePosF;
             SDL_GetMouseState(&mousePosF.x, &mousePosF.y);
@@ -169,13 +154,10 @@ void SwPick::System::initializePasses() {
         },
         true
     );
-    staticDeps.clear();
 
     // Pick Work
-    staticDeps.mReadBuffers.emplace_back(&mResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead);
     mScene.insertPass(
         SwPass::Type::PickWork,
-        std::move(staticDeps),
         [&](vk::CommandBuffer cmd) {
             glm::uvec2 read(0);
             std::memcpy(
@@ -200,10 +182,7 @@ void SwPick::System::initializePasses() {
         },
         true
     );
-    staticDeps.clear();
 }
-
-void SwPick::System::initializePushConstants() { mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value(); }
 
 void SwPick::System::reInitializeOnResize() {
     vk::Extent3D imageExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
@@ -223,24 +202,47 @@ void SwPick::System::reInitializeOnResize() {
     mResources.mReadbackDescriptorSet.pushWrites();
 }
 
-void SwPick::System::refreshDynamicDependencies() {
-    SwDependency dynamicDeps;
-
+void SwPick::System::refreshDependencies() {
     // Pick Draw
-    dynamicDeps.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
-    );
-    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::PickDraw].getDeps();
+        d.clear();
+        d.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        d.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
+        d.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
+            d.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        }
+        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
+            d.mReadBuffers.emplace_back(&batch.getFinalRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        }
     }
-    for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-        dynamicDeps.mReadBuffers.emplace_back(&batch.getFinalRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+
+    // Pick Readback
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::PickReadback].getDeps();
+        d.clear();
+        d.mReadImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        d.mWriteBuffers.emplace_back(&mResources.mReadbackBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     }
-    mScene.mPasses[SwPass::Type::PickDraw].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
+
+    // Pick Work
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::PickWork].getDeps();
+        d.clear();
+        d.mReadBuffers.emplace_back(&mResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead);
+    }
 }
 
 void SwPick::System::refreshPushConstants() {
+    mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();

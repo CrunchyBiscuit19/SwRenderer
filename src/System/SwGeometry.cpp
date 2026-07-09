@@ -61,51 +61,22 @@ SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 void SwGeometry::System::initializeResources() {}
 
 void SwGeometry::System::initializePasses() {
-    // Dependencies shared by every geometry pass: depth (read/write) plus the scene buffers read in the vertex stage.
-    auto addCommonDeps = [&](SwDependency& deps) {
-        deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-        deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        deps.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadow2DMaps) {
-            deps.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        }
-        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowCubeMaps) {
-            deps.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        }
-        deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        deps.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    };
-
-    SwDependency staticDeps;
-
     // EarlyOpaque / LateOpaque / Masked all render to the draw image with the standard opaque setup.
     for (auto type : {SwPass::Type::GeometryEarlyOpaque, SwPass::Type::GeometryLateOpaque, SwPass::Type::GeometryMasked}) {
         const bool early = type == SwPass::Type::GeometryEarlyOpaque;
         const SwMaterial::Type materialType = type == SwPass::Type::GeometryMasked ? SwMaterial::Type::Mask : SwMaterial::Type::Opaque;
 
-        staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
-        addCommonDeps(staticDeps);
-        mScene.insertPass(type, std::move(staticDeps), [&, early, materialType](vk::CommandBuffer cmd) {
+        mScene.insertPass(type, [&, early, materialType](vk::CommandBuffer cmd) {
             vk::RenderingAttachmentInfo color = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
             vk::RenderingAttachmentInfo depth = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
             cmd.beginRendering(SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), color, depth));
             drawBatches(mScene, mResources, cmd, mScene.getBatchIt(materialType), early);
             cmd.endRendering();
         });
-        staticDeps.clear();
     }
 
     // Transparent renders into the WBOIT accum/reveal targets instead of the draw image.
-    staticDeps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    staticDeps.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    addCommonDeps(staticDeps);
-    mScene.insertPass(SwPass::Type::GeometryTransparent, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::GeometryTransparent, [&](vk::CommandBuffer cmd) {
         std::array<vk::RenderingAttachmentInfo, 2> colors = {
             mScene.mWBOIT.getResources().mAccumImage.generateRenderingAttachment(),
             mScene.mWBOIT.getResources().mRvlImage.generateRenderingAttachment(),
@@ -115,32 +86,58 @@ void SwGeometry::System::initializePasses() {
         drawBatches(mScene, mResources, cmd, mScene.getBatchIt(SwMaterial::Type::Transparent), false);
         cmd.endRendering();
     });
-    staticDeps.clear();
 }
 
-void SwGeometry::System::refreshDynamicDependencies() {
-    // Each geometry pass reads the per-frame buffer plus its batches' indirect draw list + count.
-    auto setDynamicDeps = [&](SwPass::Type type, auto&& batches, bool early) {
-        SwDependency dynamicDeps;
-        dynamicDeps.mReadBuffers.emplace_back(
+void SwGeometry::System::refreshDependencies() {
+    // Dependencies shared by every geometry pass: depth (read/write), IBL / shadow maps, the per-frame
+    // buffer, and the scene buffers read in the vertex/fragment stages.
+    auto addCommonDeps = [&](SwDependency& d) {
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadow2DMaps) {
+            d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        }
+        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowCubeMaps) {
+            d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        }
+        d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        d.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
+        d.mReadBuffers.emplace_back(
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
         );
-        dynamicDeps.mReadBuffers.emplace_back(
-            &mScene.getLightingSystem().getVisibleLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
-        );
-        for (auto& batch : batches) {
-            auto& itemsBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
-            auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
-            dynamicDeps.mReadBuffers.emplace_back(&itemsBuffer, SwDependency::BufferDepType::IndirectRead);
-            dynamicDeps.mReadBuffers.emplace_back(&countBuffer, SwDependency::BufferDepType::IndirectRead);
-        }
-        mScene.mPasses[type].setDynamicDeps(std::move(dynamicDeps));
+        d.mReadBuffers.emplace_back(&mScene.getLightingSystem().getVisibleLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
     };
 
-    setDynamicDeps(SwPass::Type::GeometryEarlyOpaque, mScene.getBatchIt(SwMaterial::Type::Opaque), true);
-    setDynamicDeps(SwPass::Type::GeometryLateOpaque, mScene.getBatchIt(SwMaterial::Type::Opaque), false);
-    setDynamicDeps(SwPass::Type::GeometryMasked, mScene.getBatchIt(SwMaterial::Type::Mask), false);
-    setDynamicDeps(SwPass::Type::GeometryTransparent, mScene.getBatchIt(SwMaterial::Type::Transparent), false);
+    // Each geometry pass adds its color target then its batches' indirect draw list + count.
+    auto build = [&](SwPass::Type type, SwMaterial::Type materialType, bool early, bool transparent) {
+        SwDependency& d = mScene.mPasses[type].getDeps();
+        d.clear();
+        if (transparent) {
+            d.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+            d.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        } else {
+            d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        }
+        addCommonDeps(d);
+        for (auto& batch : mScene.getBatchIt(materialType)) {
+            auto& itemsBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
+            auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
+            d.mReadBuffers.emplace_back(&itemsBuffer, SwDependency::BufferDepType::IndirectRead);
+            d.mReadBuffers.emplace_back(&countBuffer, SwDependency::BufferDepType::IndirectRead);
+        }
+    };
+
+    build(SwPass::Type::GeometryEarlyOpaque, SwMaterial::Type::Opaque, true, false);
+    build(SwPass::Type::GeometryLateOpaque, SwMaterial::Type::Opaque, false, false);
+    build(SwPass::Type::GeometryMasked, SwMaterial::Type::Mask, false, false);
+    build(SwPass::Type::GeometryTransparent, SwMaterial::Type::Transparent, false, true);
 }
 
 void SwGeometry::System::refreshPushConstants() {

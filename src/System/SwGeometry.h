@@ -40,11 +40,10 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
+    void refreshDependencies() override;
+    void refreshPushConstants() override;
 
 public:
     System(SwScene& scene);
-
-    void refreshDynamicDependencies() override;
-    void refreshPushConstants() override;
 };
 }  // namespace SwGeometry

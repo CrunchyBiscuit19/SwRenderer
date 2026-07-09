@@ -136,7 +136,8 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;  // skybox draw pass; the bakes run as one-shot immediate submits
-    void initializePushConstants() override;
+    void refreshDependencies() override;
+    void refreshPushConstants() override;
 
     // Reconvolve the irradiance + specular-prefilter maps from a freshly-loaded environment equirect.
     // Called whenever the environment changes.
@@ -147,8 +148,6 @@ public:
 
     // Load a new environment equirect, repoint the skybox draw, and rebake the IBL maps.
     void reinitializeOnUpdate(std::optional<std::filesystem::path>);
-
-    void refreshPushConstants() override;
 
     inline void toggleActive() { mActive = !mActive; }
     inline bool isActive() const { return mActive; }

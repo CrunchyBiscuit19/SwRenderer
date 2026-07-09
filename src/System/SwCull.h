@@ -96,7 +96,8 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
-    void initializePushConstants() override;
+    void refreshDependencies() override;
+    void refreshPushConstants() override;
 
     void reInitializeOnResize() override;
 
@@ -105,8 +106,5 @@ public:
 
     inline bool getFreeze() { return mFreeze; }
     inline bool* getFreezePtr() { return &mFreeze; }
-
-    void refreshDynamicDependencies() override;
-    void refreshPushConstants() override;
 };
 };  // namespace SwCull

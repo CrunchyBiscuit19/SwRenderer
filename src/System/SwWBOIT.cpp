@@ -54,13 +54,8 @@ void SwWBOIT::System::initializeResources() {
 }
 
 void SwWBOIT::System::initializePasses() {
-    SwDependency deps;
-
     // WBOIT Composite
-    deps.mReadImages.emplace_back(&mResources.mAccumImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    deps.mReadImages.emplace_back(&mResources.mRvlImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    mScene.insertPass(SwPass::Type::WBOITComposite, std::move(deps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::WBOITComposite, [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo =
             SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), colorAttachment, nullptr);
@@ -81,7 +76,15 @@ void SwWBOIT::System::initializePasses() {
 
         cmd.endRendering();
     });
-    deps.clear();
+}
+
+void SwWBOIT::System::refreshDependencies() {
+    // WBOIT Composite
+    SwDependency& d = mScene.mPasses[SwPass::Type::WBOITComposite].getDeps();
+    d.clear();
+    d.mReadImages.emplace_back(&mResources.mAccumImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+    d.mReadImages.emplace_back(&mResources.mRvlImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
 }
 
 void SwWBOIT::System::reInitializeOnResize() {

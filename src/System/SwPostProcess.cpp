@@ -52,10 +52,7 @@ void SwPostProcess::System::initializeResources() {
 }
 
 void SwPostProcess::System::initializePasses() {
-    SwDependency staticDeps;
-
-    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ComputeStorageReadWrite);
-    mScene.insertPass(SwPass::Type::Tonemap, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::Tonemap, [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mTonemapPipelineBundle.getBindPoint(), mResources.mTonemapPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
@@ -77,10 +74,8 @@ void SwPostProcess::System::initializePasses() {
             1
         );
     });
-    staticDeps.clear();
 
-    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ComputeStorageReadWrite);
-    mScene.insertPass(SwPass::Type::FXAA, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::FXAA, [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mFXAAPipelineBundle.getBindPoint(), mResources.mFXAAPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
@@ -102,7 +97,22 @@ void SwPostProcess::System::initializePasses() {
             1
         );
     });
-    staticDeps.clear();
+}
+
+void SwPostProcess::System::refreshDependencies() {
+    // Tonemap
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::Tonemap].getDeps();
+        d.clear();
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ComputeStorageReadWrite);
+    }
+
+    // FXAA
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::FXAA].getDeps();
+        d.clear();
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ComputeStorageReadWrite);
+    }
 }
 
 void SwPostProcess::System::reInitializeOnResize() {

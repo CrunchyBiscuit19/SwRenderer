@@ -329,11 +329,8 @@ void SwGui::System::initializeResources() {
 }
 
 void SwGui::System::initializePasses() {
-    SwDependency staticDeps;
-
     // Gui
-    staticDeps.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisPublishedCount, SwDependency::BufferDepType::HostRead);
-    mScene.insertPass(SwPass::Type::Gui, std::move(staticDeps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::Gui, [&](vk::CommandBuffer cmd) {
         const vk::RenderingInfo renderInfo = SwPass::generateRenderingInfo(
             SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(),
             SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().generateRenderingAttachment(vk::AttachmentLoadOp::eDontCare),
@@ -343,7 +340,6 @@ void SwGui::System::initializePasses() {
         ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
         cmd.endRendering();
     });
-    staticDeps.clear();
 }
 
 void SwGui::System::refresh() {
@@ -363,17 +359,6 @@ void SwGui::System::refresh() {
     }
 
     ImGui::Render();
-}
-
-void SwGui::System::refreshDynamicDependencies() {
-    SwDependency dynamicDeps;
-
-    // Gui
-    dynamicDeps.mWriteImages.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite
-    );
-    mScene.mPasses[SwPass::Type::Gui].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
 }
 
 void SwGui::System::createDockSpace() {

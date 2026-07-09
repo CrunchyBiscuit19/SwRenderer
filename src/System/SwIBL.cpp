@@ -234,15 +234,7 @@ void SwIBL::System::initializeResources() {
 }
 
 void SwIBL::System::initializePasses() {
-    SwDependency deps;
-
-    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    deps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    deps.mReadImages.emplace_back(&mResources.mSkyboxImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    deps.mReadBuffers.emplace_back(&mResources.mSkyboxVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
-
-    mScene.insertPass(SwPass::Type::IBLSkybox, std::move(deps), [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::IBLSkybox, [&](vk::CommandBuffer cmd) {
         const vk::RenderingAttachmentInfo colorAttachment = SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment();
         const vk::RenderingAttachmentInfo depthAttachment = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
         const vk::RenderingInfo renderInfo =
@@ -265,10 +257,18 @@ void SwIBL::System::initializePasses() {
 
         cmd.endRendering();
     });
-    deps.clear();
 }
 
-void SwIBL::System::initializePushConstants() { mResources.mSkyboxPushConstants.mDrawVertexBuffer = mResources.mSkyboxVertexBuffer.getDeviceAddress().value(); }
+void SwIBL::System::refreshDependencies() {
+    // Skybox
+    SwDependency& d = mScene.mPasses[SwPass::Type::IBLSkybox].getDeps();
+    d.clear();
+    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    d.mReadImages.emplace_back(&mResources.mSkyboxImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+    d.mReadBuffers.emplace_back(&mResources.mSkyboxVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+}
 
 void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler environmentSampler) {
     vk::ImageView environmentView = environment.getMainImageViewHandle();
@@ -426,5 +426,6 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
 }
 
 void SwIBL::System::refreshPushConstants() {
+    mResources.mSkyboxPushConstants.mDrawVertexBuffer = mResources.mSkyboxVertexBuffer.getDeviceAddress().value();
     mResources.mSkyboxPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }

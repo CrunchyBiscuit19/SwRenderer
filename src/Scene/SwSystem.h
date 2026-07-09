@@ -19,15 +19,14 @@ protected:
 
     virtual void initializeResources() = 0;
     virtual void initializePasses() = 0;
-    virtual void initializePushConstants();
+
+    virtual void refreshDependencies();
+    virtual void refreshPushConstants();
 
 public:
     SwSystem(SwScene& scene);
 
     void initialize();
-
-    virtual void refreshDynamicDependencies();
-    virtual void refreshPushConstants();
 
     virtual void refresh();
 };

@@ -53,6 +53,7 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
+    void refreshDependencies() override;
 
     void reInitializeOnResize() override;
 

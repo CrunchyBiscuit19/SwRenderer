@@ -25,7 +25,7 @@ void SwRenderGraph::pruneUnreachablePasses() {
     std::unordered_map<SwImage*, std::vector<SwPass*>> imageWriters;
     std::unordered_map<SwBuffer*, std::vector<SwPass*>> bufferWriters;
     for (auto& p : mPasses) {
-        for (const SwDependency* deps : {&p->getStaticDeps(), &p->getDynamicDeps()}) {
+        for (const SwDependency* deps : {&p->getDeps()}) {
             for (auto& dep : deps->mWriteImages) imageWriters[dep.mImage].emplace_back(p);
             for (auto& dep : deps->mWriteBuffers) bufferWriters[dep.mBuffer].emplace_back(p);
         }
@@ -64,7 +64,7 @@ void SwRenderGraph::pruneUnreachablePasses() {
         work.pop();
 
         // (a) Read-dep backward walk
-        for (const SwDependency* deps : {&p->getStaticDeps(), &p->getDynamicDeps()}) {
+        for (const SwDependency* deps : {&p->getDeps()}) {
             for (auto& dep : deps->mReadImages) {
                 if (auto it = imageWriters.find(dep.mImage); it != imageWriters.end()) {
                     for (SwPass* writer : it->second) visit(writer);
@@ -115,7 +115,7 @@ void SwRenderGraph::sortTopological() {
     std::unordered_map<SwImage*, std::vector<SwPass*>> imageWriters, imageReaders;
     std::unordered_map<SwBuffer*, std::vector<SwPass*>> bufferWriters, bufferReaders;
     for (SwPass* p : mSortedPasses) {
-        for (const SwDependency* deps : {&p->getStaticDeps(), &p->getDynamicDeps()}) {
+        for (const SwDependency* deps : {&p->getDeps()}) {
             for (auto& d : deps->mWriteImages) imageWriters[d.mImage].emplace_back(p);
             for (auto& d : deps->mReadImages) imageReaders[d.mImage].emplace_back(p);
             for (auto& d : deps->mWriteBuffers) bufferWriters[d.mBuffer].emplace_back(p);
@@ -226,7 +226,7 @@ void SwRenderGraph::exportRenderGraph() {
     std::unordered_set<SwImage*> allImages;
     std::unordered_set<SwBuffer*> allBuffers;
     for (auto& p : mPasses) {
-        for (const SwDependency* deps : {&p->getStaticDeps(), &p->getDynamicDeps()}) {
+        for (const SwDependency* deps : {&p->getDeps()}) {
             for (auto& d : deps->mReadImages) allImages.insert(d.mImage);
             for (auto& d : deps->mWriteImages) allImages.insert(d.mImage);
             for (auto& d : deps->mReadBuffers) allBuffers.insert(d.mBuffer);
@@ -289,7 +289,7 @@ void SwRenderGraph::exportRenderGraph() {
 
     std::print(mExportStream.value(), "\n  // Reads and writes\n");
     for (auto& p : mPasses) {
-        for (const SwDependency* deps : {&p->getStaticDeps(), &p->getDynamicDeps()}) {
+        for (const SwDependency* deps : {&p->getDeps()}) {
             for (auto& d : deps->mWriteImages) {
                 std::print(mExportStream.value(), "  {} -> {} [color=\"#d62828\", label=\"W\"];\n", passId(p), imageId(d.mImage));
             }
@@ -339,7 +339,7 @@ void SwRenderGraph::compile() {
 
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
     for (SwPass* pass : mSortedPasses) {
-        for (const SwDependency* deps : {&pass->getStaticDeps(), &pass->getDynamicDeps()}) {
+        for (const SwDependency* deps : {&pass->getDeps()}) {
             for (auto& dep : deps->mReadImages) {
                 dep.mImage->emitTransition(commandBuffer.getHandle(), dep.mDesc.mStage, dep.mDesc.mAccess, dep.mDesc.mLayout);
             }

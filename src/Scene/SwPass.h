@@ -47,23 +47,18 @@ private:
     bool mMustRun{false};
     bool mPruned{false};
 
-    SwDependency mStaticDeps;
-    SwDependency mDynamicDeps;
+    SwDependency mDeps;
 
 public:
     SwPass() = default;
 
-    SwPass(Type passType, SwDependency staticDeps, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
+    SwPass(Type passType, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
 
     Type getPassType() const { return mPassType; }
     bool isPruned() const { return mPruned; }
     bool isMustRun() const { return mMustRun; }
     void setPruned(bool pruned) { mPruned = pruned; }
-    SwDependency& getStaticDeps() { return mStaticDeps; }
-    SwDependency& getDynamicDeps() { return mDynamicDeps; }
-    void setStaticDeps(SwDependency deps) { mStaticDeps = std::move(deps); }
-    void setDynamicDeps(SwDependency deps) { mDynamicDeps = std::move(deps); }
-    void clearDynamicDeps() { mDynamicDeps.clear(); }
+    SwDependency& getDeps() { return mDeps; }
 
     void execute(vk::CommandBuffer cmd);
 

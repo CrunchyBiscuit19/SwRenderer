@@ -16,15 +16,8 @@
 #include <ranges>
 
 void SwScene::initializeMiscPasses() {
-    SwDependency staticDeps;
-
     // Clear Images
-    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    staticDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentWrite);
-    staticDeps.mWriteImages.emplace_back(&mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    staticDeps.mWriteImages.emplace_back(&mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    staticDeps.mWriteImages.emplace_back(&mPick.getResources().mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    mPasses[SwPass::Type::ClearImages] = SwPass(SwPass::Type::ClearImages, staticDeps, [&](vk::CommandBuffer cmd) {
+    mPasses[SwPass::Type::ClearImages] = SwPass(SwPass::Type::ClearImages, [&](vk::CommandBuffer cmd) {
         std::array<vk::RenderingAttachmentInfo, 4> colorAttachments = {
             SwRenderer::sRendererContext.mSwapchain->getDrawImage().generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
             mWBOIT.getResources().mAccumImage.generateRenderingAttachment(vk::AttachmentLoadOp::eClear),
@@ -39,14 +32,11 @@ void SwScene::initializeMiscPasses() {
         cmd.beginRendering(renderInfo);
         cmd.endRendering();
     });
-    staticDeps.clear();
 
     // Copy to Swapchain
-    staticDeps.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
-    mPasses[SwPass::Type::CopyToSwapchain] = SwPass(SwPass::Type::CopyToSwapchain, staticDeps, [&](vk::CommandBuffer cmd) {
+    mPasses[SwPass::Type::CopyToSwapchain] = SwPass(SwPass::Type::CopyToSwapchain, [&](vk::CommandBuffer cmd) {
         SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().copyFrom(cmd, SwRenderer::sRendererContext.mSwapchain->getDrawImage());
     });
-    staticDeps.clear();
 }
 
 void SwScene::initializeResources() {
@@ -127,18 +117,36 @@ void SwScene::initializeResources() {
     mSceneMaterialResourcesDescriptorSet.pushWrites();
 }
 
-void SwScene::refreshDynamicDependencies() {
-    SwDependency dynamicDeps;
+void SwScene::refreshDependencies() {
+    // Clear Images
+    {
+        SwDependency& d = mPasses[SwPass::Type::ClearImages].getDeps();
+        d.clear();
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentWrite);
+        d.mWriteImages.emplace_back(&mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        d.mWriteImages.emplace_back(&mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        d.mWriteImages.emplace_back(&mPick.getResources().mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+    }
 
     // Copy to Swapchain
-    dynamicDeps.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
-    mPasses[SwPass::Type::CopyToSwapchain].setDynamicDeps(std::move(dynamicDeps));
-    dynamicDeps.clear();
+    {
+        SwDependency& d = mPasses[SwPass::Type::CopyToSwapchain].getDeps();
+        d.clear();
+        d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::TransferSrc);
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::TransferDst);
+    }
 
-    mGui.refreshDynamicDependencies();
+    // Gui writes the acquired swapchain image too, so its dependency must be built here, after acquireNextImage().
+    {
+        SwDependency& d = mPasses[SwPass::Type::Gui].getDeps();
+        d.clear();
+        d.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisPublishedCount, SwDependency::BufferDepType::HostRead);
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+    }
 }
 
-void SwScene::refresh() { refreshDynamicDependencies(); }
+void SwScene::refresh() { refreshDependencies(); }
 
 void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getHandle(), SwDependency::ImageDepType::PresentSrc);
@@ -171,8 +179,8 @@ void SwScene::resize() {
     mPostProcess.resize();
 }
 
-void SwScene::insertPass(SwPass::Type type, SwDependency deps, std::function<void(vk::CommandBuffer)> callback, bool mustRun) {
-    mPasses[type] = SwPass(type, std::move(deps), callback, mustRun);
+void SwScene::insertPass(SwPass::Type type, std::function<void(vk::CommandBuffer)> callback, bool mustRun) {
+    mPasses[type] = SwPass(type, callback, mustRun);
 }
 
 std::uint32_t SwScene::registerInstance(std::uint32_t assetId, SwInstance::Data instanceData) {

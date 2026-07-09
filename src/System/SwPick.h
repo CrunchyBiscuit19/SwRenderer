@@ -69,7 +69,8 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
-    void initializePushConstants() override;
+    void refreshDependencies() override;
+    void refreshPushConstants() override;
 
     void reInitializeOnResize() override;
 
@@ -84,8 +85,5 @@ public:
     inline ImGuizmo::OPERATION getImguizmoOperation() { return mImguizmoOperation; }
     inline const std::optional<std::uint32_t>& getSelectedInstanceId() const { return mSelectedInstanceId; }
     inline void clearSelection() { mSelectedInstanceId.reset(); }
-
-    void refreshDynamicDependencies() override;
-    void refreshPushConstants() override;
 };
 }  // namespace SwPick

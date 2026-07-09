@@ -45,7 +45,6 @@ public:
     inline Resources& getResources() { return mResources; }
 
     void refresh() override;
-    void refreshDynamicDependencies() override;
 
     ~System();
 };
