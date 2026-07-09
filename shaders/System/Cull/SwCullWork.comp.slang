@@ -1,5 +1,6 @@
 import System.Cull.SwCull;
 import Data.SwConstants;
+import Data.SwMaterial;
 
 [[vk::binding(0, 0)]]
 public uniform Texture2D<float> depthPyramidImage;
@@ -113,10 +114,10 @@ void markDrawRiIndex(SwBatch::RenderCommand* rc, SwBatch::RenderItem* ri, uint* 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
-    if (risIndex >= workPc.mRisLimit)
+    if (risIndex >= workPc.mSceneRisLimit)
         return;
-    SwBatch::RenderItem* ri = &workPc.mRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &workPc.mRcsBuffer[ri->mRcIndex];
+    SwBatch::RenderItem* ri = &workPc.mSceneRisBuffer[risIndex];
+    SwBatch::RenderCommand* rc = &workPc.mSceneRcsBuffer[ri->mRcIndex];
 
     SwMesh::Bounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     SwNode::Transform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
@@ -153,7 +154,9 @@ void main(SwCull::CSInput in) {
                            (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage));
         workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible;
 
-        bool drawnEarly = workPc.mHasEarlyDraw && workPc.mSceneVisibilityRisReadBuffer[riVisIndex];
+        // Opaque render commands are the only ones drawn by the early geometry pass, so only they emit just the newly-visible delta.
+        bool hasEarlyDraw = rc->mMaterialType == SwMaterial::Type::Opaque;
+        bool drawnEarly = hasEarlyDraw && workPc.mSceneVisibilityRisReadBuffer[riVisIndex];
         if (currVisible && !drawnEarly) {
             markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
             draw = true;
@@ -161,5 +164,5 @@ void main(SwCull::CSInput in) {
     }
     uint _;
     if (draw)
-        InterlockedAdd(*workPc.mRisCount, 1, _);
+        InterlockedAdd(*workPc.mStatsRisCount, 1, _);
 }

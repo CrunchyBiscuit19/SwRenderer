@@ -20,16 +20,16 @@ static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
 enum class Phase { Early, Late };
 
 struct ResetPC : public SwPC<ResetPC> {
-    vk::DeviceAddress mRcsBuffer;
-    std::uint32_t mRcsLimit;
+    vk::DeviceAddress mSceneRcsBuffer;
+    std::uint32_t mSceneRcsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct WorkPC : public SwPC<WorkPC> {
-    vk::DeviceAddress mRcsBuffer;
-    vk::DeviceAddress mRisBuffer;
-    vk::DeviceAddress mRisCount;
+    vk::DeviceAddress mSceneRcsBuffer;
+    vk::DeviceAddress mSceneRisBuffer;
+    vk::DeviceAddress mStatsRisCount;
     vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -37,9 +37,8 @@ struct WorkPC : public SwPC<WorkPC> {
     vk::DeviceAddress mSceneDrawRisIndicesBuffer;
     vk::DeviceAddress mSceneVisibilityRisReadBuffer;
     vk::DeviceAddress mSceneVisibilityRisWriteBuffer;
-    std::uint32_t mRisLimit;
+    std::uint32_t mSceneRisLimit;
     Phase mPhase;
-    vk::Bool32 mHasEarlyDraw;  // late phase: true if this batch was drawn by the early geometry pass (opaque only)
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -106,10 +105,6 @@ public:
 
     inline bool getFreeze() { return mFreeze; }
     inline bool* getFreezePtr() { return &mFreeze; }
-
-    void refreshOtherDynamicDependencies();
-    void refreshEarlyDynamicDependencies();
-    void refreshLateDynamicDependencies();
 
     void refreshDynamicDependencies() override;
     void refreshPushConstants() override;

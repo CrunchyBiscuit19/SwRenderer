@@ -15,6 +15,7 @@ namespace SwBatch {
         public uint mFirstInstance;
         public uint mBoundsIndex;
         public SwMaterial::Type mMaterialType;
+        public uint mBatchIndex;
 
         [mutating]
         public void copyFrom(RenderCommand* src) {
@@ -29,6 +30,7 @@ namespace SwBatch {
             this.mFirstInstance = src.mFirstInstance;
             this.mBoundsIndex = src.mBoundsIndex;
             this.mMaterialType = src.mMaterialType;
+            this.mBatchIndex = src.mBatchIndex;
         }
     };
 

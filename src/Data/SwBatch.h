@@ -18,7 +18,7 @@ struct SwRenderCommand {
     std::uint32_t mFirstInstance;
     std::uint32_t mBoundsIndex;
     SwMaterial::Type mMaterialType;
-    // std::uint32_t mBatchIndex; MAYBE
+    std::uint32_t mBatchIndex;
 };
 
 struct SwRenderItem {
@@ -29,6 +29,7 @@ struct SwRenderItem {
 class SwBatch {
 private:
     std::uint32_t mPipelineId{0};
+    std::uint32_t mBatchIndex{0};
 
     std::size_t mRcsIndex{0};
     std::size_t mRcsSize{0};
@@ -39,7 +40,7 @@ public:
     static std::uint32_t sFirstRiOffset;
 
     SwBatch() = default;
-    SwBatch(std::uint32_t pipelineId, std::size_t rcsOffset, std::size_t rcsSize, std::size_t risOffset, std::size_t risSize);
+    SwBatch(std::uint32_t pipelineId, std::uint32_t batchIndex, std::size_t rcsIndex, std::size_t rcsSize, std::size_t risIndex, std::size_t risSize);
 
     SwBatch(SwBatch&&) noexcept = default;
     SwBatch& operator=(SwBatch&&) noexcept = default;
@@ -49,6 +50,7 @@ public:
 
     inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return SwMaterial::getPipelineBundleById(mPipelineId); }
 
+    inline std::uint32_t getBatchIndex() const { return mBatchIndex; }
     inline std::size_t getRcsIndex() const { return mRcsIndex; }
     inline std::size_t getRcsSize() const { return mRcsSize; }
     inline std::size_t getRisIndex() const { return mRisIndex; }

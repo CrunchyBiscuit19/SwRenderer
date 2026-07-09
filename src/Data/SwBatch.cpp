@@ -6,5 +6,5 @@
 
 std::uint32_t SwBatch::sFirstRiOffset = 0;
 
-SwBatch::SwBatch(std::uint32_t pipelineId, std::size_t rcsOffset, std::size_t rcsSize, std::size_t risOffset, std::size_t risSize)
-    : mPipelineId(pipelineId), mRcsIndex(rcsOffset), mRcsSize(rcsSize), mRisIndex(risOffset), mRisSize(risSize) {}
+SwBatch::SwBatch(std::uint32_t pipelineId, std::uint32_t batchIndex, std::size_t rcsIndex, std::size_t rcsSize, std::size_t risIndex, std::size_t risSize)
+    : mPipelineId(pipelineId), mBatchIndex(batchIndex), mRcsIndex(rcsIndex), mRcsSize(rcsSize), mRisIndex(risIndex), mRisSize(risSize) {}

@@ -392,6 +392,7 @@ void SwScene::regenerateRcsAndRis() {
     });
 
     // Iterate over each batch worth of RCs, to create RIs and place them inside the batch map as new batch.
+    std::uint32_t batchIndex = 0;
     for (std::size_t batchStart = 0; batchStart < mPendingRcs.size();) {
         const SwMaterial::Type materialType = mPendingRcs[batchStart].mRc.mMaterialType;
         const std::uint32_t pipelineId = mPendingRcs[batchStart].mPipelineId;
@@ -406,6 +407,7 @@ void SwScene::regenerateRcsAndRis() {
             const std::uint32_t rcIndex = static_cast<std::uint32_t>(mSceneRcs.size());
             pending.mRc.mFirstRi = SwBatch::sFirstRiOffset;
             pending.mRc.mRiCount = 0;  // Render item count set to 0, incremented inside culling compute shader
+            pending.mRc.mBatchIndex = batchIndex;
             mSceneRcs.emplace_back(pending.mRc);
             for (std::uint32_t i = 0; i < pending.mInstanceCount; i++) {
                 mSceneRis.emplace_back(rcIndex, pending.mRc.mFirstInstance + i);
@@ -413,7 +415,10 @@ void SwScene::regenerateRcsAndRis() {
             SwBatch::sFirstRiOffset += pending.mInstanceCount;
         }
 
-        mBatches[materialType].try_emplace(pipelineId, pipelineId, rcsIndex, mSceneRcs.size() - rcsIndex, risIndex, mSceneRis.size() - risIndex);
+        mBatches[materialType].try_emplace(
+            pipelineId, pipelineId, batchIndex, rcsIndex, mSceneRcs.size() - rcsIndex, risIndex, mSceneRis.size() - risIndex
+        );
+        batchIndex++;
         batchStart = batchEnd;
     }
 

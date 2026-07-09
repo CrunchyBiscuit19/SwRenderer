@@ -8,9 +8,9 @@ SwCull::ResetPC resetPc;
 void main(SwCull::CSInput in) {
     // Get thread ID as index into render command
     uint rcsIndex = in.mDispatchThreadID.x;
-    if (rcsIndex >= resetPc.mRcsLimit)
+    if (rcsIndex >= resetPc.mSceneRcsLimit)
         return;
 
     // Reset render command instance count to zero
-    resetPc.mRcsBuffer[rcsIndex].mRiCount = 0;
+    resetPc.mSceneRcsBuffer[rcsIndex].mRiCount = 0;
 }
