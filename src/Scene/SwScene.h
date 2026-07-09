@@ -17,9 +17,10 @@
 
 #include <algorithm>
 #include <array>
-#include <set>
 #include <concepts>
 #include <ranges>
+#include <set>
+#include <span>
 #include <unordered_set>
 
 class SwScene {
@@ -121,8 +122,9 @@ public:
     static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(SwRenderCommand)};
     static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(std::uint32_t)};
     static constexpr std::size_t SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
-
-    static constexpr std::uint64_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
+    static constexpr std::size_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
+    static constexpr std::size_t SCENE_INITIAL_NUM_BATCHES{1 << 8};
+    static constexpr std::size_t SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(std::uint32_t)};
 
     Flags mFlags;
 
@@ -166,6 +168,14 @@ public:
     inline void toggleSceneVisibilityRisBuffer() { mSceneVisibilityRisBufferReadIndex = 1 - mSceneVisibilityRisBufferReadIndex; }
     inline SwAllocatedBuffer& getSceneVisibilityRisReadBuffer() { return mSceneVisibilityRisBuffers[mSceneVisibilityRisBufferReadIndex]; }
     inline SwAllocatedBuffer& getSceneVisibilityRisWriteBuffer() { return mSceneVisibilityRisBuffers[1 - mSceneVisibilityRisBufferReadIndex]; }
+    inline std::span<SwRenderCommand> getSceneRcs() { return mSceneRcs; }
+    inline std::span<SwRenderItem> getSceneRis() { return mSceneRis; }
+    inline SwAllocatedBuffer& getSceneInitialRcsBuffer() { return mSceneInitialRcsBuffer; }
+    inline SwAllocatedBuffer& getSceneEarlyRcsBuffer() { return mSceneEarlyRcsBuffer; }
+    inline SwAllocatedBuffer& getSceneEarlyRcsCount() { return mSceneEarlyRcsCount; }
+    inline SwAllocatedBuffer& getSceneLateRcsBuffer() { return mSceneLateRcsBuffer; }
+    inline SwAllocatedBuffer& getSceneLateRcsCount() { return mSceneLateRcsCount; }
+    inline SwAllocatedBuffer& getSceneRisBuffer() { return mSceneRisBuffer; }
 
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }

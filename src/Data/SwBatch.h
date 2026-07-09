@@ -18,6 +18,7 @@ struct SwRenderCommand {
     std::uint32_t mFirstInstance;
     std::uint32_t mBoundsIndex;
     SwMaterial::Type mMaterialType;
+    // std::uint32_t mBatchIndex; MAYBE
 };
 
 struct SwRenderItem {
@@ -29,21 +30,10 @@ class SwBatch {
 private:
     std::uint32_t mPipelineId{0};
 
-    std::size_t mRcsOffset{0};
+    std::size_t mRcsIndex{0};
     std::size_t mRcsSize{0};
-    std::size_t mRisOffset{0};
+    std::size_t mRisIndex{0};
     std::size_t mRisSize{0};
-    /*vk::DeviceSize mInitialRcsBufferOffset{0}; // Maybe we won't need this
-    vk::DeviceSize mInitialRcsBufferSize{0};
-    vk::DeviceSize mInitialRcsLimitsBufferOffset{0};
-    vk::DeviceSize mEarlyRcsBufferOffset{0};
-    vk::DeviceSize mEarlyRcsBufferSize{0};
-    vk::DeviceSize mEarlyRcsCountOffset{0};
-    vk::DeviceSize mLateRcsBufferOffset{0};
-    vk::DeviceSize mLateRcsBufferSize{0};
-    vk::DeviceSize mLateRcsCountOffset{0};
-    vk::DeviceSize mRisLimitsBufferOffset{0};
-    vk::DeviceSize mMaterialTypesBufferOffset{0};*/
 
 public:
     static std::uint32_t sFirstRiOffset;
@@ -58,4 +48,9 @@ public:
     SwBatch& operator=(const SwBatch&) = delete;
 
     inline SwGraphicsPipelineBundle& getGraphicsPipelineBundle() { return SwMaterial::getPipelineBundleById(mPipelineId); }
+
+    inline std::size_t getRcsIndex() const { return mRcsIndex; }
+    inline std::size_t getRcsSize() const { return mRcsSize; }
+    inline std::size_t getRisIndex() const { return mRisIndex; }
+    inline std::size_t getRisSize() const { return mRisSize; }
 };

@@ -74,21 +74,42 @@ void SwScene::initializeResources() {
         );
     }
     mSceneInitialRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneInitialRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, 69, true
+        "SceneInitialRcsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
+        true
     );
     mSceneEarlyRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneEarlyRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, 69, true
+        "SceneEarlyRcsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
+        true
     );
     mSceneEarlyRcsCount = SwBufferFactory::createAllocatedBuffer(
-        "SceneEarlyRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, 69, true
+        "SceneEarlyRcsCount",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE,
+        true
     );
     mSceneLateRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneLateRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, 69, true
+        "SceneLateRcsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
+        true
     );
     mSceneLateRcsCount = SwBufferFactory::createAllocatedBuffer(
-        "SceneLateRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, 69, true
+        "SceneLateRcsCount",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE,
+        true
     );
-    mSceneRisBuffer = SwBufferFactory::createAllocatedBuffer("SceneRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, 69, true);
+    mSceneRisBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true);
 
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "SceneMaterialResourcesDescriptorSet", SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
@@ -375,8 +396,8 @@ void SwScene::regenerateRcsAndRis() {
         const SwMaterial::Type materialType = mPendingRcs[batchStart].mRc.mMaterialType;
         const std::uint32_t pipelineId = mPendingRcs[batchStart].mPipelineId;
 
-        const std::size_t rcsOffset = mSceneRcs.size();
-        const std::size_t risOffset = mSceneRis.size();
+        const std::size_t rcsIndex = mSceneRcs.size();
+        const std::size_t risIndex = mSceneRis.size();
 
         std::size_t batchEnd = batchStart;
         for (; batchEnd < mPendingRcs.size() && mPendingRcs[batchEnd].mRc.mMaterialType == materialType && mPendingRcs[batchEnd].mPipelineId == pipelineId;
@@ -392,7 +413,7 @@ void SwScene::regenerateRcsAndRis() {
             SwBatch::sFirstRiOffset += pending.mInstanceCount;
         }
 
-        mBatches[materialType].try_emplace(pipelineId, pipelineId, rcsOffset, mSceneRcs.size() - rcsOffset, risOffset, mSceneRis.size() - risOffset);
+        mBatches[materialType].try_emplace(pipelineId, pipelineId, rcsIndex, mSceneRcs.size() - rcsIndex, risIndex, mSceneRis.size() - risIndex);
         batchStart = batchEnd;
     }
 

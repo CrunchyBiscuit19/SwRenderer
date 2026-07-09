@@ -241,8 +241,8 @@ void SwLighting::System::initializePasses() {
 void SwLighting::System::regenerateShadowRcs() {
     mResources.mInitialShadowDrawRcs.clear();
     for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask)) {
-        const std::vector<SwRenderCommand>& rcs = batch.getRcs();
-        mResources.mInitialShadowDrawRcs.insert(mResources.mInitialShadowDrawRcs.end(), rcs.begin(), rcs.end());
+        //const std::vector<SwRenderCommand>& rcs = batch.getRcs();
+        //mResources.mInitialShadowDrawRcs.insert(mResources.mInitialShadowDrawRcs.end(), rcs.begin(), rcs.end());
     }
 
     vk::BufferCopy rcsCopy{};
