@@ -144,7 +144,6 @@ void SwCull::System::initializeLatePasses() {
         cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
 
         cmd.dispatch(SwHelper::fastDivCeil(mResources.mTestPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-        // hasEarlyDraw depends on the material type now
     });
 
     // LateCompact
@@ -271,17 +270,19 @@ void SwCull::System::refreshDependencies() {
         SwDependency& d = mScene.mPasses[SwPass::Type::CullEarlyTest].getDeps();
         d.clear();
         d.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mReadBuffers.emplace_back(&mScene.getSceneRisBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneBatchesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
         );
+        d.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mWriteBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
 
@@ -289,6 +290,7 @@ void SwCull::System::refreshDependencies() {
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::CullEarlyCompact].getDeps();
         d.clear();
+        d.mReadBuffers.emplace_back(&mScene.getSceneBatchesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mScene.getSceneEarlyRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneEarlyRcsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
@@ -315,14 +317,16 @@ void SwCull::System::refreshDependencies() {
         SwDependency& d = mScene.mPasses[SwPass::Type::CullLateTest].getDeps();
         d.clear();
         d.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mReadBuffers.emplace_back(&mScene.getSceneRisBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneBatchesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
         );
+        d.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
@@ -333,6 +337,7 @@ void SwCull::System::refreshDependencies() {
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::CullLateCompact].getDeps();
         d.clear();
+        d.mReadBuffers.emplace_back(&mScene.getSceneBatchesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mScene.getSceneLateRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneLateRcsCount(), SwDependency::BufferDepType::ComputeStorageWrite);
@@ -345,6 +350,7 @@ void SwCull::System::refreshPushConstants() {
 
     mResources.mTestPushConstants.mSceneRcsBuffer = mScene.getSceneInitialRcsBuffer().getDeviceAddress().value();
     mResources.mTestPushConstants.mSceneRisBuffer = mScene.getSceneRisBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneBatchesBuffer = mScene.getSceneBatchesBuffer().getDeviceAddress().value();
     mResources.mTestPushConstants.mSceneRisCount = SwRenderer::sRendererContext.mStats->mRisScratchCount.getDeviceAddress().value();
     mResources.mTestPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mTestPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();

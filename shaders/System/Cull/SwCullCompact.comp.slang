@@ -6,7 +6,6 @@ SwCull::CompactPC compactPc;
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
-    // Get thread ID as index into render command
     uint rcsIndex = in.mDispatchThreadID.x;
     if (rcsIndex >= compactPc.mPreRcsLimit)
         return;
@@ -17,7 +16,14 @@ void main(SwCull::CSInput in) {
     if (rc->mRiCount == 0)
         return;
 
-    uint writeRcsIndex;
-    InterlockedAdd(*compactPc.mPostRcsCount, 1, writeRcsIndex);
+    // Current batch's first rcs slot in the scene wide pre-rcs buffer
+    uint currentBatchStartRcsIndex = compactPc.mSceneBatchesBuffer[rc->mBatchIndex].mRcsIndex;
+    
+    // Current batch's rcs count, incremented for next thread. 
+    uint currentBatchCurrentRcsCount;
+    InterlockedAdd(compactPc.mPostRcsCount[rc->mBatchIndex], 1, currentBatchCurrentRcsCount);
+    
+    // Current rcs's index in the scene wide post-rcs buffer
+    uint writeRcsIndex = currentBatchStartRcsIndex + currentBatchCurrentRcsCount;
     compactPc.mPostRcsBuffer[writeRcsIndex].copyFrom(rc);
 }

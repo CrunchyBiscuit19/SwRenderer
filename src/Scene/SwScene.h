@@ -59,6 +59,7 @@ private:
     std::unordered_map<SwLight::Type, std::uint32_t> mStandaloneLightAssetIds;
 
     std::unordered_map<SwMaterial::Type, std::unordered_map<std::uint32_t, SwBatch>> mBatches;
+    std::unordered_map<SwBatchKey, std::uint32_t> mBatchIndicesKeys;
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
 
@@ -85,6 +86,7 @@ private:
     SwAllocatedBuffer mSceneLightsBuffer;
     struct PendingRenderCommand {
         SwRenderCommand mRc;
+        SwMaterial::Type mMaterialType;
         std::uint32_t mPipelineId;
         std::uint32_t mInstanceCount;
     };
@@ -202,6 +204,7 @@ public:
 
     void recordPendingDraw(SwMaterial& material, const SwRenderCommand& rc, std::uint32_t instanceCount);
     void regenerateRcsAndRis();
+    void reloadSceneRcsAndRisBuffers();
     void reloadSceneBatchesBuffer();
 
     void realignVertexIndexOffset();

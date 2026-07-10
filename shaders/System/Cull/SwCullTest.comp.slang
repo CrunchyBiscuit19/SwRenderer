@@ -9,7 +9,7 @@ public uniform Texture2D<float> depthPyramidImage;
 public uniform SamplerState minSampler;
 
 [[vk::push_constant]]
-SwCull::CullPC testPc;
+SwCull::TestPC testPc;
 
 void transformCornersToWorld(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwInstance::Data* currInstance, SwNode::Transform* nodeTransform) {
     for (uint j = 0; j < SwMesh::NUM_AABB_CORNERS; j++) {
@@ -153,9 +153,8 @@ void main(SwCull::CSInput in) {
         bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&
                            (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage));
         testPc.mSceneRisVisibilityWriteBuffer[riVisIndex] = currVisible;
-
         // Opaque render commands are the only ones drawn by the early geometry pass, so only they emit just the newly-visible delta.
-        bool hasEarlyDraw = rc->mMaterialType == SwMaterial::Type::Opaque;
+        bool hasEarlyDraw = testPc.mSceneBatchesBuffer[rc->mBatchIndex].mMaterialType == SwMaterial::Type::Opaque;
         bool drawnEarly = hasEarlyDraw && testPc.mSceneRisVisibilityReadBuffer[riVisIndex];
         if (currVisible && !drawnEarly) {
             markRiIndex(rc, ri, testPc.mSceneRisIndicesBuffer);

@@ -44,7 +44,6 @@ void SwMeshNode::generateRcsAndRis(SwAsset& asset) {
             asset.getId(),
             asset.mFirstInstanceInScene,
             asset.mFirstBoundInScene + mesh.mRelativeFirstBounds,
-            material.getType()
         };
 
         SwRenderer::sRendererContext.mScene->recordPendingDraw(material, rc, static_cast<std::uint32_t>(asset.getInstanceIds().size()));

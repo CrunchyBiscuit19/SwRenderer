@@ -19,9 +19,10 @@ namespace SwCull {
 
     public enum Phase { Early, Late };
 
-    public struct CullPC {
+    public struct TestPC {
         public SwBatch::RenderCommand* mSceneRcsBuffer;
         public SwBatch::RenderItem* mSceneRisBuffer;
+        public SwBatch::Batch::Data* mSceneBatchesBuffer;
         public uint* mSceneRisCount;
         public SwFrame::Data* mFrameBuffer;
         public SwMesh::Bounds* mSceneBoundsBuffer;
@@ -35,6 +36,7 @@ namespace SwCull {
     };
 
     public struct CompactPC {
+        public SwBatch::Batch::Data* mSceneBatchesBuffer;
         public SwBatch::RenderCommand* mPreRcsBuffer;
         public SwBatch::RenderCommand* mPostRcsBuffer;
         public uint* mPostRcsCount;

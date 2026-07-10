@@ -14,7 +14,7 @@ namespace SwBatch {
         public uint mModelIndex;
         public uint mFirstInstance;
         public uint mBoundsIndex;
-        public SwMaterial::Type mMaterialType;
+
         public uint mBatchIndex;
 
         [mutating]
@@ -29,7 +29,6 @@ namespace SwBatch {
             this.mModelIndex = src.mModelIndex;
             this.mFirstInstance = src.mFirstInstance;
             this.mBoundsIndex = src.mBoundsIndex;
-            this.mMaterialType = src.mMaterialType;
             this.mBatchIndex = src.mBatchIndex;
         }
     };
@@ -43,5 +42,15 @@ namespace SwBatch {
             this.mRcIndex = src.mRcIndex;
             this.mSceneInstanceIndex = src.mSceneInstanceIndex;
         }
+    }
+
+    public struct Batch {
+        public struct Data {
+            public SwMaterial::Type mMaterialType;
+            public uint mRcsIndex;
+            public uint mRcsSize;
+            public uint mRisIndex;
+            public uint mRisSize;
+        };
     }
 }

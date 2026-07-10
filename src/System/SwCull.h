@@ -29,6 +29,7 @@ struct ResetPC : public SwPC<ResetPC> {
 struct TestPC : public SwPC<TestPC> {
     vk::DeviceAddress mSceneRcsBuffer;
     vk::DeviceAddress mSceneRisBuffer;
+    vk::DeviceAddress mSceneBatchesBuffer;
     vk::DeviceAddress mSceneRisCount;
     vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;

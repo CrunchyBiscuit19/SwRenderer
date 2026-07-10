@@ -218,12 +218,14 @@ void SwPick::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
         d.mReadBuffers.emplace_back(
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
         );
+        d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneEarlyRcsCount(), SwDependency::BufferDepType::IndirectRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneLateRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneLateRcsCount(), SwDependency::BufferDepType::IndirectRead);
     }
 
     // Pick Readback
