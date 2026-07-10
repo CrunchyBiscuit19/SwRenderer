@@ -37,6 +37,13 @@ private:
     std::size_t mRisSize{0};
 
 public:
+    struct Data {
+        std::uint32_t mRcsIndex{0};
+        std::uint32_t mRcsSize{0};
+        std::uint32_t mRisIndex{0};
+        std::uint32_t mRisSize{0};
+    };
+
     static std::uint32_t sFirstRiOffset;
 
     SwBatch() = default;
@@ -55,4 +62,6 @@ public:
     inline std::size_t getRcsSize() const { return mRcsSize; }
     inline std::size_t getRisIndex() const { return mRisIndex; }
     inline std::size_t getRisSize() const { return mRisSize; }
+
+    Data toData();
 };

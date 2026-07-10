@@ -1,3 +1,4 @@
+
 #pragma once
 
 #include <Data/SwAsset.h>
@@ -96,6 +97,7 @@ private:
     SwAllocatedBuffer mSceneLateRcsBuffer;
     SwAllocatedBuffer mSceneLateRcsCount;
     SwAllocatedBuffer mSceneRisBuffer;
+    SwAllocatedBuffer mSceneBatchesBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -125,6 +127,7 @@ public:
     static constexpr std::size_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
     static constexpr std::size_t SCENE_INITIAL_NUM_BATCHES{1 << 8};
     static constexpr std::size_t SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(std::uint32_t)};
+    static constexpr std::size_t SCENE_INITIAL_BATCHES_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(SwBatch::Data)};
 
     Flags mFlags;
 
@@ -174,6 +177,7 @@ public:
     inline SwAllocatedBuffer& getSceneLateRcsBuffer() { return mSceneLateRcsBuffer; }
     inline SwAllocatedBuffer& getSceneLateRcsCount() { return mSceneLateRcsCount; }
     inline SwAllocatedBuffer& getSceneRisBuffer() { return mSceneRisBuffer; }
+    inline SwAllocatedBuffer& getSceneBatchesBuffer() { return mSceneBatchesBuffer; }
 
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
@@ -198,6 +202,7 @@ public:
 
     void recordPendingDraw(SwMaterial& material, const SwRenderCommand& rc, std::uint32_t instanceCount);
     void regenerateRcsAndRis();
+    void reloadSceneBatchesBuffer();
 
     void realignVertexIndexOffset();
     void realignMaterialOffset();

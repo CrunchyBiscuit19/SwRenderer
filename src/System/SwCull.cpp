@@ -355,6 +355,7 @@ void SwCull::System::refreshPushConstants() {
     mResources.mTestPushConstants.mSceneRisVisibilityWriteBuffer = mScene.getSceneVisibilityRisWriteBuffer().getDeviceAddress().value();
     mResources.mTestPushConstants.mSceneRisLimit = static_cast<std::uint32_t>(mScene.getSceneRis().size());
 
+    mResources.mCompactPushConstants.mSceneBatchesBuffer = mScene.getSceneBatchesBuffer().getDeviceAddress().value();
     mResources.mCompactPushConstants.mPreRcsBuffer = mScene.getSceneInitialRcsBuffer().getDeviceAddress().value();
     mResources.mCompactPushConstants.mPreRcsLimit = static_cast<std::uint32_t>(mScene.getSceneRcs().size());
 }

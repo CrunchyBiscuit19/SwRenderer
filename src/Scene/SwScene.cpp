@@ -100,6 +100,8 @@ void SwScene::initializeResources() {
     );
     mSceneRisBuffer =
         SwBufferFactory::createAllocatedBuffer("SceneRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true);
+    mSceneBatchesBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneBatchesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_BATCHES_BUFFER_SIZE, true);
 
     mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "SceneMaterialResourcesDescriptorSet", SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
@@ -157,7 +159,7 @@ void SwScene::initialize() {
     mPick.initialize();
     mIBL.initialize();
     mWBOIT.initialize();
-    //mLighting.initialize();
+    // mLighting.initialize();
     mGeometry.initialize();
     mPostProcess.initialize();
 
@@ -171,9 +173,7 @@ void SwScene::resize() {
     mPostProcess.resize();
 }
 
-void SwScene::insertPass(SwPass::Type type, std::function<void(vk::CommandBuffer)> callback, bool mustRun) {
-    mPasses[type] = SwPass(type, callback, mustRun);
-}
+void SwScene::insertPass(SwPass::Type type, std::function<void(vk::CommandBuffer)> callback, bool mustRun) { mPasses[type] = SwPass(type, callback, mustRun); }
 
 std::uint32_t SwScene::registerInstance(std::uint32_t assetId, SwInstance::Data instanceData) {
     SwInstance instance(assetId, instanceData);
@@ -415,9 +415,7 @@ void SwScene::regenerateRcsAndRis() {
             SwBatch::sFirstRiOffset += pending.mInstanceCount;
         }
 
-        mBatches[materialType].try_emplace(
-            pipelineId, pipelineId, batchIndex, rcsIndex, mSceneRcs.size() - rcsIndex, risIndex, mSceneRis.size() - risIndex
-        );
+        mBatches[materialType].try_emplace(pipelineId, pipelineId, batchIndex, rcsIndex, mSceneRcs.size() - rcsIndex, risIndex, mSceneRis.size() - risIndex);
         batchIndex++;
         batchStart = batchEnd;
     }
@@ -446,7 +444,30 @@ void SwScene::regenerateRcsAndRis() {
         });
     }
 
-    //mLighting.regenerateShadowRcs();
+    // mLighting.regenerateShadowRcs();
+}
+
+void SwScene::reloadSceneBatchesBuffer() { 
+    std::vector<SwBatch::Data> batchData;
+    std::size_t size = 0;
+    for (auto& batch: getBatchIt({SwMaterial::Type::Opaque, SwMaterial::Type::Transparent, SwMaterial::Type::Mask})) {
+        size++;
+    }
+    batchData.reserve(size);
+
+    for (auto& batch : getBatchIt({SwMaterial::Type::Opaque, SwMaterial::Type::Transparent, SwMaterial::Type::Mask})) {
+        batchData.emplace_back(batch.toData());
+    }
+
+    vk::BufferCopy batchCopy{};
+    batchCopy.dstOffset = 0;
+    batchCopy.srcOffset = 0;
+    batchCopy.size = batchData.size() * sizeof(SwLight::Data);
+
+    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, batchData = std::move(batchData), batchCopy](vk::CommandBuffer cmd) {
+        if (batchCopy.size == 0) return;
+        SwRenderer::sRendererContext.mStagingRing->upload(cmd, mSceneBatchesBuffer, batchData.data(), batchCopy.size);
+    });
 }
 
 void SwScene::realignVertexIndexOffset() {
@@ -721,14 +742,22 @@ void SwScene::perFrameUpdate() {
 
     if (mFlags.mAssetLoaded || mFlags.mAssetUnloaded) {
         realignOffsets();
-        reloadSceneBuffers();
+        reloadSceneVertexBuffer();
+        reloadSceneIndexBuffer();
+        reloadSceneMaterialConstantsBuffer();
+        reloadSceneInstancesBuffer();
+        reloadSceneNodeTransformsBuffer();
+        reloadSceneBoundsBuffer();
+        reloadSceneMaterialResourcesArray();
         regenerateRcsAndRis();
+        reloadSceneBatchesBuffer();
         refreshLightIndices();
         reloadSceneLightsBuffer();
     } else if (mFlags.mInstanceLoaded || mFlags.mInstanceUnloaded) {
         realignInstancesOffset();
         reloadSceneInstancesBuffer();
         regenerateRcsAndRis();
+        reloadSceneBatchesBuffer();
         refreshLightIndices();
         reloadSceneLightsBuffer();
     } else if (mFlags.mReloadMainInstancesBuffer || mFlags.mLightEdited) {
@@ -751,7 +780,7 @@ void SwScene::perFrameUpdate() {
     toggleSceneVisibilityRisBuffer();
 
     mCull.refresh();
-    //mLighting.refresh();
+    // mLighting.refresh();
     mPick.refresh();
     mIBL.refresh();
     mWBOIT.refresh();

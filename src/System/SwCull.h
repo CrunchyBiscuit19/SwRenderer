@@ -44,6 +44,7 @@ struct TestPC : public SwPC<TestPC> {
 };
 
 struct CompactPC : SwPC<CompactPC> {
+    vk::DeviceAddress mSceneBatchesBuffer;
     vk::DeviceAddress mPreRcsBuffer;
     vk::DeviceAddress mPostRcsBuffer;
     vk::DeviceAddress mPostRcsCount;
