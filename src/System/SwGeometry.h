@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Data/SwMaterial.h>
 #include <Resource/SwPushConstant.h>
 #include <Scene/SwSystem.h>
 
@@ -13,13 +14,13 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneDrawRisIndicesBuffer;
-    vk::DeviceAddress mDrawRcsBuffer;
+    vk::DeviceAddress mSceneRisIndicesBuffer;
+    vk::DeviceAddress mSceneRcsBuffer;
     vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mVisibleLightsBuffer;
-    float mMaxPrefilterMip;        // highest mip index of the SwIBL specular prefilter chain
-    float mIblIntensity;           // scales the image-based ambient term (GUI-controlled)
+    float mMaxPrefilterMip;        // Highest mip index of the SwIBL specular prefilter chain
+    float mIblIntensity;           // Scales the image-based ambient term (GUI-controlled)
     std::uint32_t mIblComponents;  // IBL diffuse / specular bit mask (GUI-controlled)
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
@@ -37,6 +38,8 @@ struct Resources {
 class System : public SwSystem {
 private:
     Resources mResources;
+
+    void drawBatches(vk::CommandBuffer cmd, std::array<std::optional<SwMaterial::Type>, SwMaterial::NUM_TYPES> matTypes, bool early);
 
     void initializeResources() override;
     void initializePasses() override;

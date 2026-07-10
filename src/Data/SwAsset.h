@@ -40,6 +40,9 @@ private:
     SwAllocatedBuffer mVertexBuffer;
     SwAllocatedBuffer mIndexBuffer;
 
+    std::uint32_t mNumBounds;
+    SwAllocatedBuffer mBoundsBuffer;
+
     std::vector<SwLight> mLights;
 
     static std::unordered_map<SwSamplerOptions, SwSampler> sSamplers;
@@ -57,9 +60,6 @@ private:
 
     std::vector<std::uint32_t> mInstanceIds;
     SwAllocatedBuffer mInstancesBuffer;
-
-    std::uint32_t mNumBounds;
-    SwAllocatedBuffer mBoundsBuffer;
 
     static vk::Filter extractFilter(fastgltf::Filter filter);
     static vk::SamplerMipmapMode extractMipmapMode(fastgltf::Filter filter);

@@ -15,7 +15,7 @@ namespace SwPick {
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public uint* mSceneDrawRisIndicesBuffer;
-        public SwBatch::RenderCommand *mDrawRcsBuffer;
+        public SwBatch::RenderCommand *mSceneDrawRcsBuffer;
         public SwFrame::Data *mFrameBuffer;
     };
 

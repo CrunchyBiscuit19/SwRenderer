@@ -3,6 +3,7 @@
 #include <Data/SwAsset.h>
 #include <Data/SwBatch.h>
 #include <Data/SwCamera.h>
+#include <Data/SwMaterial.h>
 #include <Resource/SwDescriptor.h>
 #include <Scene/SwPass.h>
 #include <Scene/SwRenderGraph.h>
@@ -17,7 +18,6 @@
 
 #include <algorithm>
 #include <array>
-#include <concepts>
 #include <ranges>
 #include <set>
 #include <span>
@@ -137,9 +137,7 @@ public:
 
     void insertPass(SwPass::Type type, std::function<void(vk::CommandBuffer)> callback, bool mustRun = false);
 
-    template <std::same_as<SwMaterial::Type>... Types>
-    auto getBatchIt(Types... types) {
-        std::array<SwMaterial::Type, sizeof...(Types)> requested{types...};
+    auto getBatchIt(const std::array<std::optional<SwMaterial::Type>, SwMaterial::NUM_TYPES>& requested) {
         return mBatches | std::views::filter([requested](const auto& pair) { return std::ranges::find(requested, pair.first) != requested.end(); }) |
                std::views::values | std::views::join | std::views::values;
     }

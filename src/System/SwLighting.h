@@ -18,6 +18,8 @@
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_enums.hpp>
 
+// TODO This entire fucking system needs a rework
+
 class SwInstance;
 
 namespace SwLighting {

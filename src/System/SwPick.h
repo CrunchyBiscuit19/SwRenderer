@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Data/SwInstance.h>
+#include <Data/SwMaterial.h>
 #include <ImGuizmo.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwDescriptor.h>
@@ -28,8 +29,8 @@ struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneDrawRisIndicesBuffer;
-    vk::DeviceAddress mDrawRcsBuffer;
+    vk::DeviceAddress mSceneRisIndicesBuffer;
+    vk::DeviceAddress mSceneRcsBuffer;
     vk::DeviceAddress mFrameBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
@@ -66,6 +67,10 @@ private:
 
     ImGuizmo::OPERATION mImguizmoOperation{ImGuizmo::TRANSLATE};
     std::optional<std::uint32_t> mSelectedInstanceId;
+
+    void drawBatches(
+        vk::CommandBuffer cmd, std::array<std::optional<SwMaterial::Type>, SwMaterial::NUM_TYPES> matTypes, SwGraphicsPipelineBundle& pipeline, bool early
+    );
 
     void initializeResources() override;
     void initializePasses() override;

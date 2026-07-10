@@ -119,7 +119,7 @@ private:
 
 public:
     enum class Type { Opaque, Mask, Transparent };
-
+    static constexpr std::uint32_t NUM_TYPES{3};
     static constexpr std::uint32_t NUM_PBR_IMAGES{5};
 
     std::uint32_t mRelativeMaterialIndex;

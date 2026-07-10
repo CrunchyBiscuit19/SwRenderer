@@ -11,9 +11,8 @@
 #include <System/SwIBL.h>
 #include <System/SwLighting.h>
 #include <format>
-#include <quill/LogMacros.h>
-
 #include <magic_enum.hpp>
+#include <quill/LogMacros.h>
 
 SwMaterialTexture SwMaterialTexture::sDefaultWhiteTexture{nullptr, nullptr};
 SwMaterialTexture SwMaterialTexture::sDefaultErrorTexture{nullptr, nullptr};

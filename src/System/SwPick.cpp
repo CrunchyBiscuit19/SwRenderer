@@ -10,6 +10,31 @@
 
 SwPick::System::System(SwScene& scene) : SwSystem(scene) {}
 
+void SwPick::System::drawBatches(
+    vk::CommandBuffer cmd, std::array<std::optional<SwMaterial::Type>, SwMaterial::NUM_TYPES> matTypes,
+    SwGraphicsPipelineBundle& pipeline, bool early
+) {
+    SwAllocatedBuffer& rcsBuffer = early ? mScene.getSceneEarlyRcsBuffer() : mScene.getSceneLateRcsBuffer();
+    SwAllocatedBuffer& rcsCount = early ? mScene.getSceneEarlyRcsCount() : mScene.getSceneLateRcsCount();
+    cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+
+    mResources.mDrawPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value();
+    cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+
+    for (auto& batch : mScene.getBatchIt(matTypes)) {
+        if (batch.getRcsSize() == 0) continue;
+
+        cmd.drawIndexedIndirectCount(
+            rcsBuffer.getHandle(),
+            batch.getRcsIndex() * sizeof(SwRenderCommand),
+            rcsCount.getHandle(),
+            batch.getBatchIndex() * sizeof(std::uint32_t),
+            static_cast<std::uint32_t>(batch.getRcsSize()),
+            sizeof(SwRenderCommand)
+        );
+    }
+}
+
 void SwPick::System::initializeResources() {
     mResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
         "PickReadbackBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(SwPick::ReadbackData), true
@@ -91,38 +116,16 @@ void SwPick::System::initializePasses() {
 
         cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
         cmd.bindDescriptorSets(
-            mResources.mDrawOpaqueTransparentPipelineBundle.getBindPoint(),  // Same across opaque / transparent / masked
+            mResources.mDrawOpaqueTransparentPipelineBundle.getBindPoint(),
             mResources.mDrawPipelineLayout.getHandle(),
             0,
             mScene.getSceneMaterialResourcesDescriptorSet().getHandle(),
             nullptr
         );
 
-        // Draw only the culled commands, mirroring what the geometry pass put in the shared depth image.
-        // Opaque / transparent share one pipeline, while masked uses the discard one.
-        auto drawBatches = [&](auto&& batches, SwGraphicsPipelineBundle& pipeline, bool early) {
-            cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
-
-            for (auto& batch : batches) {
-                if (batch.getRcs().empty()) {
-                    continue;
-                }
-
-                auto& rcBuffer = early ? batch.getEarlyRcsBuffer() : batch.getFinalRcsBuffer();
-                auto& countBuffer = early ? batch.getEarlyRcsCount() : batch.getFinalRcsCount();
-
-                mResources.mDrawPushConstants.mDrawRcsBuffer = rcBuffer.getDeviceAddress().value();
-                cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
-
-                cmd.drawIndexedIndirectCount(
-                    rcBuffer.getHandle(), 0, countBuffer.getHandle(), 0, static_cast<std::uint32_t>(batch.getRcs().size()), sizeof(SwRenderCommand)
-                );
-            }
-        };
-
-        drawBatches(mScene.getBatchIt(SwMaterial::Type::Opaque), mResources.mDrawOpaqueTransparentPipelineBundle, true);
-        drawBatches(mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Transparent), mResources.mDrawOpaqueTransparentPipelineBundle, false);
-        drawBatches(mScene.getBatchIt(SwMaterial::Type::Mask), mResources.mDrawMaskedPipelineBundle, false);
+        drawBatches(cmd, {SwMaterial::Type::Opaque}, mResources.mDrawOpaqueTransparentPipelineBundle, true);
+        drawBatches(cmd, {SwMaterial::Type::Opaque, SwMaterial::Type::Transparent}, mResources.mDrawOpaqueTransparentPipelineBundle, false);
+        drawBatches(cmd, {SwMaterial::Type::Mask}, mResources.mDrawMaskedPipelineBundle, false);
 
         cmd.endRendering();
     });
@@ -216,13 +219,11 @@ void SwPick::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-        d.mReadBuffers.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque)) {
-            d.mReadBuffers.emplace_back(&batch.getEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
-        for (auto& batch : mScene.getBatchIt(SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent)) {
-            d.mReadBuffers.emplace_back(&batch.getFinalRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
-        }
+        d.mReadBuffers.emplace_back(
+            &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
+        );
+        d.mReadBuffers.emplace_back(&mScene.getSceneEarlyRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneLateRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
     }
 
     // Pick Readback
@@ -243,11 +244,12 @@ void SwPick::System::refreshDependencies() {
 
 void SwPick::System::refreshPushConstants() {
     mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
+
     mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }
 
