@@ -8,15 +8,15 @@
 SwWBOIT::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwWBOIT::System::initializeResources() {
-    mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "WBOITWorkDescriptorSetLayout",
+    mResources.mCompositeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "WBOITCompositeDescriptorSetLayout",
         {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampledImage, 1}},
         vk::ShaderStageFlagBits::eFragment
     );
-    mResources.mWorkDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("WBOITWorkDescriptorSet", mResources.mWorkDescriptorLayout);
+    mResources.mCompositeDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("WBOITCompositeDescriptorSet", mResources.mCompositeDescriptorLayout);
 
-    mResources.mWorkPipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITWorkPipelineLayout", mResources.mWorkDescriptorLayout.getHandle(), nullptr);
+    mResources.mCompositePipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITCompositePipelineLayout", mResources.mCompositeDescriptorLayout.getHandle(), nullptr);
 
     SwShader wboitVertexShader = SwShaderFactory::createShader("WBOITVertexShaderModule", WBOIT_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader wboitFragmentShader = SwShaderFactory::createShader("WBOITFragmentShaderModule", WBOIT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -35,7 +35,7 @@ void SwWBOIT::System::initializeResources() {
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions wboitPipelineOptions;
     wboitPipelineOptions.mVertexShader = wboitVertexShader.getHandle();
     wboitPipelineOptions.mFragmentShader = wboitFragmentShader.getHandle();
-    wboitPipelineOptions.mLayout = mResources.mWorkPipelineLayout.getHandle();
+    wboitPipelineOptions.mLayout = mResources.mCompositePipelineLayout.getHandle();
     wboitPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     wboitPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     wboitPipelineOptions.mCullMode = vk::CullModeFlagBits::eNone;
@@ -48,7 +48,7 @@ void SwWBOIT::System::initializeResources() {
     wboitPipelineOptions.mDepthTestEnabled = false;
     wboitPipelineOptions.mDepthWriteEnabled = false;
     wboitPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    mResources.mWorkPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("WBOITWorkPipeline", wboitPipelineOptions);
+    mResources.mCompositePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("WBOITCompositePipeline", wboitPipelineOptions);
 
     reInitializeOnResize();
 }
@@ -62,12 +62,12 @@ void SwWBOIT::System::initializePasses() {
 
         cmd.beginRendering(renderInfo);
 
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
+        cmd.bindPipeline(mResources.mCompositePipelineBundle.getBindPoint(), mResources.mCompositePipelineBundle.getPipelineHandle());
         cmd.bindDescriptorSets(
-            mResources.mWorkPipelineBundle.getBindPoint(),
-            mResources.mWorkPipelineBundle.getLayoutHandle(),
+            mResources.mCompositePipelineBundle.getBindPoint(),
+            mResources.mCompositePipelineBundle.getLayoutHandle(),
             0,
-            mResources.mWorkDescriptorSet.getHandle(),
+            mResources.mCompositeDescriptorSet.getHandle(),
             nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
@@ -109,7 +109,7 @@ void SwWBOIT::System::reInitializeOnResize() {
         mResources.mRvlImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     });
 
-    mResources.mWorkDescriptorSet.writeImage(0, mResources.mAccumImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
-    mResources.mWorkDescriptorSet.writeImage(1, mResources.mRvlImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
-    mResources.mWorkDescriptorSet.pushWrites();
+    mResources.mCompositeDescriptorSet.writeImage(0, mResources.mAccumImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mCompositeDescriptorSet.writeImage(1, mResources.mRvlImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mCompositeDescriptorSet.pushWrites();
 }

@@ -171,7 +171,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Passes and Dependencies `SwPass` / `SwDependency`
 
-* **`SwPass`** — one unit of GPU work: a `SwPass::Type` (the fixed enum of all passes, e.g. `CullEarlyWork`, `GeometryLateOpaque`, `Tonemap`, `Gui`), a command-buffer callback, a single `SwDependency` set rebuilt each frame by the owning system, and `mustRun` / `pruned` flags. Provides helpers for dynamic-rendering info and viewport/scissor setup.
+* **`SwPass`** — one unit of GPU work: a `SwPass::Type` (the fixed enum of all passes, e.g. `CullEarlyTest`, `GeometryLateOpaque`, `Tonemap`, `Gui`), a command-buffer callback, a single `SwDependency` set rebuilt each frame by the owning system, and `mustRun` / `pruned` flags. Provides helpers for dynamic-rendering info and viewport/scissor setup.
 * **`SwDependency`** — the read/write image and buffer dependencies of a pass. `ImageDep` / `BufferDep` pair a resource with an `ImageDepDesc` / `BufferDepDesc` (stage + access + layout), derived from the high-level `ImageDepType` / `BufferDepType` enums (e.g. `ColorAttachmentReadWrite`, `ComputeStorageRead`, `IndirectRead`).
 * **Relations** — passes are created by systems (via `SwScene::insertPass(...)`) and consumed by the render graph; their declared dependencies are what the graph uses to insert barriers and prune.
 
@@ -185,8 +185,8 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 * Two-pass GPU frustum + Hierarchical-Z occlusion cull; one compute thread per render item.
 * **`Plane`** — a frustum plane (used by `SwCamera`); **`Phase`** — `Early` / `Late`.
-* **`ResetPC` / `WorkPC` / `CompactPC` / `PrepOcclusionPC`** — compute push constants for the reset, cull-work, compaction, and depth-pyramid-build stages (mostly buffer device addresses).
-* **`Resources`** — the reset/work/compact/prep-occlusion compute pipelines and their layouts/descriptors, plus the depth-pyramid image and samplers.
+* **`ResetPC` / `CullPC` / `CompactPC` / `PrepOcclusionPC`** — compute push constants for the reset, cull-test, compaction, and depth-pyramid-build stages (mostly buffer device addresses).
+* **`Resources`** — the reset/test/compact/prep-occlusion compute pipelines and their layouts/descriptors, plus the depth-pyramid image and samplers.
 * **`System`** (`SwSystem::Resizable`) — registers the cull passes; can be frozen for debugging. **Relations** — produces the indirect draw lists consumed by `SwGeometry`; reads the scene bounds/transforms/instances buffers. See [Scene Data Model](#scene-data-model).
 
 ### Lighting `SwLighting`
@@ -206,9 +206,9 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Geometry `SwGeometry`
 
-* **`WorkPC`** — the vertex+fragment push constants: device addresses for the scene vertex/material/transform/instance/draw-RI/indirect-RC/light buffers, plus light count and IBL parameters.
+* **`DrawPC`** — the vertex+fragment push constants shared by every geometry pass: device addresses for the scene vertex / material / node-transform / instance / draw-RI-indices / indirect-RC / lights / visible-lights buffers, plus the IBL parameters (max prefilter mip level, intensity, component mask). Backed by `SwGeometry.vert` and the `SwGeometryOpaqueMasked` / `SwGeometryTransparent` fragment shaders.
 * **`Resources`** — just holds the push-constant block (the material pipelines themselves are owned by `SwMaterial`).
-* **`System`** — issues the indirect draws for the opaque / mask / transparent batches using each material's pipeline.
+* **`System`** — issues the indirect draws across the early and late opaque, masked, and transparent passes, each using its material's pipeline.
 * **Relations** — consumes the indirect draw lists from `SwCull`, the lights from `SwLighting`, and the IBL maps from `SwIBL`.
 
 ### WBOIT `SwWBOIT`
@@ -338,7 +338,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Culling to Indirect Draw Commands (Render Commands)
 
-* Each cull thread takes one RI and reconstructs its full draw context purely by following the indices above (`SwCullWork.comp.slang`):
+* Each cull thread takes one RI and reconstructs its full draw context purely by following the indices above (`SwCullTest.comp.slang`):
 
 ```
 ri  = mRisBuffer[threadId]
@@ -378,14 +378,14 @@ transform          = mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix
 The per-frame pass order — each pass is owned by the system of the same name (see [Scene and Systems](#scene-and-systems)):
 
 ```
-ClearImages → [SkyboxDraw] → CullReset → CullEarlyWork → CullEarlyCompact
-→ GeometryEarlyOpaque → CullPrepOcclusion → CullLateReset → CullLateWork
+ClearImages → [IBLSkybox] → CullEarlyReset → CullEarlyTest → CullEarlyCompact
+→ GeometryEarlyOpaque → CullPrepOcclusion → CullLateReset → CullLateTest
 → CullLateCompact → CullPublishCount → GeometryLateOpaque → GeometryMasked
-→ GeometryTransparent → [PickDraw → PickReadback → PickWork] → WBOITComposite
-→ [LightingBillboard] → Tonemap → [FXAA] → CopyToSwapchain → Gui
+→ GeometryTransparent → [PickDraw → PickReadback → PickSelect] → WBOITComposite
+→ Tonemap → [FXAA] → CopyToSwapchain → Gui
 ```
 
-This realises the two-pass cull (early draw of last frame's visible set, build the HZ pyramid, late occlusion pass) feeding the indirect geometry draws, then transparency composite and post-process, ending in the swapchain copy and GUI overlay. `LightingBillboard` is an optional pass that draws a camera-facing emissive quad for each spawned test light (see the GUI Objects panel) so otherwise-invisible punctual lights are locatable; it only runs when at least one test light exists.
+This realises the two-pass cull (early draw of last frame's visible set, build the HZ pyramid, late occlusion pass) feeding the indirect geometry draws, then transparency composite and post-process, ending in the swapchain copy and GUI overlay.
 
 ---
 

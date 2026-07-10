@@ -19,17 +19,17 @@ namespace SwCull {
 
     public enum Phase { Early, Late };
 
-    public struct WorkPC {
+    public struct CullPC {
         public SwBatch::RenderCommand* mSceneRcsBuffer;
         public SwBatch::RenderItem* mSceneRisBuffer;
-        public uint* mStatsRisCount;
+        public uint* mSceneRisCount;
         public SwFrame::Data* mFrameBuffer;
         public SwMesh::Bounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public uint* mSceneDrawRisIndicesBuffer;
-        public bool* mSceneVisibilityRisReadBuffer;
-        public bool* mSceneVisibilityRisWriteBuffer;
+        public uint* mSceneRisIndicesBuffer;
+        public bool* mSceneRisVisibilityReadBuffer;
+        public bool* mSceneRisVisibilityWriteBuffer;
         public uint mSceneRisLimit;
         public Phase mPhase;
     };

@@ -72,7 +72,7 @@ namespace SwIBL {
     }
 
     public struct SkyboxPC {
-        public SwIBL::Vertex* mWorkVertexBuffer;
+        public SwIBL::Vertex* mSkyboxVertexBuffer;
         public SwFrame::Data* mFrameBuffer;
     };
 

@@ -64,9 +64,9 @@ SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
 static const std::filesystem::path GEOMETRY_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Geometry"};
 const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometry.vert.spv"};
 SwShader SwMaterial::sVertexShader;
-const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometryWorkOpaqueMasked.frag.spv"};
+const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometryOpaqueMasked.frag.spv"};
 SwShader SwMaterial::sOpaqueMaskedFragmentShader;
-const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometryWorkTransparent.frag.spv"};
+const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometryTransparent.frag.spv"};
 SwShader SwMaterial::sTransparentFragmentShader;
 
 SwMaterial::SwMaterial(
@@ -91,9 +91,9 @@ SwMaterial::SwMaterial(
 
 void SwMaterial::init() {
     sOpaquePipelineLayout =
-        SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", SwGeometry::Resources::sGeometrySetLayouts, SwGeometry::WorkPC::getRange());
+        SwPipelineFactory::createPipelineLayout("GeometryOpaquePipelineLayout", SwGeometry::Resources::sGeometrySetLayouts, SwGeometry::DrawPC::getRange());
     sTransparentPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "GeometryTransparentPipelineLayout", SwGeometry::Resources::sGeometrySetLayouts, SwGeometry::WorkPC::getRange()
+        "GeometryTransparentPipelineLayout", SwGeometry::Resources::sGeometrySetLayouts, SwGeometry::DrawPC::getRange()
     );
 
     sVertexShader = SwShaderFactory::createShader("GeometryVertexShaderModule", GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);

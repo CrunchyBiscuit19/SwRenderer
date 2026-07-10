@@ -4,29 +4,29 @@ import System.Geometry.SwGeometry;
 public uniform Sampler2D materialResources[];
 
 [[vk::push_constant]]
-SwGeometry::WorkPC workPc;
+SwGeometry::DrawPC drawPc;
 
 SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     SwGeometry::VSOutput out;
 
-    SwMesh::Vertex v = workPc.mSceneVertexBuffer[in.mVertexIndex];
+    SwMesh::Vertex v = drawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwBatch::RenderCommand rc = workPc.mDrawRcsBuffer[in.mDrawIndex];
+    SwBatch::RenderCommand rc = drawPc.mSceneRcsBuffer[in.mDrawIndex];
 
-    uint sceneInstanceIndex = workPc.mSceneDrawRisIndicesBuffer[in.mInstanceIndex];
-    float4x4 instanceTransformMatrix = workPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
+    uint sceneInstanceIndex = drawPc.mSceneRisIndicesBuffer[in.mInstanceIndex];
+    float4x4 instanceTransformMatrix = drawPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
 
-    uint sceneNodeTransformIndex = workPc.mDrawRcsBuffer[in.mDrawIndex].mNodeTransformIndex;
-    float4x4 nodeTransformMatrix = workPc.mSceneNodeTransformsBuffer[sceneNodeTransformIndex];
+    uint sceneNodeTransformIndex = drawPc.mSceneRcsBuffer[in.mDrawIndex].mNodeTransformIndex;
+    float4x4 nodeTransformMatrix = drawPc.mSceneNodeTransformsBuffer[sceneNodeTransformIndex];
 
-    uint sceneMaterialIndex = workPc.mDrawRcsBuffer[in.mDrawIndex].mMaterialIndex;
-    SwMaterial::Constant materialConstant = workPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
+    uint sceneMaterialIndex = drawPc.mSceneRcsBuffer[in.mDrawIndex].mMaterialIndex;
+    SwMaterial::Constant materialConstant = drawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
     float4 worldPosition = mul(modelMatrix, position);
 
-    out.mPosition = mul(mul(workPc.mFrameBuffer->mCameraBuffer->mPerspective.mProj, workPc.mFrameBuffer->mCameraBuffer->mPerspective.mView), worldPosition);
+    out.mPosition = mul(mul(drawPc.mFrameBuffer->mCameraBuffer->mPerspective.mProj, drawPc.mFrameBuffer->mCameraBuffer->mPerspective.mView), worldPosition);
     out.mWorldPos = worldPosition.xyz;
     out.mNormal = normalize(mul((float3x3)modelMatrix, v.mNormal));  // world-space normal; uniform scale only, so normalize absorbs the scale
     out.mTangent = float4(mul((float3x3)modelMatrix, v.mTangent.xyz), v.mTangent.w);

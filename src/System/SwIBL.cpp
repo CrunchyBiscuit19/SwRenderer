@@ -426,6 +426,6 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
 }
 
 void SwIBL::System::refreshPushConstants() {
-    mResources.mSkyboxPushConstants.mDrawVertexBuffer = mResources.mSkyboxVertexBuffer.getDeviceAddress().value();
+    mResources.mSkyboxPushConstants.mSkyboxVertexBuffer = mResources.mSkyboxVertexBuffer.getDeviceAddress().value();
     mResources.mSkyboxPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }

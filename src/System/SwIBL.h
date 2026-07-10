@@ -51,7 +51,7 @@ struct PrefilterPC : SwPC<PrefilterPC> {
 };
 
 struct SkyboxPC : SwPC<SkyboxPC> {
-    vk::DeviceAddress mDrawVertexBuffer;
+    vk::DeviceAddress mSkyboxVertexBuffer;
     vk::DeviceAddress mFrameBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;

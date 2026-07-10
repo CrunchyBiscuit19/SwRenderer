@@ -22,7 +22,7 @@ SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::optional<SwMaterial::Type>, SwMaterial::NUM_TYPES> matTypes, bool early) {
     SwAllocatedBuffer& rcsBuffer = early ? mScene.getSceneEarlyRcsBuffer() : mScene.getSceneLateRcsBuffer();
     SwAllocatedBuffer& rcsCount = early ? mScene.getSceneEarlyRcsCount() : mScene.getSceneLateRcsCount();
-    mResources.mWorkPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value();
 
     for (auto& batch : mScene.getBatchIt(matTypes)) {
         if (batch.getRcsSize() == 0) continue;
@@ -44,7 +44,7 @@ void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::opti
             nullptr
         );
 
-        cmd.pushConstants<SwGeometry::WorkPC>(pipeline.getLayoutHandle(), SwGeometry::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+        cmd.pushConstants<SwGeometry::DrawPC>(pipeline.getLayoutHandle(), SwGeometry::DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
         cmd.drawIndexedIndirectCount(
             rcsBuffer.getHandle(),
@@ -111,7 +111,7 @@ void SwGeometry::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
         d.mReadBuffers.emplace_back(
@@ -144,15 +144,15 @@ void SwGeometry::System::refreshDependencies() {
 }
 
 void SwGeometry::System::refreshPushConstants() {
-    mResources.mWorkPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneLightsBuffer = mScene.getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mVisibleLightsBuffer = mScene.getLightingSystem().getVisibleLightsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mMaxPrefilterMip = mScene.getIBLSystem().getMaxPrefilterMip();
-    mResources.mWorkPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
-    mResources.mWorkPushConstants.mIblComponents = mScene.getIBLSystem().getIblComponents();
+    mResources.mDrawPushConstants.mSceneVertexBuffer = mScene.getSceneVertexBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneRisIndicesBuffer = mScene.getSceneRisIndicesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneLightsBuffer = mScene.getSceneLightsBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mVisibleLightsBuffer = mScene.getLightingSystem().getVisibleLightsBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mMaxPrefilterMipLevel = mScene.getIBLSystem().getMaxPrefilterMip();
+    mResources.mDrawPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
+    mResources.mDrawPushConstants.mIblComponents = mScene.getIBLSystem().getIblComponents();
 }

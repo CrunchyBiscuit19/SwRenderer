@@ -87,9 +87,9 @@ void SwPick::System::initializeResources() {
     mResources.mReadbackPipelineLayout =
         SwPipelineFactory::createPipelineLayout("PickReadbackPipelineLayout", mResources.mReadbackDescriptorLayout.getHandle(), SwPick::ReadbackPC::getRange());
 
-    SwShader workShader = SwShaderFactory::createShader("PickReadbackShaderModule", PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader readbackShader = SwShaderFactory::createShader("PickReadbackShaderModule", PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mReadbackPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {workShader.getHandle(), mResources.mReadbackPipelineLayout.getHandle()});
+        SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {readbackShader.getHandle(), mResources.mReadbackPipelineLayout.getHandle()});
 
     SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
         const bool* keyState = SDL_GetKeyboardState(nullptr);
@@ -158,9 +158,9 @@ void SwPick::System::initializePasses() {
         true
     );
 
-    // Pick Work
+    // Pick Select
     mScene.insertPass(
-        SwPass::Type::PickWork,
+        SwPass::Type::PickSelect,
         [&](vk::CommandBuffer cmd) {
             glm::uvec2 read(0);
             std::memcpy(
@@ -217,7 +217,7 @@ void SwPick::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
         d.mReadBuffers.emplace_back(
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead
@@ -234,9 +234,9 @@ void SwPick::System::refreshDependencies() {
         d.mWriteBuffers.emplace_back(&mResources.mReadbackBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     }
 
-    // Pick Work
+    // Pick Select
     {
-        SwDependency& d = mScene.mPasses[SwPass::Type::PickWork].getDeps();
+        SwDependency& d = mScene.mPasses[SwPass::Type::PickSelect].getDeps();
         d.clear();
         d.mReadBuffers.emplace_back(&mResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead);
     }
@@ -249,7 +249,7 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneMaterialConstantsBuffer = mScene.getSceneMaterialConstantsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mSceneRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
+    mResources.mDrawPushConstants.mSceneRisIndicesBuffer = mScene.getSceneRisIndicesBuffer().getDeviceAddress().value();
     mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }
 

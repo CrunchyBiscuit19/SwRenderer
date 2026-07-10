@@ -50,26 +50,26 @@ constexpr std::uint32_t INITIAL_ACTIVE_LIGHTS_BUFFER_SIZE{1 << 10};
 
 // LightingShadowReset, LightingBuildClusters, LightingMarkActiveClusters, LightingLightsCull, LightingShadowCull, LightingShadowDraw,
 
-struct ShadowResetPC : SwPC<ShadowResetPC> {
-    vk::DeviceAddress mShadowDrawRcsBuffer;
+struct ResetPC : SwPC<ResetPC> {
+    vk::DeviceAddress mShadowRcsBuffer;
     std::uint32_t mShadowRcsLimit;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct BuildClustersPC : SwPC<BuildClustersPC> {
+struct ClusterBuildPC : SwPC<ClusterBuildPC> {
     vk::DeviceAddress mClustersBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct MarkActiveClustersPC : SwPC<MarkActiveClustersPC> {
+struct ClusterMarkActivePC : SwPC<ClusterMarkActivePC> {
     vk::DeviceAddress mActiveClustersIndicesBuffer;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct LightsCullPC : SwPC<LightsCullPC> {
+struct ClusterCullLightsPC : SwPC<ClusterCullLightsPC> {
     vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -80,10 +80,10 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct ShadowCullPC : SwPC<ShadowCullPC> {
-    vk::DeviceAddress mShadowDrawRcsBuffer;
-    vk::DeviceAddress mShadowDrawRisBuffer;
-    vk::DeviceAddress mShadowDrawRisIndicesBuffer;
+struct CullPC : SwPC<CullPC> {
+    vk::DeviceAddress mShadowRcsBuffer;
+    vk::DeviceAddress mShadowRisBuffer;
+    vk::DeviceAddress mShadowRisIndicesBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -94,9 +94,9 @@ struct ShadowCullPC : SwPC<ShadowCullPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct ShadowDrawPC : SwPC<ShadowDrawPC> {
-    vk::DeviceAddress mShadowDrawRcsBuffer;
-    vk::DeviceAddress mShadowDrawRisIndicesBuffer;
+struct DrawPC : SwPC<DrawPC> {
+    vk::DeviceAddress mShadowRcsBuffer;
+    vk::DeviceAddress mShadowRisIndicesBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -121,32 +121,32 @@ struct Resources {
     SwSampler mShadowMapsSampler;
     SwDescriptorSet mShadowMapsDescriptorSet;
 
-    std::vector<SwRenderCommand> mInitialShadowDrawRcs;
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRcsBuffer;
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisBuffer;
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowDrawRisIndicesBuffer;
+    std::vector<SwRenderCommand> mInitialShadowRcs;
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowRcsBuffer;
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowRisBuffer;
+    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowRisIndicesBuffer;
 
-    ShadowResetPC mShadowResetPc;
+    ResetPC mShadowResetPc;
     SwPipelineLayout mShadowResetPipelineLayout;
     SwComputePipelineBundle mShadowResetPipelineBundle;
 
-    BuildClustersPC mBuildClustersPc;
+    ClusterBuildPC mBuildClustersPc;
     SwPipelineLayout mBuildClustersPipelineLayout;
     SwComputePipelineBundle mBuildClustersPipelineBundle;
 
-    MarkActiveClustersPC mMarkActiveClustersPc;
+    ClusterMarkActivePC mMarkActiveClustersPc;
     SwPipelineLayout mMarkActiveClustersPipelineLayout;
     SwComputePipelineBundle mMarkActiveClustersPipelineBundle;
 
-    LightsCullPC mLightsCullPc;
+    ClusterCullLightsPC mLightsCullPc;
     SwPipelineLayout mLightsCullPipelineLayout;
     SwComputePipelineBundle mLightsCullPipelineBundle;
 
-    ShadowCullPC mShadowCullPc;
+    CullPC mShadowCullPc;
     SwPipelineLayout mShadowCullPipelineLayout;
     SwComputePipelineBundle mShadowCullPipelineBundle;
 
-    ShadowDrawPC mShadowDrawPc;
+    DrawPC mShadowDrawPc;
     SwPipelineLayout mShadowDrawPipelineLayout;
     SwGraphicsPipelineBundle mShadowDrawOpaquePipelineBundle;
     SwGraphicsPipelineBundle mShadowDrawMaskedPipelineBundle;

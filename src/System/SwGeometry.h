@@ -9,7 +9,7 @@
 
 namespace SwGeometry {
 
-struct WorkPC : SwPC<WorkPC> {
+struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer;
     vk::DeviceAddress mSceneMaterialConstantsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
@@ -19,15 +19,15 @@ struct WorkPC : SwPC<WorkPC> {
     vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneLightsBuffer;
     vk::DeviceAddress mVisibleLightsBuffer;
-    float mMaxPrefilterMip;        // Highest mip index of the SwIBL specular prefilter chain
-    float mIblIntensity;           // Scales the image-based ambient term (GUI-controlled)
-    std::uint32_t mIblComponents;  // IBL diffuse / specular bit mask (GUI-controlled)
+    float mMaxPrefilterMipLevel;
+    float mIblIntensity;
+    std::uint32_t mIblComponents;
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 };
 
 struct Resources {
-    WorkPC mWorkPushConstants;
+    DrawPC mDrawPushConstants;
 
     static std::array<vk::DescriptorSetLayout, 3> sGeometrySetLayouts;
 

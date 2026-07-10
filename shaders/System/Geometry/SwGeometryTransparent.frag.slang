@@ -19,12 +19,12 @@ public uniform TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS];
 public uniform SamplerComparisonState shadowSampler;
 
 [[vk::push_constant]]
-SwGeometry::WorkPC workPc;
+SwGeometry::DrawPC drawPc;
 
 SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     SwGeometry::FSOutputTransparent output;
 
-    SwMaterial::Constant mc = workPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
+    SwMaterial::Constant mc = drawPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
     uint base = in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES;
 
     float4 diffuseColor = materialResources[NonUniformResourceIndex(base + SwGeometry::BASE_TEXTURE_OFFSET)].Sample(in.mUv);
@@ -39,12 +39,12 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float3 sampledNormal = materialResources[NonUniformResourceIndex(base + SwGeometry::NORMAL_TEXTURE_OFFSET)].Sample(in.mUv).rgb;
     float3 normal = SwGeometry::applyNormalMap(in.mNormal, in.mTangent, sampledNormal, mc.mNormalScale);
 
-    float3 view = normalize(workPc.mFrameBuffer->mCameraBuffer->mWorldPos - in.mWorldPos);
+    float3 view = normalize(drawPc.mFrameBuffer->mCameraBuffer->mWorldPos - in.mWorldPos);
 
     float3 litColor = SwLighting::shadeLit(
-        baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, workPc.mVisibleLightsBuffer, workPc.mSceneLightsBuffer,
-        workPc.mSceneInstancesBuffer, workPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
-        workPc.mMaxPrefilterMip, workPc.mIblIntensity, workPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
+        baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, drawPc.mVisibleLightsBuffer, drawPc.mSceneLightsBuffer,
+        drawPc.mSceneInstancesBuffer, drawPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblPrefilterMap, iblBrdfLut,
+        drawPc.mMaxPrefilterMipLevel, drawPc.mIblIntensity, drawPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
     );
     litColor += materialResources[NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET)].Sample(in.mUv).rgb * mc.mEmissiveFactor.rgb;
     float4 finalColor = float4(litColor, baseColor.a);

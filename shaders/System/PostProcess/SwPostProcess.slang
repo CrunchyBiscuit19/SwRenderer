@@ -9,13 +9,13 @@ namespace SwPostProcess {
     public static const float SPAN_MAX = 8.0f;
 
     namespace Fxaa {
-        public struct WorkPC {
+        public struct FxaaPC {
             public float2 mInverseScreenSize;
         };
     }
 
     namespace Tonemap {
-        public struct WorkPC {
+        public struct TonemapPC {
             public float mExposure;
         };
 

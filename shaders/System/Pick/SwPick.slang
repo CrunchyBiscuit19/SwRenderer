@@ -14,8 +14,8 @@ namespace SwPick {
         public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public uint* mSceneDrawRisIndicesBuffer;
-        public SwBatch::RenderCommand *mSceneDrawRcsBuffer;
+        public uint* mSceneRisIndicesBuffer;
+        public SwBatch::RenderCommand *mSceneRcsBuffer;
         public SwFrame::Data *mFrameBuffer;
     };
 

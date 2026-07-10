@@ -78,7 +78,7 @@ private:
     SwAllocatedBuffer mSceneNodeTransformsBuffer;
     SwAllocatedBuffer mSceneInstancesBuffer;
     SwAllocatedBuffer mSceneBoundsBuffer;
-    SwAllocatedBuffer mSceneDrawRisIndicesBuffer;
+    SwAllocatedBuffer mSceneRisIndicesBuffer;
     std::array<SwAllocatedBuffer, 2> mSceneVisibilityRisBuffers;
     std::uint32_t mSceneVisibilityRisBufferReadIndex{0};
     SwAllocatedBuffer mSceneLightsBuffer;
@@ -161,7 +161,7 @@ public:
     inline SwAllocatedBuffer& getSceneNodeTransformsBuffer() { return mSceneNodeTransformsBuffer; }
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
-    inline SwAllocatedBuffer& getSceneDrawRisIndicesBuffer() { return mSceneDrawRisIndicesBuffer; }
+    inline SwAllocatedBuffer& getSceneRisIndicesBuffer() { return mSceneRisIndicesBuffer; }
     inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
     inline void toggleSceneVisibilityRisBuffer() { mSceneVisibilityRisBufferReadIndex = 1 - mSceneVisibilityRisBufferReadIndex; }
     inline SwAllocatedBuffer& getSceneVisibilityRisReadBuffer() { return mSceneVisibilityRisBuffers[mSceneVisibilityRisBufferReadIndex]; }

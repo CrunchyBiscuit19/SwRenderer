@@ -30,20 +30,20 @@ namespace SwLighting {
         public uint mShadowCastIndices[MAX_NUM_SHADOW_CASTERS];
     };
 
-    public struct ShadowResetPC {
-        public SwBatch::RenderCommand* mShadowDrawRcsBuffer;
+    public struct ResetPC {
+        public SwBatch::RenderCommand* mShadowRcsBuffer;
         public uint mShadowRcsLimit;
     };
 
-    public struct BuildClustersPC {
+    public struct ClusterBuildPC {
         public Cluster* mClustersBuffer;
     };
 
-    public struct MarkActiveClustersPC {
+    public struct ClusterMarkActivePC {
         public uint* mActiveClustersIndicesBuffer;
     };
 
-    public struct LightsCullPC {
+    public struct ClusterCullLightsPC {
         public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
@@ -52,10 +52,10 @@ namespace SwLighting {
         public uint* mActiveClustersIndicesBuffer;
     };
 
-    public struct ShadowCullPC {
-        public SwBatch::RenderCommand* mShadowDrawRcsBuffer;
-        public SwBatch::RenderItem* mShadowDrawRisBuffer;
-        public uint* mShadowDrawRisIndicesBuffer;
+    public struct CullPC {
+        public SwBatch::RenderCommand* mShadowRcsBuffer;
+        public SwBatch::RenderItem* mShadowRisBuffer;
+        public uint* mShadowRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwMesh::Bounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
@@ -65,9 +65,9 @@ namespace SwLighting {
         public uint mLightIndex;
     };
 
-    public struct ShadowDrawPC {
-        public SwBatch::RenderCommand* mShadowDrawRcsBuffer;
-        public uint* mShadowDrawRisIndicesBuffer;
+    public struct DrawPC {
+        public SwBatch::RenderCommand* mShadowRcsBuffer;
+        public uint* mShadowRisIndicesBuffer;
         public SwMesh::Vertex* mSceneVertexBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;

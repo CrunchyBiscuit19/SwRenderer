@@ -3,7 +3,7 @@ import Data.SwConstants;
 import System.Cull.SwCull;
 
 [[vk::push_constant]]
-SwLighting::ShadowCullPC shadowCullPc;
+SwLighting::CullPC shadowCullPc;
 
 void constructCorners(SwMesh::Bounds* riBounds, float4x4 riModelMatrix, out float4 corners[SwMesh::NUM_AABB_CORNERS]) {
     corners[0] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMin.z, 1.f);
@@ -68,8 +68,8 @@ void main(SwLighting::CSInput in) {
         return;
     }
 
-    SwBatch::RenderItem* ri = &shadowCullPc.mShadowDrawRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &shadowCullPc.mShadowDrawRcsBuffer[ri->mRcIndex];
+    SwBatch::RenderItem* ri = &shadowCullPc.mShadowRisBuffer[risIndex];
+    SwBatch::RenderCommand* rc = &shadowCullPc.mShadowRcsBuffer[ri->mRcIndex];
 
     SwMesh::Bounds* riBounds = &shadowCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
@@ -98,6 +98,6 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowCullPc.mShadowDrawRisIndicesBuffer[rc->mFirstRi + offset] = ri->mSceneInstanceIndex;
+        shadowCullPc.mShadowRisIndicesBuffer[rc->mFirstRi + offset] = ri->mSceneInstanceIndex;
     }
 }

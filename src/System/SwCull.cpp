@@ -26,7 +26,7 @@ void SwCull::System::initializeEarlyPasses() {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
 
         cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneDrawRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(mScene.getSceneRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
         cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneEarlyRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneEarlyRcsCount().getHandle(), 0, vk::WholeSize, 0);
@@ -38,22 +38,22 @@ void SwCull::System::initializeEarlyPasses() {
         cmd.dispatch(SwHelper::fastDivCeil(mResources.mResetPushConstants.mSceneRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
-    // EarlyWork
-    mScene.insertPass(SwPass::Type::CullEarlyWork, [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
+    // EarlyTest
+    mScene.insertPass(SwPass::Type::CullEarlyTest, [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mTestPipelineBundle.getBindPoint(), mResources.mTestPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mWorkPipelineBundle.getBindPoint(),
-            mResources.mWorkPipelineBundle.getLayoutHandle(),
+            mResources.mTestPipelineBundle.getBindPoint(),
+            mResources.mTestPipelineBundle.getLayoutHandle(),
             0,
-            mResources.mWorkDescriptorSet.getHandle(),
+            mResources.mTestDescriptorSet.getHandle(),
             nullptr
         );
 
-        mResources.mWorkPushConstants.mPhase = SwCull::Phase::Early;
-        cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayoutHandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+        mResources.mTestPushConstants.mPhase = SwCull::Phase::Early;
+        cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
 
-        cmd.dispatch(SwHelper::fastDivCeil(mResources.mWorkPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        cmd.dispatch(SwHelper::fastDivCeil(mResources.mTestPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
     // EarlyCompact
@@ -128,22 +128,22 @@ void SwCull::System::initializeLatePasses() {
         }
     });
 
-    // LateWork
-    mScene.insertPass(SwPass::Type::CullLateWork, [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mWorkPipelineBundle.getBindPoint(), mResources.mWorkPipelineBundle.getPipelineHandle());
+    // LateTest
+    mScene.insertPass(SwPass::Type::CullLateTest, [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mTestPipelineBundle.getBindPoint(), mResources.mTestPipelineBundle.getPipelineHandle());
 
         cmd.bindDescriptorSets(
-            mResources.mWorkPipelineBundle.getBindPoint(),
-            mResources.mWorkPipelineBundle.getLayoutHandle(),
+            mResources.mTestPipelineBundle.getBindPoint(),
+            mResources.mTestPipelineBundle.getLayoutHandle(),
             0,
-            mResources.mWorkDescriptorSet.getHandle(),
+            mResources.mTestDescriptorSet.getHandle(),
             nullptr
         );
 
-        mResources.mWorkPushConstants.mPhase = SwCull::Phase::Late;
-        cmd.pushConstants<SwCull::WorkPC>(mResources.mWorkPipelineBundle.getLayoutHandle(), SwCull::WorkPC::sStages, 0, mResources.mWorkPushConstants);
+        mResources.mTestPushConstants.mPhase = SwCull::Phase::Late;
+        cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
 
-        cmd.dispatch(SwHelper::fastDivCeil(mResources.mWorkPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        cmd.dispatch(SwHelper::fastDivCeil(mResources.mTestPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         // hasEarlyDraw depends on the material type now
     });
 
@@ -208,31 +208,31 @@ void SwCull::System::initializeResources() {
         "CullPrepOcclusionPipeline", {depthPyramidShader.getHandle(), mResources.mPrepOcclusionPipelineLayout.getHandle()}
     );
 
-    // Work*
-    mResources.mWorkDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "CullWorkDescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}}, vk::ShaderStageFlagBits::eCompute
+    // Test*
+    mResources.mTestDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "CullTestDescriptorSetLayout", {{0, vk::DescriptorType::eSampledImage, 1}, {1, vk::DescriptorType::eSampler, 1}}, vk::ShaderStageFlagBits::eCompute
     );
-    mResources.mWorkDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("CullWorkDescriptorSet", mResources.mWorkDescriptorLayout);
+    mResources.mTestDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("CullTestDescriptorSet", mResources.mTestDescriptorLayout);
 
-    vk::SamplerReductionModeCreateInfo workReductionInfo{vk::SamplerReductionMode::eMin};
-    vk::SamplerCreateInfo workSamplerInfo{};
-    workSamplerInfo.setPNext(&workReductionInfo);
-    workSamplerInfo.setMagFilter(vk::Filter::eLinear);
-    workSamplerInfo.setMinFilter(vk::Filter::eLinear);
-    workSamplerInfo.setMipmapMode(vk::SamplerMipmapMode::eNearest);
-    workSamplerInfo.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
-    workSamplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
-    workSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
-    workSamplerInfo.setMaxLod(VK_LOD_CLAMP_NONE);
-    mResources.mWorkDepthPyramidSampler = SwSamplerFactory::createSampler("CullWorkDepthPyramidSampler", workSamplerInfo);
-    mResources.mWorkDescriptorSet.writeSampler(1, mResources.mWorkDepthPyramidSampler.getHandle());
+    vk::SamplerReductionModeCreateInfo testReductionInfo{vk::SamplerReductionMode::eMin};
+    vk::SamplerCreateInfo testSamplerInfo{};
+    testSamplerInfo.setPNext(&testReductionInfo);
+    testSamplerInfo.setMagFilter(vk::Filter::eLinear);
+    testSamplerInfo.setMinFilter(vk::Filter::eLinear);
+    testSamplerInfo.setMipmapMode(vk::SamplerMipmapMode::eNearest);
+    testSamplerInfo.setAddressModeU(vk::SamplerAddressMode::eClampToEdge);
+    testSamplerInfo.setAddressModeV(vk::SamplerAddressMode::eClampToEdge);
+    testSamplerInfo.setAddressModeW(vk::SamplerAddressMode::eClampToEdge);
+    testSamplerInfo.setMaxLod(VK_LOD_CLAMP_NONE);
+    mResources.mTestDepthPyramidSampler = SwSamplerFactory::createSampler("CullTestDepthPyramidSampler", testSamplerInfo);
+    mResources.mTestDescriptorSet.writeSampler(1, mResources.mTestDepthPyramidSampler.getHandle());
 
-    mResources.mWorkPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("CullWorkPipelineLayout", mResources.mWorkDescriptorLayout.getHandle(), SwCull::WorkPC::getRange());
-    SwShader workShader = SwShaderFactory::createShader("CullWorkShaderModule", CULL_WORK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mResources.mWorkPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("CullWorkPipeline", {workShader.getHandle(), mResources.mWorkPipelineLayout.getHandle()});
+    mResources.mTestPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("CullTestPipelineLayout", mResources.mTestDescriptorLayout.getHandle(), SwCull::TestPC::getRange());
+    SwShader testShader = SwShaderFactory::createShader("CullTestShaderModule", CULL_TEST_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mTestPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline("CullTestPipeline", {testShader.getHandle(), mResources.mTestPipelineLayout.getHandle()});
 
     reInitializeOnResize();
 }
@@ -257,7 +257,7 @@ void SwCull::System::refreshDependencies() {
         SwDependency& d = mScene.mPasses[SwPass::Type::CullEarlyReset].getDeps();
         d.clear();
         d.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::TransferWrite);
-        d.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneEarlyRcsBuffer(), SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneEarlyRcsCount(), SwDependency::BufferDepType::TransferWrite);
@@ -266,9 +266,9 @@ void SwCull::System::refreshDependencies() {
         d.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::TransferWrite);
     }
 
-    // EarlyWork
+    // EarlyTest
     {
-        SwDependency& d = mScene.mPasses[SwPass::Type::CullEarlyWork].getDeps();
+        SwDependency& d = mScene.mPasses[SwPass::Type::CullEarlyTest].getDeps();
         d.clear();
         d.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -280,7 +280,7 @@ void SwCull::System::refreshDependencies() {
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
         );
         d.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
@@ -310,9 +310,9 @@ void SwCull::System::refreshDependencies() {
         d.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
     }
 
-    // LateWork
+    // LateTest
     {
-        SwDependency& d = mScene.mPasses[SwPass::Type::CullLateWork].getDeps();
+        SwDependency& d = mScene.mPasses[SwPass::Type::CullLateTest].getDeps();
         d.clear();
         d.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeShaderSampledRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -325,7 +325,7 @@ void SwCull::System::refreshDependencies() {
         );
         d.mReadBuffers.emplace_back(&mScene.getSceneVisibilityRisReadBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&SwRenderer::sRendererContext.mStats->mRisScratchCount, SwDependency::BufferDepType::ComputeStorageWrite);
-        d.mWriteBuffers.emplace_back(&mScene.getSceneDrawRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneVisibilityRisWriteBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
 
@@ -343,17 +343,17 @@ void SwCull::System::refreshPushConstants() {
     mResources.mResetPushConstants.mSceneRcsBuffer = mScene.getSceneInitialRcsBuffer().getDeviceAddress().value();
     mResources.mResetPushConstants.mSceneRcsLimit = static_cast<std::uint32_t>(mScene.getSceneRcs().size());
 
-    mResources.mWorkPushConstants.mSceneRcsBuffer = mScene.getSceneInitialRcsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneRisBuffer = mScene.getSceneRisBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mStatsRisCount = SwRenderer::sRendererContext.mStats->mRisScratchCount.getDeviceAddress().value();
-    mResources.mWorkPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneDrawRisIndicesBuffer = mScene.getSceneDrawRisIndicesBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibilityRisReadBuffer = mScene.getSceneVisibilityRisReadBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneVisibilityRisWriteBuffer = mScene.getSceneVisibilityRisWriteBuffer().getDeviceAddress().value();
-    mResources.mWorkPushConstants.mSceneRisLimit = static_cast<std::uint32_t>(mScene.getSceneRis().size());
+    mResources.mTestPushConstants.mSceneRcsBuffer = mScene.getSceneInitialRcsBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneRisBuffer = mScene.getSceneRisBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneRisCount = SwRenderer::sRendererContext.mStats->mRisScratchCount.getDeviceAddress().value();
+    mResources.mTestPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneBoundsBuffer = mScene.getSceneBoundsBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneNodeTransformsBuffer = mScene.getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneInstancesBuffer = mScene.getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneRisIndicesBuffer = mScene.getSceneRisIndicesBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneRisVisibilityReadBuffer = mScene.getSceneVisibilityRisReadBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneRisVisibilityWriteBuffer = mScene.getSceneVisibilityRisWriteBuffer().getDeviceAddress().value();
+    mResources.mTestPushConstants.mSceneRisLimit = static_cast<std::uint32_t>(mScene.getSceneRis().size());
 
     mResources.mCompactPushConstants.mPreRcsBuffer = mScene.getSceneInitialRcsBuffer().getDeviceAddress().value();
     mResources.mCompactPushConstants.mPreRcsLimit = static_cast<std::uint32_t>(mScene.getSceneRcs().size());
@@ -398,7 +398,7 @@ void SwCull::System::reInitializeOnResize() {
     }
     mResources.mPrepOcclusionDescriptorSet.pushWrites();
 
-    // Work*
-    mResources.mWorkDescriptorSet.writeImage(0, mResources.mDepthPyramidImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
-    mResources.mWorkDescriptorSet.pushWrites();
+    // Test*
+    mResources.mTestDescriptorSet.writeImage(0, mResources.mDepthPyramidImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mTestDescriptorSet.pushWrites();
 }

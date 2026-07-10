@@ -9,9 +9,9 @@ SwPick::VSOutput computeVertex(SwPick::VSInput in) {
     SwMesh::Vertex v = pickDrawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwBatch::RenderCommand rc = pickDrawPc.mSceneDrawRcsBuffer[in.mDrawIndex];
+    SwBatch::RenderCommand rc = pickDrawPc.mSceneRcsBuffer[in.mDrawIndex];
 
-    uint mSceneInstanceIndex = pickDrawPc.mSceneDrawRisIndicesBuffer[in.mInstanceIndex];
+    uint mSceneInstanceIndex = pickDrawPc.mSceneRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = pickDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
     uint mSceneNodeTransformIndex = rc.mNodeTransformIndex;

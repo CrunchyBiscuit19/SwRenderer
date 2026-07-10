@@ -19,11 +19,11 @@ struct Resources {
     SwColorImage2D mAccumImage;
     SwColorImage2D mRvlImage;
 
-    SwGraphicsPipelineBundle mWorkPipelineBundle;
-    SwPipelineLayout mWorkPipelineLayout;
+    SwGraphicsPipelineBundle mCompositePipelineBundle;
+    SwPipelineLayout mCompositePipelineLayout;
 
-    SwDescriptorSet mWorkDescriptorSet;
-    SwDescriptorLayout mWorkDescriptorLayout;
+    SwDescriptorSet mCompositeDescriptorSet;
+    SwDescriptorLayout mCompositeDescriptorLayout;
 };
 class System : public SwSystem, public SwSystem::Resizable {
 private:

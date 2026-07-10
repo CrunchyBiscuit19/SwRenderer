@@ -55,8 +55,8 @@ void SwScene::initializeResources() {
         SwBufferFactory::createAllocatedBuffer("SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_BOUNDS_BUFFER_SIZE, true);
     mSceneLightsBuffer =
         SwBufferFactory::createAllocatedBuffer("SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true);
-    mSceneDrawRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneDrawRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
+    mSceneRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
     );
     for (std::uint32_t i = 0; i < mSceneVisibilityRisBuffers.size(); i++) {
         mSceneVisibilityRisBuffers[i] = SwBufferFactory::createAllocatedBuffer(
@@ -157,7 +157,7 @@ void SwScene::initialize() {
     mPick.initialize();
     mIBL.initialize();
     mWBOIT.initialize();
-    mLighting.initialize();
+    //mLighting.initialize();
     mGeometry.initialize();
     mPostProcess.initialize();
 
@@ -446,7 +446,7 @@ void SwScene::regenerateRcsAndRis() {
         });
     }
 
-    mLighting.regenerateShadowRcs();
+    //mLighting.regenerateShadowRcs();
 }
 
 void SwScene::realignVertexIndexOffset() {
@@ -751,7 +751,7 @@ void SwScene::perFrameUpdate() {
     toggleSceneVisibilityRisBuffer();
 
     mCull.refresh();
-    mLighting.refresh();
+    //mLighting.refresh();
     mPick.refresh();
     mIBL.refresh();
     mWBOIT.refresh();
@@ -773,12 +773,12 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::IBLSkybox]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyTest]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyCompact]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryEarlyOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateWork]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateTest]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     /*mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowReset]);
@@ -791,7 +791,7 @@ void SwScene::draw() {
     if (mPick.isPicked()) {  // This block always after geometry draws since it uses the same depth image
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickDraw]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::PickReadback]);
-        mRenderGraph.addPass(&mPasses[SwPass::Type::PickWork]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::PickSelect]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::WBOITComposite]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::Tonemap]);

@@ -9,7 +9,7 @@ public uniform Texture2D<float> depthPyramidImage;
 public uniform SamplerState minSampler;
 
 [[vk::push_constant]]
-SwCull::WorkPC workPc;
+SwCull::CullPC testPc;
 
 void transformCornersToWorld(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwInstance::Data* currInstance, SwNode::Transform* nodeTransform) {
     for (uint j = 0; j < SwMesh::NUM_AABB_CORNERS; j++) {
@@ -101,29 +101,29 @@ bool occlusionCull(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwCamera:
     return closestDepthInRi >= furthestDepthInPyramid;
 }
 
-void markDrawRiIndex(SwBatch::RenderCommand* rc, SwBatch::RenderItem* ri, uint* sceneDrawRisIndicesBuffer) {
+void markRiIndex(SwBatch::RenderCommand* rc, SwBatch::RenderItem* ri, uint* sceneRisIndicesBuffer) {
     // Write the indices of to-draw render items to the draw instances indices buffer
     // Index into to-draw instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
     uint offsetVisibleRiIndex;
     InterlockedAdd(rc->mRiCount, 1, offsetVisibleRiIndex);
     uint visibleRiIndex = rc->mFirstRi + offsetVisibleRiIndex;
-    sceneDrawRisIndicesBuffer[visibleRiIndex] = ri->mSceneInstanceIndex;
+    sceneRisIndicesBuffer[visibleRiIndex] = ri->mSceneInstanceIndex;
 }
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
-    if (risIndex >= workPc.mSceneRisLimit)
+    if (risIndex >= testPc.mSceneRisLimit)
         return;
-    SwBatch::RenderItem* ri = &workPc.mSceneRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &workPc.mSceneRcsBuffer[ri->mRcIndex];
+    SwBatch::RenderItem* ri = &testPc.mSceneRisBuffer[risIndex];
+    SwBatch::RenderCommand* rc = &testPc.mSceneRcsBuffer[ri->mRcIndex];
 
-    SwMesh::Bounds* bounds = &workPc.mSceneBoundsBuffer[rc->mBoundsIndex];
-    SwNode::Transform* nodeTransform = &workPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    SwInstance::Data* instance = &workPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
-    SwFrustum::Data* frustum = &workPc.mFrameBuffer->mCameraBuffer->mFrustum;
-    SwCamera::Perspective* perspective = &workPc.mFrameBuffer->mCameraBuffer->mPerspective;
+    SwMesh::Bounds* bounds = &testPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    SwNode::Transform* nodeTransform = &testPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
+    SwInstance::Data* instance = &testPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
+    SwFrustum::Data* frustum = &testPc.mFrameBuffer->mCameraBuffer->mFrustum;
+    SwCamera::Perspective* perspective = &testPc.mFrameBuffer->mCameraBuffer->mPerspective;
     float4[SwMesh::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMax.z, 1.f),
@@ -140,29 +140,29 @@ void main(SwCull::CSInput in) {
     uint riVisIndex = rc->mFirstRi + (ri->mSceneInstanceIndex - rc->mFirstInstance);
 
     bool draw = false;
-    if (workPc.mPhase == SwCull::Phase::Early) {
+    if (testPc.mPhase == SwCull::Phase::Early) {
         // Draw whatever was visible last frame (frustum only). Do not modify visibility.
-        bool prevVisible = workPc.mSceneVisibilityRisReadBuffer[riVisIndex];
+        bool prevVisible = testPc.mSceneRisVisibilityReadBuffer[riVisIndex];
         if (prevVisible)
             prevVisible = !SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners);
         if (prevVisible) {
-            markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
+            markRiIndex(rc, ri, testPc.mSceneRisIndicesBuffer);
             draw = true;
         }
     } else {
         bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&
                            (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage));
-        workPc.mSceneVisibilityRisWriteBuffer[riVisIndex] = currVisible;
+        testPc.mSceneRisVisibilityWriteBuffer[riVisIndex] = currVisible;
 
         // Opaque render commands are the only ones drawn by the early geometry pass, so only they emit just the newly-visible delta.
         bool hasEarlyDraw = rc->mMaterialType == SwMaterial::Type::Opaque;
-        bool drawnEarly = hasEarlyDraw && workPc.mSceneVisibilityRisReadBuffer[riVisIndex];
+        bool drawnEarly = hasEarlyDraw && testPc.mSceneRisVisibilityReadBuffer[riVisIndex];
         if (currVisible && !drawnEarly) {
-            markDrawRiIndex(rc, ri, workPc.mSceneDrawRisIndicesBuffer);
+            markRiIndex(rc, ri, testPc.mSceneRisIndicesBuffer);
             draw = true;
         }
     }
     uint _;
     if (draw)
-        InterlockedAdd(*workPc.mStatsRisCount, 1, _);
+        InterlockedAdd(*testPc.mSceneRisCount, 1, _);
 }

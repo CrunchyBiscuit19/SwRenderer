@@ -18,19 +18,19 @@ namespace SwGeometry {
     public static const uint OCCLUSION_TEXTURE_OFFSET = 3;
     public static const uint EMISSIVE_TEXTURE_OFFSET = 4;
 
-    public struct WorkPC {
+    public struct DrawPC {
         public SwMesh::Vertex* mSceneVertexBuffer;
         public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public uint* mSceneDrawRisIndicesBuffer;
-        public SwBatch::RenderCommand* mDrawRcsBuffer;
+        public uint* mSceneRisIndicesBuffer;
+        public SwBatch::RenderCommand* mSceneRcsBuffer;
         public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwLighting::VisibleLights* mVisibleLightsBuffer;
-        public float mMaxPrefilterMip;   // highest mip index of the specular prefilter chain
-        public float mIblIntensity;      // scales the image-based ambient term (GUI-controlled)
-        public uint mIblComponents;      // IBL_DIFFUSE / IBL_SPECULAR bit mask (GUI-controlled)
+        public float mMaxPrefilterMipLevel;
+        public float mIblIntensity;
+        public uint mIblComponents;
     };
 
     public struct VSInput {

@@ -2,7 +2,7 @@ import System.Lighting.SwLighting;
 import Data.SwConstants;
 
 [[vk::push_constant]]
-SwLighting::ShadowResetPC shadowResetPc;
+SwLighting::ResetPC shadowResetPc;
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
@@ -12,5 +12,5 @@ void main(SwLighting::CSInput in) {
         return;
 
     // Reset render command instance count to zero
-    shadowResetPc.mShadowDrawRcsBuffer[rcsIndex].mRiCount = 0;
+    shadowResetPc.mShadowRcsBuffer[rcsIndex].mRiCount = 0;
 }

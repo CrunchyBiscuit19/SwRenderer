@@ -9,7 +9,7 @@ public uniform SamplerState linearSampler;
 public uniform RWTexture2D<float4> outputImage;
 
 [[vk::push_constant]]
-SwPostProcess::Fxaa::WorkPC fxaaPc;
+SwPostProcess::Fxaa::FxaaPC fxaaPc;
 
 [numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(SwPostProcess::CSInput in) {

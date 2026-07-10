@@ -13,7 +13,7 @@ namespace SwCull {
 static const std::filesystem::path CULL_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Cull"};
 static const std::filesystem::path CULL_RESET_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullReset.comp.spv"};
 static const std::filesystem::path CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullPrepOcclusion.comp.spv"};
-static const std::filesystem::path CULL_WORK_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullWork.comp.spv"};
+static const std::filesystem::path CULL_TEST_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullTest.comp.spv"};
 static const std::filesystem::path CULL_COMPACT_COMPUTE_SHADER_PATH{CULL_SHADERS_DIR / "SwCullCompact.comp.spv"};
 static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
 
@@ -26,17 +26,17 @@ struct ResetPC : public SwPC<ResetPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct WorkPC : public SwPC<WorkPC> {
+struct TestPC : public SwPC<TestPC> {
     vk::DeviceAddress mSceneRcsBuffer;
     vk::DeviceAddress mSceneRisBuffer;
-    vk::DeviceAddress mStatsRisCount;
+    vk::DeviceAddress mSceneRisCount;
     vk::DeviceAddress mFrameBuffer;
     vk::DeviceAddress mSceneBoundsBuffer;
     vk::DeviceAddress mSceneNodeTransformsBuffer;
     vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneDrawRisIndicesBuffer;
-    vk::DeviceAddress mSceneVisibilityRisReadBuffer;
-    vk::DeviceAddress mSceneVisibilityRisWriteBuffer;
+    vk::DeviceAddress mSceneRisIndicesBuffer;
+    vk::DeviceAddress mSceneRisVisibilityReadBuffer;
+    vk::DeviceAddress mSceneRisVisibilityWriteBuffer;
     std::uint32_t mSceneRisLimit;
     Phase mPhase;
 
@@ -67,12 +67,12 @@ struct Resources {
     SwPipelineLayout mCompactPipelineLayout;
     SwCull::CompactPC mCompactPushConstants;
 
-    SwComputePipelineBundle mWorkPipelineBundle;
-    SwPipelineLayout mWorkPipelineLayout;
-    SwDescriptorSet mWorkDescriptorSet;
-    SwDescriptorLayout mWorkDescriptorLayout;
-    SwSampler mWorkDepthPyramidSampler;
-    SwCull::WorkPC mWorkPushConstants;
+    SwComputePipelineBundle mTestPipelineBundle;
+    SwPipelineLayout mTestPipelineLayout;
+    SwDescriptorSet mTestDescriptorSet;
+    SwDescriptorLayout mTestDescriptorLayout;
+    SwSampler mTestDepthPyramidSampler;
+    SwCull::TestPC mTestPushConstants;
 
     SwComputePipelineBundle mPrepOcclusionPipelineBundle;
     SwPipelineLayout mPrepOcclusionPipelineLayout;

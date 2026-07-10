@@ -19,10 +19,10 @@ public uniform TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS];
 public uniform SamplerComparisonState shadowSampler;
 
 [[vk::push_constant]]
-SwGeometry::WorkPC workPc;
+SwGeometry::DrawPC drawPc;
 
 float4 shade(SwGeometry::FSInput in, bool masked) {
-    SwMaterial::Constant mc = workPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
+    SwMaterial::Constant mc = drawPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
     uint base = in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES;
 
     float4 diffuseColor = materialResources[NonUniformResourceIndex(base + SwGeometry::BASE_TEXTURE_OFFSET)].Sample(in.mUv);
@@ -42,7 +42,7 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     float3 sampledNormal = materialResources[NonUniformResourceIndex(base + SwGeometry::NORMAL_TEXTURE_OFFSET)].Sample(in.mUv).rgb;
     float3 normal = SwGeometry::applyNormalMap(in.mNormal, in.mTangent, sampledNormal, mc.mNormalScale);
 
-    float3 view = normalize(workPc.mFrameBuffer->mCameraBuffer->mWorldPos - in.mWorldPos);
+    float3 view = normalize(drawPc.mFrameBuffer->mCameraBuffer->mWorldPos - in.mWorldPos);
 
     float3 lit = SwLighting::shadeLit(
         color.rgb,
@@ -52,16 +52,16 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
         in.mWorldPos,
         normal,
         view,
-        workPc.mVisibleLightsBuffer,
-        workPc.mSceneLightsBuffer,
-        workPc.mSceneInstancesBuffer,
-        workPc.mSceneNodeTransformsBuffer,
+        drawPc.mVisibleLightsBuffer,
+        drawPc.mSceneLightsBuffer,
+        drawPc.mSceneInstancesBuffer,
+        drawPc.mSceneNodeTransformsBuffer,
         iblIrradianceMap,
         iblPrefilterMap,
         iblBrdfLut,
-        workPc.mMaxPrefilterMip,
-        workPc.mIblIntensity,
-        workPc.mIblComponents,
+        drawPc.mMaxPrefilterMipLevel,
+        drawPc.mIblIntensity,
+        drawPc.mIblComponents,
         shadow2DMaps,
         shadowCubeMaps,
         shadowSampler
