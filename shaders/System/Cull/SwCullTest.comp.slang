@@ -141,13 +141,15 @@ void main(SwCull::CSInput in) {
 
     bool draw = false;
     if (testPc.mPhase == SwCull::Phase::Early) {
-        // Draw whatever was visible last frame (frustum only). Do not modify visibility.
-        bool prevVisible = testPc.mSceneRisVisibilityReadBuffer[riVisIndex];
-        if (prevVisible)
-            prevVisible = !SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners);
-        if (prevVisible) {
-            markRiIndex(rc, ri, testPc.mSceneRisIndicesBuffer);
-            draw = true;
+        // Draw whatever opaque was visible last frame (frustum only). Do not modify visibility.
+        if (testPc.mSceneBatchesBuffer[rc->mBatchIndex].mMaterialType == SwMaterial::Type::Opaque) {
+            bool prevVisible = testPc.mSceneRisVisibilityReadBuffer[riVisIndex];
+            if (prevVisible)
+                prevVisible = !SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners);
+            if (prevVisible) {
+                markRiIndex(rc, ri, testPc.mSceneRisIndicesBuffer);
+                draw = true;
+            }
         }
     } else {
         bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&

@@ -11,7 +11,7 @@ namespace SwBatch {
         public uint mFirstRi;
         public uint mMaterialIndex;
         public uint mNodeTransformIndex;
-        public uint mModelIndex;
+        public uint mAssetIndex;
         public uint mFirstInstance;
         public uint mBoundsIndex;
 
@@ -26,7 +26,7 @@ namespace SwBatch {
             this.mFirstRi = src.mFirstRi;
             this.mMaterialIndex = src.mMaterialIndex;
             this.mNodeTransformIndex = src.mNodeTransformIndex;
-            this.mModelIndex = src.mModelIndex;
+            this.mAssetIndex = src.mAssetIndex;
             this.mFirstInstance = src.mFirstInstance;
             this.mBoundsIndex = src.mBoundsIndex;
             this.mBatchIndex = src.mBatchIndex;

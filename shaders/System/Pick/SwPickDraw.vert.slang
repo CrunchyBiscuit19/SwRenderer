@@ -28,7 +28,7 @@ SwPick::VSOutput computeVertex(SwPick::VSInput in) {
     out.mColor = v.mColor * materialConstant.mBaseFactor;
     out.mAlphaCutoff = materialConstant.mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
-    out.mModelIndex = rc.mModelIndex;
+    out.mModelIndex = rc.mAssetIndex;
     out.mInstanceIndex = mSceneInstanceIndex;
 
     return out;
