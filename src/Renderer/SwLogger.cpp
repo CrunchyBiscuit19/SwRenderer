@@ -383,7 +383,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
             LOG_WARNING(swLogger->getQuillPtr(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
-            LOG_TRACE_L3(swLogger->getQuillPtr(), "{}", message);
+            LOG_INFO(swLogger->getQuillPtr(), "{}", message);
             break;
         case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
         default:

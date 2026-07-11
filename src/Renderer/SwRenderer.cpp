@@ -71,6 +71,7 @@ SwRenderer::SwRenderer()
         .require_api_version(VK_MAJOR_VERSION, VK_MINOR_VERSION, VK_PATCH_VERSION);
     if (VALIDATION_MODE >= ValidationMode::Basic) {
         vkbInstBuilder.request_validation_layers(true);
+        vkbInstBuilder.add_validation_feature_enable(static_cast<VkValidationFeatureEnableEXT>(vk::ValidationFeatureEnableEXT::eDebugPrintf));
     }
     if (VALIDATION_MODE >= ValidationMode::Strict) {
         vkbInstBuilder.add_validation_feature_enable(static_cast<VkValidationFeatureEnableEXT>(vk::ValidationFeatureEnableEXT::eDebugPrintf))
