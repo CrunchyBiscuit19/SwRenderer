@@ -28,7 +28,7 @@ SwPick::VSOutput computeVertex(SwPick::VSInput in) {
     out.mColor = v.mColor * materialConstant.mBaseFactor;
     out.mAlphaCutoff = materialConstant.mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
-    out.mModelIndex = rc.mAssetIndex;
+    out.mAssetIndex = rc.mAssetIndex;
     out.mInstanceIndex = mSceneInstanceIndex;
 
     return out;
@@ -40,7 +40,7 @@ SwPick::VSOutputOpaque mainOpaque(SwPick::VSInput in) {
 
     SwPick::VSOutputOpaque out;
     out.mPosition = full.mPosition;
-    out.mModelIndex = full.mModelIndex;
+    out.mAssetIndex = full.mAssetIndex;
     out.mInstanceIndex = full.mInstanceIndex;
     return out;
 }

@@ -27,7 +27,7 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     out.mColor = v.mColor * materialConstant.mBaseFactor;
     out.mAlphaCutoff = materialConstant.mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
-    out.mModelIndex = rc.mAssetIndex;
+    out.mAssetIndex = rc.mAssetIndex;
     out.mInstanceIndex = mSceneInstanceIndex;
 
     return out;
@@ -39,7 +39,7 @@ SwLighting::VSOutputOpaque mainOpaque(SwLighting::VSInput in) {
 
     SwLighting::VSOutputOpaque out;
     out.mPosition = full.mPosition;
-    out.mModelIndex = full.mModelIndex;
+    out.mAssetIndex = full.mAssetIndex;
     out.mInstanceIndex = full.mInstanceIndex;
     return out;
 }

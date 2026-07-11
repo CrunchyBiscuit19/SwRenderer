@@ -88,13 +88,13 @@ namespace SwLighting {
         public float4 mColor : COLOR0;
         public nointerpolation float mAlphaCutoff;
         public nointerpolation uint mMaterialIndex;
-        public nointerpolation uint mModelIndex;
+        public nointerpolation uint mAssetIndex;
         public nointerpolation uint mInstanceIndex;
     };
 
     public struct VSOutputOpaque {
         public float4 mPosition : SV_Position;
-        public nointerpolation uint mModelIndex;
+        public nointerpolation uint mAssetIndex;
         public nointerpolation uint mInstanceIndex;
     };
 
