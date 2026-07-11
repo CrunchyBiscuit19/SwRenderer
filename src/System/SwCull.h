@@ -65,16 +65,16 @@ struct Resources {
     SwPipelineLayout mResetPipelineLayout;
     SwCull::ResetPC mResetPushConstants;
 
-    SwComputePipelineBundle mCompactPipelineBundle;
-    SwPipelineLayout mCompactPipelineLayout;
-    SwCull::CompactPC mCompactPushConstants;
-
     SwComputePipelineBundle mTestPipelineBundle;
     SwPipelineLayout mTestPipelineLayout;
     SwDescriptorSet mTestDescriptorSet;
     SwDescriptorLayout mTestDescriptorLayout;
     SwSampler mTestDepthPyramidSampler;
     SwCull::TestPC mTestPushConstants;
+
+    SwComputePipelineBundle mCompactPipelineBundle;
+    SwPipelineLayout mCompactPipelineLayout;
+    SwCull::CompactPC mCompactPushConstants;
 
     SwComputePipelineBundle mPrepOcclusionPipelineBundle;
     SwPipelineLayout mPrepOcclusionPipelineLayout;

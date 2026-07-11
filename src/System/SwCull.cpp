@@ -5,82 +5,13 @@
 #include <Resource/SwShader.h>
 #include <System/SwCull.h>
 #include <quill/LogMacros.h>
+#include <quill/Logger.h>
 
 #include <format>
 
 SwCull::System::System(SwScene& scene) : SwSystem(scene) {}
 
 void SwCull::System::initializeOtherPasses() {
-    // PublishCount
-    mScene.insertPass(SwPass::Type::CullPublishCount, [&](vk::CommandBuffer cmd) {
-        const vk::BufferCopy region{0, 0, sizeof(std::uint32_t)};
-        cmd.copyBuffer(
-            SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), SwRenderer::sRendererContext.mStats->mRisPublishedCount.getHandle(), region
-        );
-    });
-}
-
-void SwCull::System::initializeEarlyPasses() {
-    // EarlyReset
-    mScene.insertPass(SwPass::Type::CullEarlyReset, [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
-
-        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
-        cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneEarlyRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneEarlyRcsCount().getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneLateRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneLateRcsCount().getHandle(), 0, vk::WholeSize, 0);
-
-        cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
-
-        cmd.dispatch(SwHelper::fastDivCeil(mResources.mResetPushConstants.mSceneRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-    });
-
-    // EarlyTest
-    mScene.insertPass(SwPass::Type::CullEarlyTest, [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mTestPipelineBundle.getBindPoint(), mResources.mTestPipelineBundle.getPipelineHandle());
-
-        cmd.bindDescriptorSets(
-            mResources.mTestPipelineBundle.getBindPoint(),
-            mResources.mTestPipelineBundle.getLayoutHandle(),
-            0,
-            mResources.mTestDescriptorSet.getHandle(),
-            nullptr
-        );
-
-        mResources.mTestPushConstants.mPhase = SwCull::Phase::Early;
-        cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
-
-        cmd.dispatch(SwHelper::fastDivCeil(mResources.mTestPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-    });
-
-    // EarlyCompact
-    mScene.insertPass(SwPass::Type::CullEarlyCompact, [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getPipelineHandle());
-
-        mResources.mCompactPushConstants.mPostRcsBuffer = mScene.getSceneEarlyRcsBuffer().getDeviceAddress().value();
-        mResources.mCompactPushConstants.mPostRcsCount = mScene.getSceneEarlyRcsCount().getDeviceAddress().value();
-        cmd.pushConstants<SwCull::CompactPC>(
-            mResources.mCompactPipelineBundle.getLayoutHandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
-        );
-
-        cmd.dispatch(SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-    });
-}
-
-void SwCull::System::initializeLatePasses() {
-    // LateReset
-    // Zero initialRcs.mRiCount after the early compact has snapshotted it. Late draw list limited to just the newly-visible delta.
-    mScene.insertPass(SwPass::Type::CullLateReset, [&](vk::CommandBuffer cmd) {
-        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
-
-        cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
-
-        cmd.dispatch(SwHelper::fastDivCeil(mScene.getSceneRcs().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-    });
-
     // PrepOcclusion
     mScene.insertPass(SwPass::Type::CullPrepOcclusion, [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mPrepOcclusionPipelineBundle.getBindPoint(), mResources.mPrepOcclusionPipelineBundle.getPipelineHandle());
@@ -128,6 +59,84 @@ void SwCull::System::initializeLatePasses() {
         }
     });
 
+    // PublishCount
+    mScene.insertPass(SwPass::Type::CullPublishCount, [&](vk::CommandBuffer cmd) {
+        const vk::BufferCopy region{0, 0, sizeof(std::uint32_t)};
+        cmd.copyBuffer(
+            SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), SwRenderer::sRendererContext.mStats->mRisPublishedCount.getHandle(), region
+        );
+    });
+}
+
+void SwCull::System::initializeEarlyPasses() {
+    // EarlyReset
+    mScene.insertPass(SwPass::Type::CullEarlyReset, [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
+
+        cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneEarlyRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneEarlyRcsCount().getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneLateRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mScene.getSceneLateRcsCount().getHandle(), 0, vk::WholeSize, 0);
+
+        cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mResetPushConstants.mSceneRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        if (groupCountX == 0) return;
+        cmd.dispatch(groupCountX, 1, 1);
+    });
+
+    // EarlyTest
+    mScene.insertPass(SwPass::Type::CullEarlyTest, [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mTestPipelineBundle.getBindPoint(), mResources.mTestPipelineBundle.getPipelineHandle());
+
+        cmd.bindDescriptorSets(
+            mResources.mTestPipelineBundle.getBindPoint(),
+            mResources.mTestPipelineBundle.getLayoutHandle(),
+            0,
+            mResources.mTestDescriptorSet.getHandle(),
+            nullptr
+        );
+
+        mResources.mTestPushConstants.mPhase = SwCull::Phase::Early;
+        cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
+
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mTestPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        if (groupCountX == 0) return;
+        cmd.dispatch(groupCountX, 1, 1);
+    });
+
+    // EarlyCompact
+    mScene.insertPass(SwPass::Type::CullEarlyCompact, [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getPipelineHandle());
+
+        mResources.mCompactPushConstants.mPostRcsBuffer = mScene.getSceneEarlyRcsBuffer().getDeviceAddress().value();
+        mResources.mCompactPushConstants.mPostRcsCount = mScene.getSceneEarlyRcsCount().getDeviceAddress().value();
+        cmd.pushConstants<SwCull::CompactPC>(
+            mResources.mCompactPipelineBundle.getLayoutHandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
+        );
+
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        if (groupCountX == 0) return;
+        cmd.dispatch(groupCountX, 1, 1);
+    });
+}
+
+void SwCull::System::initializeLatePasses() {
+    // LateReset
+    // Zero initialRcs.mRiCount after the early compact has snapshotted it. Late draw list limited to just the newly-visible delta.
+    mScene.insertPass(SwPass::Type::CullLateReset, [&](vk::CommandBuffer cmd) {
+        cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
+
+        cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mResetPushConstants.mSceneRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        if (groupCountX == 0) return;
+        cmd.dispatch(groupCountX, 1, 1);
+    });
+
     // LateTest
     mScene.insertPass(SwPass::Type::CullLateTest, [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mTestPipelineBundle.getBindPoint(), mResources.mTestPipelineBundle.getPipelineHandle());
@@ -143,7 +152,9 @@ void SwCull::System::initializeLatePasses() {
         mResources.mTestPushConstants.mPhase = SwCull::Phase::Late;
         cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
 
-        cmd.dispatch(SwHelper::fastDivCeil(mResources.mTestPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mTestPushConstants.mSceneRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        if (groupCountX == 0) return;
+        cmd.dispatch(groupCountX, 1, 1);
     });
 
     // LateCompact
@@ -156,7 +167,9 @@ void SwCull::System::initializeLatePasses() {
             mResources.mCompactPipelineBundle.getLayoutHandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
         );
 
-        cmd.dispatch(SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        if (groupCountX == 0) return;
+        cmd.dispatch(groupCountX, 1, 1);
     });
 }
 
@@ -243,6 +256,15 @@ void SwCull::System::initializePasses() {
 }
 
 void SwCull::System::refreshDependencies() {
+    // PrepOcclusion
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::CullPrepOcclusion].getDeps();
+        d.clear();
+        d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
+        d.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
+        d.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
+    }
+
     // PublishCount
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::CullPublishCount].getDeps();
@@ -301,15 +323,6 @@ void SwCull::System::refreshDependencies() {
         SwDependency& d = mScene.mPasses[SwPass::Type::CullLateReset].getDeps();
         d.clear();
         d.mWriteBuffers.emplace_back(&mScene.getSceneInitialRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
-    }
-
-    // PrepOcclusion
-    {
-        SwDependency& d = mScene.mPasses[SwPass::Type::CullPrepOcclusion].getDeps();
-        d.clear();
-        d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
-        d.mReadImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
-        d.mWriteImages.emplace_back(&mResources.mDepthPyramidImage, SwDependency::ImageDepType::ComputeStorageReadWrite);
     }
 
     // LateTest

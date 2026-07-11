@@ -132,9 +132,9 @@ void SwGeometry::System::refreshDependencies() {
         }
         addCommonDeps(d);
         auto& rcsBuffer = early ? mScene.getSceneEarlyRcsBuffer() : mScene.getSceneLateRcsBuffer();
-        auto& rcsCountBuffer = early ? mScene.getSceneEarlyRcsCount() : mScene.getSceneLateRcsCount();
+        auto& rcsCount = early ? mScene.getSceneEarlyRcsCount() : mScene.getSceneLateRcsCount();
         d.mReadBuffers.emplace_back(&rcsBuffer, SwDependency::BufferDepType::IndirectRead);
-        d.mReadBuffers.emplace_back(&rcsCountBuffer, SwDependency::BufferDepType::IndirectRead);
+        d.mReadBuffers.emplace_back(&rcsCount, SwDependency::BufferDepType::IndirectRead);
     };
 
     build(SwPass::Type::GeometryEarlyOpaque, SwMaterial::Type::Opaque, true, false);
