@@ -241,7 +241,6 @@ void SwGui::System::initializeResources() {
 
         ImGui::Unindent();
     };
-
     mResources.mGuiComponents[SwGuiComponent::Effects] = [this]() { ImGui::Checkbox("Toggle FXAA", mScene.getPostProcessSystem().getFXAAActivePtr()); };
     mResources.mGuiComponents[SwGuiComponent::Stats] = [this]() {
         const float frameTime = SwRenderer::sRendererContext.mStats->mFrameTime;
@@ -291,6 +290,7 @@ void SwGui::System::initializeResources() {
         ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall);
         ImGui::Text("Pre-Cull Render Items: %i", SwRenderer::sRendererContext.mStats->mNumInitialRis);
         ImGui::Text("Post-Cull Render Items: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRisPublishedCount.getMappedPtr()));
+        ImGui::Checkbox("Freeze Culling", mScene.getCullSystem().getFreezePtr());
         if (ImGui::Button("Create Render Graph")) {
             mScene.getRenderGraph().requestRenderGraph();
         }

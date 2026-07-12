@@ -802,15 +802,19 @@ void SwScene::draw() {
     if (mIBL.isActive() && mIBL.isFileSelected()) {
         mRenderGraph.addPass(&mPasses[SwPass::Type::IBLSkybox]);
     }
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyTest]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyCompact]);
+    if (!mCull.getFreeze()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyReset]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyTest]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullEarlyCompact]);
+    }
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryEarlyOpaque]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateReset]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateTest]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
+    if (!mCull.getFreeze()) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullPrepOcclusion]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateReset]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateTest]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
+        mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
+    }
     /*mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowReset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingLightsCull]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowCull]);
