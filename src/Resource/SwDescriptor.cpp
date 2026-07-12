@@ -18,9 +18,9 @@ void SwDescriptorSet::writeImage(std::uint32_t bindingIndex, vk::ImageView image
     mWrites.emplace_back(*mSet, bindingIndex, arrayIndex, 1, mBindings[bindingIndex].descriptorType, &mWriteImageInfos.back());
 }
 
-void SwDescriptorSet::writeSampler(std::uint32_t bindingIndex, vk::Sampler sampler) {
+void SwDescriptorSet::writeSampler(std::uint32_t bindingIndex, vk::Sampler sampler, std::uint32_t arrayIndex) {
     mWriteImageInfos.emplace_back(sampler);
-    mWrites.emplace_back(*mSet, bindingIndex, 0, 1, mBindings[bindingIndex].descriptorType, &mWriteImageInfos.back());
+    mWrites.emplace_back(*mSet, bindingIndex, arrayIndex, 1, mBindings[bindingIndex].descriptorType, &mWriteImageInfos.back());
 }
 
 void SwDescriptorSet::writeBuffer(std::uint32_t bindingIndex, vk::Buffer buffer, size_t size, size_t offset) {
@@ -93,13 +93,20 @@ SwDescriptorLayout SwDescriptorAllocator::createDescriptorLayout(
     descriptorLayoutCreateInfo.pBindings = bindings.data();
     descriptorLayoutCreateInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
 
-    vk::DescriptorBindingFlags bindlessFlags = vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind |
-                                               vk::DescriptorBindingFlagBits::eVariableDescriptorCount;
+    std::vector<vk::DescriptorBindingFlags> bindlessFlags(
+        bindings.size(), vk::DescriptorBindingFlagBits::ePartiallyBound | vk::DescriptorBindingFlagBits::eUpdateAfterBind
+    );
+    if (!bindlessFlags.empty()) bindlessFlags.back() |= vk::DescriptorBindingFlagBits::eVariableDescriptorCount;
+
     vk::DescriptorSetLayoutBindingFlagsCreateInfo descriptorLayoutBindingFlagsCreateInfo{};
-    descriptorLayoutBindingFlagsCreateInfo.pBindingFlags = &bindlessFlags;
-    descriptorLayoutBindingFlagsCreateInfo.bindingCount = static_cast<std::uint32_t>(bindings.size());
+    descriptorLayoutBindingFlagsCreateInfo.pBindingFlags = bindlessFlags.data();
+    descriptorLayoutBindingFlagsCreateInfo.bindingCount = static_cast<std::uint32_t>(bindlessFlags.size());
 
     if (useBindless) {
+        for (std::size_t i = 0; i < bindings.size(); ++i) {
+            if (i == bindings.size() - 1) continue;
+            assert(bindings[i].descriptorCount == 1 && "Only the last binding of a bindless layout may hold a variable-sized array");
+        }
         descriptorLayoutCreateInfo.flags = vk::DescriptorSetLayoutCreateFlagBits::eUpdateAfterBindPool;
         descriptorLayoutCreateInfo.pNext = &descriptorLayoutBindingFlagsCreateInfo;
     }

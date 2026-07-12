@@ -4,8 +4,10 @@ import System.IBL.SwIBL;
 
 // GGX-importance-sampled specular prefilter for all mips of the equirect prefilter chain. 
 [[vk::binding(0, 0)]]
-public uniform Sampler2D environmentMap;
+public uniform SamplerState environmentSampler;
 [[vk::binding(1, 0)]]
+public uniform Texture2D environmentMap;
+[[vk::binding(2, 0)]]
 public uniform RWTexture2D<float4> prefilterMips[SwIBL::MAX_PREFILTER_MIP_LEVELS];
 
 [[vk::push_constant]]
@@ -50,7 +52,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
             float pdf = SwBRDF::distributionGGX(NdotH, roughness) * NdotH / (4.f * VdotH) + 1e-4f;
             float saSample = 1.f / (float(SwIBL::PREFILTER_SAMPLE_COUNT) * pdf);
             float mip = roughness <= 0.f ? 0.f : 0.5f * log2(saSample / saTexel);
-            prefiltered += environmentMap.SampleLevel(SwBRDF::dirToEquirectUv(L), max(mip, 0.f)).rgb * NdotL;
+            prefiltered += environmentMap.SampleLevel(environmentSampler, SwBRDF::dirToEquirectUv(L), max(mip, 0.f)).rgb * NdotL;
             totalWeight += NdotL;
         }
     }

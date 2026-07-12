@@ -104,8 +104,11 @@ void SwScene::initializeResources() {
     mSceneBatchesBuffer =
         SwBufferFactory::createAllocatedBuffer("SceneBatchesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_BATCHES_BUFFER_SIZE, true);
 
-    mSceneMaterialResourcesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
-        "SceneMaterialResourcesDescriptorSet", SwMaterialResources::sMaterialResourcesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
+    mSceneMaterialSamplersDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
+        "SceneMaterialSamplersDescriptorSet", SwMaterialResources::sMaterialSamplersDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
+    );
+    mSceneMaterialTexturesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
+        "SceneMaterialTexturesDescriptorSet", SwMaterialResources::sMaterialTexturesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
 
     // The normal slot of each material gets a flat (0,0,1) normal instead of white so unmapped surfaces keep their geometric normal.
@@ -113,11 +116,11 @@ void SwScene::initializeResources() {
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
         SwMaterialTexture& seed =
             (i % SwMaterial::NUM_PBR_IMAGES == normalSlot) ? SwMaterialTexture::sDefaultFlatNormalTexture : SwMaterialTexture::sDefaultWhiteTexture;
-        mSceneMaterialResourcesDescriptorSet.writeImage(
-            0, seed.getImage().getMainImageViewHandle(), seed.getSampler().getHandle(), vk::ImageLayout::eShaderReadOnlyOptimal, i
-        );
+        mSceneMaterialSamplersDescriptorSet.writeSampler(0, seed.getSampler().getHandle(), i);
+        mSceneMaterialTexturesDescriptorSet.writeImage(0, seed.getImage().getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i);
     }
-    mSceneMaterialResourcesDescriptorSet.pushWrites();
+    mSceneMaterialSamplersDescriptorSet.pushWrites();
+    mSceneMaterialTexturesDescriptorSet.pushWrites();
 }
 
 void SwScene::refreshDependencies() {
@@ -676,15 +679,13 @@ void SwScene::reloadSceneMaterialResourcesArray() {
                 &material.getResources().mEmissive
             };
             for (std::uint32_t i = 0; i < SwMaterial::NUM_PBR_IMAGES; i++) {
-                mSceneMaterialResourcesDescriptorSet.writeImage(
-                    0,
-                    materialTextures[i]->getImage().getMainImageViewHandle(),
-                    materialTextures[i]->getSampler().getHandle(),
-                    vk::ImageLayout::eShaderReadOnlyOptimal,
-                    materialTextureArrayIndex + i
+                mSceneMaterialSamplersDescriptorSet.writeSampler(0, materialTextures[i]->getSampler().getHandle(), materialTextureArrayIndex + i);
+                mSceneMaterialTexturesDescriptorSet.writeImage(
+                    0, materialTextures[i]->getImage().getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, materialTextureArrayIndex + i
                 );
             }
-            mSceneMaterialResourcesDescriptorSet.pushWrites();
+            mSceneMaterialSamplersDescriptorSet.pushWrites();
+            mSceneMaterialTexturesDescriptorSet.pushWrites();
         }
     }
 }

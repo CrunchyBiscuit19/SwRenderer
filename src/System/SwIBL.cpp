@@ -20,9 +20,12 @@ void SwIBL::Resources::init() {
     SwIBL::Resources::sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLConsumeDescriptorSetLayout",
         {
-            {CONSUME_IRRADIANCE_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
-            {CONSUME_PREFILTER_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
-            {CONSUME_BRDF_LUT_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
+            {CONSUME_IRRADIANCE_SAMPLER_BINDING, vk::DescriptorType::eSampler, 1},
+            {CONSUME_PREFILTER_SAMPLER_BINDING, vk::DescriptorType::eSampler, 1},
+            {CONSUME_BRDF_LUT_SAMPLER_BINDING, vk::DescriptorType::eSampler, 1},
+            {CONSUME_IRRADIANCE_IMAGE_BINDING, vk::DescriptorType::eSampledImage, 1},
+            {CONSUME_PREFILTER_IMAGE_BINDING, vk::DescriptorType::eSampledImage, 1},
+            {CONSUME_BRDF_LUT_IMAGE_BINDING, vk::DescriptorType::eSampledImage, 1},
         },
         vk::ShaderStageFlagBits::eFragment
     );
@@ -36,9 +39,12 @@ void SwIBL::System::initializeResources() {
     SwIBL::Resources::sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLConsumeDescriptorSetLayout",
         {
-            {CONSUME_IRRADIANCE_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
-            {CONSUME_PREFILTER_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
-            {CONSUME_BRDF_LUT_BINDING, vk::DescriptorType::eCombinedImageSampler, 1},
+            {CONSUME_IRRADIANCE_SAMPLER_BINDING, vk::DescriptorType::eSampler, 1},
+            {CONSUME_PREFILTER_SAMPLER_BINDING, vk::DescriptorType::eSampler, 1},
+            {CONSUME_BRDF_LUT_SAMPLER_BINDING, vk::DescriptorType::eSampler, 1},
+            {CONSUME_IRRADIANCE_IMAGE_BINDING, vk::DescriptorType::eSampledImage, 1},
+            {CONSUME_PREFILTER_IMAGE_BINDING, vk::DescriptorType::eSampledImage, 1},
+            {CONSUME_BRDF_LUT_IMAGE_BINDING, vk::DescriptorType::eSampledImage, 1},
         },
         vk::ShaderStageFlagBits::eFragment
     );
@@ -80,12 +86,12 @@ void SwIBL::System::initializeResources() {
 
     mResources.mIrradianceDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLBakeInputDescriptorSetLayout",
-        {{0, vk::DescriptorType::eCombinedImageSampler, 1}, {1, vk::DescriptorType::eStorageImage, 1}},
+        {{0, vk::DescriptorType::eSampler, 1}, {1, vk::DescriptorType::eSampledImage, 1}, {2, vk::DescriptorType::eStorageImage, 1}},
         vk::ShaderStageFlagBits::eCompute
     );
     mResources.mPrefilterDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLPrefilterDescriptorSetLayout",
-        {{0, vk::DescriptorType::eCombinedImageSampler, 1}, {1, vk::DescriptorType::eStorageImage, MAX_PREFILTER_MIP_LEVELS}},
+        {{0, vk::DescriptorType::eSampler, 1}, {1, vk::DescriptorType::eSampledImage, 1}, {2, vk::DescriptorType::eStorageImage, MAX_PREFILTER_MIP_LEVELS}},
         vk::ShaderStageFlagBits::eCompute
     );
     mResources.mBrdfLutDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -114,14 +120,14 @@ void SwIBL::System::initializeResources() {
 
     mResources.mIrradianceDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLIrradianceDescriptorSet", mResources.mIrradianceDescriptorLayout);
-    mResources.mIrradianceDescriptorSet.writeImage(1, mResources.mIrradianceImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eGeneral);
+    mResources.mIrradianceDescriptorSet.writeImage(2, mResources.mIrradianceImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eGeneral);
     mResources.mIrradianceDescriptorSet.pushWrites();
 
     mResources.mPrefilterMipDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLPrefilterDescriptorSet", mResources.mPrefilterDescriptorLayout);
     for (std::uint32_t slot = 0; slot < MAX_PREFILTER_MIP_LEVELS; slot++) {
         const std::uint32_t mip = std::min(slot, mPrefilterMipLevels - 1);
-        mResources.mPrefilterMipDescriptorSet.writeImage(1, mResources.mPrefilterImage.getOtherImageViewHandle(mip), nullptr, vk::ImageLayout::eGeneral, slot);
+        mResources.mPrefilterMipDescriptorSet.writeImage(2, mResources.mPrefilterImage.getOtherImageViewHandle(mip), nullptr, vk::ImageLayout::eGeneral, slot);
     }
     mResources.mPrefilterMipDescriptorSet.pushWrites();
 
@@ -160,20 +166,17 @@ void SwIBL::System::initializeResources() {
         );
     });
 
+    mResources.mConsumeDescriptorSet.writeSampler(CONSUME_IRRADIANCE_SAMPLER_BINDING, mResources.mEnvSampler.getHandle());
+    mResources.mConsumeDescriptorSet.writeSampler(CONSUME_PREFILTER_SAMPLER_BINDING, mResources.mEnvSampler.getHandle());
+    mResources.mConsumeDescriptorSet.writeSampler(CONSUME_BRDF_LUT_SAMPLER_BINDING, mResources.mLutSampler.getHandle());
     mResources.mConsumeDescriptorSet.writeImage(
-        CONSUME_IRRADIANCE_BINDING,
-        mResources.mIrradianceImage.getMainImageViewHandle(),
-        mResources.mEnvSampler.getHandle(),
-        vk::ImageLayout::eShaderReadOnlyOptimal
+        CONSUME_IRRADIANCE_IMAGE_BINDING, mResources.mIrradianceImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.writeImage(
-        CONSUME_PREFILTER_BINDING,
-        mResources.mPrefilterImage.getMainImageViewHandle(),
-        mResources.mEnvSampler.getHandle(),
-        vk::ImageLayout::eShaderReadOnlyOptimal
+        CONSUME_PREFILTER_IMAGE_BINDING, mResources.mPrefilterImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.writeImage(
-        CONSUME_BRDF_LUT_BINDING, mResources.mBrdfLutImage.getMainImageViewHandle(), mResources.mLutSampler.getHandle(), vk::ImageLayout::eShaderReadOnlyOptimal
+        CONSUME_BRDF_LUT_IMAGE_BINDING, mResources.mBrdfLutImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.pushWrites();
 
@@ -181,7 +184,9 @@ void SwIBL::System::initializeResources() {
     mResources.mSkyboxSampler = SwSamplerFactory::createSampler("SkyboxDrawSampler", vk::SamplerCreateInfo());
 
     mResources.mSkyboxDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "SkyboxDrawDescriptorSetLayout", {{0, vk::DescriptorType::eCombinedImageSampler, 1}}, vk::ShaderStageFlagBits::eFragment
+        "SkyboxDrawDescriptorSetLayout",
+        {{0, vk::DescriptorType::eSampler, 1}, {1, vk::DescriptorType::eSampledImage, 1}},
+        vk::ShaderStageFlagBits::eFragment
     );
     mResources.mSkyboxDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SkyboxDrawDescriptorSet", mResources.mSkyboxDescriptorLayout);
@@ -272,10 +277,12 @@ void SwIBL::System::refreshDependencies() {
 void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler environmentSampler) {
     vk::ImageView environmentView = environment.getMainImageViewHandle();
 
-    // Bind the freshly-loaded environment as the input (binding 0) of every bake set.
-    mResources.mIrradianceDescriptorSet.writeImage(0, environmentView, environmentSampler, vk::ImageLayout::eShaderReadOnlyOptimal);
+    // Bind the freshly-loaded environment as the input (sampler at binding 0, image at binding 1) of every bake set.
+    mResources.mIrradianceDescriptorSet.writeSampler(0, environmentSampler);
+    mResources.mIrradianceDescriptorSet.writeImage(1, environmentView, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mIrradianceDescriptorSet.pushWrites();
-    mResources.mPrefilterMipDescriptorSet.writeImage(0, environmentView, environmentSampler, vk::ImageLayout::eShaderReadOnlyOptimal);
+    mResources.mPrefilterMipDescriptorSet.writeSampler(0, environmentSampler);
+    mResources.mPrefilterMipDescriptorSet.writeImage(1, environmentView, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mPrefilterMipDescriptorSet.pushWrites();
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
@@ -325,16 +332,10 @@ void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler enviro
 
     // The image views are unchanged, but re-point the consume set so the equirect sampler stays attached.
     mResources.mConsumeDescriptorSet.writeImage(
-        CONSUME_IRRADIANCE_BINDING,
-        mResources.mIrradianceImage.getMainImageViewHandle(),
-        mResources.mEnvSampler.getHandle(),
-        vk::ImageLayout::eShaderReadOnlyOptimal
+        CONSUME_IRRADIANCE_IMAGE_BINDING, mResources.mIrradianceImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.writeImage(
-        CONSUME_PREFILTER_BINDING,
-        mResources.mPrefilterImage.getMainImageViewHandle(),
-        mResources.mEnvSampler.getHandle(),
-        vk::ImageLayout::eShaderReadOnlyOptimal
+        CONSUME_PREFILTER_IMAGE_BINDING, mResources.mPrefilterImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mConsumeDescriptorSet.pushWrites();
 }
@@ -414,9 +415,8 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
         stbi_image_free(data);
     }
 
-    mResources.mSkyboxDescriptorSet.writeImage(
-        0, mResources.mSkyboxImage.getMainImageViewHandle(), mResources.mSkyboxSampler.getHandle(), vk::ImageLayout::eShaderReadOnlyOptimal
-    );
+    mResources.mSkyboxDescriptorSet.writeSampler(0, mResources.mSkyboxSampler.getHandle());
+    mResources.mSkyboxDescriptorSet.writeImage(1, mResources.mSkyboxImage.getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mSkyboxDescriptorSet.pushWrites();
 
     // Bake with the equirect sampler (full LOD range) so the prefilter can read the environment's mip

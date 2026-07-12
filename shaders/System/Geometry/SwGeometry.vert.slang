@@ -1,8 +1,5 @@
 import System.Geometry.SwGeometry;
 
-[[vk::binding(0, 0)]]
-public uniform Sampler2D materialResources[];
-
 [[vk::push_constant]]
 SwGeometry::DrawPC drawPc;
 

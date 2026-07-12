@@ -47,7 +47,7 @@ public:
 
     void writeImage(std::uint32_t binding, vk::ImageView imageView, vk::Sampler sampler, vk::ImageLayout layout, std::uint32_t arrayIndex = 0);
 
-    void writeSampler(std::uint32_t binding, vk::Sampler sampler);
+    void writeSampler(std::uint32_t binding, vk::Sampler sampler, std::uint32_t arrayIndex = 0);
 
     void writeBuffer(std::uint32_t binding, vk::Buffer buffer, size_t size, size_t offset);
 

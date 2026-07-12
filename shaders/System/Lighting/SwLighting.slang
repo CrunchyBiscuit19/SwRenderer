@@ -138,12 +138,15 @@ namespace SwLighting {
     // Full PBR shading: image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
     public float3 shadeLit(
         float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, SwLighting::VisibleLights* visibleLights,
-        SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, Sampler2D irradianceMap, Sampler2D prefilterMap,
-        Sampler2D brdfLut, float maxPrefilterMip, float iblIntensity, uint iblComponents, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS],
-        TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS], SamplerComparisonState shadowSampler
+        SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, Texture2D irradianceMap, SamplerState irradianceSampler,
+        Texture2D prefilterMap, SamplerState prefilterSampler, Texture2D brdfLut, SamplerState brdfLutSampler, float maxPrefilterMip, float iblIntensity,
+        uint iblComponents, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS], TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS],
+        SamplerComparisonState shadowSampler
     ) {
-        float3 color = iblIntensity *
-                       SwIBL::ambientIBL(albedo, metallic, roughness, ao, normal, view, irradianceMap, prefilterMap, brdfLut, maxPrefilterMip, iblComponents);
+        float3 color = iblIntensity * SwIBL::ambientIBL(
+                                          albedo, metallic, roughness, ao, normal, view, irradianceMap, irradianceSampler, prefilterMap, prefilterSampler,
+                                          brdfLut, brdfLutSampler, maxPrefilterMip, iblComponents
+                                      );
         for (uint i = 0; i < visibleLights->mLitCount; i++) {
             SwLight::Data light = lights[visibleLights->mLitIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);

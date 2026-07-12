@@ -38,10 +38,14 @@ constexpr std::uint32_t MAX_PREFILTER_MIP_LEVELS{1 << 4};
 constexpr std::uint32_t IBL_DIFFUSE{1u};
 constexpr std::uint32_t IBL_SPECULAR{2u};
 
-// Set-1 bindings consumed by the geometry/transparent fragment shaders.
-constexpr std::uint32_t CONSUME_IRRADIANCE_BINDING{0};
-constexpr std::uint32_t CONSUME_PREFILTER_BINDING{1};
-constexpr std::uint32_t CONSUME_BRDF_LUT_BINDING{2};
+// Bindings consumed by the geometry/transparent fragment shaders. Samplers keep the original binding
+// slots, the sampled images follow directly after them.
+constexpr std::uint32_t CONSUME_IRRADIANCE_SAMPLER_BINDING{0};
+constexpr std::uint32_t CONSUME_PREFILTER_SAMPLER_BINDING{1};
+constexpr std::uint32_t CONSUME_BRDF_LUT_SAMPLER_BINDING{2};
+constexpr std::uint32_t CONSUME_IRRADIANCE_IMAGE_BINDING{3};
+constexpr std::uint32_t CONSUME_PREFILTER_IMAGE_BINDING{4};
+constexpr std::uint32_t CONSUME_BRDF_LUT_IMAGE_BINDING{5};
 
 struct PrefilterPC : SwPC<PrefilterPC> {
     std::uint32_t mTotalMipLevels{0};

@@ -5,11 +5,12 @@
 #include <System/SwGeometry.h>
 #include <System/SwLighting.h>
 
-std::array<vk::DescriptorSetLayout, 3> SwGeometry::Resources::sGeometrySetLayouts{};
+std::array<vk::DescriptorSetLayout, 4> SwGeometry::Resources::sGeometrySetLayouts{};
 
 void SwGeometry::Resources::init() {
     SwGeometry::Resources::sGeometrySetLayouts = {
-        SwMaterialResources::sMaterialResourcesDescriptorLayout.getHandle(),
+        SwMaterialResources::sMaterialSamplersDescriptorLayout.getHandle(),
+        SwMaterialResources::sMaterialTexturesDescriptorLayout.getHandle(),
         SwIBL::Resources::sConsumeDescriptorLayout.getHandle(),
         SwLighting::Resources::sShadowConsumeDescriptorLayout.getHandle()
     };
@@ -40,7 +41,8 @@ void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::opti
             pipeline.getBindPoint(),
             pipeline.getLayoutHandle(),
             0,
-            {mScene.getSceneMaterialResourcesDescriptorSet().getHandle(),
+            {mScene.getSceneMaterialSamplersDescriptorSet().getHandle(),
+             mScene.getSceneMaterialTexturesDescriptorSet().getHandle(),
              mScene.getIBLSystem().getConsumeDescriptorSet().getHandle(),
              mScene.getLightingSystem().getShadowMapsDescriptorSet().getHandle()},
             nullptr

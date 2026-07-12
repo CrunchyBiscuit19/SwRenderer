@@ -72,7 +72,8 @@ private:
     SwLighting::System mLighting;
     SwGui::System mGui;
 
-    SwDescriptorSet mSceneMaterialResourcesDescriptorSet;
+    SwDescriptorSet mSceneMaterialSamplersDescriptorSet;
+    SwDescriptorSet mSceneMaterialTexturesDescriptorSet;
     SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;
     SwAllocatedBuffer mSceneVertexBuffer;
     SwAllocatedBuffer mSceneIndexBuffer;
@@ -159,7 +160,8 @@ public:
     inline SwLight& getLight(const std::uint32_t lightId) { return mLights.at(lightId); }
     inline const std::vector<std::uint32_t>& getLightIds() const { return mLightIds; }
 
-    inline SwDescriptorSet& getSceneMaterialResourcesDescriptorSet() { return mSceneMaterialResourcesDescriptorSet; }
+    inline SwDescriptorSet& getSceneMaterialSamplersDescriptorSet() { return mSceneMaterialSamplersDescriptorSet; }
+    inline SwDescriptorSet& getSceneMaterialTexturesDescriptorSet() { return mSceneMaterialTexturesDescriptorSet; }
     inline SwAllocatedBuffer& getSceneVertexBuffer() { return mSceneVertexBuffer; }
     inline SwAllocatedBuffer& getSceneIndexBuffer() { return mSceneIndexBuffer; }
     inline SwAllocatedBuffer& getSceneMaterialConstantsBuffer() { return mSceneMaterialConstantsBuffer; }

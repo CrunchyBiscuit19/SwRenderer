@@ -29,7 +29,7 @@ struct DrawPC : SwPC<DrawPC> {
 struct Resources {
     DrawPC mDrawPushConstants;
 
-    static std::array<vk::DescriptorSetLayout, 3> sGeometrySetLayouts;
+    static std::array<vk::DescriptorSetLayout, 4> sGeometrySetLayouts;
 
     static void init();
     static void cleanup();

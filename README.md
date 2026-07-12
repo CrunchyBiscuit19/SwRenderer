@@ -172,7 +172,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 * **`SwScene`** — owns the camera, the loaded assets (`mAssets`), the per-material-type batch maps (`mBatchTypes`), the passes (`mPasses`), the render graph, and every system instance (`SwCull`, `SwPick`, `SwIBL`, `SwWBOIT`, `SwGeometry`, `SwPostProcess`, `SwLighting`, `SwGui`).
 * **`SwScene::Flags`** — per-frame change flags (asset/instance loaded/unloaded, buffer reload requests) that drive what gets rebuilt.
-* Owns the scene-wide "global" GPU buffers (vertex, index, material constants, node transforms, instances, bounds, draw-RI indices, lights, plus a double-buffered visibility-RI buffer for occlusion) and the bindless material-resources descriptor set.
+* Owns the scene-wide "global" GPU buffers (vertex, index, material constants, node transforms, instances, bounds, draw-RI indices, lights, plus a double-buffered visibility-RI buffer for occlusion) and the two bindless material-resources descriptor sets (one sampler array, one sampled-image array).
 * **Relations** — `loadAssets(...)` parses assets and `regenerateRcsAndRis()` rebuilds the batches; the `realign*` / `reloadScene*Buffer` helpers repack the global buffers when assets change. `draw()` refreshes systems and executes the render graph each frame. Systems are friends of the scene so they can read its buffers.
 
 ### Passes and Dependencies `SwPass` / `SwDependency`

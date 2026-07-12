@@ -28,7 +28,8 @@ SwMaterialTexture SwMaterialTexture::retrieveDefaultFlatNormalTexture() {
     return SwMaterialTexture(sDefaultFlatNormalTexture.mImage, sDefaultFlatNormalTexture.mSampler);
 }
 
-SwDescriptorLayout SwMaterialResources::sMaterialResourcesDescriptorLayout{};
+SwDescriptorLayout SwMaterialResources::sMaterialSamplersDescriptorLayout{};
+SwDescriptorLayout SwMaterialResources::sMaterialTexturesDescriptorLayout{};
 
 SwMaterialResources::SwMaterialResources(
     SwMaterialTexture base, SwMaterialTexture metallicRoughness, SwMaterialTexture normal, SwMaterialTexture occlusion, SwMaterialTexture emissive
@@ -40,9 +41,15 @@ SwMaterialResources::SwMaterialResources(
       mEmissive(std::move(emissive)) {}
 
 void SwMaterialResources::init() {
-    sMaterialResourcesDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "MaterialResourcesDescriptorSetLayout",
-        {{0, vk::DescriptorType::eCombinedImageSampler, SwScene::SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
+    sMaterialSamplersDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "MaterialSamplersDescriptorSetLayout",
+        {{0, vk::DescriptorType::eSampler, SwScene::SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
+        vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
+        true
+    );
+    sMaterialTexturesDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "MaterialTexturesDescriptorSetLayout",
+        {{0, vk::DescriptorType::eSampledImage, SwScene::SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         true
     );
@@ -54,7 +61,10 @@ void SwMaterialResources::init() {
         SwMaterialTexture(&SwImageFactory::sDefaultImages[SwImageFactory::SwDefaultImageOption::FlatNormal], &SwSampler::sDefaultSampler);
 };
 
-void SwMaterialResources::cleanup() { sMaterialResourcesDescriptorLayout.destroy(); }
+void SwMaterialResources::cleanup() {
+    sMaterialSamplersDescriptorLayout.destroy();
+    sMaterialTexturesDescriptorLayout.destroy();
+}
 
 std::uint32_t SwMaterial::sLatestMaterialId{0};
 std::unordered_map<SwMaterialPipelineOptions, std::uint32_t> SwMaterial::sMaterialPipelinesCreated{};

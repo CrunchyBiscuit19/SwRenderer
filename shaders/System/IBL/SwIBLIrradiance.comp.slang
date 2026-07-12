@@ -4,8 +4,10 @@ import System.IBL.SwIBL;
 
 // Convolves the environment equirect into a small cosine-weighted diffuse irradiance map.
 [[vk::binding(0, 0)]]
-public uniform Sampler2D environmentMap;
+public uniform SamplerState environmentSampler;
 [[vk::binding(1, 0)]]
+public uniform Texture2D environmentMap;
+[[vk::binding(2, 0)]]
 public uniform RWTexture2D<float4> irradianceMap;
 
 [numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
@@ -42,7 +44,7 @@ void main(uint3 dispatchThreadID: SV_DispatchThreadID) {
             float saSample = sin(theta) * sampleDelta * sampleDelta;
             float mip = 0.5f * log2(max(saSample, 1e-12f) / saTexel);
             // cos(theta) weights by incident angle, sin(theta) accounts for the hemisphere area element.
-            irradiance += environmentMap.SampleLevel(SwBRDF::dirToEquirectUv(sampleVec), max(mip, 0.f)).rgb * cos(theta) * sin(theta);
+            irradiance += environmentMap.SampleLevel(environmentSampler, SwBRDF::dirToEquirectUv(sampleVec), max(mip, 0.f)).rgb * cos(theta) * sin(theta);
             numSamples += 1.f;
         }
     }

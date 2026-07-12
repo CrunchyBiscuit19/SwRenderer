@@ -47,7 +47,9 @@ void SwPick::System::initializeResources() {
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("PickReadbackDescriptorSet", mResources.mReadbackDescriptorLayout);
 
     mResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "PickDrawPipelineLayout", SwMaterialResources::sMaterialResourcesDescriptorLayout.getHandle(), SwPick::DrawPC::getRange()
+        "PickDrawPipelineLayout",
+        {SwMaterialResources::sMaterialSamplersDescriptorLayout.getHandle(), SwMaterialResources::sMaterialTexturesDescriptorLayout.getHandle()},
+        SwPick::DrawPC::getRange()
     );
 
     SwShader drawVertexShader = SwShaderFactory::createShader("PickDrawVertexShaderModule", PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
@@ -119,7 +121,7 @@ void SwPick::System::initializePasses() {
             mResources.mDrawOpaqueTransparentPipelineBundle.getBindPoint(),
             mResources.mDrawPipelineLayout.getHandle(),
             0,
-            mScene.getSceneMaterialResourcesDescriptorSet().getHandle(),
+            {mScene.getSceneMaterialSamplersDescriptorSet().getHandle(), mScene.getSceneMaterialTexturesDescriptorSet().getHandle()},
             nullptr
         );
 

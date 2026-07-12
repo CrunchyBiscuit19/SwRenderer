@@ -66,7 +66,8 @@ public:
     SwMaterialTexture mOcclusion;
     SwMaterialTexture mEmissive;
 
-    static SwDescriptorLayout sMaterialResourcesDescriptorLayout;
+    static SwDescriptorLayout sMaterialSamplersDescriptorLayout;
+    static SwDescriptorLayout sMaterialTexturesDescriptorLayout;
 
     SwMaterialResources(
         SwMaterialTexture base, SwMaterialTexture metallicRoughness, SwMaterialTexture normal, SwMaterialTexture occlusion, SwMaterialTexture emissive

@@ -41,8 +41,8 @@ namespace SwIBL {
     // Image-based ambient: split-sum diffuse irradiance + specular prefilter, modulated by AO.
     // Replaces the flat constant ambient now that the skybox drives a real environment.
     public float3 ambientIBL(
-        float3 albedo, float metallic, float roughness, float ao, float3 normal, float3 view, Sampler2D irradianceMap, Sampler2D prefilterMap,
-        Sampler2D brdfLut, float maxPrefilterMip, uint components
+        float3 albedo, float metallic, float roughness, float ao, float3 normal, float3 view, Texture2D irradianceMap, SamplerState irradianceSampler,
+        Texture2D prefilterMap, SamplerState prefilterSampler, Texture2D brdfLut, SamplerState brdfLutSampler, float maxPrefilterMip, uint components
     ) {
         float NdotV = max(dot(normal, view), 1e-4f);
         float3 F0 = lerp(float3(0.04f), albedo, metallic);
@@ -52,14 +52,14 @@ namespace SwIBL {
             // Weight by the normal-incidence Fresnel F0 (not the view-dependent F) so the diffuse fill
             // stays camera-invariant while keeping a sensible diffuse/specular energy split.
             float3 kD = (1.f - F0) * (1.f - metallic);
-            float3 irradiance = irradianceMap.SampleLevel(SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
+            float3 irradiance = irradianceMap.SampleLevel(irradianceSampler, SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
             ambient += kD * irradiance * albedo;
         }
         if ((components & IBL_SPECULAR) != 0u) {
             float3 R = reflect(-view, normal);
             float prefilterLod = roughness * maxPrefilterMip;
-            float3 prefiltered = prefilterMap.SampleLevel(SwBRDF::dirToEquirectUv(R), prefilterLod).rgb;
-            float2 envBrdf = brdfLut.SampleLevel(float2(NdotV, roughness), 0.f).rg;
+            float3 prefiltered = prefilterMap.SampleLevel(prefilterSampler, SwBRDF::dirToEquirectUv(R), prefilterLod).rgb;
+            float2 envBrdf = brdfLut.SampleLevel(brdfLutSampler, float2(NdotV, roughness), 0.f).rg;
             ambient += prefiltered * (F0 * envBrdf.x + envBrdf.y);
         }
 
