@@ -22,10 +22,12 @@ SwGeometry::System::System(SwScene& scene) : SwSystem(scene) {}
 void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::optional<SwMaterial::Type>, SwMaterial::NUM_TYPES> matTypes, bool early) {
     SwAllocatedBuffer& rcsBuffer = early ? mScene.getSceneEarlyRcsBuffer() : mScene.getSceneLateRcsBuffer();
     SwAllocatedBuffer& rcsCount = early ? mScene.getSceneEarlyRcsCount() : mScene.getSceneLateRcsCount();
-    mResources.mDrawPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value();
 
     for (auto& batch : mScene.getBatchIt(matTypes)) {
         if (batch.getRcsSize() == 0) continue;
+
+        // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
+        mResources.mDrawPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value() + batch.getRcsIndex() * sizeof(SwRenderCommand);
 
         auto& pipeline = batch.getGraphicsPipelineBundle();
 

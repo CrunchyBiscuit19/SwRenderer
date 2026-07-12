@@ -1,3 +1,4 @@
+
 #include <Renderer/SwEvents.h>
 #include <Renderer/SwHelper.h>
 #include <Renderer/SwImmSubmit.h>
@@ -780,7 +781,7 @@ void SwScene::perFrameUpdate() {
     toggleSceneVisibilityRisBuffer();
 
     mCull.refresh();
-    // mLighting.refresh();
+    mLighting.refresh();
     mPick.refresh();
     mIBL.refresh();
     mWBOIT.refresh();

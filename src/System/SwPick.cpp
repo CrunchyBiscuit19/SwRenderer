@@ -18,11 +18,12 @@ void SwPick::System::drawBatches(
     SwAllocatedBuffer& rcsCount = early ? mScene.getSceneEarlyRcsCount() : mScene.getSceneLateRcsCount();
     cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
 
-    mResources.mDrawPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value();
-    cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
-
     for (auto& batch : mScene.getBatchIt(matTypes)) {
         if (batch.getRcsSize() == 0) continue;
+
+        // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
+        mResources.mDrawPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value() + batch.getRcsIndex() * sizeof(SwRenderCommand);
+        cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
         cmd.drawIndexedIndirectCount(
             rcsBuffer.getHandle(),
