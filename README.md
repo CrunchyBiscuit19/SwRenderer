@@ -42,7 +42,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Images `SwImage`
 
 * Abstract base `SwImage` over the concrete `SwSwapchainImage` (wraps a swapchain-owned `VkImage`) and `SwAllocatedImage` (owns a `VkImage` + VMA allocation).
-* `SwAllocatedImage` is specialized into `SwColorImage2D`, `SwDepthImage2D`, and `SwColorImageCubemap`.
+* `SwAllocatedImage` splits into the `SwColorImage` and `SwDepthImage` bases, which are specialized into the concrete `SwColorImage2D`, `SwDepthImage2D`, `SwColorImageCubemap`, and `SwDepthImageCubemap`.
 * Tracks the current layout, pipeline stage, and access bits; convenience methods for barrier insertion and layout transitions (including via `SwDependency` types).
 * Holds a main image view plus optional additional views/formats; supports mipmap generation and resizing.
 * `SwImageFactory` creates images (uploading pixel data through a shared staging buffer), builds image views, and provides a set of default fallback textures (white, grey, black, blue, checkerboard).
@@ -95,8 +95,9 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Camera
 
-* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed and computes the six frustum planes. It owns and writes the camera GPU buffers (`SwCamera::Data`: perspective, world position, and the frustum) that the frame's data buffer points at, consumed by the cull and geometry passes. One buffer per frame-in-flight (indexed by frame number) so the CPU write for the next frame never races an in-flight frame's GPU read. Offers a spawn transform helper for placing new instances in front of the camera.
+* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed and computes its view frustum as a `SwFrustum` (`SwCamera::getFrustum()`). It owns and writes the camera GPU buffers (`SwCamera::Data`: perspective, world position, and the frustum) that the frame's data buffer points at, consumed by the cull and geometry passes. One buffer per frame-in-flight (indexed by frame number) so the CPU write for the next frame never races an in-flight frame's GPU read. Offers a spawn transform helper for placing new instances in front of the camera.
 * **`SwPerspective`** — a view + projection matrix pair (reversed-Z, Y-flipped Vulkan projection); produced by `SwCamera::getPerspective()`.
+* **`SwFrustum`** — the six bounding planes (near/far/left/right/top/bottom) built by `SwFrustum::calculateFrustum(...)`; **`SwPlane`** is a single plane (normal + signed distance). The camera bakes its `SwFrustum` into `SwCamera::Data` for the GPU cull pass.
 
 ### Asset
 
@@ -144,9 +145,14 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Batch
 
 * **`SwBatch`** — groups all render commands and render items that share one graphics pipeline; owns the GPU buffers backing the indirect draw lists (including the compacted early/late command buffers and counts used by the two-pass cull). Its CPU data is uploaded through the shared [staging ring](#staging-ring-swstagingring).
-* **`SwRenderCommand`** — one per mesh-node primitive; its first fields mirror `VkDrawIndexedIndirectCommand`, plus indices into the scene-wide material/node-transform/bounds/instance buffers.
-* **`SwRenderItem`** — one per (render command × instance); just a render-command index and a scene instance index. It is the unit of culling.
-* **Relations** — batches are keyed by pipeline id and live in per-material-type maps on the scene. A `SwRenderItem` points back to its `SwRenderCommand` (same batch) and to a `SwInstance`; a `SwRenderCommand` indexes the scene-wide material, node-transform, bounds, and instance buffers.
+* **`SwRenderCommand`** — one per mesh-node primitive. Its first five fields are laid out to be read directly as a `VkDrawIndexedIndirectCommand`:
+  * `mIndexCount` — the primitive's index count.
+  * `mRiCount` — the surviving instance count, written by the cull pass (the command's `instanceCount`).
+  * `mFirstIndex` / `mVertexOffset` — the primitive's window into the scene-wide index / vertex buffers.
+  * `mFirstRi` — the base slot this command owns in the scene draw-RI-indices buffer; it doubles as the draw's `firstInstance`, so each drawn instance's `SV_VulkanInstanceID` lands on `mFirstRi + local` and reads back the visible scene-instance index the cull pass wrote there.
+  * The remaining fields are indices into the other scene-wide buffers: `mMaterialIndex`, `mNodeTransformIndex`, and `mBoundsIndex` into the material-constants / node-transform / bounds buffers; `mFirstInstance` the base slot of the owning asset's instances in the scene instances buffer (cull derives an RC-local instance number as `mInstanceIndex - mFirstInstance`); `mBatchIndex` the owning batch in the scene batches buffer (cull reads its RCS window and material type); and `mAssetIndex` the owning asset, carried through to the fragment stage for picking and shadows.
+* **`SwRenderItem`** — one per (render command × instance); just `mRcIndex` (its render command in the same batch) and `mInstanceIndex` (its scene-wide instance). It is the unit of culling.
+* **Relations** — batches are keyed by pipeline id and live in per-material-type maps on the scene. A `SwRenderItem` points back to its `SwRenderCommand` (same batch) and to a `SwInstance`; a `SwRenderCommand` indexes the scene-wide material, node-transform, bounds, instance, and batch buffers.
 
 ---
 
@@ -184,7 +190,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Cull `SwCull`
 
 * Two-pass GPU frustum + Hierarchical-Z occlusion cull; one compute thread per render item.
-* **`Plane`** — a frustum plane (used by `SwCamera`); **`Phase`** — `Early` / `Late`.
+* **`Phase`** — `Early` / `Late`. The frustum planes it tests against are the camera's `SwFrustum` (see [Data Representation](#data-representation)).
 * **`ResetPC` / `CullPC` / `CompactPC` / `PrepOcclusionPC`** — compute push constants for the reset, cull-test, compaction, and depth-pyramid-build stages (mostly buffer device addresses).
 * **`Resources`** — the reset/test/compact/prep-occlusion compute pipelines and their layouts/descriptors, plus the depth-pyramid image and samplers.
 * **`System`** (`SwSystem::Resizable`) — registers the cull passes; can be frozen for debugging. **Relations** — produces the indirect draw lists consumed by `SwGeometry`; reads the scene bounds/transforms/instances buffers. See [Scene Data Model](#scene-data-model).
@@ -194,7 +200,8 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 * **`AssetLight`** — a per-instance binding emitted by asset `SwLightNode`s during regen: a non-owning pointer to the asset-owned `SwLight`, its owning instance pointer and asset id, its node-transform and instance indices, and the cached world position and direction. The system references the light object rather than copying its `SwLight::Data`.
 * **`Resources`** — the scene's lights: a single global `SwSunlight` and the `AssetLight` references. All punctual lights belong to assets. Lights spawned from the GUI are loaded from `resources/lights/{point,spot,directional}.gltf` as standalone assets (`SwScene::spawnStandaloneLight`) that live in `mAssets` but are flagged `standalone` so they are hidden from the assets menu and transformable from the lighting panel.
 * **`System`** — flattens its `AssetLight` references into `SwLight::Data` via `collectLightData()`; the scene packs that into `mSceneLightsBuffer` (`reloadSceneLightsBuffer`).
-* **Relations** — feeds the light buffer that `SwGeometry`'s shaders consume; the sunlight is uploaded per frame via the per-frame buffer.
+* **Shadow mapping (in progress)** — the system also owns the shadow-caster resources: per-caster arrays of `SwDepthImage2D` / `SwDepthImageCubemap` maps (`MAX_NUM_SHADOW_CASTERS`), their sampler and consume descriptor set (`sShadowConsumeDescriptorLayout`, bound during the geometry passes), the per-caster shadow render-command/item buffers, and the reset/cull/draw compute and graphics pipelines. It registers the `LightingShadowReset`, `LightingLightsCull`, `LightingShadowCull`, and `LightingShadowDraw` passes; reset and light-culling are live, while the shadow cull and draw callbacks are still stubs. The `LightingBuildClusters` / `LightingMarkActiveClusters` pass types are reserved for planned clustered lighting and are not yet registered.
+* **Relations** — feeds the light buffer that `SwGeometry`'s shaders consume, and the shadow-map descriptor set that its geometry pipeline layouts sample; the sunlight is uploaded per frame via the per-frame buffer.
 
 ### Image-Based Lighting `SwIBL`
 
@@ -296,6 +303,20 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 * Data types from [Data Representation](#data-representation) get flattened into GPU buffers and drive the cull/draw loop. 
 * The GPU-Driven rendering approach uploads buffers of relevant data of drawable objects and create indirect draw commands in `SwCull` compute shaders, pointing into those buffers during draw calls.
 
+### Design principle: one big buffer per data type
+
+* The architecture deliberately favours packing each kind of scene data into a **single scene-wide buffer**. 
+* Every asset's vertices, indices, material constants, node transforms, instances, bounds, render commands, and render items are concatenated into the corresponding `mSceneXBuffer` on `SwScene`, and each asset is handed contiguous base offsets (`mFirstMaterialInScene`, `mFirstNodeTransformInScene`, `mFirstInstanceInScene`, `mFirstBoundInScene`)
+* Cross-references between the data types are then plain integer indices into these flat arrays (see [Buffer Referencing via Indices](#buffer-referencing-via-indices)) rather than pointers or per-asset bindings.
+
+* Compute or draw stage can launch **a GPU thread per element** over the whole scene at once. 
+
+* Cull pass dispatches one thread per render item across every asset and batch, each thread reconstructing its full draw context by chasing indices, with no branching per asset and no rebinding between draws. 
+
+* Adding or removing an asset is a repack of the affected buffers plus an offset realignment (`realign*` / `reloadScene*Buffer`). 
+
+* The same flat-buffer, one-thread-per-element pattern recurs throughout the systems (cull, shadow-caster culling, lighting), which is why nearly every stage is a single indirect dispatch or draw over scene-wide buffers.
+
 ### Terminology
 
 * An instance (`SwInstance`) is a placement of an entire asset in the world. 
@@ -320,7 +341,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
  | RI[2] rc=1  sceneInst=5  |--rc-->    |       materialIdx nodeXformIdx boundsIdx        |--+
  | RI[3] rc=1  sceneInst=6  |--rc-->    | RC[1] firstRi=2  riCount=(0->cull) ...          |  |
  +--------------------------+           +-------------------------------------------------+  |
-        |  mSceneInstanceIndex                       | mBoundsIndex / mNodeTransformIndex /  |
+        |  mInstanceIndex                            | mBoundsIndex / mNodeTransformIndex /  |
         |                                            | mMaterialIndex (scene-wide buffers)   |
         v                                            v                                       |
  Scene instances buffer                  Scene bounds / node-transform / material buffers <--+
@@ -332,7 +353,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ```
 
 - **RI → RC**: `RI.mRcIndex` indexes `mRcsBuffer` within the same batch. Every RI knows the draw it belongs to.
-- **RI → instance**: `RI.mSceneInstanceIndex` indexes the scene-wide instances buffer for the world transform.
+- **RI → instance**: `RI.mInstanceIndex` indexes the scene-wide instances buffer for the world transform.
 - **RC → scene resources**: `mBoundsIndex`, `mNodeTransformIndex`, `mMaterialIndex`, `mFirstInstance` index the scene-wide bounds, node-transform, material, and instance buffers respectively.
 - **RC ↔ RI window**: `RC.mFirstRi` is the base slot in the scene "draw RIs indices" buffer that this RC owns; `RC.mRiCount` is how many of its RIs survived culling (filled in at runtime).
 
@@ -345,11 +366,11 @@ ri  = mRisBuffer[threadId]
 rc  = mRcsBuffer[ri.mRcIndex]
 bounds        = mSceneBoundsBuffer[rc.mBoundsIndex]
 nodeTransform = mSceneNodeTransformsBuffer[rc.mNodeTransformIndex]
-instance      = mSceneInstancesBuffer[ri.mSceneInstanceIndex]
+instance      = mSceneInstancesBuffer[ri.mInstanceIndex]
 ```
 
 * Transforms the bounds AABB by `instance * nodeTransform`, runs the culling tests. 
-* If the RI is visible it `InterlockedAdd`s into `rc.mRiCount` to claim a compacted slot and writes the surviving `mSceneInstanceIndex` into `mSceneDrawRisIndicesBuffer[rc.mFirstRi + offset]`.
+* If the RI is visible it `InterlockedAdd`s into `rc.mRiCount` to claim a compacted slot and writes the surviving `mInstanceIndex` into `mSceneDrawRisIndicesBuffer[rc.mFirstRi + offset]`.
 * At draw time the vertex shader reads back the visible instance.
 
 ```
@@ -380,7 +401,8 @@ The per-frame pass order — each pass is owned by the system of the same name (
 ```
 ClearImages → [IBLSkybox] → CullEarlyReset → CullEarlyTest → CullEarlyCompact
 → GeometryEarlyOpaque → CullPrepOcclusion → CullLateReset → CullLateTest
-→ CullLateCompact → CullPublishCount → GeometryLateOpaque → GeometryMasked
+→ CullLateCompact → CullPublishCount → LightingShadowReset → LightingLightsCull
+→ [LightingShadowCull → LightingShadowDraw] → GeometryLateOpaque → GeometryMasked
 → GeometryTransparent → [PickDraw → PickReadback → PickSelect] → WBOITComposite
 → Tonemap → [FXAA] → CopyToSwapchain → Gui
 ```
