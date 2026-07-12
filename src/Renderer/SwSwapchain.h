@@ -89,6 +89,8 @@ public:
 
     void resize();
 
+    void toggleFullscreen();
+
     inline SwColorImage2D& getDrawImage() { return mDrawImage; }
     inline SwDepthImage2D& getDepthImage() { return mDepthImage; }
     inline std::uint64_t getFrameNumber() const { return mFrameNumber; }

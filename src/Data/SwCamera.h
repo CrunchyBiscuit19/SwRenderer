@@ -56,7 +56,6 @@ private:
     float mSpeed{1.f};
     bool mRelativeMode{false};
     SwMovementMode mMovementMode{FREEFLY};
-    std::unordered_map<SwMovementMode, std::function<void()>> mMovementFunctions;
     SwFrustum mFrustum;
     std::array<SwAllocatedBuffer, SwSwapchain::NUM_FRAME_OVERLAP> mCameraBuffers;
 

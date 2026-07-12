@@ -5,6 +5,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwShader.h>
 #include <Scene/SwScene.h>
+#include <System/SwInput.h>
 #include <System/SwPick.h>
 #include <quill/LogMacros.h>
 
@@ -92,14 +93,6 @@ void SwPick::System::initializeResources() {
     SwShader readbackShader = SwShaderFactory::createShader("PickReadbackShaderModule", PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mReadbackPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {readbackShader.getHandle(), mResources.mReadbackPipelineLayout.getHandle()});
-
-    SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
-        const bool* keyState = SDL_GetKeyboardState(nullptr);
-        if (keyState[SDL_SCANCODE_DELETE] && mSelectedInstanceId.has_value() && mScene.getInstances().contains(*mSelectedInstanceId) &&
-            e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
-            mScene.getInstance(*mSelectedInstanceId).markDelete();
-        }
-    });
 
     reInitializeOnResize();
 }
@@ -257,6 +250,15 @@ void SwPick::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }
 
+void SwPick::System::refresh() {
+    SwInput::System& input = mScene.getInputSystem();
+    if (!ImGui::GetIO().WantCaptureKeyboard && input.wasTriggered(SwInput::DELETE_INSTANCE) && mSelectedInstanceId.has_value() &&
+        mScene.getInstances().contains(*mSelectedInstanceId)) {
+        mScene.getInstance(*mSelectedInstanceId).markDelete();
+    }
+    SwSystem::refresh();
+}
+
 void SwPick::System::changePickOperation() {
     switch (mImguizmoOperation) {
         case ImGuizmo::TRANSLATE:
@@ -303,7 +305,7 @@ void SwPick::System::generatePickFrame() {
 
 bool SwPick::System::isPicked() {
     return (
-        (SDL_GetMouseState(nullptr, nullptr) & SDL_BUTTON_LMASK) && !SwRenderer::sRendererContext.mScene->getCamera().getRelativeMode() &&
+        mScene.getInputSystem().isActive(SwInput::SELECT_OBJECT) && !SwRenderer::sRendererContext.mScene->getCamera().getRelativeMode() &&
         !ImGui::GetIO().WantCaptureMouse
     );
 }

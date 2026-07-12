@@ -239,6 +239,9 @@ target_include_directories(tinyexr PUBLIC "${CMAKE_THIRD_PARTY_DIR}/tinyexr")
 add_library(imgui-filebrowser INTERFACE)
 target_include_directories(imgui-filebrowser INTERFACE "${CMAKE_THIRD_PARTY_DIR}/imgui-filebrowser")
 
+add_library(nlohmann_json INTERFACE)
+target_include_directories(nlohmann_json INTERFACE "${CMAKE_THIRD_PARTY_DIR}")
+
 add_library(vma INTERFACE)
 target_include_directories(vma INTERFACE "${CMAKE_THIRD_PARTY_DIR}/vma")
 
@@ -261,6 +264,7 @@ target_link_libraries(SwRenderer PUBLIC
     stb_image
     tinyexr
     imgui-filebrowser
+    nlohmann_json
     vma
     quill
     Vulkan::Vulkan
@@ -290,6 +294,7 @@ target_compile_definitions(SwRenderer PUBLIC ASSETS_PATH="${CMAKE_CURRENT_SOURCE
 target_compile_definitions(SwRenderer PUBLIC LIGHTS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/lights/")
 target_compile_definitions(SwRenderer PUBLIC SKYBOXES_PATH="${CMAKE_CURRENT_SOURCE_DIR}/resources/skyboxes/")
 target_compile_definitions(SwRenderer PUBLIC DOCS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/docs")
+target_compile_definitions(SwRenderer PUBLIC KEYBINDINGS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/config/keybindings.json")
 
 target_compile_definitions(SwRenderer PUBLIC SHADERS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/shaders/System")
 

@@ -225,9 +225,11 @@ void SwRenderer::run() {
             break;
         }
 
+        mScene.getInputSystem().beginFrame();
         while (SDL_PollEvent(&e) != 0) {
             mEvents.executeEventCallbacks(e);
         }
+        if (mScene.getInputSystem().wasTriggered(SwInput::TOGGLE_FULLSCREEN)) mSwapchain.toggleFullscreen();
 
         if (mStopRendering) {
             // Do not draw if minimized, throttle to avoid endless spinning

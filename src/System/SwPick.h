@@ -82,6 +82,8 @@ private:
 public:
     System(SwScene& scene);
 
+    void refresh() override;
+
     void changePickOperation();
     void generatePickFrame();
     bool isPicked();

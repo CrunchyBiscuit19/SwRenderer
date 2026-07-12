@@ -170,7 +170,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Scene `SwScene`
 
-* **`SwScene`** — owns the camera, the loaded assets (`mAssets`), the per-material-type batch maps (`mBatchTypes`), the passes (`mPasses`), the render graph, and every system instance (`SwCull`, `SwPick`, `SwIBL`, `SwWBOIT`, `SwGeometry`, `SwPostProcess`, `SwLighting`, `SwGui`).
+* **`SwScene`** — owns the camera, the loaded assets (`mAssets`), the per-material-type batch maps (`mBatchTypes`), the passes (`mPasses`), the render graph, and every system instance (`SwInput`, `SwCull`, `SwPick`, `SwIBL`, `SwWBOIT`, `SwGeometry`, `SwPostProcess`, `SwLighting`, `SwGui`).
 * **`SwScene::Flags`** — per-frame change flags (asset/instance loaded/unloaded, buffer reload requests) that drive what gets rebuilt.
 * Owns the scene-wide "global" GPU buffers (vertex, index, material constants, node transforms, instances, bounds, draw-RI indices, lights, plus a double-buffered visibility-RI buffer for occlusion) and the two bindless material-resources descriptor sets (one sampler array, one sampled-image array).
 * **Relations** — `loadAssets(...)` parses assets and `regenerateRcsAndRis()` rebuilds the batches; the `realign*` / `reloadScene*Buffer` helpers repack the global buffers when assets change. `draw()` refreshes systems and executes the render graph each frame. Systems are friends of the scene so they can read its buffers.
@@ -186,6 +186,14 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 * **`SwRenderGraph`** — collects passes and output images, prunes passes that don't contribute to an output, topologically sorts the rest (`compile()`), and `execute()`s them on a command buffer — inserting the Vulkan barriers implied by each pass's `SwDependency`s.
 * Can export the compiled graph to Graphviz for inspection (`requestRenderGraph()` / `exportRenderGraph()`).
 * **Relations** — owned by the `SwScene`; operates on the `SwPass`es the systems register.
+
+### Input `SwInput`
+
+* Centralized keyboard/mouse input, loaded from a JSON keybindings file at startup so controls can be added or remapped without touching code.
+* **`keybindings.json`** (`resources/config/`) — maps a stable action name to a binding: a `key` and/or `mouse` button, optional `mods`, a `trigger` (`hold` for held state, `press` for a key-down edge), and an optional `description` for the on-screen controls list. A `settings` block exposes look sensitivity, scroll speed, and move speed. A built-in default table is used if the file is missing or malformed.
+* **`SwBinding`** — the resolved binding for one action (SDL scancode / mouse button / modifier mask / edge flag / description).
+* **`System`** — registers one SDL event callback that accumulates press edges and mouse/wheel deltas each frame; `beginFrame()` (called from `SwRenderer::run()` before event polling) clears them. Exposes `isActive(action)` (held), `wasTriggered(action)` (press edge this frame), `getMouseDelta()`, and `getWheelDelta()`.
+* **Relations** — the single source of truth for controls: `SwCamera`, `SwGui`, `SwPick`, and the fullscreen toggle in `SwRenderer::run()` all query it by action name instead of reading SDL directly. Consumers gate keyboard/mouse actions on ImGui's `WantCaptureKeyboard` / `WantCaptureMouse`. The GUI Controls panel is generated from the loaded bindings so it never drifts from the actual keys.
 
 ### Cull `SwCull`
 
@@ -386,7 +394,7 @@ transform          = mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix
 
 ### CPU Update — `SwScene::perFrameUpdate()`
 
-1. Refresh the [GUI](#gui-swgui) and update the [camera](#camera).
+1. Refresh the [GUI](#gui-swgui) and update the [camera](#camera), both of which read this frame's actions from [`SwInput`](#input-swinput) (whose per-frame state was cleared by `beginFrame()` and repopulated during event polling in `run()`).
 2. Apply pending asset/instance loads and unloads. If anything changed, `realign*` the scene-wide offsets, `reloadScene*Buffer` the affected [global buffers](#scene-swscene), and `regenerateRcsAndRis()` to rebuild the [batches](#batch).
 3. `refresh()` each system (recomputing push constants and rebuilding its passes' dependencies). Per-frame uploads are accumulated on [`SwImmSubmit`](#immediate-submit-swimmsubmit) here and folded into the frame command buffer during the draw, rather than flushed by a blocking submit.
 
@@ -460,6 +468,7 @@ All dependencies are vendored under `thirdParty/`:
 | Vulkan SDK       | GPU API                 |
 | SDL3             | Window and input        |
 | glm              | Math                    |
+| nlohmann/json    | Keybindings config      |
 | fastgltf         | glTF 2.0 loading        |
 | vk-bootstrap     | Vulkan init boilerplate |
 | VMA              | GPU memory allocation   |

@@ -3,6 +3,7 @@
 #include <Renderer/SwSwapchain.h>
 #include <Scene/SwScene.h>
 #include <System/SwGui.h>
+#include <System/SwInput.h>
 #include <format>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
@@ -296,34 +297,14 @@ void SwGui::System::initializeResources() {
         }
     };
     mResources.mGuiComponents[SwGuiComponent::Controls] = [this]() {
-        ImGui::Text("[G] Toggle GUI");
-        ImGui::Text("[Alt + Enter] Toggle Borderless Fullscreen");
-        ImGui::Text("[C] Change Camera Mode");
+        SwInput::System& input = mScene.getInputSystem();
+        for (const std::string& action : input.getActionOrder()) {
+            const SwInput::SwBinding* binding = input.getBinding(action);
+            if (binding == nullptr || binding->mDescription.empty()) continue;
+            ImGui::Text("[%s] %s", input.bindingLabel(action).c_str(), binding->mDescription.c_str());
+        }
         ImGui::Text("[Mouse Scroll] Control Camera Speed");
-        ImGui::Text("[Left Click] Select / Deselect Object");
-        ImGui::Text("[Right Click] Enter / Leave Window");
-        ImGui::Text("[Ctrl + I] Import Asset");
-        ImGui::Text("[T] Switch Transform Mode");
-        ImGui::Text("[Del] Delete Clicked Instance");
     };
-
-    SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
-        const SDL_Keymod modState = SDL_GetModState();
-        const bool* keyState = SDL_GetKeyboardState(nullptr);
-
-        if (keyState[SDL_SCANCODE_G] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
-            mCollapsed = !mCollapsed;
-        }
-
-        if (keyState[SDL_SCANCODE_T] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
-            mScene.getPickSystem().changePickOperation();
-        }
-
-        if ((modState & SDL_KMOD_CTRL) && keyState[SDL_SCANCODE_I] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
-            mResources.mSelectAssetsFileBrowser.Open();
-            mScene.getCamera().setRelativeMode(false);
-        }
-    });
 }
 
 void SwGui::System::initializePasses() {
@@ -341,6 +322,16 @@ void SwGui::System::initializePasses() {
 }
 
 void SwGui::System::refresh() {
+    SwInput::System& input = mScene.getInputSystem();
+    if (!ImGui::GetIO().WantCaptureKeyboard) {
+        if (input.wasTriggered(SwInput::TOGGLE_GUI)) mCollapsed = !mCollapsed;
+        if (input.wasTriggered(SwInput::CYCLE_TRANSFORM)) mScene.getPickSystem().changePickOperation();
+        if (input.wasTriggered(SwInput::IMPORT_ASSET)) {
+            mResources.mSelectAssetsFileBrowser.Open();
+            mScene.getCamera().setRelativeMode(false);
+        }
+    }
+
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplSDL3_NewFrame();
     ImGui::NewFrame();

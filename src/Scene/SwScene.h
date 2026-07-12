@@ -12,6 +12,7 @@
 #include <System/SwGeometry.h>
 #include <System/SwGui.h>
 #include <System/SwIBL.h>
+#include <System/SwInput.h>
 #include <System/SwLighting.h>
 #include <System/SwPick.h>
 #include <System/SwPostProcess.h>
@@ -63,6 +64,7 @@ private:
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
 
+    SwInput::System mInput;
     SwCull::System mCull;
     SwPick::System mPick;
     SwIBL::System mIBL;
@@ -183,6 +185,7 @@ public:
     inline SwAllocatedBuffer& getSceneRisBuffer() { return mSceneRisBuffer; }
     inline SwAllocatedBuffer& getSceneBatchesBuffer() { return mSceneBatchesBuffer; }
 
+    inline SwInput::System& getInputSystem() { return mInput; }
     inline SwCull::System& getCullSystem() { return mCull; }
     inline SwPick::System& getPickSystem() { return mPick; }
     inline SwIBL::System& getIBLSystem() { return mIBL; }

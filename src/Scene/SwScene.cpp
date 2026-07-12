@@ -150,9 +150,11 @@ void SwScene::finalPresentTransition(SwCommandBuffer& commandBuffer) {
     SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getHandle(), SwDependency::ImageDepType::PresentSrc);
 }
 
-SwScene::SwScene() : mCull(*this), mPick(*this), mIBL(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
+SwScene::SwScene()
+    : mInput(*this), mCull(*this), mPick(*this), mIBL(*this), mWBOIT(*this), mGeometry(*this), mPostProcess(*this), mLighting(*this), mGui(*this) {}
 
 void SwScene::initialize() {
+    mInput.initialize();
     mCamera.initialize();
     mGui.initialize();
 

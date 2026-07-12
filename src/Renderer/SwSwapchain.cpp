@@ -39,16 +39,6 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
         mFrames.back().initialize(static_cast<std::uint32_t>(i));
     }
 
-    SwRenderer::sRendererContext.mEvents->addEventCallback([this](SDL_Event& e) -> void {
-        const SDL_Keymod modState = SDL_GetModState();
-        const bool* keyState = SDL_GetKeyboardState(nullptr);
-        if ((modState & SDL_KMOD_ALT) && keyState[SDL_SCANCODE_RETURN] && e.type == SDL_EVENT_KEY_DOWN && !e.key.repeat) {
-            mWindowFullScreen = !mWindowFullScreen;
-            SDL_SetWindowFullscreen(mWindow, mWindowFullScreen);
-            SDL_SetWindowBordered(mWindow, !mWindowFullScreen);
-        }
-    });
-
     mWindow = window;
     mSurface = std::move(surface);
     mWindowExtent = windowExtent;
@@ -57,6 +47,12 @@ void SwSwapchain::initialize(SDL_Window* window, vk::raii::SurfaceKHR surface, v
     mWindowFullScreen ? mResizeRequested = true : mResizeRequested = false;  // Initial resize for fullscreen
 
     onResizeInitialize();
+}
+
+void SwSwapchain::toggleFullscreen() {
+    mWindowFullScreen = !mWindowFullScreen;
+    SDL_SetWindowFullscreen(mWindow, mWindowFullScreen);
+    SDL_SetWindowBordered(mWindow, !mWindowFullScreen);
 }
 
 void SwSwapchain::onResizeInitialize() {

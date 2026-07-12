@@ -1,0 +1,23 @@
+{
+  "settings": {
+    "look_sensitivity": 200.0,
+    "scroll_speed": 0.2,
+    "move_speed": 0.1
+  },
+  "actions": {
+    "camera_forward":     { "key": "W" },
+    "camera_back":        { "key": "S" },
+    "camera_left":        { "key": "A" },
+    "camera_right":       { "key": "D" },
+    "camera_up":          { "key": "W", "mods": ["LSHIFT"] },
+    "camera_down":        { "key": "S", "mods": ["LSHIFT"] },
+    "camera_toggle_mode": { "key": "C", "trigger": "press", "description": "Change Camera Mode" },
+    "camera_look":        { "mouse": "RIGHT", "trigger": "press", "description": "Enter / Leave Window" },
+    "toggle_fullscreen":  { "key": "Return", "mods": ["ALT"], "trigger": "press", "description": "Toggle Borderless Fullscreen" },
+    "toggle_gui":         { "key": "G", "trigger": "press", "description": "Toggle GUI" },
+    "cycle_transform":    { "key": "T", "trigger": "press", "description": "Switch Transform Mode" },
+    "import_asset":       { "key": "I", "mods": ["CTRL"], "trigger": "press", "description": "Import Asset" },
+    "delete_instance":    { "key": "Delete", "trigger": "press", "description": "Delete Clicked Instance" },
+    "select_object":      { "mouse": "LEFT", "description": "Select / Deselect Object" }
+  }
+}

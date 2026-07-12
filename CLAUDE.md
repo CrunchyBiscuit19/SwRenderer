@@ -49,6 +49,7 @@
 - **Quill** — async logging
 - **stb_image** — texture loading
 - **magic_enum** — enum-to-string reflection
+- **nlohmann/json** — JSON parsing for the input keybindings config
 
 ### Code Conventions
 
