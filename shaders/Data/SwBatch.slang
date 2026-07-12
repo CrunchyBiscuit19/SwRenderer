@@ -34,12 +34,12 @@ namespace SwBatch {
 
     public struct RenderItem {
         public uint mRcIndex;
-        public uint mSceneInstanceIndex;
+        public uint mInstanceIndex;
 
         [mutating]
         public void copyFrom(RenderItem* src) {
             this.mRcIndex = src.mRcIndex;
-            this.mSceneInstanceIndex = src.mSceneInstanceIndex;
+            this.mInstanceIndex = src.mInstanceIndex;
         }
     }
 

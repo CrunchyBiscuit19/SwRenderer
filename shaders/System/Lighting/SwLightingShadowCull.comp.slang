@@ -73,7 +73,7 @@ void main(SwLighting::CSInput in) {
 
     SwMesh::Bounds* riBounds = &shadowCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    float4x4 riInstanceTransform = shadowCullPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex].mTransformMatrix;
+    float4x4 riInstanceTransform = shadowCullPc.mSceneInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
     uint sceneLightsIndex = shadowCullPc.mVisibleLightsBuffer->mLitIndices[shadowCullPc.mLightIndex];
@@ -98,6 +98,6 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowCullPc.mShadowRisIndicesBuffer[rc->mFirstRi + offset] = ri->mSceneInstanceIndex;
+        shadowCullPc.mShadowRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
     }
 }

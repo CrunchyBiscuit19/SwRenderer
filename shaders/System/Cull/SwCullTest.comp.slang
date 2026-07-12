@@ -108,7 +108,7 @@ void markRiIndex(SwBatch::RenderCommand* rc, SwBatch::RenderItem* ri, uint* scen
     uint offsetVisibleRiIndex;
     InterlockedAdd(rc->mRiCount, 1, offsetVisibleRiIndex);
     uint visibleRiIndex = rc->mFirstRi + offsetVisibleRiIndex;
-    sceneRisIndicesBuffer[visibleRiIndex] = ri->mSceneInstanceIndex;
+    sceneRisIndicesBuffer[visibleRiIndex] = ri->mInstanceIndex;
 }
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
@@ -121,7 +121,7 @@ void main(SwCull::CSInput in) {
 
     SwMesh::Bounds* bounds = &testPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     SwNode::Transform* nodeTransform = &testPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    SwInstance::Data* instance = &testPc.mSceneInstancesBuffer[ri->mSceneInstanceIndex];
+    SwInstance::Data* instance = &testPc.mSceneInstancesBuffer[ri->mInstanceIndex];
     SwFrustum::Data* frustum = &testPc.mFrameBuffer->mCameraBuffer->mFrustum;
     SwCamera::Perspective* perspective = &testPc.mFrameBuffer->mCameraBuffer->mPerspective;
     float4[SwMesh::NUM_AABB_CORNERS] aabbCorners = {
@@ -137,7 +137,7 @@ void main(SwCull::CSInput in) {
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
 
-    uint riVisIndex = rc->mFirstRi + (ri->mSceneInstanceIndex - rc->mFirstInstance);
+    uint riVisIndex = rc->mFirstRi + (ri->mInstanceIndex - rc->mFirstInstance);
 
     bool draw = false;
     if (testPc.mPhase == SwCull::Phase::Early) {

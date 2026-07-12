@@ -24,7 +24,7 @@ struct SwRenderCommand {
 
 struct SwRenderItem {
     std::uint32_t mRcIndex;
-    std::uint32_t mSceneInstanceIndex;
+    std::uint32_t mInstanceIndex;
 };
 
 class SwBatch {
