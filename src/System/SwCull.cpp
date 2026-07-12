@@ -74,7 +74,7 @@ void SwCull::System::initializeEarlyPasses() {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
 
         cmd.fillBuffer(SwRenderer::sRendererContext.mStats->mRisScratchCount.getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mScene.getSceneRisIndicesBuffer().getHandle(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(mScene.getSceneRisIndicesBuffer().getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneVisibilityRisWriteBuffer().getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneEarlyRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getSceneEarlyRcsCount().getHandle(), 0, vk::WholeSize, 0);

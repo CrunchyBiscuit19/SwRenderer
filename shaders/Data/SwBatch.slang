@@ -14,7 +14,6 @@ namespace SwBatch {
         public uint mAssetIndex;
         public uint mFirstInstance;
         public uint mBoundsIndex;
-
         public uint mBatchIndex;
 
         [mutating]

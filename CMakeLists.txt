@@ -27,6 +27,13 @@ set(CMAKE_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 
 find_program(SLANGC slangc REQUIRED)
 
+set(SW_RENDERDOC_SOURCE_DEBUGGING ON)
+if(SW_RENDERDOC_SOURCE_DEBUGGING)
+    set(SHADER_OPT_ARG -g3)
+else()
+    set(SHADER_OPT_ARG -O3)
+endif()
+
 file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SHADER_DIR}/*.slang"
 	"${CMAKE_SHADER_DIR}/**/*.slang"
@@ -92,7 +99,7 @@ foreach(SHADER IN LISTS SLANG_ENTRY_SOURCES)
     add_custom_command(
         OUTPUT "${SHADER_SPV}"
         COMMAND ${SLANGC} "${SHADER}" -o "${SHADER_SPV}" -I "${CMAKE_SHADER_DIR}"
-                ${SHADER_STAGE_ARGS} -profile sm_6_6 -target spirv -O3 -fvk-use-scalar-layout
+                ${SHADER_STAGE_ARGS} -profile sm_6_6 -target spirv ${SHADER_OPT_ARG} -fvk-use-scalar-layout
                 -depfile "${SHADER_DEPFILE}"
         DEPFILE "${SHADER_DEPFILE}"
         DEPENDS "${SHADER}" PurgeSlangModules
