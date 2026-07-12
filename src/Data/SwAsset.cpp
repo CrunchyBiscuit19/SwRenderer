@@ -365,7 +365,7 @@ void SwAsset::constructMeshes() {
             }
         }
 
-        mesh.getBounds() = SwBounds(mesh.getVertices()[0].mPosition, mesh.getVertices()[0].mPosition);
+        mesh.setBounds(mesh.getVertices()[0].mPosition, mesh.getVertices()[0].mPosition);
         for (auto& vertex : mesh.getVertices()) {
             mesh.setBounds(glm::min(mesh.getBounds().mMin, vertex.mPosition), glm::max(mesh.getBounds().mMax, vertex.mPosition));
         }
