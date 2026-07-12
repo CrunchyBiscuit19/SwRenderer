@@ -72,7 +72,6 @@ void SwWBOIT::System::initializePasses() {
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.draw(SwSwapchain::NUM_FULLSCREEN_QUAD_VERTICES, 1, 0, 0);
-        SwRenderer::sRendererContext.mStats->mNumDrawCall++;
 
         cmd.endRendering();
     });
@@ -89,14 +88,14 @@ void SwWBOIT::System::refreshDependencies() {
 
 void SwWBOIT::System::reInitializeOnResize() {
     mResources.mAccumImage = SwImageFactory::createColorImage2D(
-        "AccumImage",
+        "WBOITAccumImage",
         SwSwapchain::DRAW_FORMAT,
         SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D(),
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false
     );
     mResources.mRvlImage = SwImageFactory::createColorImage2D(
-        "RvlImage",
+        "WBOITRvlImage",
         SwWBOIT::RVL_FORMAT,
         SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D(),
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,

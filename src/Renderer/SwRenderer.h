@@ -66,7 +66,7 @@ private:
 public:
     static SwRendererContext sRendererContext;
 
-#if SW_ENABLE_DEBUG_LABELS
+#if SW_ENABLE_DEBUG
     static constexpr ValidationMode VALIDATION_MODE{ValidationMode::Basic};
 #else
     static constexpr ValidationMode VALIDATION_MODE{ValidationMode::None};

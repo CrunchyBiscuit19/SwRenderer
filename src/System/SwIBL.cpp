@@ -253,7 +253,6 @@ void SwIBL::System::initializePasses() {
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
         cmd.pushConstants<SwIBL::SkyboxPC>(mResources.mSkyboxPipelineBundle.getLayoutHandle(), SwIBL::SkyboxPC::sStages, 0, mResources.mSkyboxPushConstants);
         cmd.draw(SwIBL::NUM_SKYBOX_VERTICES, 1, 0, 0);
-        SwRenderer::sRendererContext.mStats->mNumDrawCall++;
 
         cmd.endRendering();
     });

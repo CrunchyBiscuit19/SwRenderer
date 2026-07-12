@@ -27,12 +27,12 @@ set(CMAKE_SHADER_DIR "${CMAKE_CURRENT_SOURCE_DIR}/shaders")
 
 find_program(SLANGC slangc REQUIRED)
 
-set(SW_RENDERDOC_SOURCE_DEBUGGING ON)
-if(SW_RENDERDOC_SOURCE_DEBUGGING)
-    set(SHADER_OPT_ARG -g3)
-else()
-    set(SHADER_OPT_ARG -O3)
-endif()
+# Debug builds (Debug and RelWithDebInfo) enable Vulkan debug object labels and RenderDoc shader
+# source debugging. NDEBUG can't distinguish RelWithDebInfo from Release, so gate on config here.
+set(SW_ENABLE_DEBUG "$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>")
+
+# RenderDoc source debugging compiles shaders with -g3, otherwise optimize with -O3.
+set(SHADER_OPT_ARG "$<IF:${SW_ENABLE_DEBUG},-g3,-O3>")
 
 file(GLOB_RECURSE SLANG_SOURCES CONFIGURE_DEPENDS
     "${CMAKE_SHADER_DIR}/*.slang"
@@ -296,9 +296,31 @@ target_compile_definitions(SwRenderer PUBLIC SHADERS_DIR="${CMAKE_CURRENT_SOURCE
 target_compile_definitions(SwRenderer PRIVATE $<$<CONFIG:Release>:RELEASE>)
 
 # Vulkan debug object labels (VK_EXT_debug_utils naming): enabled for Debug and RelWithDebInfo,
-# compiled out of Release. NDEBUG can't distinguish RelWithDebInfo from Release, so gate it here.
+# compiled out of Release.
 target_compile_definitions(SwRenderer PRIVATE
-    $<$<OR:$<CONFIG:Debug>,$<CONFIG:RelWithDebInfo>>:SW_ENABLE_DEBUG_LABELS=1>
+    $<${SW_ENABLE_DEBUG}:SW_ENABLE_DEBUG=1>
+)
+
+# ---------------------------------------------------------------------------
+# Release optimization
+# ---------------------------------------------------------------------------
+include(CheckIPOSupported)
+check_ipo_supported(RESULT SW_IPO_OK OUTPUT SW_IPO_MSG)
+if(SW_IPO_OK)
+    set_property(TARGET SwRenderer PROPERTY INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+else()
+    message(WARNING "IPO/LTCG not supported: ${SW_IPO_MSG}")
+endif()
+
+# The debug-neutral codegen flags apply to RelWithDebInfo too. /Ob3, LTCG, and /OPT:ICF stay
+# Release-only because they collapse or fold frames and hurt step-through debugging.
+target_compile_options(SwRenderer PRIVATE
+    $<$<CONFIG:Release>:/Ob3>
+    $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/Oi /Ot /Gy /Gw /arch:AVX2>
+)
+target_link_options(SwRenderer PRIVATE
+    $<$<OR:$<CONFIG:Release>,$<CONFIG:RelWithDebInfo>>:/OPT:REF>
+    $<$<CONFIG:Release>:/OPT:ICF>
 )
 
 # ---------------------------------------------------------------------------
