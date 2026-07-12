@@ -23,7 +23,7 @@ struct TonemapPC : SwPC<TonemapPC> {
 };
 
 struct FXAAPC : SwPC<FXAAPC> {
-    glm::vec2 mInverseScreenSize;
+    glm::vec2 mInverseScreenSize{0.f};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

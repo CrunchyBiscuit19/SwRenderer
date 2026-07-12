@@ -51,59 +51,59 @@ constexpr std::uint32_t INITIAL_ACTIVE_LIGHTS_BUFFER_SIZE{1 << 10};
 // LightingShadowReset, LightingBuildClusters, LightingMarkActiveClusters, LightingLightsCull, LightingShadowCull, LightingShadowDraw,
 
 struct ResetPC : SwPC<ResetPC> {
-    vk::DeviceAddress mShadowRcsBuffer;
-    std::uint32_t mShadowRcsLimit;
+    vk::DeviceAddress mShadowRcsBuffer{0};
+    std::uint32_t mShadowRcsLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ClusterBuildPC : SwPC<ClusterBuildPC> {
-    vk::DeviceAddress mClustersBuffer;
+    vk::DeviceAddress mClustersBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ClusterMarkActivePC : SwPC<ClusterMarkActivePC> {
-    vk::DeviceAddress mActiveClustersIndicesBuffer;
+    vk::DeviceAddress mActiveClustersIndicesBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ClusterCullLightsPC : SwPC<ClusterCullLightsPC> {
-    vk::DeviceAddress mFrameBuffer;
-    vk::DeviceAddress mSceneLightsBuffer;
-    vk::DeviceAddress mSceneNodeTransformsBuffer;
-    vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mVisibleLightsBuffer;
-    vk::DeviceAddress mActiveClustersIndicesBuffer;
+    vk::DeviceAddress mFrameBuffer{0};
+    vk::DeviceAddress mSceneLightsBuffer{0};
+    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
+    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mVisibleLightsBuffer{0};
+    vk::DeviceAddress mActiveClustersIndicesBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct CullPC : SwPC<CullPC> {
-    vk::DeviceAddress mShadowRcsBuffer;
-    vk::DeviceAddress mShadowRisBuffer;
-    vk::DeviceAddress mShadowRisIndicesBuffer;
-    vk::DeviceAddress mSceneLightsBuffer;
-    vk::DeviceAddress mSceneBoundsBuffer;
-    vk::DeviceAddress mSceneNodeTransformsBuffer;
-    vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mVisibleLightsBuffer;
-    std::uint32_t mShadowRisLimit;
+    vk::DeviceAddress mShadowRcsBuffer{0};
+    vk::DeviceAddress mShadowRisBuffer{0};
+    vk::DeviceAddress mShadowRisIndicesBuffer{0};
+    vk::DeviceAddress mSceneLightsBuffer{0};
+    vk::DeviceAddress mSceneBoundsBuffer{0};
+    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
+    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mVisibleLightsBuffer{0};
+    std::uint32_t mShadowRisLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct DrawPC : SwPC<DrawPC> {
-    vk::DeviceAddress mShadowRcsBuffer;
-    vk::DeviceAddress mShadowRisIndicesBuffer;
-    vk::DeviceAddress mSceneLightsBuffer;
-    vk::DeviceAddress mSceneVertexBuffer;
-    vk::DeviceAddress mSceneNodeTransformsBuffer;
-    vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneMaterialConstantsBuffer;
-    vk::DeviceAddress mVisibleLightsBuffer;
-    std::uint32_t mLightIndex;
+    vk::DeviceAddress mShadowRcsBuffer{0};
+    vk::DeviceAddress mShadowRisIndicesBuffer{0};
+    vk::DeviceAddress mSceneLightsBuffer{0};
+    vk::DeviceAddress mSceneVertexBuffer{0};
+    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
+    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mSceneMaterialConstantsBuffer{0};
+    vk::DeviceAddress mVisibleLightsBuffer{0};
+    std::uint32_t mLightIndex{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };

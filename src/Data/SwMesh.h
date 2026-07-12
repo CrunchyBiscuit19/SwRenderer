@@ -18,18 +18,18 @@ struct SwVertex {
 };
 
 struct SwBounds {
-    glm::vec3 mMin;
-    glm::vec3 mMax;
+    glm::vec3 mMin{0.f};
+    glm::vec3 mMax{0.f};
 
     SwBounds() = default;
     SwBounds(glm::vec3 min, glm::vec3 max);
 };
 
 struct SwPrimitive {
-    std::uint32_t mRelativeFirstIndex;
-    std::uint32_t mIndexCount;
-    std::uint32_t mRelativeVertexOffset;
-    std::uint32_t mMaterialIndex;
+    std::uint32_t mRelativeFirstIndex{0};
+    std::uint32_t mIndexCount{0};
+    std::uint32_t mRelativeVertexOffset{0};
+    std::uint32_t mMaterialIndex{0};
 
     SwPrimitive(std::uint32_t relativeFirstIndex, std::uint32_t indexCount, std::uint32_t relativeVertexOffset, std::uint32_t materialIndex);
 };

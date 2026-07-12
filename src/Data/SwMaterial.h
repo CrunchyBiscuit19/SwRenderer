@@ -49,12 +49,12 @@ public:
 };
 
 struct SwMaterialConstants {
-    glm::vec4 mBaseFactor;
-    glm::vec4 mEmissiveFactor;
-    glm::vec2 mMetallicRoughnessFactor;
+    glm::vec4 mBaseFactor{1.f};
+    glm::vec4 mEmissiveFactor{0.f};
+    glm::vec2 mMetallicRoughnessFactor{1.f};
     float mNormalScale{1.f};
     float mOcclusionStrength{1.f};
-    float mAlphaCutoff;
+    float mAlphaCutoff{0.5f};
 };
 
 struct SwMaterialResources {
@@ -78,8 +78,8 @@ public:
 };
 
 struct SwMaterialPipelineOptions {
-    bool doubleSided;
-    fastgltf::AlphaMode alphaMode;
+    bool doubleSided{false};
+    fastgltf::AlphaMode alphaMode{fastgltf::AlphaMode::Opaque};
     bool operator==(const SwMaterialPipelineOptions& other) const { return (doubleSided == other.doubleSided && alphaMode == other.alphaMode); }
 };
 
@@ -122,7 +122,7 @@ public:
     static constexpr std::uint32_t NUM_TYPES{3};
     static constexpr std::uint32_t NUM_PBR_IMAGES{5};
 
-    std::uint32_t mRelativeMaterialIndex;
+    std::uint32_t mRelativeMaterialIndex{0};
 
     SwMaterial(
         std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, SwMaterialConstants materialConstants,

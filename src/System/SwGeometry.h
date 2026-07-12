@@ -10,18 +10,18 @@
 namespace SwGeometry {
 
 struct DrawPC : SwPC<DrawPC> {
-    vk::DeviceAddress mSceneVertexBuffer;
-    vk::DeviceAddress mSceneMaterialConstantsBuffer;
-    vk::DeviceAddress mSceneNodeTransformsBuffer;
-    vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneRisIndicesBuffer;
-    vk::DeviceAddress mSceneRcsBuffer;
-    vk::DeviceAddress mFrameBuffer;
-    vk::DeviceAddress mSceneLightsBuffer;
-    vk::DeviceAddress mVisibleLightsBuffer;
-    float mMaxPrefilterMipLevel;
-    float mIblIntensity;
-    std::uint32_t mIblComponents;
+    vk::DeviceAddress mSceneVertexBuffer{0};
+    vk::DeviceAddress mSceneMaterialConstantsBuffer{0};
+    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
+    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mSceneRisIndicesBuffer{0};
+    vk::DeviceAddress mSceneRcsBuffer{0};
+    vk::DeviceAddress mFrameBuffer{0};
+    vk::DeviceAddress mSceneLightsBuffer{0};
+    vk::DeviceAddress mVisibleLightsBuffer{0};
+    float mMaxPrefilterMipLevel{0.f};
+    float mIblIntensity{0.f};
+    std::uint32_t mIblComponents{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 };

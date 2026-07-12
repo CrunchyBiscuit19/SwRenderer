@@ -17,11 +17,11 @@ struct SwRendererContext;
 class SwImage {
 protected:
     std::string mName;
-    vk::Format mMainFormat;
+    vk::Format mMainFormat{vk::Format::eUndefined};
     std::vector<vk::Format> mOtherFormats;
     vk::Extent3D mExtent;
     vk::ImageAspectFlags mAspect;
-    vk::ImageLayout mCurrentLayout;
+    vk::ImageLayout mCurrentLayout{vk::ImageLayout::eUndefined};
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
 
@@ -111,11 +111,11 @@ protected:
     vk::raii::ImageView mMainImageView;
     std::deque<vk::raii::ImageView> mOtherImageViews;
     vk::ImageUsageFlags mUsage;
-    vk::ClearValue mClearValue;
+    vk::ClearValue mClearValue{};
     VmaAllocator mAllocator{nullptr};
     VmaAllocation mAllocation{nullptr};
-    bool mMipmapped;
-    std::uint32_t mMipLevels;
+    bool mMipmapped{false};
+    std::uint32_t mMipLevels{0};
 
     SwAllocatedImage();
 

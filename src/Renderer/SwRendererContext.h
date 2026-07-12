@@ -65,20 +65,20 @@ class SwScene;
 class SwLogger;
 
 struct SwRendererContext {
-    vk::raii::Instance* mInstance;
-    vk::raii::PhysicalDevice* mChosenGPU;
-    vk::raii::Device* mDevice;
-    VmaAllocator mAllocator;
-    vk::raii::Queue* mGraphicsQueue;
-    vk::raii::Queue* mComputeQueue;
-    SwDescriptorAllocator* mDescriptorAllocator;
-    SwSwapchain* mSwapchain;
-    SwImmSubmit* mImmSubmit;
-    SwStagingRing* mStagingRing;
-    SwEvents* mEvents;
-    SwScene* mScene;
-    SwStats* mStats;
-    SwLogger* mLogger;
+    vk::raii::Instance* mInstance{nullptr};
+    vk::raii::PhysicalDevice* mChosenGPU{nullptr};
+    vk::raii::Device* mDevice{nullptr};
+    VmaAllocator mAllocator{nullptr};
+    vk::raii::Queue* mGraphicsQueue{nullptr};
+    vk::raii::Queue* mComputeQueue{nullptr};
+    SwDescriptorAllocator* mDescriptorAllocator{nullptr};
+    SwSwapchain* mSwapchain{nullptr};
+    SwImmSubmit* mImmSubmit{nullptr};
+    SwStagingRing* mStagingRing{nullptr};
+    SwEvents* mEvents{nullptr};
+    SwScene* mScene{nullptr};
+    SwStats* mStats{nullptr};
+    SwLogger* mLogger{nullptr};
 
     SwRendererContext() = default;
     SwRendererContext(

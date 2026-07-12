@@ -44,15 +44,15 @@ constexpr std::uint32_t CONSUME_PREFILTER_BINDING{1};
 constexpr std::uint32_t CONSUME_BRDF_LUT_BINDING{2};
 
 struct PrefilterPC : SwPC<PrefilterPC> {
-    std::uint32_t mTotalMipLevels;
-    glm::uvec2 mBaseExtent;
+    std::uint32_t mTotalMipLevels{0};
+    glm::uvec2 mBaseExtent{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct SkyboxPC : SwPC<SkyboxPC> {
-    vk::DeviceAddress mSkyboxVertexBuffer;
-    vk::DeviceAddress mFrameBuffer;
+    vk::DeviceAddress mSkyboxVertexBuffer{0};
+    vk::DeviceAddress mFrameBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };

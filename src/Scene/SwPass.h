@@ -42,7 +42,7 @@ public:
     };
 
 private:
-    Type mPassType;
+    Type mPassType{Type::ClearImages};
     std::function<void(vk::CommandBuffer)> mCallback;
     bool mMustRun{false};
     bool mPruned{false};

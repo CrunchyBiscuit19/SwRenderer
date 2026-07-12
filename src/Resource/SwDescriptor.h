@@ -11,7 +11,7 @@ class SwDescriptorLayout {
 private:
     vk::raii::DescriptorSetLayout mLayout;
     std::vector<vk::DescriptorSetLayoutBinding> mBindings;
-    bool mUseBindless;
+    bool mUseBindless{false};
 
 public:
     SwDescriptorLayout();
@@ -38,7 +38,7 @@ private:
     std::vector<vk::WriteDescriptorSet> mWrites;
     std::deque<vk::DescriptorImageInfo> mWriteImageInfos;
     std::deque<vk::DescriptorBufferInfo> mWriteBufferInfos;
-    bool mUseBindless;
+    bool mUseBindless{false};
 
 public:
     SwDescriptorSet();
@@ -65,8 +65,8 @@ public:
 };
 
 struct SwPoolSizeRatio {
-    vk::DescriptorType mType;
-    float mRatio;
+    vk::DescriptorType mType{vk::DescriptorType::eSampler};
+    float mRatio{0.f};
 };
 
 class SwDescriptorPool {
@@ -88,7 +88,7 @@ private:
     static constexpr std::uint32_t MAX_SETS_PER_POOL{1 << 12};
 
     std::vector<SwPoolSizeRatio> mRatios;
-    std::uint32_t mSetsPerPool;
+    std::uint32_t mSetsPerPool{0};
     std::vector<SwDescriptorPool> mReadyPools;
     std::vector<SwDescriptorPool> mFullPools;
 

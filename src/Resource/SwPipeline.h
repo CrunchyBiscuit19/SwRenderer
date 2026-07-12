@@ -29,7 +29,7 @@ public:
 class SwPipelineBundle {
 protected:
     static std::uint32_t sLatestPipelineID;
-    std::uint32_t mId;
+    std::uint32_t mId{0};
     vk::raii::Pipeline mPipeline;
     vk::PipelineLayout mLayout;
 
@@ -91,17 +91,17 @@ public:
         std::string mVertexEntryPoint{DEFAULT_SHADER_ENTRY_POINT};
         std::string mFragmentEntryPoint{DEFAULT_SHADER_ENTRY_POINT};
         vk::PipelineLayout mLayout;
-        vk::PrimitiveTopology mTopology;
-        vk::PolygonMode mPolygonMode;
+        vk::PrimitiveTopology mTopology{vk::PrimitiveTopology::eTriangleList};
+        vk::PolygonMode mPolygonMode{vk::PolygonMode::eFill};
         vk::CullModeFlags mCullMode;
-        vk::FrontFace mFrontFace;
-        bool mMultisamplingEnabled;
-        bool mSampleShadingEnabled;
+        vk::FrontFace mFrontFace{vk::FrontFace::eCounterClockwise};
+        bool mMultisamplingEnabled{false};
+        bool mSampleShadingEnabled{false};
         std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>> mColorAttachments;
-        vk::Format mDepthFormat;
-        bool mDepthTestEnabled;
-        bool mDepthWriteEnabled;
-        vk::CompareOp mDepthCompareOp;
+        vk::Format mDepthFormat{vk::Format::eUndefined};
+        bool mDepthTestEnabled{false};
+        bool mDepthWriteEnabled{false};
+        vk::CompareOp mDepthCompareOp{vk::CompareOp::eNever};
     };
 
     static SwGraphicsPipelineBundle createGraphicsPipeline(std::string name, SwGraphicsPipelineOptions options);

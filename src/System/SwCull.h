@@ -20,42 +20,42 @@ static constexpr std::uint32_t CULL_MAX_DEPTH_PYRAMID_LEVELS{16};
 enum class Phase { Early, Late };
 
 struct ResetPC : public SwPC<ResetPC> {
-    vk::DeviceAddress mSceneRcsBuffer;
-    std::uint32_t mSceneRcsLimit;
+    vk::DeviceAddress mSceneRcsBuffer{0};
+    std::uint32_t mSceneRcsLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct TestPC : public SwPC<TestPC> {
-    vk::DeviceAddress mSceneRcsBuffer;
-    vk::DeviceAddress mSceneRisBuffer;
-    vk::DeviceAddress mSceneBatchesBuffer;
-    vk::DeviceAddress mSceneRisCount;
-    vk::DeviceAddress mFrameBuffer;
-    vk::DeviceAddress mSceneBoundsBuffer;
-    vk::DeviceAddress mSceneNodeTransformsBuffer;
-    vk::DeviceAddress mSceneInstancesBuffer;
-    vk::DeviceAddress mSceneRisIndicesBuffer;
-    vk::DeviceAddress mSceneRisVisibilityReadBuffer;
-    vk::DeviceAddress mSceneRisVisibilityWriteBuffer;
-    std::uint32_t mSceneRisLimit;
-    Phase mPhase;
+    vk::DeviceAddress mSceneRcsBuffer{0};
+    vk::DeviceAddress mSceneRisBuffer{0};
+    vk::DeviceAddress mSceneBatchesBuffer{0};
+    vk::DeviceAddress mSceneRisCount{0};
+    vk::DeviceAddress mFrameBuffer{0};
+    vk::DeviceAddress mSceneBoundsBuffer{0};
+    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
+    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mSceneRisIndicesBuffer{0};
+    vk::DeviceAddress mSceneRisVisibilityReadBuffer{0};
+    vk::DeviceAddress mSceneRisVisibilityWriteBuffer{0};
+    std::uint32_t mSceneRisLimit{0};
+    Phase mPhase{Phase::Early};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct CompactPC : SwPC<CompactPC> {
-    vk::DeviceAddress mSceneBatchesBuffer;
-    vk::DeviceAddress mPreRcsBuffer;
-    vk::DeviceAddress mPostRcsBuffer;
-    vk::DeviceAddress mPostRcsCount;
-    std::uint32_t mPreRcsLimit;
+    vk::DeviceAddress mSceneBatchesBuffer{0};
+    vk::DeviceAddress mPreRcsBuffer{0};
+    vk::DeviceAddress mPostRcsBuffer{0};
+    vk::DeviceAddress mPostRcsCount{0};
+    std::uint32_t mPreRcsLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct PrepOcclusionPC : SwPC<PrepOcclusionPC> {
-    std::int32_t mLevel;
+    std::int32_t mLevel{-1};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

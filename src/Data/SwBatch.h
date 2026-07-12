@@ -9,22 +9,22 @@
 #include <vector>
 
 struct SwRenderCommand {
-    std::uint32_t mIndexCount;
-    std::uint32_t mRiCount;
-    std::uint32_t mFirstIndex;
-    std::uint32_t mVertexOffset;
-    std::uint32_t mFirstRi;
-    std::uint32_t mMaterialIndex;
-    std::uint32_t mNodeTransformIndex;
-    std::uint32_t mAssetIndex;
-    std::uint32_t mFirstInstance;
-    std::uint32_t mBoundsIndex;
-    std::uint32_t mBatchIndex;
+    std::uint32_t mIndexCount{0};
+    std::uint32_t mRiCount{0};
+    std::uint32_t mFirstIndex{0};
+    std::uint32_t mVertexOffset{0};
+    std::uint32_t mFirstRi{0};
+    std::uint32_t mMaterialIndex{0};
+    std::uint32_t mNodeTransformIndex{0};
+    std::uint32_t mAssetIndex{0};
+    std::uint32_t mFirstInstance{0};
+    std::uint32_t mBoundsIndex{0};
+    std::uint32_t mBatchIndex{0};
 };
 
 struct SwRenderItem {
-    std::uint32_t mRcIndex;
-    std::uint32_t mInstanceIndex;
+    std::uint32_t mRcIndex{0};
+    std::uint32_t mInstanceIndex{0};
 };
 
 class SwBatch {
@@ -33,7 +33,7 @@ private:
 
     std::uint32_t mPipelineId{0};
 
-    SwMaterial::Type mMaterialType;
+    SwMaterial::Type mMaterialType{SwMaterial::Type::Opaque};
     std::size_t mRcsIndex{0};
     std::size_t mRcsSize{0};
     std::size_t mRisIndex{0};
@@ -41,7 +41,7 @@ private:
 
 public:
     struct Data {
-        SwMaterial::Type mMaterialType;
+        SwMaterial::Type mMaterialType{SwMaterial::Type::Opaque};
         std::uint32_t mRcsIndex{0};
         std::uint32_t mRcsSize{0};
         std::uint32_t mRisIndex{0};

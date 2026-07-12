@@ -11,8 +11,8 @@ class SwImage;
 class SwStagingRing {
 private:
     struct Region {
-        std::uint64_t mEnd;
-        std::uint64_t mFrame;
+        std::uint64_t mEnd{0};
+        std::uint64_t mFrame{0};
     };
 
     SwStagingBuffer mRing;

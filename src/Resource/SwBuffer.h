@@ -14,15 +14,15 @@ class SwBuffer {
 protected:
     std::string mName;
     std::optional<vk::DeviceAddress> mAddress;
-    VmaAllocationInfo mInfo;
-    VmaAllocationCreateFlags mFlags;
+    VmaAllocationInfo mInfo{};
+    VmaAllocationCreateFlags mFlags{0};
     vk::BufferUsageFlags mUsage;
-    std::uint64_t mSize;
+    std::uint64_t mSize{0};
     std::uint32_t mGeneration{0};
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
-    VmaAllocator mAllocator;
-    VmaAllocation mAllocation;
+    VmaAllocator mAllocator{nullptr};
+    VmaAllocation mAllocation{nullptr};
     vk::raii::Buffer mBuffer;
 
     SwBuffer();

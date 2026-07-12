@@ -16,8 +16,8 @@ enum SwMovementMode {
 
 struct SwPerspective {
 private:
-    glm::mat4 mView;
-    glm::mat4 mProj;  // Vulkan-style: Y-flipped, reversed-Z
+    glm::mat4 mView{1.f};
+    glm::mat4 mProj{1.f};  // Vulkan-style: Y-flipped, reversed-Z
 
 public:
     SwPerspective() = default;
@@ -34,7 +34,7 @@ class SwCamera {
 public:
     struct Data {
         SwPerspective mPerspective;
-        glm::vec3 mWorldPos;
+        glm::vec3 mWorldPos{0.f};
         SwFrustum mFrustum;
     };
 
@@ -49,13 +49,13 @@ private:
     static constexpr std::uint32_t FRUSTUM_TOP_FACE{4};
     static constexpr std::uint32_t FRUSTUM_BOTTOM_FACE{5};
 
-    glm::vec3 mVelocity;
-    glm::vec3 mPosition;
+    glm::vec3 mVelocity{0.f};
+    glm::vec3 mPosition{0.f};
     float mPitch{0.f};
     float mYaw{0.f};
     float mSpeed{1.f};
     bool mRelativeMode{false};
-    SwMovementMode mMovementMode;
+    SwMovementMode mMovementMode{FREEFLY};
     std::unordered_map<SwMovementMode, std::function<void()>> mMovementFunctions;
     SwFrustum mFrustum;
     std::array<SwAllocatedBuffer, SwSwapchain::NUM_FRAME_OVERLAP> mCameraBuffers;

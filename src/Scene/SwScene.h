@@ -27,12 +27,12 @@
 class SwScene {
 public:
     struct Flags {
-        bool mAssetLoaded;
-        bool mAssetUnloaded;
-        bool mInstanceLoaded;
-        bool mInstanceUnloaded;
-        bool mReloadMainInstancesBuffer;
-        bool mLightEdited;
+        bool mAssetLoaded{false};
+        bool mAssetUnloaded{false};
+        bool mInstanceLoaded{false};
+        bool mInstanceUnloaded{false};
+        bool mReloadMainInstancesBuffer{false};
+        bool mLightEdited{false};
     };
 
 private:
@@ -86,9 +86,9 @@ private:
     SwAllocatedBuffer mSceneLightsBuffer;
     struct PendingRenderCommand {
         SwRenderCommand mRc;
-        SwMaterial::Type mMaterialType;
-        std::uint32_t mPipelineId;
-        std::uint32_t mInstanceCount;
+        SwMaterial::Type mMaterialType{SwMaterial::Type::Opaque};
+        std::uint32_t mPipelineId{0};
+        std::uint32_t mInstanceCount{0};
     };
     std::vector<PendingRenderCommand> mPendingRcs;
     std::vector<SwRenderCommand> mSceneRcs;

@@ -20,7 +20,7 @@ struct SwRendererContext;
 class SwFrame {
 public:
     struct Data {
-        vk::DeviceAddress mCameraBuffer;
+        vk::DeviceAddress mCameraBuffer{0};
     };
 
 private:

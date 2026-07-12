@@ -17,7 +17,7 @@
 #include <vulkan/vulkan.hpp>
 
 struct SwVmaAllocator {
-    VmaAllocator mAllocator;
+    VmaAllocator mAllocator{nullptr};
 
     SwVmaAllocator() = default;
 
@@ -44,12 +44,12 @@ private:
     vk::raii::Instance mInstance;
     vk::raii::PhysicalDevice mChosenGPU;
     vk::raii::Device mDevice;
-    vk::PhysicalDeviceProperties mChosenGPUProperties;
+    vk::PhysicalDeviceProperties mChosenGPUProperties{};
     vk::raii::DebugUtilsMessengerEXT mDebugMessenger;
     vk::raii::Queue mComputeQueue;
-    std::uint32_t mComputeQueueFamily;
+    std::uint32_t mComputeQueueFamily{0};
     vk::raii::Queue mGraphicsQueue;
-    std::uint32_t mGraphicsQueueFamily;
+    std::uint32_t mGraphicsQueueFamily{0};
     SwVmaAllocator mAllocator;
     SwDescriptorAllocator mDescriptorAllocator;
     bool mIsInitialized{false};

@@ -40,7 +40,7 @@ private:
     SwAllocatedBuffer mVertexBuffer;
     SwAllocatedBuffer mIndexBuffer;
 
-    std::uint32_t mNumBounds;
+    std::uint32_t mNumBounds{0};
     SwAllocatedBuffer mBoundsBuffer;
 
     std::vector<SwLight> mLights;

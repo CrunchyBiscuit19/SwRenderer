@@ -20,14 +20,14 @@ public:
         PresentSrc
     };
     struct ImageDepDesc {
-        vk::PipelineStageFlags2 mStage;
-        vk::AccessFlags2 mAccess;
-        vk::ImageLayout mLayout;
+        vk::PipelineStageFlags2 mStage{};
+        vk::AccessFlags2 mAccess{};
+        vk::ImageLayout mLayout{vk::ImageLayout::eUndefined};
 
         static const ImageDepDesc get(ImageDepType type);
     };
     struct ImageDep {
-        SwImage* mImage;
+        SwImage* mImage{nullptr};
         ImageDepDesc mDesc;
 
         ImageDep(SwImage* image);
@@ -49,13 +49,13 @@ public:
         HostRead
     };
     struct BufferDepDesc {
-        vk::PipelineStageFlags2 mStage;
-        vk::AccessFlags2 mAccess;
+        vk::PipelineStageFlags2 mStage{};
+        vk::AccessFlags2 mAccess{};
 
         static const BufferDepDesc get(BufferDepType type);
     };
     struct BufferDep {
-        SwBuffer* mBuffer;
+        SwBuffer* mBuffer{nullptr};
         BufferDepDesc mDesc;
 
         BufferDep(SwBuffer* buffer);

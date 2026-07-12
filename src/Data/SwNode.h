@@ -15,11 +15,11 @@ class SwAsset;
 class SwNode : public std::enable_shared_from_this<SwNode> {
 protected:
     std::string mName;
-    std::uint32_t mRelativeNodeIndex;
+    std::uint32_t mRelativeNodeIndex{0};
     std::weak_ptr<SwNode> mParent;
     std::vector<std::shared_ptr<SwNode>> mChildren;
-    glm::mat4 mLocalTransform;
-    glm::mat4 mWorldTransform;
+    glm::mat4 mLocalTransform{1.f};
+    glm::mat4 mWorldTransform{1.f};
 
 public:
     SwNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform);
@@ -40,7 +40,7 @@ public:
 };
 
 class SwMeshNode : public SwNode {
-    std::uint32_t mMeshIndex;
+    std::uint32_t mMeshIndex{0};
 
 public:
     SwMeshNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, std::uint32_t meshIndex);
@@ -49,8 +49,8 @@ public:
 };
 
 class SwLightNode : public SwNode {
-    std::uint32_t mLightIndex;
-    std::uint32_t mAssetId;
+    std::uint32_t mLightIndex{0};
+    std::uint32_t mAssetId{0};
 
 public:
     SwLightNode(std::string name, std::uint32_t relativeNodeIndex, glm::mat4 localTransform, std::uint32_t lightIndex, std::uint32_t assetId);

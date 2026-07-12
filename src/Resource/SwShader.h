@@ -10,7 +10,7 @@ struct SwRendererContext;
 class SwShader {
 private:
     vk::raii::ShaderModule mModule;
-    vk::ShaderStageFlagBits mStage;
+    vk::ShaderStageFlagBits mStage{};
 
 public:
     SwShader();

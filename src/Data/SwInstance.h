@@ -14,8 +14,8 @@ public:
 private:
     static std::uint32_t sLatestInstanceId;
 
-    std::uint32_t mAssetId;
-    std::uint32_t mId;
+    std::uint32_t mAssetId{0};
+    std::uint32_t mId{0};
     bool mDelete{false};
 
     Data mData;
