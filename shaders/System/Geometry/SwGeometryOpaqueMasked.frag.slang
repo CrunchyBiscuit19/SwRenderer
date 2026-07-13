@@ -20,9 +20,9 @@ public uniform Texture2D iblPrefilterMap;
 public uniform Texture2D iblBrdfLut;
 
 [[vk::binding(0, 3)]]
-public uniform Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS];
+public uniform Texture2D shadow2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
 [[vk::binding(1, 3)]]
-public uniform TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS];
+public uniform TextureCube shadowCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
 [[vk::binding(2, 3)]]
 public uniform SamplerComparisonState shadowSampler;
 
@@ -64,7 +64,7 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
         in.mWorldPos,
         normal,
         view,
-        drawPc.mVisibleLightsBuffer,
+        drawPc.mSceneLightsInfoBuffer,
         drawPc.mSceneLightsBuffer,
         drawPc.mSceneInstancesBuffer,
         drawPc.mSceneNodeTransformsBuffer,

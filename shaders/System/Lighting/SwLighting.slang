@@ -14,20 +14,18 @@ import System.BRDF.SwBRDF;
 import System.IBL.SwIBL;
 
 namespace SwLighting {
-  public struct Cluster {};
+    public struct Cluster {};
 
-    public static const uint MAX_SHADOW_LIGHTS = 16;
-    public static const uint MAX_SHADOW_CUBE_LIGHTS = 8;
     public static const uint SHADOW_MAP_SIZE = 1024;
     public static const uint MAX_NUM_SHADOW_CASTERS = 16;
     public static const float SHADOW_SPOT_NEAR = 0.05f;
     public static const float SHADOW_SPOT_DEFAULT_RANGE = 60.f;
-
-    public struct VisibleLights {
+    
+    public struct LightsInfo {
         public uint mLitCount;
         public uint* mLitIndices;
         public uint mShadowCastCount;
-        public uint mShadowCastIndices[MAX_NUM_SHADOW_CASTERS];
+        public uint* mShadowCastIndices;
     };
 
     public struct ResetPC {
@@ -48,7 +46,7 @@ namespace SwLighting {
         public SwLight::Data* mSceneLightsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public SwLighting::VisibleLights* mVisibleLightsBuffer;
+        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public uint* mActiveClustersIndicesBuffer;
     };
 
@@ -60,19 +58,19 @@ namespace SwLighting {
         public SwMesh::Bounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public SwLighting::VisibleLights* mVisibleLightsBuffer;
+        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public uint mShadowRisLimit;
-        public uint mLightIndex;
     };
 
     public struct DrawPC {
         public SwBatch::RenderCommand* mShadowRcsBuffer;
         public uint* mShadowRisIndicesBuffer;
+        public SwLight::Data* mSceneLightsBuffer;
         public SwMesh::Vertex* mSceneVertexBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
-        public SwLighting::VisibleLights* mVisibleLightsBuffer;
+        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public uint mLightIndex;
     };
 
@@ -137,26 +135,26 @@ namespace SwLighting {
 
     // Full PBR shading: image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
     public float3 shadeLit(
-        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, SwLighting::VisibleLights* visibleLights,
+        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, SwLighting::LightsInfo* lightsInfo,
         SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, Texture2D irradianceMap, SamplerState irradianceSampler,
         Texture2D prefilterMap, SamplerState prefilterSampler, Texture2D brdfLut, SamplerState brdfLutSampler, float maxPrefilterMip, float iblIntensity,
-        uint iblComponents, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS], TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS],
+        uint iblComponents, Texture2D shadow2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS], TextureCube shadowCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
         SamplerComparisonState shadowSampler
     ) {
         float3 color = iblIntensity * SwIBL::ambientIBL(
                                           albedo, metallic, roughness, ao, normal, view, irradianceMap, irradianceSampler, prefilterMap, prefilterSampler,
                                           brdfLut, brdfLutSampler, maxPrefilterMip, iblComponents
                                       );
-        for (uint i = 0; i < visibleLights->mLitCount; i++) {
-            SwLight::Data light = lights[visibleLights->mLitIndices[i]];
+        for (uint i = 0; i < lightsInfo->mLitCount; i++) {
+            SwLight::Data light = lights[lightsInfo->mLitIndices[i]];
             float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
             switch (light.mType) {
                 case SwLight::Type::Spot:
                 case SwLight::Type::Directional:
-                    contribution *= shadowFactor2D(i, worldPos, visibleLights, shadow2DMaps, shadowSampler);
+                    contribution *= shadowFactor2D(i, worldPos, lightsInfo, shadow2DMaps, shadowSampler);
                     break;
                 case SwLight::Type::Point:
-                    contribution *= shadowFactorCube(i, light, worldPos, visibleLights, shadowCubeMaps, shadowSampler);
+                    contribution *= shadowFactorCube(i, light, worldPos, lightsInfo, shadowCubeMaps, shadowSampler);
                     break;
             }
             color += contribution;
@@ -190,7 +188,7 @@ namespace SwLighting {
     }
 
     public float shadowFactor2D(
-        uint slot, float3 worldPos, SwLighting::VisibleLights* visibleLights, Texture2D shadow2DMaps[SwLighting::MAX_SHADOW_LIGHTS],
+        uint slot, float3 worldPos, SwLighting::LightsInfo* lightsInfo, Texture2D shadow2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
         SamplerComparisonState shadowSampler
     ) {
         const bool shadow2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
@@ -227,7 +225,7 @@ namespace SwLighting {
     }
 
     public float shadowFactorCube(
-        uint slot, SwLight::Data light, float3 worldPos, SwLighting::VisibleLights* visibleLights, TextureCube shadowCubeMaps[SwLighting::MAX_SHADOW_CUBE_LIGHTS],
+        uint slot, SwLight::Data light, float3 worldPos, SwLighting::LightsInfo* lightsInfo, TextureCube shadowCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
         SamplerComparisonState shadowSampler
     ) {
         return 1.f; // TODO actually implement it

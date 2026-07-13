@@ -18,37 +18,31 @@
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_enums.hpp>
 
-// TODO This entire fucking system needs a rework
-
 class SwInstance;
 
 namespace SwLighting {
 static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Lighting"};
-static const std::filesystem::path SHADOW_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowReset.comp.spv"};
-static const std::filesystem::path BUILD_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingBuildClusters.comp.spv"};
-static const std::filesystem::path MARK_ACTIVE_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingMarkActiveClusters.comp.spv"};
-static const std::filesystem::path LIGHTS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingLightsCull.comp.spv"};
-static const std::filesystem::path SHADOW_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowCull.comp.spv"};
-static const std::filesystem::path SHADOW_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowDraw.vert.spv"};
-static constexpr std::string_view SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
-static constexpr std::string_view SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
+static const std::filesystem::path LIGHTING_SHADOW_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowReset.comp.spv"};
+static const std::filesystem::path LIGHTING_BUILD_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingBuildClusters.comp.spv"};
+static const std::filesystem::path LIGHTING_MARK_ACTIVE_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingMarkActiveClusters.comp.spv"};
+static const std::filesystem::path LIGHTING_LIGHTS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingLightsCull.comp.spv"};
+static const std::filesystem::path LIGHTING_SHADOW_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowCull.comp.spv"};
+static const std::filesystem::path LIGHTING_SHADOW_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowDraw.vert.spv"};
+static constexpr std::string_view LIGHTING_SHADOW_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
+static constexpr std::string_view LIGHTING_SHADOW_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
-constexpr std::uint64_t SHADOW_INITIAL_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
-constexpr std::uint32_t SHADOW_MAP_WIDTH_HEIGHT{1 << 10};
-constexpr std::uint32_t SHADOW_CUBE_MAP_WIDTH_HEIGHT{1 << 9};
-constexpr vk::Format SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
+constexpr std::uint64_t LIGHTING_INITIAL_SHADOW_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
+constexpr std::uint32_t LIGHTING_SHADOW_2D_MAP_WIDTH_HEIGHT{1 << 10};
+constexpr std::uint32_t LIGHTING_SHADOW_CUBEMAP_WIDTH_HEIGHT{1 << 9};
+constexpr vk::Format LIGHTING_SHADOW_MAP_FORMAT{vk::Format::eD32Sfloat};
 
-constexpr float SHADOW_DIRECTIONAL_HALF_EXTENT{20.f};
-constexpr float SHADOW_DIRECTIONAL_DISTANCE{60.f};
-constexpr float SHADOW_DIRECTIONAL_NEAR{0.1f};
-constexpr float SHADOW_DIRECTIONAL_FAR{160.f};
-constexpr float SHADOW_SPOT_NEAR{0.05f};
-constexpr float SHADOW_SPOT_DEFAULT_RANGE{60.f};
-
-constexpr std::uint32_t INITIAL_ACTIVE_LIGHTS_BUFFER_SIZE{1 << 10};
-
-// LightingShadowReset, LightingBuildClusters, LightingMarkActiveClusters, LightingLightsCull, LightingShadowCull, LightingShadowDraw,
+struct LightsInfo {
+    std::uint32_t mLitCount;
+    vk::DeviceAddress mLitIndices;
+    std::uint32_t mShadowCastCount;
+    vk::DeviceAddress mShadowCastIndices;
+};
 
 struct ResetPC : SwPC<ResetPC> {
     vk::DeviceAddress mShadowRcsBuffer{0};
@@ -74,7 +68,7 @@ struct ClusterCullLightsPC : SwPC<ClusterCullLightsPC> {
     vk::DeviceAddress mSceneLightsBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
-    vk::DeviceAddress mVisibleLightsBuffer{0};
+    vk::DeviceAddress mSceneLightsInfoBuffer{0};
     vk::DeviceAddress mActiveClustersIndicesBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -88,7 +82,7 @@ struct CullPC : SwPC<CullPC> {
     vk::DeviceAddress mSceneBoundsBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
-    vk::DeviceAddress mVisibleLightsBuffer{0};
+    vk::DeviceAddress mSceneLightsInfoBuffer{0};
     std::uint32_t mShadowRisLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -102,7 +96,7 @@ struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
     vk::DeviceAddress mSceneMaterialConstantsBuffer{0};
-    vk::DeviceAddress mVisibleLightsBuffer{0};
+    vk::DeviceAddress mSceneLightsInfoBuffer{0};
     std::uint32_t mLightIndex{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
@@ -114,17 +108,10 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    SwAllocatedBuffer mVisibleLightsBuffer;
-
     std::array<SwDepthImage2D, MAX_NUM_SHADOW_CASTERS> mShadow2DMaps;
     std::array<SwDepthImageCubemap, MAX_NUM_SHADOW_CASTERS> mShadowCubeMaps;
     SwSampler mShadowMapsSampler;
     SwDescriptorSet mShadowMapsDescriptorSet;
-
-    std::vector<SwRenderCommand> mInitialShadowRcs;
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowRcsBuffer;
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowRisBuffer;
-    std::array<SwAllocatedBuffer, MAX_NUM_SHADOW_CASTERS> mShadowRisIndicesBuffer;
 
     ResetPC mShadowResetPc;
     SwPipelineLayout mShadowResetPipelineLayout;
@@ -167,7 +154,6 @@ public:
     void regenerateShadowRcs();
 
     inline SwDescriptorSet& getShadowMapsDescriptorSet() { return mResources.mShadowMapsDescriptorSet; }
-    inline SwAllocatedBuffer& getVisibleLightsBuffer() { return mResources.mVisibleLightsBuffer; }
 
     inline Resources& getResources() { return mResources; }
 };

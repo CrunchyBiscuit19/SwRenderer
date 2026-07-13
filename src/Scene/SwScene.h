@@ -64,6 +64,16 @@ private:
 
     std::unordered_map<SwPass::Type, SwPass> mPasses;
 
+    std::vector<SwRenderCommand> mRcs;
+    std::vector<SwRenderItem> mRis;
+    struct PendingRenderCommand {
+        SwRenderCommand mRc;
+        SwMaterial::Type mMaterialType{SwMaterial::Type::Opaque};
+        std::uint32_t mPipelineId{0};
+        std::uint32_t mInstanceCount{0};
+    };
+    std::vector<PendingRenderCommand> mPendingRcs;
+
     SwInput::System mInput;
     SwCull::System mCull;
     SwPick::System mPick;
@@ -86,16 +96,6 @@ private:
     SwAllocatedBuffer mSceneRisIndicesBuffer;
     std::array<SwAllocatedBuffer, 2> mSceneVisibilityRisBuffers;
     std::uint32_t mSceneVisibilityRisBufferReadIndex{0};
-    SwAllocatedBuffer mSceneLightsBuffer;
-    struct PendingRenderCommand {
-        SwRenderCommand mRc;
-        SwMaterial::Type mMaterialType{SwMaterial::Type::Opaque};
-        std::uint32_t mPipelineId{0};
-        std::uint32_t mInstanceCount{0};
-    };
-    std::vector<PendingRenderCommand> mPendingRcs;
-    std::vector<SwRenderCommand> mSceneRcs;
-    std::vector<SwRenderItem> mSceneRis;
     SwAllocatedBuffer mSceneInitialRcsBuffer;
     SwAllocatedBuffer mSceneEarlyRcsBuffer;
     SwAllocatedBuffer mSceneEarlyRcsCount;
@@ -103,6 +103,11 @@ private:
     SwAllocatedBuffer mSceneLateRcsCount;
     SwAllocatedBuffer mSceneRisBuffer;
     SwAllocatedBuffer mSceneBatchesBuffer;
+    SwAllocatedBuffer mSceneLightsBuffer;
+    SwAllocatedBuffer mSceneLightsInfoBuffer;
+    SwAllocatedBuffer mSceneShadowsRcsBuffer;
+    SwAllocatedBuffer mSceneShadowsRisBuffer;
+    SwAllocatedBuffer mSceneShadowsRisIndicesBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -129,10 +134,11 @@ public:
     static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(SwRenderCommand)};
     static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(std::uint32_t)};
     static constexpr std::size_t SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
-    static constexpr std::size_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
     static constexpr std::size_t SCENE_INITIAL_NUM_BATCHES{1 << 8};
     static constexpr std::size_t SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(std::uint32_t)};
     static constexpr std::size_t SCENE_INITIAL_BATCHES_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(SwBatch::Data)};
+    static constexpr std::size_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
+    static constexpr std::size_t SCENE_INITIAL_LIGHTS_INFO_BUFFER_SIZE{(1 << 6) * sizeof(SwLighting::LightsInfo)};
 
     Flags mFlags;
 
@@ -171,12 +177,11 @@ public:
     inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
     inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
     inline SwAllocatedBuffer& getSceneRisIndicesBuffer() { return mSceneRisIndicesBuffer; }
-    inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
     inline void toggleSceneVisibilityRisBuffer() { mSceneVisibilityRisBufferReadIndex = 1 - mSceneVisibilityRisBufferReadIndex; }
     inline SwAllocatedBuffer& getSceneVisibilityRisReadBuffer() { return mSceneVisibilityRisBuffers[mSceneVisibilityRisBufferReadIndex]; }
     inline SwAllocatedBuffer& getSceneVisibilityRisWriteBuffer() { return mSceneVisibilityRisBuffers[1 - mSceneVisibilityRisBufferReadIndex]; }
-    inline std::span<SwRenderCommand> getSceneRcs() { return mSceneRcs; }
-    inline std::span<SwRenderItem> getSceneRis() { return mSceneRis; }
+    inline std::span<SwRenderCommand> getSceneRcs() { return mRcs; }
+    inline std::span<SwRenderItem> getSceneRis() { return mRis; }
     inline SwAllocatedBuffer& getSceneInitialRcsBuffer() { return mSceneInitialRcsBuffer; }
     inline SwAllocatedBuffer& getSceneEarlyRcsBuffer() { return mSceneEarlyRcsBuffer; }
     inline SwAllocatedBuffer& getSceneEarlyRcsCount() { return mSceneEarlyRcsCount; }
@@ -184,6 +189,11 @@ public:
     inline SwAllocatedBuffer& getSceneLateRcsCount() { return mSceneLateRcsCount; }
     inline SwAllocatedBuffer& getSceneRisBuffer() { return mSceneRisBuffer; }
     inline SwAllocatedBuffer& getSceneBatchesBuffer() { return mSceneBatchesBuffer; }
+    inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
+    inline SwAllocatedBuffer& getSceneLightsInfoBuffer() { return mSceneLightsInfoBuffer; };
+    inline SwAllocatedBuffer& getSceneShadowsRcsBuffer() { return mSceneShadowsRcsBuffer; };
+    inline SwAllocatedBuffer& getSceneShadowsRisBuffer() { return mSceneShadowsRisBuffer; };
+    inline SwAllocatedBuffer& getSceneShadowsRisIndicesBuffer() { return mSceneShadowsRisIndicesBuffer; };
 
     inline SwInput::System& getInputSystem() { return mInput; }
     inline SwCull::System& getCullSystem() { return mCull; }

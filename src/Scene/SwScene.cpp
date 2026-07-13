@@ -56,8 +56,6 @@ void SwScene::initializeResources() {
     );
     mSceneBoundsBuffer =
         SwBufferFactory::createAllocatedBuffer("SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_BOUNDS_BUFFER_SIZE, true, true, true);
-    mSceneLightsBuffer =
-        SwBufferFactory::createAllocatedBuffer("SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true, true, true);
     mSceneRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
     );
@@ -123,8 +121,22 @@ void SwScene::initializeResources() {
     mSceneMaterialTexturesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "SceneMaterialTexturesDescriptorSet", SwMaterialResources::sMaterialTexturesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
+    mSceneLightsBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true, true, true
+    );
+    mSceneLightsInfoBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneLightsInfosBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_INFO_BUFFER_SIZE, true, true, true
+    );
+    mSceneShadowsRcsBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE, true, true, true
+    );
+    mSceneShadowsRisBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneShadowRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true, true, true
+    );
+    mSceneShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneShadowRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true, true, true
+    );
 
-    // The normal slot of each material gets a flat (0,0,1) normal instead of white so unmapped surfaces keep their geometric normal.
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
         SwMaterialTexture& seed =
@@ -393,8 +405,8 @@ void SwScene::recordPendingDraw(SwMaterial& material, const SwRenderCommand& rc,
 void SwScene::regenerateRcsAndRis() {
     SwBatch::sFirstRiOffset = 0;
     mPendingRcs.clear();
-    mSceneRcs.clear();
-    mSceneRis.clear();
+    mRcs.clear();
+    mRis.clear();
     for (auto type : {SwMaterial::Type::Opaque, SwMaterial::Type::Mask, SwMaterial::Type::Transparent}) {
         mBatches[type].clear();
     }
@@ -417,35 +429,35 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
         const SwMaterial::Type materialType = mPendingRcs[batchStart].mMaterialType;
         const std::uint32_t pipelineId = mPendingRcs[batchStart].mPipelineId;
 
-        const std::size_t rcsIndex = mSceneRcs.size();
-        const std::size_t risIndex = mSceneRis.size();
+        const std::size_t rcsIndex = mRcs.size();
+        const std::size_t risIndex = mRis.size();
 
         std::size_t batchEnd = batchStart;
         for (; batchEnd < mPendingRcs.size() && mPendingRcs[batchEnd].mMaterialType == materialType && mPendingRcs[batchEnd].mPipelineId == pipelineId;
              batchEnd++) {
             PendingRenderCommand& pending = mPendingRcs[batchEnd];
-            const std::uint32_t rcIndex = static_cast<std::uint32_t>(mSceneRcs.size());
+            const std::uint32_t rcIndex = static_cast<std::uint32_t>(mRcs.size());
             pending.mRc.mFirstRi = SwBatch::sFirstRiOffset;
             pending.mRc.mRiCount = 0;  // Render item count starts at zero and is incremented inside the culling compute shader.
             pending.mRc.mBatchIndex = batchIndex;
-            mSceneRcs.emplace_back(pending.mRc);
+            mRcs.emplace_back(pending.mRc);
             for (std::uint32_t i = 0; i < pending.mInstanceCount; i++) {
-                mSceneRis.emplace_back(rcIndex, pending.mRc.mFirstInstance + i);
+                mRis.emplace_back(rcIndex, pending.mRc.mFirstInstance + i);
             }
             SwBatch::sFirstRiOffset += pending.mInstanceCount;
         }
 
         mBatches[materialType].try_emplace(
-            pipelineId, materialType, pipelineId, batchIndex, rcsIndex, mSceneRcs.size() - rcsIndex, risIndex, mSceneRis.size() - risIndex
+            pipelineId, materialType, pipelineId, batchIndex, rcsIndex, mRcs.size() - rcsIndex, risIndex, mRis.size() - risIndex
         );
         mBatchIndicesKeys.try_emplace({materialType, pipelineId}, batchIndex);
         batchIndex++;
         batchStart = batchEnd;
     }
 
-    if (!mSceneRcs.empty()) {
-        const std::uint64_t rcsBytes = mSceneRcs.size() * sizeof(SwRenderCommand);
-        const std::uint64_t risBytes = mSceneRis.size() * sizeof(SwRenderItem);
+    if (!mRcs.empty()) {
+        const std::uint64_t rcsBytes = mRcs.size() * sizeof(SwRenderCommand);
+        const std::uint64_t risBytes = mRis.size() * sizeof(SwRenderItem);
 
         SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsBytes, risBytes](vk::CommandBuffer cmd) {
             SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
@@ -453,12 +465,12 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
             mSceneInitialRcsBuffer.ensureCapacity(cmd, rcsBytes);
             cmd.fillBuffer(mSceneInitialRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
             mSceneInitialRcsBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-            stagingRing->upload(cmd, mSceneInitialRcsBuffer, mSceneRcs.data(), rcsBytes);
+            stagingRing->upload(cmd, mSceneInitialRcsBuffer, mRcs.data(), rcsBytes);
 
             mSceneRisBuffer.ensureCapacity(cmd, risBytes);
             cmd.fillBuffer(mSceneRisBuffer.getHandle(), 0, vk::WholeSize, 0);
             mSceneRisBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-            stagingRing->upload(cmd, mSceneRisBuffer, mSceneRis.data(), risBytes);
+            stagingRing->upload(cmd, mSceneRisBuffer, mRis.data(), risBytes);
 
             mSceneEarlyRcsBuffer.ensureCapacity(cmd, rcsBytes);  // At least as big as mSceneInitialRcsBuffer
             mSceneLateRcsBuffer.ensureCapacity(cmd, rcsBytes);   // At least as big as mSceneInitialRcsBuffer
