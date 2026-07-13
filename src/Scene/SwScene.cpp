@@ -447,7 +447,7 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
         const std::uint64_t rcsBytes = mSceneRcs.size() * sizeof(SwRenderCommand);
         const std::uint64_t risBytes = mSceneRis.size() * sizeof(SwRenderItem);
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [this, rcsBytes, risBytes](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsBytes, risBytes](vk::CommandBuffer cmd) {
             SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
 
             mSceneInitialRcsBuffer.ensureCapacity(cmd, rcsBytes);
@@ -481,7 +481,7 @@ void SwScene::reloadSceneBatchesBuffer() {
     }
 
     const std::uint64_t batchDataSize = batchData.size() * sizeof(SwBatch::Data);
-    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [this, batchData = std::move(batchData), batchDataSize](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, batchData = std::move(batchData), batchDataSize](vk::CommandBuffer cmd) {
         if (batchDataSize == 0) return;
         SwRenderer::sRendererContext.mStagingRing->upload(cmd, mSceneBatchesBuffer, batchData.data(), batchDataSize);
     });
@@ -551,7 +551,7 @@ void SwScene::reloadSceneVertexBuffer() {
 
         dstOffset += vertexCopy.size;
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [&asset, this, vertexCopy](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&asset, this, vertexCopy](vk::CommandBuffer cmd) {
             if (vertexCopy.size == 0) return;
             mSceneVertexBuffer.copyFrom(cmd, asset.getVertexBuffer(), vertexCopy);
         });
@@ -569,7 +569,7 @@ void SwScene::reloadSceneIndexBuffer() {
 
         dstOffset += indexCopy.size;
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [&asset, this, indexCopy](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&asset, this, indexCopy](vk::CommandBuffer cmd) {
             if (indexCopy.size == 0) return;
             mSceneIndexBuffer.copyFrom(cmd, asset.getIndexBuffer(), indexCopy);
         });
@@ -589,7 +589,7 @@ void SwScene::reloadSceneMaterialConstantsBuffer() {
         dstOffset += materialConstantCopy.size;
         maxPos = dstOffset;
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [&asset, this, materialConstantCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&asset, this, materialConstantCopy, maxPos](vk::CommandBuffer cmd) {
             if (materialConstantCopy.size == 0) return;
             mSceneMaterialConstantsBuffer.copyFrom(cmd, asset.getMaterialConstantsBuffer(), materialConstantCopy);
         });
@@ -609,7 +609,7 @@ void SwScene::reloadSceneNodeTransformsBuffer() {
         dstOffset += nodeTransformsCopy.size;
         maxPos = dstOffset;
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [&asset, this, nodeTransformsCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&asset, this, nodeTransformsCopy, maxPos](vk::CommandBuffer cmd) {
             if (nodeTransformsCopy.size == 0) return;
             mSceneNodeTransformsBuffer.copyFrom(cmd, asset.getNodeTransformsBuffer(), nodeTransformsCopy);
         });
@@ -629,7 +629,7 @@ void SwScene::reloadSceneBoundsBuffer() {
         dstOffset += boundsCopy.size;
         maxPos = dstOffset;
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [&asset, this, boundsCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&asset, this, boundsCopy, maxPos](vk::CommandBuffer cmd) {
             if (boundsCopy.size == 0) return;
             mSceneBoundsBuffer.copyFrom(cmd, asset.getBoundsBuffer(), boundsCopy);
         });
@@ -653,7 +653,7 @@ void SwScene::reloadSceneInstancesBuffer() {
         dstOffset += instancesCopy.size;
         maxPos = dstOffset;
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [&asset, this, instancesCopy, maxPos](vk::CommandBuffer cmd) {
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&asset, this, instancesCopy, maxPos](vk::CommandBuffer cmd) {
             if (instancesCopy.size == 0) return;
             mSceneInstancesBuffer.copyFrom(cmd, asset.getInstancesBuffer(), instancesCopy);
         });
@@ -676,7 +676,7 @@ void SwScene::reloadSceneLightsBuffer() {
     lightsCopy.srcOffset = 0;
     lightsCopy.size = lightData.size() * sizeof(SwLight::Data);
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [this, lightData = std::move(lightData), lightsCopy](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, lightData = std::move(lightData), lightsCopy](vk::CommandBuffer cmd) {
         if (lightsCopy.size == 0) return;
         SwRenderer::sRendererContext.mStagingRing->upload(cmd, mSceneLightsBuffer, lightData.data(), lightsCopy.size);
     });
