@@ -7,7 +7,9 @@
 SwImmSubmit::SwImmSubmit() {}
 
 void SwImmSubmit::initialize() {
-    mCommandPool = SwCommandPoolFactory::createCommandPool("ImmSubmitCommandPool", vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
+    mCommandPool = SwCommandPoolFactory::createCommandPool(
+        "ImmSubmitCommandPool", vk::CommandPoolCreateFlagBits::eResetCommandBuffer, SwRenderer::sRendererContext.mGraphicsQueueFamily
+    );
     mCommandBuffer = SwCommandBufferFactory::createCommandBuffer("ImmSubmitCommandBuffer", mCommandPool);
     mFence = SwFenceFactory::createFence("ImmSubmitFence", vk::FenceCreateFlagBits::eSignaled);
 }
@@ -36,11 +38,13 @@ void SwImmSubmit::individualSubmit(std::function<void(vk::CommandBuffer cmd)>&& 
     vk::Result result = SwRenderer::sRendererContext.mDevice->waitForFences(mFence.getHandle(), true, 1e9);  // DO NOT MOVE THIS TO THE TOP
 }
 
-void SwImmSubmit::flushInto(vk::CommandBuffer cmd) {
-    for (auto& flushIntoCallback : mCallbacks) {
+void SwImmSubmit::flushInto(SwQueueType queueType, vk::CommandBuffer cmd) {
+    for (auto& flushIntoCallback : mCallbacks[queueType]) {
         flushIntoCallback(cmd);
     }
-    mCallbacks.clear();
+    mCallbacks[queueType].clear();
 }
 
-void SwImmSubmit::addCallback(std::function<void(vk::CommandBuffer cmd)>&& function) { mCallbacks.emplace_back(std::move(function)); }
+void SwImmSubmit::addCallback(SwQueueType queueType, std::function<void(vk::CommandBuffer cmd)>&& function) {
+    mCallbacks[queueType].emplace_back(std::move(function));
+}

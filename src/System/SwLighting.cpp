@@ -88,7 +88,7 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowMapsDescriptorSet.writeSampler(2, mResources.mShadowMapsSampler.getHandle());
     mResources.mShadowMapsDescriptorSet.pushWrites();
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
             mResources.mShadow2DMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
             mResources.mShadowCubeMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
@@ -213,7 +213,7 @@ void SwLighting::System::regenerateShadowRcs() {
     rcsCopy.size = mResources.mInitialShadowRcs.size() * sizeof(SwRenderCommand);
     if (rcsCopy.size == 0) return;
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, rcsCopy](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsCopy](vk::CommandBuffer cmd) {
         SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
             stagingRing->upload(cmd, mResources.mShadowRcsBuffer[i], mResources.mInitialShadowRcs.data(), rcsCopy.size);

@@ -356,7 +356,7 @@ void SwAllocatedImage::fillImageData(const void* data, bool immediateSubmit) {
     if (immediateSubmit)
         SwRenderer::sRendererContext.mImmSubmit->individualSubmit(std::move(recordUpload));
     else
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(std::move(recordUpload));
+        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, std::move(recordUpload));
 }
 
 void SwAllocatedImage::addImageView(
@@ -647,7 +647,7 @@ void SwImageFactory::init() {
     }
     addDefault(SwDefaultImageOption::Checkerboard, "DefaultCheckerboardImage", vk::Format::eR8G8B8A8Srgb, vk::Extent3D{16, 16, 1}, pixels.data());
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [](vk::CommandBuffer cmd) {
         for (auto& [option, image] : sDefaultImages) {
             image.emitTransition(cmd, vk::PipelineStageFlagBits2::eFragmentShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
         }

@@ -46,6 +46,8 @@ private:
     vk::raii::Device mDevice;
     vk::PhysicalDeviceProperties mChosenGPUProperties{};
     vk::raii::DebugUtilsMessengerEXT mDebugMessenger;
+    vk::raii::Queue mTransferQueue;
+    std::uint32_t mTransferQueueFamily{0};
     vk::raii::Queue mComputeQueue;
     std::uint32_t mComputeQueueFamily{0};
     vk::raii::Queue mGraphicsQueue;

@@ -103,7 +103,7 @@ void SwWBOIT::System::reInitializeOnResize() {
         SwWBOIT::RVL_CLEAR_VALUE
     );
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
         mResources.mAccumImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
         mResources.mRvlImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     });

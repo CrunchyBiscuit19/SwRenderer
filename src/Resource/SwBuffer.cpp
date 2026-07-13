@@ -18,7 +18,7 @@ SwBuffer::SwBuffer()
 
 SwBuffer::SwBuffer(
     std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, vk::SharingMode sharingMode
 )
     : mName(std::move(name)),
       mBuffer(std::move(buffer)),
@@ -29,6 +29,7 @@ SwBuffer::SwBuffer(
       mFlags(flags),
       mUsage(usage),
       mSize(size),
+      mSharingMode(sharingMode),
       mCurrentStage(vk::PipelineStageFlagBits2::eTopOfPipe),
       mCurrentAccess(vk::AccessFlags2()) {}
 
@@ -106,6 +107,7 @@ SwBuffer::SwBuffer(SwBuffer&& other) noexcept
       mUsage(other.mUsage),
       mSize(other.mSize),
       mGeneration(other.mGeneration),
+      mSharingMode(other.mSharingMode),
       mCurrentStage(other.mCurrentStage),
       mCurrentAccess(other.mCurrentAccess) {
     other.mAllocator = nullptr;
@@ -126,6 +128,7 @@ SwBuffer& SwBuffer::operator=(SwBuffer&& other) noexcept {
         mUsage = other.mUsage;
         mSize = other.mSize;
         mGeneration = other.mGeneration;
+        mSharingMode = other.mSharingMode;
         mCurrentStage = other.mCurrentStage;
         mCurrentAccess = other.mCurrentAccess;
 
@@ -141,16 +144,17 @@ SwAllocatedBuffer::SwAllocatedBuffer() : SwBuffer() {}
 
 SwAllocatedBuffer::SwAllocatedBuffer(
     std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, vk::SharingMode sharingMode
 )
-    : SwBuffer(std::move(name), std::move(buffer), address, allocator, allocation, info, usage, flags, size) {}
+    : SwBuffer(std::move(name), std::move(buffer), address, allocator, allocation, info, usage, flags, size, sharingMode) {}
 
 void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     vk::PipelineStageFlags2 prevStage = mCurrentStage;
     vk::AccessFlags2 prevAccess = mCurrentAccess;
     std::uint32_t prevGeneration = mGeneration;
 
-    SwAllocatedBuffer newBuffer = SwBufferFactory::createAllocatedBuffer(mName, mUsage, mFlags, newSize, mAddress.has_value());
+    SwAllocatedBuffer newBuffer =
+        SwBufferFactory::createAllocatedBuffer(mName, mUsage, mFlags, newSize, mAddress.has_value(), true, mSharingMode == vk::SharingMode::eConcurrent);
 
     if (mSize > 0) {
         vk::BufferCopy copyRegion{};
@@ -188,11 +192,12 @@ void SwAllocatedBuffer::copyFromUnchecked(const void* src, std::uint64_t size, s
 SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
 
 SwStagingBuffer::SwStagingBuffer(
-    std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size
+    std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size,
+    vk::SharingMode sharingMode
 )
     : SwBuffer(
           std::move(name), std::move(buffer), std::nullopt, allocator, allocation, info, vk::BufferUsageFlagBits::eTransferSrc,
-          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size
+          VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size, sharingMode
       ) {}
 
 void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
@@ -202,7 +207,7 @@ void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     vk::AccessFlags2 prevAccess = mCurrentAccess;
     std::uint32_t prevGeneration = mGeneration;
 
-    SwStagingBuffer newBuffer = SwBufferFactory::createStagingBuffer(mName, newSize);
+    SwStagingBuffer newBuffer = SwBufferFactory::createStagingBuffer(mName, newSize, true, mSharingMode == vk::SharingMode::eConcurrent);
 
     if (oldMapped != nullptr && newBuffer.mInfo.pMappedData != nullptr && copySize > 0) {
         std::memcpy(newBuffer.mInfo.pMappedData, oldMapped, copySize);
@@ -244,16 +249,25 @@ void SwBufferFactory::tick(std::uint64_t currentFrame) {
 }
 
 SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
-    std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable, bool resizable
+    std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable, bool resizable, bool crossQueue
 ) {
     if (addressable) usage |= vk::BufferUsageFlagBits::eShaderDeviceAddress;
     if (resizable) usage |= vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
     flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
+    const std::vector<std::uint32_t>& families = SwRenderer::sRendererContext.mConcurrentUploadFamilies;
+    const bool concurrent = crossQueue && families.size() > 1;
+    const vk::SharingMode sharingMode = concurrent ? vk::SharingMode::eConcurrent : vk::SharingMode::eExclusive;
+
     vk::BufferCreateInfo bufferInfo = {};
     bufferInfo.pNext = nullptr;
     bufferInfo.size = size;
     bufferInfo.usage = usage;
+    bufferInfo.sharingMode = sharingMode;
+    if (concurrent) {
+        bufferInfo.queueFamilyIndexCount = static_cast<std::uint32_t>(families.size());
+        bufferInfo.pQueueFamilyIndices = families.data();
+    }
     auto bufferInfo1 = static_cast<VkBufferCreateInfo>(bufferInfo);
 
     VmaAllocationCreateInfo vmaCreateInfo = {};
@@ -281,18 +295,28 @@ SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
         tempInfo,
         usage,
         flags,
-        size
+        size,
+        sharingMode
     );
     SwRenderer::sRendererContext.labelResourceDebug(buffer.getHandle(), buffer.getName().c_str());
     return buffer;
 }
 
-SwStagingBuffer SwBufferFactory::createStagingBuffer(std::string name, std::uint64_t size, bool resizable) {
+SwStagingBuffer SwBufferFactory::createStagingBuffer(std::string name, std::uint64_t size, bool resizable, bool crossQueue) {
+    const std::vector<std::uint32_t>& families = SwRenderer::sRendererContext.mConcurrentUploadFamilies;
+    const bool concurrent = crossQueue && families.size() > 1;
+    const vk::SharingMode sharingMode = concurrent ? vk::SharingMode::eConcurrent : vk::SharingMode::eExclusive;
+
     vk::BufferCreateInfo bufferInfo = {};
     bufferInfo.pNext = nullptr;
     bufferInfo.size = size;
     bufferInfo.usage = vk::BufferUsageFlagBits::eTransferSrc;
     if (resizable) bufferInfo.usage |= vk::BufferUsageFlagBits::eTransferDst;
+    bufferInfo.sharingMode = sharingMode;
+    if (concurrent) {
+        bufferInfo.queueFamilyIndexCount = static_cast<std::uint32_t>(families.size());
+        bufferInfo.pQueueFamilyIndices = families.data();
+    }
     auto bufferInfo1 = static_cast<VkBufferCreateInfo>(bufferInfo);
 
     VmaAllocationCreateInfo vmaCreateInfo = {};
@@ -310,7 +334,8 @@ SwStagingBuffer SwBufferFactory::createStagingBuffer(std::string name, std::uint
         SwRenderer::sRendererContext.mAllocator,
         tempAllocation,
         tempInfo,
-        size
+        size,
+        sharingMode
     );
     SwRenderer::sRendererContext.labelResourceDebug(buffer.getHandle(), buffer.getName().c_str());
     return buffer;

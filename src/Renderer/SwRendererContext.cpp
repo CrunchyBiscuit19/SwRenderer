@@ -5,9 +5,13 @@
 #include <Renderer/SwSwapchain.h>
 #include <Resource/SwDescriptor.h>
 
+#include <algorithm>
+#include <unordered_set>
+
 SwRendererContext::SwRendererContext(
     vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
-    vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwStagingRing* stagingRing,
+    vk::raii::Queue* computeQueue, vk::raii::Queue* transferQueue, std::uint32_t graphicsQueueFamily, std::uint32_t computeQueueFamily,
+    std::uint32_t transferQueueFamily, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwStagingRing* stagingRing,
     SwEvents* events, SwScene* scene, SwStats* stats, SwLogger* logger
 )
     : mInstance(instance),
@@ -16,6 +20,10 @@ SwRendererContext::SwRendererContext(
       mAllocator(allocator),
       mGraphicsQueue(graphicsQueue),
       mComputeQueue(computeQueue),
+      mTransferQueue(transferQueue),
+      mGraphicsQueueFamily(graphicsQueueFamily),
+      mComputeQueueFamily(computeQueueFamily),
+      mTransferQueueFamily(transferQueueFamily),
       mDescriptorAllocator(descriptorAllocator),
       mSwapchain(swapchain),
       mImmSubmit(immSubmit),
@@ -23,4 +31,13 @@ SwRendererContext::SwRendererContext(
       mEvents(events),
       mScene(scene),
       mStats(stats),
-      mLogger(logger) {}
+      mLogger(logger) {
+    std::unordered_set<std::uint32_t> concurrentUploadFamilies;
+    for (std::uint32_t family : {graphicsQueueFamily, computeQueueFamily, transferQueueFamily}) {
+        concurrentUploadFamilies.insert(family);
+    }
+    mConcurrentUploadFamilies.reserve(concurrentUploadFamilies.size());
+    for (std::uint32_t family : concurrentUploadFamilies) {
+            mConcurrentUploadFamilies.emplace_back(family);
+    }
+}

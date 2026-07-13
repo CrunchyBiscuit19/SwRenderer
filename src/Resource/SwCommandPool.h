@@ -21,5 +21,5 @@ private:
 public:
     static void init();
 
-    static SwCommandPool createCommandPool(std::string name, vk::CommandPoolCreateFlags commandPoolCreateFlags);
+    static SwCommandPool createCommandPool(std::string name, vk::CommandPoolCreateFlags commandPoolCreateFlags, std::uint32_t queueFamilyIndex);
 };

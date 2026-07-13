@@ -512,7 +512,7 @@ void SwAsset::reloadInstances() {
     }
 
     SwScene* scene = SwRenderer::sRendererContext.mScene;
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, scene](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [this, scene](vk::CommandBuffer cmd) {
         vk::DeviceSize dstOffset = 0;
         for (std::uint32_t instanceId : mInstanceIds) {
             mInstancesBuffer.copyFrom(cmd, &scene->getInstance(instanceId).getData(), sizeof(SwInstance::Data), dstOffset);
@@ -540,7 +540,7 @@ void SwAsset::deferDestroyImages() {
 }
 
 void SwAsset::fillBuffers() {
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Transfer, [this](vk::CommandBuffer cmd) {
         SwStagingRing* ring = SwRenderer::sRendererContext.mStagingRing;
 
         std::vector<SwMaterialConstants> materialConstants;

@@ -4,13 +4,22 @@
 #include <VkBootstrap.h>
 #include <format>
 
-SwFrame::SwFrame() : mCommandPool(nullptr), mCommandBuffer(nullptr), mRenderFence(nullptr), mAvailableSemaphore(nullptr) {}
+SwFrame::SwFrame()
+    : mGraphicsCommandPool(nullptr), mGraphicsCommandBuffer(nullptr), mTransferCommandPool(nullptr), mTransferCommandBuffer(nullptr), mRenderFence(nullptr),
+      mAvailableSemaphore(nullptr), mTransferSemaphore(nullptr) {}
 
 void SwFrame::initialize(std::uint32_t frameIndex) {
-    mCommandPool = SwCommandPoolFactory::createCommandPool(std::format("Frame{}CommandPool", frameIndex), vk::CommandPoolCreateFlagBits::eResetCommandBuffer);
-    mCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}CommandBuffer", frameIndex), mCommandPool);
+    mGraphicsCommandPool = SwCommandPoolFactory::createCommandPool(
+        std::format("Frame{}GraphicsCommandPool", frameIndex), vk::CommandPoolCreateFlagBits::eResetCommandBuffer, SwRenderer::sRendererContext.mGraphicsQueueFamily
+    );
+    mGraphicsCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}GraphicsCommandBuffer", frameIndex), mGraphicsCommandPool);
+    mTransferCommandPool = SwCommandPoolFactory::createCommandPool(
+        std::format("Frame{}TransferCommandPool", frameIndex), vk::CommandPoolCreateFlagBits::eResetCommandBuffer, SwRenderer::sRendererContext.mTransferQueueFamily
+    );
+    mTransferCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}TransferCommandBuffer", frameIndex), mTransferCommandPool);
     mRenderFence = SwFenceFactory::createFence(std::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore(std::format("Frame{}AvailableSemaphore", frameIndex));
+    mTransferSemaphore = SwSemaphoreFactory::createSemaphore(std::format("Frame{}TransferSemaphore", frameIndex));
     mDataBuffer = SwBufferFactory::createAllocatedBuffer(
         std::format("Frame{}DataBuffer", frameIndex),
         vk::BufferUsageFlagBits::eStorageBuffer,
@@ -133,7 +142,7 @@ void SwSwapchain::onResizeInitialize() {
             vk::ImageUsageFlagBits::eStorage,
         false
     );
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < mSwapchainImages.size(); i++) {
             mSwapchainImages[i].emitTransition(cmd, SwDependency::ImageDepType::PresentSrc);
         }

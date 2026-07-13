@@ -264,7 +264,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Renderer `SwRenderer`
 
-* **`SwRenderer`** — the top-level application object. Owns the Vulkan instance / physical device / device, the graphics + compute queues, the VMA allocator, the descriptor allocator, and the major subsystems (`SwLogger`, `SwImmSubmit`, `SwSwapchain`, `SwStats`, `SwEvents`, and the `SwScene`). 
+* **`SwRenderer`** — the top-level application object. Owns the Vulkan instance / physical device / device, the graphics + compute + transfer queues, the VMA allocator, the descriptor allocator, and the major subsystems (`SwLogger`, `SwImmSubmit`, `SwSwapchain`, `SwStats`, `SwEvents`, and the `SwScene`). 
 * Runs the main loop `run()` and the per-frame `draw()`. Validation layer strictness is gated on the debug build.
 * **`SwVmaAllocator`** — a tiny RAII wrapper that destroys the VMA allocator on teardown.
 * **Relations** — constructs and wires up everything, then publishes pointers to its members through the static `SwRenderer::sRendererContext` so the rest of the engine can reach them.
@@ -272,7 +272,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Swapchain `SwSwapchain`
 
 * **`SwSwapchain`** — owns the SDL window + surface, the `VkSwapchainKHR` and its `SwSwapchainImage`s, the HDR draw image and depth image rendered into, and the frames-in-flight. Triple-buffered (3 swapchain images) with 2 frames of overlap. Handles image acquire / queue submit / present and window resize.
-* **`SwFrame`** — per-frame-in-flight state: its own command pool + command buffer, render fence, image-available semaphore, and a per-frame data buffer.
+* **`SwFrame`** — per-frame-in-flight state: its own graphics command pool + command buffer, a dedicated transfer command pool + command buffer, render fence, image-available semaphore, a transfer-done semaphore (signaled by the transfer submit, waited on by the graphics submit), and a per-frame data buffer.
 * **`SwFrame::Data`** — the per-frame data payload: a table of `vk::DeviceAddress`es pointing at other GPU buffers (currently just the camera buffer). Each frame `update()` writes the current addresses into the data buffer, decoupling the pointed-to buffers from the frame's lifetime.
 * **Relations** — owns the draw/depth images the systems render into; `getCurrentFrame()` indexes by frame number; the data buffer's device address is fed into systems' push constants as `mFrameBuffer`, and shaders chase the addresses inside it (e.g. `mFrameBuffer->mCameraBuffer`). The camera buffer it points to (holding the `SwPerspective`, camera world position, and the six frustum planes) is owned and written by `SwCamera`, which keeps one per frame-in-flight and hands back the current frame's buffer.
 
@@ -285,14 +285,14 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Immediate Submit `SwImmSubmit`
 
 * **`SwImmSubmit`** — runs one-off GPU work outside the frame loop (load-time buffer/image uploads, mipmap generation, IBL bakes) with its own command pool, command buffer, and fence.
-* `individualSubmit(...)` records and submits a single callback synchronously (blocking on its fence). `addCallback(...)` accumulates per-frame work that `flushInto(cmd)` later records into the frame's render command buffer, so those uploads ride the frame submission instead of a separate blocking submit.
+* `individualSubmit(...)` records and submits a single callback synchronously (blocking on its fence) and always runs on the graphics queue. Per-frame work is split into two channels: `addCallback(...)` / `flushInto(cmd)` is the **graphics** channel (image uploads, mipmap blits, layout transitions to shader-read), while `addTransferCallback(...)` / `flushTransferInto(cmd)` is the **transfer** channel (all buffer uploads and scene-consolidation copies). The draw folds each channel into its respective command buffer so uploads ride the frame submission instead of a separate blocking submit.
 
 ### Staging Ring `SwStagingRing`
 
 * **`SwStagingRing`** — one all-purpose, persistently mapped host-visible buffer sub-allocated as a ring, so streaming CPU data into a device-local resource is a single `upload(...)` call and the staging is invisible. The `SwBuffer&` overload records a `vkCmdCopyBuffer`, while the `SwImage&` overload transitions the image to transfer-dst optimal and records a `vkCmdCopyBufferToImage` from caller-supplied per-subresource regions (whose `bufferOffset` values are relative to the staged data and shifted by the ring offset internally).
 * Each region is tagged with the frame it was recorded in and reclaimed by `tick(frameNumber)` once that frame retires (the same `NUM_FRAME_OVERLAP` window as `SwBufferFactory`), which makes uploads non-blocking. On overflow the backing buffer grows and the old one is deferred-destroyed until every in-flight copy that still reads it has completed.
 * Used by the per-frame streaming path (batch RCS/RIS, scene lights, shadow render commands) and by image uploads (`SwAllocatedImage::fillImageData`). Newly loaded `SwAsset` textures decode in parallel and upload through `fillAssetImages`, which folds the copies plus a shader-read transition into the frame command buffer (non-blocking) and frees the decoded pixels a frame later in `freeAssetImages`.
-* Newly loaded `SwAsset` GPU buffers (material constants, mesh vertices/indices, bounds, node transforms) stream through the ring the same way: the constructor stashes the CPU data, `SwScene::fillAssetBuffers` records the uploads into the frame command buffer through `SwAsset::fillBuffers` (before the scene consolidates the per-asset buffers), and `freeAssetBuffers` releases the stashed data a frame later. A shared two-phase fill/free queue (`mAssetsIdsToFill` / `mAssetsIdsToFree`) drives both the buffer and image paths so assets loaded at `initialize()` time are handled correctly.
+* Newly loaded `SwAsset` GPU buffers (material constants, mesh vertices/indices, bounds, node transforms) stream through the ring the same way: the constructor stashes the CPU data, `SwScene::fillAssetBuffers` records the uploads into the transfer command buffer through `SwAsset::fillBuffers` (before the scene consolidates the per-asset buffers), and `freeAssetBuffers` releases the stashed data a frame later. Because the ring backs both the transfer-queue buffer uploads and the graphics-queue image uploads, it is created with `CONCURRENT` sharing across the upload queue families. A shared two-phase fill/free queue (`mAssetsIdsToFill` / `mAssetsIdsToFree`) drives both the buffer and image paths so assets loaded at `initialize()` time are handled correctly.
 
 ### Logger `SwLogger`
 
@@ -396,13 +396,14 @@ transform          = mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix
 
 1. Refresh the [GUI](#gui-swgui) and update the [camera](#camera), both of which read this frame's actions from [`SwInput`](#input-swinput) (whose per-frame state was cleared by `beginFrame()` and repopulated during event polling in `run()`).
 2. Apply pending asset/instance loads and unloads. If anything changed, `realign*` the scene-wide offsets, `reloadScene*Buffer` the affected [global buffers](#scene-swscene), and `regenerateRcsAndRis()` to rebuild the [batches](#batch).
-3. `refresh()` each system (recomputing push constants and rebuilding its passes' dependencies). Per-frame uploads are accumulated on [`SwImmSubmit`](#immediate-submit-swimmsubmit) here and folded into the frame command buffer during the draw, rather than flushed by a blocking submit.
+3. `refresh()` each system (recomputing push constants and rebuilding its passes' dependencies). Per-frame uploads are accumulated on [`SwImmSubmit`](#immediate-submit-swimmsubmit) here (buffer uploads on the transfer channel, image uploads on the graphics channel) and folded into the respective command buffers during the draw, rather than flushed by a blocking submit.
 
 ### GPU Draw — `SwScene::draw()`
 
 1. Wait on the current frame's render fence, reset it, `tick` the [buffer factory](#buffers-swbuffer) and [staging ring](#staging-ring-swstagingring) reclamation, and acquire the next swapchain image.
-2. Begin the frame command buffer and fold the accumulated per-frame uploads into its front via `SwImmSubmit::flushInto`, then record the per-frame [render graph](#render-graph-swrendergraph): the passes below are added (some conditionally — skybox, pick, FXAA), the swapchain/draw/depth images are registered as outputs, then `compile()` prunes + topologically sorts them and `execute()` records them with auto-inserted barriers.
-3. Transition the swapchain image to present, submit (waiting on the image-available semaphore, signalling the rendered semaphore + render fence), and present.
+2. Record the frame's buffer uploads into the transfer command buffer via `SwImmSubmit::flushTransferInto` and submit them on the dedicated **transfer queue**, signaling the frame's transfer semaphore. This submit happens every frame (even when empty) so the binary semaphore is always signaled. The scene buffers written here (vertex, index, material constants, node transforms, instances, bounds, lights, batches, initial RCS/RIS, and the early/late RCS buffers) are allocated with `CONCURRENT` sharing so no queue-family ownership transfer is needed.
+3. Begin the frame graphics command buffer and fold the accumulated graphics-channel uploads (image copies and shader-read transitions) into its front via `SwImmSubmit::flushInto`, then record the per-frame [render graph](#render-graph-swrendergraph): the passes below are added (some conditionally — skybox, pick, FXAA), the swapchain/draw/depth images are registered as outputs, then `compile()` prunes + topologically sorts them and `execute()` records them with auto-inserted barriers.
+4. Transition the swapchain image to present, submit on the graphics queue (waiting on both the image-available semaphore and the transfer semaphore, signalling the rendered semaphore + render fence), and present.
 
 The per-frame pass order — each pass is owned by the system of the same name (see [Scene and Systems](#scene-and-systems)):
 

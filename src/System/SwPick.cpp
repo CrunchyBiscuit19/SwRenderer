@@ -192,7 +192,7 @@ void SwPick::System::reInitializeOnResize() {
         false
     );
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
         mResources.mReadbackImage.emitTransition(cmd, SwDependency::ImageDepType::ColorAttachmentReadWrite);
     });
 

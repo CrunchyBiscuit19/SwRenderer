@@ -137,7 +137,7 @@ void SwIBL::System::initializeResources() {
     mResources.mBrdfLutDescriptorSet.pushWrites();
 
     // Bake the environment-independent BRDF LUT once
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&](vk::CommandBuffer cmd) {
         mResources.mIrradianceImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
         mResources.mPrefilterImage.emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
 
@@ -231,7 +231,7 @@ void SwIBL::System::initializeResources() {
     mResources.mSkyboxVertexBuffer =
         SwBufferFactory::createAllocatedBuffer("SkyboxDrawVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, skyboxVertexSize, true);
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([this, skyboxVertexSize](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, skyboxVertexSize](vk::CommandBuffer cmd) {
         SwRenderer::sRendererContext.mStagingRing->upload(cmd, mResources.mSkyboxVertexBuffer, mResources.mSkyboxVertices.data(), skyboxVertexSize);
     });
 
@@ -285,7 +285,7 @@ void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler enviro
     mResources.mPrefilterMipDescriptorSet.writeImage(1, environmentView, nullptr, vk::ImageLayout::eShaderReadOnlyOptimal);
     mResources.mPrefilterMipDescriptorSet.pushWrites();
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback([&](vk::CommandBuffer cmd) {
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [&](vk::CommandBuffer cmd) {
         environment.emitTransition(cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderRead, vk::ImageLayout::eShaderReadOnlyOptimal);
         mResources.mIrradianceImage.emitTransition(
             cmd, vk::PipelineStageFlagBits2::eComputeShader, vk::AccessFlagBits2::eShaderWrite, vk::ImageLayout::eGeneral

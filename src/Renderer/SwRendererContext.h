@@ -3,6 +3,7 @@
 #include <Renderer/SwStats.h>
 #include <vk_mem_alloc.h>
 
+#include <vector>
 #include <vulkan/vulkan.hpp>
 #include <vulkan/vulkan_raii.hpp>
 
@@ -71,6 +72,12 @@ struct SwRendererContext {
     VmaAllocator mAllocator{nullptr};
     vk::raii::Queue* mGraphicsQueue{nullptr};
     vk::raii::Queue* mComputeQueue{nullptr};
+    vk::raii::Queue* mTransferQueue{nullptr};
+    std::uint32_t mGraphicsQueueFamily{0};
+    std::uint32_t mComputeQueueFamily{0};
+    std::uint32_t mTransferQueueFamily{0};
+    // Unique family indices among graphics/compute/transfer, used for CONCURRENT-shared upload buffers. One entry means no sharing needed.
+    std::vector<std::uint32_t> mConcurrentUploadFamilies;
     SwDescriptorAllocator* mDescriptorAllocator{nullptr};
     SwSwapchain* mSwapchain{nullptr};
     SwImmSubmit* mImmSubmit{nullptr};
@@ -83,7 +90,8 @@ struct SwRendererContext {
     SwRendererContext() = default;
     SwRendererContext(
         vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
-        vk::raii::Queue* computeQueue, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwStagingRing* stagingRing,
+        vk::raii::Queue* computeQueue, vk::raii::Queue* transferQueue, std::uint32_t graphicsQueueFamily, std::uint32_t computeQueueFamily,
+        std::uint32_t transferQueueFamily, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwStagingRing* stagingRing,
         SwEvents* events, SwScene* scene, SwStats* stats, SwLogger* logger
     );
 

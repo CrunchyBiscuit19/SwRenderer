@@ -26,10 +26,13 @@ public:
 private:
     static constexpr std::uint32_t DATA_BUFFER_SIZE{sizeof(Data)};
 
-    SwCommandPool mCommandPool;
-    SwCommandBuffer mCommandBuffer;
+    SwCommandPool mGraphicsCommandPool;
+    SwCommandBuffer mGraphicsCommandBuffer;
+    SwCommandPool mTransferCommandPool;
+    SwCommandBuffer mTransferCommandBuffer;
     SwFence mRenderFence;
     SwSemaphore mAvailableSemaphore;
+    SwSemaphore mTransferSemaphore;
     SwAllocatedBuffer mDataBuffer;
 
 public:
@@ -41,9 +44,11 @@ public:
 
     void update();
 
-    inline SwCommandBuffer& getCommandBuffer() { return mCommandBuffer; };
+    inline SwCommandBuffer& getGraphicsCommandBuffer() { return mGraphicsCommandBuffer; };
+    inline SwCommandBuffer& getTransferCommandBuffer() { return mTransferCommandBuffer; };
     inline SwFence& getRenderFence() { return mRenderFence; };
     inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };
+    inline SwSemaphore& getTransferSemaphore() { return mTransferSemaphore; };
     inline SwAllocatedBuffer& getDataBuffer() { return mDataBuffer; };
 };
 

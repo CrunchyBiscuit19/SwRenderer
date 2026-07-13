@@ -14,7 +14,7 @@
 #include <SDL3/SDL_vulkan.h>
 #include <System/SwIBL.h>
 #include <System/SwLighting.h>
-#include <Vkbootstrap.h>
+#include <VkBootstrap.h>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #define VMA_IMPLEMENTATION
@@ -28,6 +28,7 @@ SwRenderer::SwRenderer()
       mInstance(nullptr),
       mDevice(nullptr),
       mChosenGPU(nullptr),
+      mTransferQueue(nullptr),
       mComputeQueue(nullptr),
       mGraphicsQueue(nullptr),
       mDescriptorAllocator(
@@ -152,11 +153,11 @@ SwRenderer::SwRenderer()
     mDevice = std::move(device);
     mChosenGPUProperties = mChosenGPU.getProperties();
 
-    vk::raii::Queue computeQueue(mDevice, vkbDevice.get_queue(vkb::QueueType::compute).value());
-    vk::raii::Queue graphicsQueue(mDevice, vkbDevice.get_queue(vkb::QueueType::graphics).value());
-    mComputeQueue = std::move(computeQueue);
-    mGraphicsQueue = std::move(graphicsQueue);
+    mTransferQueue = vk::raii::Queue(mDevice, vkbDevice.get_queue(vkb::QueueType::transfer).value());
+    mTransferQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::transfer).value();
+    mComputeQueue = vk::raii::Queue(mDevice, vkbDevice.get_queue(vkb::QueueType::compute).value());
     mComputeQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::compute).value();
+    mGraphicsQueue = vk::raii::Queue(mDevice, vkbDevice.get_queue(vkb::QueueType::graphics).value());
     mGraphicsQueueFamily = vkbDevice.get_queue_index(vkb::QueueType::graphics).value();
 
     VmaAllocatorCreateInfo allocatorInfo = {};
@@ -183,6 +184,10 @@ SwRenderer::SwRenderer()
         mAllocator.mAllocator,
         &mGraphicsQueue,
         &mComputeQueue,
+        &mTransferQueue,
+        mGraphicsQueueFamily,
+        mComputeQueueFamily,
+        mTransferQueueFamily,
         &mDescriptorAllocator,
         &mSwapchain,
         &mImmSubmit,
@@ -261,7 +266,7 @@ void SwRenderer::run() {
 
         auto end = std::chrono::system_clock::now();
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
-        if (mSwapchain.getFrameNumber() % 60 == 0) mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;
+        mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;
     }
 }
 
