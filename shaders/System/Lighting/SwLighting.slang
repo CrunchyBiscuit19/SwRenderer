@@ -46,28 +46,28 @@ namespace SwLighting {
     };
 
     public struct ShadowsResetPC {
-        public SwBatch::RenderCommand* mSceneShadowsRcsBuffer;
+        public SwRenderCommand* mSceneShadowsRcsBuffer;
         public uint mSceneShadowsRcsLimit;
     };
 
     public struct ShadowsCullPC {
-        public SwBatch::RenderCommand* mSceneShadowsRcsBuffer;
-        public SwBatch::RenderItem* mSceneShadowsRisBuffer;
+        public SwRenderCommand* mSceneShadowsRcsBuffer;
+        public SwRenderItem* mSceneShadowsRisBuffer;
         public uint* mSceneShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
-        public SwMesh::Bounds* mSceneBoundsBuffer;
+        public SwBounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public uint mSceneShadowsRisLimit;
     };
 
     public struct ShadowDrawPC {
-        public SwBatch::RenderCommand* mSceneShadowsRcsBuffer;
+        public SwRenderCommand* mSceneShadowsRcsBuffer;
         public uint* mSceneShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
-        public SwMesh::Vertex* mSceneVertexBuffer;
+        public SwVertex* mSceneVertexBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public SwMaterial::Constant* mSceneMaterialConstantsBuffer;

@@ -80,7 +80,7 @@ const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PAT
 SwShader SwMaterial::sTransparentFragmentShader;
 
 SwMaterial::SwMaterial(
-    std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, SwMaterialConstants materialConstants,
+    std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, SwMaterial::Constant materialConstants,
     SwMaterialResources materialResources
 )
     : mName(std::move(name)),

@@ -123,7 +123,7 @@ public:
     static constexpr std::size_t SCENE_INITIAL_VERTEX_BUFFER_SIZE{1ull << 28};
     static constexpr std::size_t SCENE_INITIAL_INDEX_BUFFER_SIZE{1ull << 28};
     static constexpr std::size_t SCENE_INITIAL_NUM_MATERIALS{1 << 8};
-    static constexpr std::size_t SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE{SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterialConstants)};
+    static constexpr std::size_t SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE{SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterial::Constant)};
     static constexpr std::size_t SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE{(1 << 12) * sizeof(glm::mat4)};
     static constexpr std::size_t SCENE_INITIAL_INSTANCES_BUFFER_SIZE{(1 << 8) * sizeof(SwInstance::Data)};
     static constexpr std::size_t SCENE_INITIAL_BOUNDS_BUFFER_SIZE{(1 << 12) * sizeof(SwBounds)};
@@ -192,7 +192,6 @@ public:
     inline SwAllocatedBuffer& getSceneLightsInfoBuffer() { return mSceneLightsInfoBuffer; };
 
     inline SwAllocatedBuffer& getSceneShadowsRcsBuffer() { return mSceneShadowsRcsBuffer; };
-    inline SwAllocatedBuffer& getSceneShadowsRisBuffer() { return mSceneShadowsRisBuffer; };
     inline SwAllocatedBuffer& getSceneShadowsRisIndicesBuffer() { return mSceneShadowsRisIndicesBuffer; };
 
     inline SwInput::System& getInputSystem() { return mInput; }

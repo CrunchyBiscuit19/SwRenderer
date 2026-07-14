@@ -11,7 +11,7 @@ void main(SwCull::CSInput in) {
         return;
 
     // Copy over render commands with more than zero instances, and increment counter
-    SwBatch::RenderCommand* rc = &compactPc.mPreRcsBuffer[rcsIndex];
+    SwRenderCommand* rc = &compactPc.mPreRcsBuffer[rcsIndex];
 
     if (rc->mRiCount == 0)
         return;

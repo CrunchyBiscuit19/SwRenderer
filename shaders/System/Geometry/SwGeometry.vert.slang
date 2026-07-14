@@ -6,10 +6,10 @@ SwGeometry::DrawPC drawPc;
 SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     SwGeometry::VSOutput out;
 
-    SwMesh::Vertex v = drawPc.mSceneVertexBuffer[in.mVertexIndex];
+    SwVertex v = drawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwBatch::RenderCommand rc = drawPc.mSceneRcsBuffer[in.mDrawIndex];
+    SwRenderCommand rc = drawPc.mSceneRcsBuffer[in.mDrawIndex];
 
     uint sceneInstanceIndex = drawPc.mSceneRisIndicesBuffer[in.mRenderItemIndex];
     float4x4 instanceTransformMatrix = drawPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;

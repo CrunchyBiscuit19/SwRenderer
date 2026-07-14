@@ -5,7 +5,7 @@ import System.Cull.SwCull;
 [[vk::push_constant]]
 SwLighting::ShadowsCullPC shadowsCullPc;
 
-void constructCorners(SwMesh::Bounds* riBounds, float4x4 riModelMatrix, out float4 corners[SwMesh::NUM_AABB_CORNERS]) {
+void constructCorners(SwBounds* riBounds, float4x4 riModelMatrix, out float4 corners[SwMesh::NUM_AABB_CORNERS]) {
     corners[0] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMin.z, 1.f);
     corners[1] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMax.z, 1.f);
     corners[2] = float4(riBounds->mMin.x, riBounds->mMax.y, riBounds->mMin.z, 1.f);
@@ -28,12 +28,12 @@ bool frustumTest(SwFrustum::Data frustum, float4 corners[SwMesh::NUM_AABB_CORNER
         aabbMax = max(aabbMax, corners[j]);
     }
 
-    SwFrustum::Plane* planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
+    SwPlane* planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
         &frustum.mNear, &frustum.mFar, &frustum.mLeft, &frustum.mRight, &frustum.mTop, &frustum.mBottom
     };
 
     for (uint i = 0; i < SwFrustum::NUM_FRUSTUM_PLANES; i++) {
-        SwFrustum::Plane p = *planes[i];
+        SwPlane p = *planes[i];
         float3 chosen;
         chosen.x = (p.mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
         chosen.y = (p.mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
@@ -68,10 +68,10 @@ void main(SwLighting::CSInput in) {
         return;
     }
 
-    SwBatch::RenderItem* ri = &shadowsCullPc.mSceneShadowsRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &shadowsCullPc.mSceneShadowsRcsBuffer[ri->mRcIndex];
+    SwRenderItem* ri = &shadowsCullPc.mSceneShadowsRisBuffer[risIndex];
+    SwRenderCommand* rc = &shadowsCullPc.mSceneShadowsRcsBuffer[ri->mRcIndex];
 
-    SwMesh::Bounds* riBounds = &shadowsCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    SwBounds* riBounds = &shadowsCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
     float4x4 riInstanceTransform = shadowsCullPc.mSceneInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);

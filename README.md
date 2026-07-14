@@ -95,9 +95,9 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Camera
 
-* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed and computes its view frustum as a `SwFrustum` (`SwCamera::getFrustum()`). It owns and writes the camera GPU buffers (`SwCamera::Data`: perspective, world position, and the frustum) that the frame's data buffer points at, consumed by the cull and geometry passes. One buffer per frame-in-flight (indexed by frame number) so the CPU write for the next frame never races an in-flight frame's GPU read. Offers a spawn transform helper for placing new instances in front of the camera.
-* **`SwPerspective`** — a view + projection matrix pair (reversed-Z, Y-flipped Vulkan projection); produced by `SwCamera::getPerspective()`.
-* **`SwFrustum`** — the six bounding planes (near/far/left/right/top/bottom) built by `SwFrustum::calculateFrustum(...)`; **`SwPlane`** is a single plane (normal + signed distance). The camera bakes its `SwFrustum` into `SwCamera::Data` for the GPU cull pass.
+* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed and computes its view frustum as a `SwFrustum::Data` (`SwCamera::getFrustum()`). It owns and writes the camera GPU buffers (`SwCamera::Data`: perspective, world position, and the frustum) that the frame's data buffer points at, consumed by the cull and geometry passes. One buffer per frame-in-flight (indexed by frame number) so the CPU write for the next frame never races an in-flight frame's GPU read. Offers a spawn transform helper for placing new instances in front of the camera.
+* **`SwCamera::Perspective`** — a view + projection matrix pair (reversed-Z, Y-flipped Vulkan projection); produced by `SwCamera::getPerspective()`.
+* **`SwFrustum::Data`** — the six bounding planes (near/far/left/right/top/bottom) built by `SwFrustum::calculateFrustum(...)`; **`SwPlane`** is a single plane (normal + signed distance). The camera bakes its `SwFrustum::Data` into `SwCamera::Data` for the GPU cull pass.
 
 ### Asset
 
@@ -107,11 +107,11 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Material
 
 * **`SwMaterial`** — a PBR material; classified `Opaque` / `Mask` / `Transparent` from the glTF alpha mode.
-* **`SwMaterialConstants`** — the scalar/vector factors (base, emissive, metallic-roughness, normal scale, occlusion strength, alpha cutoff).
+* **`SwMaterial::Constant`** — the scalar/vector factors (base, emissive, metallic-roughness, normal scale, occlusion strength, alpha cutoff).
 * **`SwMaterialResources`** — the five PBR textures (base, metallic-roughness, normal, occlusion, emissive).
 * **`SwMaterialTexture`** — pairs a `SwColorImage2D` with a `SwSampler`, with default white/error fallbacks.
 * **`SwMaterialPipelineOptions`** — double-sided + alpha mode; used as a hash key to share/de-duplicate graphics pipeline bundles across materials.
-* **Relations** — a `SwMaterial` bundles one `SwMaterialConstants` and one `SwMaterialResources` (which holds five `SwMaterialTexture`s, each wrapping an image + sampler). Materials are referenced by `SwPrimitive`; the alpha-mode classification decides which material-type batch a primitive lands in.
+* **Relations** — a `SwMaterial` bundles one `SwMaterial::Constant` and one `SwMaterialResources` (which holds five `SwMaterialTexture`s, each wrapping an image + sampler). Materials are referenced by `SwPrimitive`; the alpha-mode classification decides which material-type batch a primitive lands in.
 
 ### Instance
 
@@ -274,7 +274,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 * **`SwSwapchain`** — owns the SDL window + surface, the `VkSwapchainKHR` and its `SwSwapchainImage`s, the HDR draw image and depth image rendered into, and the frames-in-flight. Triple-buffered (3 swapchain images) with 2 frames of overlap. Handles image acquire / queue submit / present and window resize.
 * **`SwFrame`** — per-frame-in-flight state: its own graphics command pool + command buffer, a dedicated transfer command pool + command buffer, render fence, image-available semaphore, a transfer-done semaphore (signaled by the transfer submit, waited on by the graphics submit), and a per-frame data buffer.
 * **`SwFrame::Data`** — the per-frame data payload: a table of `vk::DeviceAddress`es pointing at other GPU buffers (currently just the camera buffer). Each frame `update()` writes the current addresses into the data buffer, decoupling the pointed-to buffers from the frame's lifetime.
-* **Relations** — owns the draw/depth images the systems render into; `getCurrentFrame()` indexes by frame number; the data buffer's device address is fed into systems' push constants as `mFrameBuffer`, and shaders chase the addresses inside it (e.g. `mFrameBuffer->mCameraBuffer`). The camera buffer it points to (holding the `SwPerspective`, camera world position, and the six frustum planes) is owned and written by `SwCamera`, which keeps one per frame-in-flight and hands back the current frame's buffer.
+* **Relations** — owns the draw/depth images the systems render into; `getCurrentFrame()` indexes by frame number; the data buffer's device address is fed into systems' push constants as `mFrameBuffer`, and shaders chase the addresses inside it (e.g. `mFrameBuffer->mCameraBuffer`). The camera buffer it points to (holding the `SwCamera::Perspective`, camera world position, and the six frustum planes) is owned and written by `SwCamera`, which keeps one per frame-in-flight and hands back the current frame's buffer.
 
 ### Renderer Context `SwRendererContext`
 

@@ -257,7 +257,7 @@ void SwAsset::constructMaterials() {
 
         SwMaterialPipelineOptions pipelineOptions(material.doubleSided, material.alphaMode);
 
-        SwMaterialConstants constants;
+        SwMaterial::Constant constants;
         constants.mBaseFactor = glm::vec4(
             material.pbrData.baseColorFactor[0], material.pbrData.baseColorFactor[1], material.pbrData.baseColorFactor[2], material.pbrData.baseColorFactor[3]
         );
@@ -543,11 +543,11 @@ void SwAsset::fillBuffers() {
     SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
         SwStagingRing* ring = SwRenderer::sRendererContext.mStagingRing;
 
-        std::vector<SwMaterialConstants> materialConstants;
+        std::vector<SwMaterial::Constant> materialConstants;
         materialConstants.reserve(mMaterials.size());
         for (auto& material : mMaterials) materialConstants.emplace_back(material.getConstants());
         if (!materialConstants.empty()) {
-            ring->upload(cmd, mMaterialConstantsBuffer, materialConstants.data(), materialConstants.size() * sizeof(SwMaterialConstants));
+            ring->upload(cmd, mMaterialConstantsBuffer, materialConstants.data(), materialConstants.size() * sizeof(SwMaterial::Constant));
             mMaterialConstantsBuffer.emitBarrier(cmd, vk::PipelineStageFlagBits2::eTransfer, vk::AccessFlagBits2::eTransferRead);
         }
 

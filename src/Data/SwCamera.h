@@ -14,28 +14,28 @@ enum SwMovementMode {
     DRONE,
 };
 
-struct SwPerspective {
-private:
-    glm::mat4 mView{1.f};
-    glm::mat4 mProj{1.f};  // Vulkan-style: Y-flipped, reversed-Z
-
-public:
-    SwPerspective() = default;
-    SwPerspective(glm::mat4 view, glm::mat4 proj);
-
-    const glm::mat4& getView() const { return mView; }
-    const glm::mat4& getProjVk() const { return mProj; }
-    glm::mat4 getProjGL() const;
-};
-
 struct SwRendererContext;
 
 class SwCamera {
 public:
+    struct Perspective {
+    private:
+        glm::mat4 mView{1.f};
+        glm::mat4 mProj{1.f};  // Vulkan-style: Y-flipped, reversed-Z
+
+    public:
+        Perspective() = default;
+        Perspective(glm::mat4 view, glm::mat4 proj);
+
+        const glm::mat4& getView() const { return mView; }
+        const glm::mat4& getProjVk() const { return mProj; }
+        glm::mat4 getProjGL() const;
+    };
+
     struct Data {
-        SwPerspective mPerspective;
+        Perspective mPerspective;
         glm::vec3 mWorldPos{0.f};
-        SwFrustum mFrustum;
+        SwFrustum::Data mFrustum;
     };
 
 private:
@@ -56,7 +56,7 @@ private:
     float mSpeed{1.f};
     bool mRelativeMode{false};
     SwMovementMode mMovementMode{FREEFLY};
-    SwFrustum mFrustum;
+    SwFrustum::Data mFrustum;
     std::array<SwAllocatedBuffer, SwSwapchain::NUM_FRAME_OVERLAP> mCameraBuffers;
 
 public:
@@ -76,7 +76,7 @@ public:
     glm::mat4 getSpawnTransform(float distance = 5.f, float scale = 1.f, bool rotated = false) const;
     void update(float deltaTime, float expectedDeltaTime);
 
-    inline SwFrustum& getFrustum() { return mFrustum; }
+    inline SwFrustum::Data& getFrustum() { return mFrustum; }
     SwAllocatedBuffer& getCameraBuffer();
     inline bool getRelativeMode() const { return mRelativeMode; }
     inline SwMovementMode getMovementMode() const { return mMovementMode; }
@@ -85,7 +85,7 @@ public:
     inline float getYaw() const { return mYaw; }
     inline float getSpeed() const { return mSpeed; }
 
-    SwPerspective getPerspective() const;
+    Perspective getPerspective() const;
 
     void setRelativeMode(bool relativeMode);
 };

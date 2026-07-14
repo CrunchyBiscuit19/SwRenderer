@@ -11,14 +11,16 @@ struct SwPlane {
 };
 
 struct SwFrustum {
-    SwPlane mNear;
-    SwPlane mFar;
-    SwPlane mLeft;
-    SwPlane mRight;
-    SwPlane mTop;
-    SwPlane mBottom;
+    struct Data {
+        SwPlane mNear;
+        SwPlane mFar;
+        SwPlane mLeft;
+        SwPlane mRight;
+        SwPlane mTop;
+        SwPlane mBottom;
+    };
 
-    static SwFrustum calculateFrustum(
+    static Data calculateFrustum(
         const glm::vec3& position, const glm::vec3& forward, const glm::vec3& right, const glm::vec3& up, float halfHSide, float halfVSide, float nearPlane,
         float farPlane
     );

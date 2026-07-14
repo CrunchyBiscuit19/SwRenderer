@@ -8,17 +8,15 @@ namespace SwPostProcess {
     public static const float REDUCE_MIN = 1.0f / 128.0f;
     public static const float SPAN_MAX = 8.0f;
 
-    namespace Fxaa {
-        public struct FxaaPC {
-            public float2 mInverseScreenSize;
-        };
-    }
+    public struct FXAAPC {
+        public float2 mInverseScreenSize;
+    };
+
+    public struct TonemapPC {
+        public float mExposure;
+    };
 
     namespace Tonemap {
-        public struct TonemapPC {
-            public float mExposure;
-        };
-
         // sRGB => XYZ => D65_2_D60 => AP1 => RRT_SAT
         public static const float3x3 ACES_INPUT_MATRIX = {
             {0.59719, 0.35458, 0.04823},

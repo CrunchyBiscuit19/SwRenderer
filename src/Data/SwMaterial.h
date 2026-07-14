@@ -48,15 +48,6 @@ public:
     static SwMaterialTexture retrieveDefaultFlatNormalTexture();
 };
 
-struct SwMaterialConstants {
-    glm::vec4 mBaseFactor{1.f};
-    glm::vec4 mEmissiveFactor{0.f};
-    glm::vec2 mMetallicRoughnessFactor{1.f};
-    float mNormalScale{1.f};
-    float mOcclusionStrength{1.f};
-    float mAlphaCutoff{0.5f};
-};
-
 struct SwMaterialResources {
 private:
 public:
@@ -94,12 +85,22 @@ struct std::hash<SwMaterialPipelineOptions> {
 };
 
 class SwMaterial {
+public:
+    struct Constant {
+        glm::vec4 mBaseFactor{1.f};
+        glm::vec4 mEmissiveFactor{0.f};
+        glm::vec2 mMetallicRoughnessFactor{1.f};
+        float mNormalScale{1.f};
+        float mOcclusionStrength{1.f};
+        float mAlphaCutoff{0.5f};
+    };
+
 private:
     static std::uint32_t sLatestMaterialId;
 
     std::string mName;
     SwMaterialPipelineOptions mMaterialPipelineOptions;
-    SwMaterialConstants mMaterialConstants;
+    Constant mMaterialConstants;
     SwMaterialResources mMaterialResources;
     std::uint32_t mPipelineId{0};
 
@@ -126,7 +127,7 @@ public:
     std::uint32_t mRelativeMaterialIndex{0};
 
     SwMaterial(
-        std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, SwMaterialConstants materialConstants,
+        std::string name, std::uint32_t relativeMaterialIndex, SwMaterialPipelineOptions materialPipelineOptions, Constant materialConstants,
         SwMaterialResources materialResources
     );
 
@@ -146,5 +147,5 @@ public:
 
     inline SwMaterialResources& getResources() { return mMaterialResources; }
 
-    inline const SwMaterialConstants& getConstants() const { return mMaterialConstants; }
+    inline const Constant& getConstants() const { return mMaterialConstants; }
 };

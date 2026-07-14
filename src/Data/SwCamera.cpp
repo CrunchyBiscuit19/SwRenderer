@@ -7,9 +7,9 @@
 #include <System/SwInput.h>
 #include <imgui.h>
 
-SwPerspective::SwPerspective(glm::mat4 view, glm::mat4 proj) : mView(std::move(view)), mProj(std::move(proj)) {}
+SwCamera::Perspective::Perspective(glm::mat4 view, glm::mat4 proj) : mView(std::move(view)), mProj(std::move(proj)) {}
 
-glm::mat4 SwPerspective::getProjGL() const {
+glm::mat4 SwCamera::Perspective::getProjGL() const {
     glm::mat4 p = mProj;
     p[1][1] *= -1;
     return p;
@@ -128,7 +128,7 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
     getCameraBuffer().copyFromUnchecked(&cameraData, sizeof(Data));
 }
 
-SwPerspective SwCamera::getPerspective() const {
+SwCamera::Perspective SwCamera::getPerspective() const {
     glm::mat4 view = getViewMatrix();
     glm::mat4 proj = glm::perspective(glm::radians(FOVY), SwRenderer::sRendererContext.mSwapchain->getAspectRatio(), FAR_PLANE, NEAR_PLANE);
     proj[1][1] *= -1;

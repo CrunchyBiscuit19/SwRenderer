@@ -32,11 +32,11 @@ bool frustumTest(SwFrustum::Data* frustum, float4[SwMesh::NUM_AABB_CORNERS] aabb
     // Point-normal plane equation is positive if it's on the side of the plane the normal is pointing
     // Frustum plane normals point inward => non-negative result means at least 1 corner is on correct side of the plane
     // At least 1 corner on correct side of all 6 planes means render item is within frustum and therefore visible
-    const SwFrustum::Plane* planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
+    const SwPlane* planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
         &frustum->mNear, &frustum->mFar, &frustum->mLeft, &frustum->mRight, &frustum->mTop, &frustum->mBottom
     };
     for (uint i = 0; i < SwFrustum::NUM_FRUSTUM_PLANES; i++) {
-        SwFrustum::Plane* p = planes[i];
+        SwPlane* p = planes[i];
         float4 chosen;
         chosen.x = (p->mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
         chosen.y = (p->mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
@@ -101,7 +101,7 @@ bool occlusionCull(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwCamera:
     return closestDepthInRi >= furthestDepthInPyramid;
 }
 
-void markRiIndex(SwBatch::RenderCommand* rc, SwBatch::RenderItem* ri, uint* sceneRisIndicesBuffer) {
+void markRiIndex(SwRenderCommand* rc, SwRenderItem* ri, uint* sceneRisIndicesBuffer) {
     // Write the indices of to-draw render items to the draw instances indices buffer
     // Index into to-draw instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
@@ -116,10 +116,10 @@ void main(SwCull::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
     if (risIndex >= testPc.mSceneRisLimit)
         return;
-    SwBatch::RenderItem* ri = &testPc.mSceneRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &testPc.mSceneRcsBuffer[ri->mRcIndex];
+    SwRenderItem* ri = &testPc.mSceneRisBuffer[risIndex];
+    SwRenderCommand* rc = &testPc.mSceneRcsBuffer[ri->mRcIndex];
 
-    SwMesh::Bounds* bounds = &testPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    SwBounds* bounds = &testPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     SwNode::Transform* nodeTransform = &testPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
     SwInstance::Data* instance = &testPc.mSceneInstancesBuffer[ri->mInstanceIndex];
     SwFrustum::Data* frustum = &testPc.mFrameBuffer->mCameraBuffer->mFrustum;

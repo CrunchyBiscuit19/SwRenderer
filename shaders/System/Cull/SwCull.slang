@@ -13,19 +13,19 @@ namespace SwCull {
     public static const bool ENABLE_OCCLUSION_CULL = true;
 
     public struct ResetPC {
-        public SwBatch::RenderCommand* mSceneRcsBuffer;
+        public SwRenderCommand* mSceneRcsBuffer;
         public uint mSceneRcsLimit;
     };
 
     public enum Phase { Early, Late };
 
     public struct TestPC {
-        public SwBatch::RenderCommand* mSceneRcsBuffer;
-        public SwBatch::RenderItem* mSceneRisBuffer;
-        public SwBatch::Batch::Data* mSceneBatchesBuffer;
+        public SwRenderCommand* mSceneRcsBuffer;
+        public SwRenderItem* mSceneRisBuffer;
+        public SwBatch::Data* mSceneBatchesBuffer;
         public uint* mSceneRisCount;
         public SwFrame::Data* mFrameBuffer;
-        public SwMesh::Bounds* mSceneBoundsBuffer;
+        public SwBounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public uint* mSceneRisIndicesBuffer;
@@ -36,9 +36,9 @@ namespace SwCull {
     };
 
     public struct CompactPC {
-        public SwBatch::Batch::Data* mSceneBatchesBuffer;
-        public SwBatch::RenderCommand* mPreRcsBuffer;
-        public SwBatch::RenderCommand* mPostRcsBuffer;
+        public SwBatch::Data* mSceneBatchesBuffer;
+        public SwRenderCommand* mPreRcsBuffer;
+        public SwRenderCommand* mPostRcsBuffer;
         public uint* mPostRcsCount;
         public uint mPreRcsLimit;
     };

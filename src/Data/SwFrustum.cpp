@@ -1,10 +1,10 @@
 #include <Data/SwFrustum.h>
 
-SwFrustum SwFrustum::calculateFrustum(
+SwFrustum::Data SwFrustum::calculateFrustum(
     const glm::vec3& position, const glm::vec3& forward, const glm::vec3& right, const glm::vec3& up, float halfHSide, float halfVSide, float nearPlane,
     float farPlane
 ) {
-    SwFrustum frustum;
+    SwFrustum::Data frustum;
     frustum.mNear = SwPlane(forward, position + forward * nearPlane);
     frustum.mFar = SwPlane(-forward, position + forward * farPlane);
     frustum.mLeft = SwPlane(glm::cross(forward - right * halfHSide, up), position);

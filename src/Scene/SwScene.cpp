@@ -596,7 +596,7 @@ void SwScene::reloadSceneMaterialConstantsBuffer() {
         vk::BufferCopy materialConstantCopy{};
         materialConstantCopy.dstOffset = dstOffset;
         materialConstantCopy.srcOffset = 0;
-        materialConstantCopy.size = asset.getMaterials().size() * sizeof(SwMaterialConstants);
+        materialConstantCopy.size = asset.getMaterials().size() * sizeof(SwMaterial::Constant);
 
         dstOffset += materialConstantCopy.size;
         maxPos = dstOffset;

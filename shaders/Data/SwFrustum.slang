@@ -1,20 +1,20 @@
 module SwFrustum;
 
+public struct SwPlane {
+    public float3 mNormal;
+    public float mDistance;
+};
+
 namespace SwFrustum {
     public static const uint NUM_FRUSTUM_PLANES = 6;
 
-    public struct Plane {
-        public float3 mNormal;
-        public float mDistance;
-    };
-
     public struct Data {
-        public Plane mNear;
-        public Plane mFar;
-        public Plane mLeft;
-        public Plane mRight;
-        public Plane mTop;
-        public Plane mBottom;
+        public SwPlane mNear;
+        public SwPlane mFar;
+        public SwPlane mLeft;
+        public SwPlane mRight;
+        public SwPlane mTop;
+        public SwPlane mBottom;
     };
 
     // Orthonormal basis perpendicular to forward, matching the camera convention (right = forward x worldUp).
