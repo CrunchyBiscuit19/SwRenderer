@@ -14,7 +14,7 @@ import System.BRDF.SwBRDF;
 import System.IBL.SwIBL;
 
 namespace SwLighting {
-    public struct Cluster {};
+    public struct Cluster{};
 
     public static const uint SHADOWS_MAP_SIZE = 1024;
     public static const uint MAX_NUM_SHADOW_CASTERS = 16;
@@ -28,50 +28,49 @@ namespace SwLighting {
         public uint* mShadowCastIndices;
     };
 
-    public struct ResetPC {
-        public SwBatch::RenderCommand* mShadowsRcsBuffer;
-        public uint mShadowsRcsLimit;
-    };
-
-    public struct ClusterBuildPC {
+    public struct ClustersBuildPC {
         public Cluster* mClustersBuffer;
     };
 
-    public struct ClusterMarkActivePC {
-        public uint* mActiveClustersIndicesBuffer;
+    public struct ClustersMarkActivePC {
+        public uint* mClustersActiveIndicesBuffer;
     };
 
-    public struct ClusterCullLightsPC {
+    public struct ClustersCullPC {
         public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mSceneLightsBuffer;
+        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
-        public uint* mActiveClustersIndicesBuffer;
+        public uint* mClustersActiveIndicesBuffer;
     };
 
-    public struct CullPC {
-        public SwBatch::RenderCommand* mShadowsRcsBuffer;
-        public SwBatch::RenderItem* mShadowsRisBuffer;
-        public uint* mShadowsRisIndicesBuffer;
+    public struct ShadowsResetPC {
+        public SwBatch::RenderCommand* mSceneShadowsRcsBuffer;
+        public uint mSceneShadowsRcsLimit;
+    };
+
+    public struct ShadowsCullPC {
+        public SwBatch::RenderCommand* mSceneShadowsRcsBuffer;
+        public SwBatch::RenderItem* mSceneShadowsRisBuffer;
+        public uint* mSceneShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
+        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public SwMesh::Bounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
-        public uint mShadowsRisLimit;
+        public uint mSceneShadowsRisLimit;
     };
 
-    public struct DrawPC {
-        public SwBatch::RenderCommand* mShadowsRcsBuffer;
-        public uint* mShadowsRisIndicesBuffer;
+    public struct ShadowDrawPC {
+        public SwBatch::RenderCommand* mSceneShadowsRcsBuffer;
+        public uint* mSceneShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
+        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public SwMesh::Vertex* mSceneVertexBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
-        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
-        public uint mLightIndex;
     };
 
     public struct VSInput {
@@ -100,8 +99,8 @@ namespace SwLighting {
         public uint3 mDispatchThreadID : SV_DispatchThreadID;
     };
 
-    // Resolve one punctual light's world-space transform from its instance / node-transform indices
-    // and return its Cook-Torrance contribution (point: inverse-square + range falloff, spot: cone falloff).
+    // Resolve punctual light's world-space transform and return Cook-Torrance contribution 
+    // Point: Inverse-square + range falloff, Spot: Cone falloff.
     public float3 accumulatePunctualLight(
         SwLight::Data light, float3 worldPos, float3 normal, float3 view, float3 albedo, float metallic, float roughness, SwInstance::Data* instances,
         SwNode::Transform* nodeTransforms
@@ -133,7 +132,7 @@ namespace SwLighting {
         return SwBRDF::cookTorrance(normal, view, toLightDir, albedo, metallic, roughness, radiance);
     }
 
-    // Full PBR shading: image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
+    // Full PBR shading: Image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
     public float3 shadeLit(
         float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, SwLighting::LightsInfo* lightsInfo,
         SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, Texture2D irradianceMap, SamplerState irradianceSampler,

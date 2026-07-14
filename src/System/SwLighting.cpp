@@ -93,25 +93,25 @@ void SwLighting::System::initializeResources() {
 
     mResources.mClustersCullPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ClustersCullPipelineLayout", nullptr, SwLighting::ClustersCullPC::getRange());
-    SwShader lightsCullShader =
-        SwShaderFactory::createShader("ClustersCullShaderModule", SwLighting::LIGHTING_LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader clustersCullShader =
+        SwShaderFactory::createShader("ClustersCullShaderModule", SwLighting::LIGHTING_CLUSTER_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mClustersCullPipelineBundle = SwComputePipelineFactory::createComputePipeline(
-        "ClustersCullPipeline", {lightsCullShader.getHandle(), mResources.mClustersCullPipelineLayout.getHandle()}
+        "ClustersCullPipeline", {clustersCullShader.getHandle(), mResources.mClustersCullPipelineLayout.getHandle()}
     );
 
     mResources.mShadowsResetPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ShadowsResetPipelineLayout", nullptr, SwLighting::ShadowsResetPC::getRange());
-    SwShader resetShader =
+    SwShader shadowsResetShader =
         SwShaderFactory::createShader("ShadowsResetShaderModule", SwLighting::LIGHTING_SHADOWS_RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowsResetPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("ShadowsResetPipeline", {resetShader.getHandle(), mResources.mShadowsResetPipelineLayout.getHandle()});
+        SwComputePipelineFactory::createComputePipeline("ShadowsResetPipeline", {shadowsResetShader.getHandle(), mResources.mShadowsResetPipelineLayout.getHandle()});
 
     mResources.mShadowsCullPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ShadowsCullPipelineLayout", nullptr, SwLighting::ShadowsCullPC::getRange());
-    SwShader cullShader =
+    SwShader shadowsCullShader =
         SwShaderFactory::createShader("ShadowsCullShaderModule", SwLighting::LIGHTING_SHADOWS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowsCullPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("ShadowsCullPipeline", {cullShader.getHandle(), mResources.mShadowsCullPipelineLayout.getHandle()});
+        SwComputePipelineFactory::createComputePipeline("ShadowsCullPipeline", {shadowsCullShader.getHandle(), mResources.mShadowsCullPipelineLayout.getHandle()});
 
     mResources.mShadowsDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsDrawPipelineLayout", nullptr, SwLighting::ShadowDrawPC::getRange());
     SwShader drawVertexShader =

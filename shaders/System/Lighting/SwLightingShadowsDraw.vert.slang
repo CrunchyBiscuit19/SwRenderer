@@ -1,7 +1,7 @@
 import System.Lighting.SwLighting;
 
 [[vk::push_constant]]
-SwLighting::DrawPC shadowsDrawPc;
+SwLighting::ShadowDrawPC shadowsDrawPc;
 
 SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     SwLighting::VSOutput out;
@@ -9,9 +9,9 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     SwMesh::Vertex v = shadowsDrawPc.mSceneVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwBatch::RenderCommand rc = shadowsDrawPc.mShadowsRcsBuffer[in.mDrawIndex];
+    SwBatch::RenderCommand rc = shadowsDrawPc.mSceneShadowsRcsBuffer[in.mDrawIndex];
 
-    uint mSceneInstanceIndex = shadowsDrawPc.mShadowsRisIndicesBuffer[in.mInstanceIndex];
+    uint mSceneInstanceIndex = shadowsDrawPc.mSceneShadowsRisIndicesBuffer[in.mInstanceIndex];
     float4x4 instanceTransformMatrix = shadowsDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
     uint mSceneNodeTransformIndex = rc.mNodeTransformIndex;

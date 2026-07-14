@@ -22,12 +22,12 @@ class SwInstance;
 
 namespace SwLighting {
 static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Lighting"};
-static const std::filesystem::path LIGHTING_SHADOWS_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowReset.comp.spv"};
-static const std::filesystem::path LIGHTING_BUILD_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingBuildClusters.comp.spv"};
-static const std::filesystem::path LIGHTING_MARK_ACTIVE_CLUSTERS_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingMarkActiveClusters.comp.spv"};
-static const std::filesystem::path LIGHTING_LIGHTS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingLightsCull.comp.spv"};
-static const std::filesystem::path LIGHTING_SHADOWS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowCull.comp.spv"};
-static const std::filesystem::path LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowDraw.vert.spv"};
+static const std::filesystem::path LIGHTING_CLUSTERS_BUILD_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersBuild.comp.spv"};
+static const std::filesystem::path LIGHTING_CLUSTERS_MARK_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersMarkActive.comp.spv"};
+static const std::filesystem::path LIGHTING_CLUSTER_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCull.comp.spv"};
+static const std::filesystem::path LIGHTING_SHADOWS_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsReset.comp.spv"};
+static const std::filesystem::path LIGHTING_SHADOWS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsCull.comp.spv"};
+static const std::filesystem::path LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsDraw.vert.spv"};
 static constexpr std::string_view LIGHTING_SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view LIGHTING_SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 

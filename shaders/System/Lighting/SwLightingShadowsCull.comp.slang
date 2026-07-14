@@ -3,7 +3,7 @@ import Data.SwConstants;
 import System.Cull.SwCull;
 
 [[vk::push_constant]]
-SwLighting::CullPC shadowsCullPc;
+SwLighting::ShadowsCullPC shadowsCullPc;
 
 void constructCorners(SwMesh::Bounds* riBounds, float4x4 riModelMatrix, out float4 corners[SwMesh::NUM_AABB_CORNERS]) {
     corners[0] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMin.z, 1.f);
@@ -64,12 +64,12 @@ bool rangeTest(float4 corners[SwMesh::NUM_AABB_CORNERS], float3 center, float ra
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
-    if (risIndex >= shadowsCullPc.mShadowsRisLimit) {
+    if (risIndex >= shadowsCullPc.mSceneShadowsRisLimit) {
         return;
     }
 
-    SwBatch::RenderItem* ri = &shadowsCullPc.mShadowsRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[ri->mRcIndex];
+    SwBatch::RenderItem* ri = &shadowsCullPc.mSceneShadowsRisBuffer[risIndex];
+    SwBatch::RenderCommand* rc = &shadowsCullPc.mSceneShadowsRcsBuffer[ri->mRcIndex];
 
     SwMesh::Bounds* riBounds = &shadowsCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
@@ -99,6 +99,6 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowsCullPc.mShadowsRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
+        shadowsCullPc.mSceneShadowsRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
     }
 }
