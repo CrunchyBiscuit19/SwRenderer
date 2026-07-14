@@ -22,7 +22,7 @@ public:
         CullLateTest,
         CullLateCompact,
         CullPublishCount,
-        LightingShadowReset,
+        LightingShadowsReset,
         LightingBuildClusters,
         LightingMarkActiveClusters,
         LightingLightsCull,

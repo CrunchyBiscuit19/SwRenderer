@@ -16,10 +16,10 @@ import System.IBL.SwIBL;
 namespace SwLighting {
     public struct Cluster {};
 
-    public static const uint SHADOW_MAP_SIZE = 1024;
+    public static const uint SHADOWS_MAP_SIZE = 1024;
     public static const uint MAX_NUM_SHADOW_CASTERS = 16;
-    public static const float SHADOW_SPOT_NEAR = 0.05f;
-    public static const float SHADOW_SPOT_DEFAULT_RANGE = 60.f;
+    public static const float SHADOWS_SPOT_NEAR = 0.05f;
+    public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
     
     public struct LightsInfo {
         public uint mLitCount;
@@ -29,8 +29,8 @@ namespace SwLighting {
     };
 
     public struct ResetPC {
-        public SwBatch::RenderCommand* mShadowRcsBuffer;
-        public uint mShadowRcsLimit;
+        public SwBatch::RenderCommand* mShadowsRcsBuffer;
+        public uint mShadowsRcsLimit;
     };
 
     public struct ClusterBuildPC {
@@ -51,20 +51,20 @@ namespace SwLighting {
     };
 
     public struct CullPC {
-        public SwBatch::RenderCommand* mShadowRcsBuffer;
-        public SwBatch::RenderItem* mShadowRisBuffer;
-        public uint* mShadowRisIndicesBuffer;
+        public SwBatch::RenderCommand* mShadowsRcsBuffer;
+        public SwBatch::RenderItem* mShadowsRisBuffer;
+        public uint* mShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwMesh::Bounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
         public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
-        public uint mShadowRisLimit;
+        public uint mShadowsRisLimit;
     };
 
     public struct DrawPC {
-        public SwBatch::RenderCommand* mShadowRcsBuffer;
-        public uint* mShadowRisIndicesBuffer;
+        public SwBatch::RenderCommand* mShadowsRcsBuffer;
+        public uint* mShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwMesh::Vertex* mSceneVertexBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
@@ -138,8 +138,8 @@ namespace SwLighting {
         float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, SwLighting::LightsInfo* lightsInfo,
         SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, Texture2D irradianceMap, SamplerState irradianceSampler,
         Texture2D prefilterMap, SamplerState prefilterSampler, Texture2D brdfLut, SamplerState brdfLutSampler, float maxPrefilterMip, float iblIntensity,
-        uint iblComponents, Texture2D shadow2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS], TextureCube shadowCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
-        SamplerComparisonState shadowSampler
+        uint iblComponents, Texture2D shadows2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS], TextureCube shadowsCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
+        SamplerComparisonState shadowsSampler
     ) {
         float3 color = iblIntensity * SwIBL::ambientIBL(
                                           albedo, metallic, roughness, ao, normal, view, irradianceMap, irradianceSampler, prefilterMap, prefilterSampler,
@@ -151,10 +151,10 @@ namespace SwLighting {
             switch (light.mType) {
                 case SwLight::Type::Spot:
                 case SwLight::Type::Directional:
-                    contribution *= shadowFactor2D(i, worldPos, lightsInfo, shadow2DMaps, shadowSampler);
+                    contribution *= shadowsFactor2D(i, worldPos, lightsInfo, shadows2DMaps, shadowsSampler);
                     break;
                 case SwLight::Type::Point:
-                    contribution *= shadowFactorCube(i, light, worldPos, lightsInfo, shadowCubeMaps, shadowSampler);
+                    contribution *= shadowsFactorCube(i, light, worldPos, lightsInfo, shadowsCubeMaps, shadowsSampler);
                     break;
             }
             color += contribution;
@@ -166,7 +166,7 @@ namespace SwLighting {
     public static const int BLUR_RANGE = 1;
     public static const int SAMPLES_COUNT = (BLUR_RANGE * 2 + 1) * (BLUR_RANGE * 2 + 1);
     public static const float PCF_SCALE = 0.5;
-    public static const float SHADOW_AMBIENT = 0.15;
+    public static const float SHADOWS_AMBIENT = 0.15;
     public static const float POISSON_RADIUS = 5000.0;  // Smaller means blurrier
     public static const float2 POISSON_DISK[POISSON_COUNT] = float2[](
         float2(-0.94201624, -0.39906216), float2(0.94558609, -0.76890725), float2(-0.094184101, -0.92938870), float2(0.34495938, 0.29387760),
@@ -187,12 +187,12 @@ namespace SwLighting {
         return projCoords.xy + POISSON_DISK[index] / radius;
     }
 
-    public float shadowFactor2D(
-        uint slot, float3 worldPos, SwLighting::LightsInfo* lightsInfo, Texture2D shadow2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
-        SamplerComparisonState shadowSampler
+    public float shadowsFactor2D(
+        uint slot, float3 worldPos, SwLighting::LightsInfo* lightsInfo, Texture2D shadows2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
+        SamplerComparisonState shadowsSampler
     ) {
-        const bool shadow2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
-        if (!shadow2DEnabled) {
+        const bool shadows2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
+        if (!shadows2DEnabled) {
             return 1.f;
         }
 
@@ -209,24 +209,24 @@ namespace SwLighting {
 
         const float bias = 0.0015f;
         const float radius = ndc.z + bias;  // reversed-Z, so bias is added to push receivers toward lit
-        const float2 texel = 1.f / float2(SwLighting::SHADOW_MAP_SIZE, SwLighting::SHADOW_MAP_SIZE);
+        const float2 texel = 1.f / float2(SwLighting::SHADOWS_MAP_SIZE, SwLighting::SHADOWS_MAP_SIZE);
         float lit = 0.f;
         int count = 0;
         for (int y = -BLUR_RANGE; y <= BLUR_RANGE; y++) {
             for (int x = -BLUR_RANGE; x <= BLUR_RANGE; x++) {
                 float2 off = float2(texel.x * x, texel.y * y);
                 float2 coord = GetPoissonDiskCoord(uv + off, count, POISSON_RADIUS);
-                lit += shadow2DMaps[slot].SampleCmpLevelZero(shadowSampler, coord, radius).r;
+                lit += shadows2DMaps[slot].SampleCmpLevelZero(shadowsSampler, coord, radius).r;
                 count++;
             }
         }
         float shadow = lit / count;  // 0 = fully occluded, 1 = fully lit
-        return lerp(SwLighting::SHADOW_AMBIENT, 1.0, shadow);
+        return lerp(SwLighting::SHADOWS_AMBIENT, 1.0, shadow);
     }
 
-    public float shadowFactorCube(
-        uint slot, SwLight::Data light, float3 worldPos, SwLighting::LightsInfo* lightsInfo, TextureCube shadowCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
-        SamplerComparisonState shadowSampler
+    public float shadowsFactorCube(
+        uint slot, SwLight::Data light, float3 worldPos, SwLighting::LightsInfo* lightsInfo, TextureCube shadowsCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
+        SamplerComparisonState shadowsSampler
     ) {
         return 1.f; // TODO actually implement it
     }

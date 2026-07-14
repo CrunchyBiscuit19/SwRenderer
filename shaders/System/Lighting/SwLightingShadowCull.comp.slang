@@ -3,7 +3,7 @@ import Data.SwConstants;
 import System.Cull.SwCull;
 
 [[vk::push_constant]]
-SwLighting::CullPC shadowCullPc;
+SwLighting::CullPC shadowsCullPc;
 
 void constructCorners(SwMesh::Bounds* riBounds, float4x4 riModelMatrix, out float4 corners[SwMesh::NUM_AABB_CORNERS]) {
     corners[0] = float4(riBounds->mMin.x, riBounds->mMin.y, riBounds->mMin.z, 1.f);
@@ -64,23 +64,23 @@ bool rangeTest(float4 corners[SwMesh::NUM_AABB_CORNERS], float3 center, float ra
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
-    if (risIndex >= shadowCullPc.mShadowRisLimit) {
+    if (risIndex >= shadowsCullPc.mShadowsRisLimit) {
         return;
     }
 
-    SwBatch::RenderItem* ri = &shadowCullPc.mShadowRisBuffer[risIndex];
-    SwBatch::RenderCommand* rc = &shadowCullPc.mShadowRcsBuffer[ri->mRcIndex];
+    SwBatch::RenderItem* ri = &shadowsCullPc.mShadowsRisBuffer[risIndex];
+    SwBatch::RenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[ri->mRcIndex];
 
-    SwMesh::Bounds* riBounds = &shadowCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
-    float4x4 riNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    float4x4 riInstanceTransform = shadowCullPc.mSceneInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
+    SwMesh::Bounds* riBounds = &shadowsCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
+    float4x4 riNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
+    float4x4 riInstanceTransform = shadowsCullPc.mSceneInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
     uint activeLightIndex = 0;  // TODO: source the per-dispatch shadow-caster index once the cull dispatch is rebuilt
-    uint sceneLightsIndex = shadowCullPc.mSceneLightsInfoBuffer->mLitIndices[activeLightIndex];
-    SwLight::Data* light = &shadowCullPc.mSceneLightsBuffer[sceneLightsIndex];
-    float4x4 lightNodeTransform = shadowCullPc.mSceneNodeTransformsBuffer[light->mNodeTransformIndex]; 
-    float4x4 lightInstanceTransform = shadowCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
+    uint sceneLightsIndex = shadowsCullPc.mSceneLightsInfoBuffer->mLitIndices[activeLightIndex];
+    SwLight::Data* light = &shadowsCullPc.mSceneLightsBuffer[sceneLightsIndex];
+    float4x4 lightNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[light->mNodeTransformIndex]; 
+    float4x4 lightInstanceTransform = shadowsCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
     float4x4 lightModelMatrix = mul(lightInstanceTransform, lightNodeTransform);
     float3 lightApex = mul(lightModelMatrix, float4(light->mBasePosition, 1.f)).xyz;
 
@@ -89,7 +89,7 @@ void main(SwLighting::CSInput in) {
 
     bool visible = true;
     if (light->mType == SwLight::Type::Spot) {
-        //SwFrustum::Data frustumData = shadowCullPc.mSceneLightsInfoBuffer->mActiveLightFrustums[activeLightIndex];
+        //SwFrustum::Data frustumData = shadowsCullPc.mSceneLightsInfoBuffer->mActiveLightFrustums[activeLightIndex];
         //visible = frustumTest(frustumData, corners);
     }
     if (visible && light->mType != SwLight::Type::Directional) {
@@ -99,6 +99,6 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowCullPc.mShadowRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
+        shadowsCullPc.mShadowsRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
     }
 }

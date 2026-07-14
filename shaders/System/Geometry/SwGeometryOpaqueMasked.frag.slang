@@ -20,11 +20,11 @@ public uniform Texture2D iblPrefilterMap;
 public uniform Texture2D iblBrdfLut;
 
 [[vk::binding(0, 3)]]
-public uniform Texture2D shadow2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
+public uniform Texture2D shadows2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
 [[vk::binding(1, 3)]]
-public uniform TextureCube shadowCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
+public uniform TextureCube shadowsCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
 [[vk::binding(2, 3)]]
-public uniform SamplerComparisonState shadowSampler;
+public uniform SamplerComparisonState shadowsSampler;
 
 [[vk::push_constant]]
 SwGeometry::DrawPC drawPc;
@@ -77,9 +77,9 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
         drawPc.mMaxPrefilterMipLevel,
         drawPc.mIblIntensity,
         drawPc.mIblComponents,
-        shadow2DMaps,
-        shadowCubeMaps,
-        shadowSampler
+        shadows2DMaps,
+        shadowsCubeMaps,
+        shadowsSampler
     );
     uint emissiveIdx = NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET);
     lit += materialTextures[emissiveIdx].Sample(materialSamplers[emissiveIdx], in.mUv).rgb * mc.mEmissiveFactor.rgb;

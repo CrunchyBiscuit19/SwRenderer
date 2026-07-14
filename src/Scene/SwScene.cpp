@@ -131,10 +131,10 @@ void SwScene::initializeResources() {
         "SceneShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE, true, true, true
     );
     mSceneShadowsRisBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneShadowRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true, true, true
+        "SceneShadowsRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true, true, true
     );
     mSceneShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneShadowRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true, true, true
+        "SceneShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true, true, true
     );
 
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
@@ -477,7 +477,7 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
         });
     }
 
-    // mLighting.regenerateShadowRcs();
+    // mLighting.regenerateShadowsRcs();
 }
 
 void SwScene::reloadSceneBatchesBuffer() {
@@ -858,10 +858,10 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     }
-    /*mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowReset]);
+    /*mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsReset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingLightsCull]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowCull]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowDraw]);*/
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);*/
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryMasked]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);

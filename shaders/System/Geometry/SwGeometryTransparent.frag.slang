@@ -20,11 +20,11 @@ public uniform Texture2D iblPrefilterMap;
 public uniform Texture2D iblBrdfLut;
 
 [[vk::binding(0, 3)]]
-public uniform Texture2D shadow2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
+public uniform Texture2D shadows2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
 [[vk::binding(1, 3)]]
-public uniform TextureCube shadowCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
+public uniform TextureCube shadowsCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS];
 [[vk::binding(2, 3)]]
-public uniform SamplerComparisonState shadowSampler;
+public uniform SamplerComparisonState shadowsSampler;
 
 [[vk::push_constant]]
 SwGeometry::DrawPC drawPc;
@@ -56,7 +56,7 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float3 litColor = SwLighting::shadeLit(
         baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, drawPc.mSceneLightsInfoBuffer, drawPc.mSceneLightsBuffer,
         drawPc.mSceneInstancesBuffer, drawPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblIrradianceSampler, iblPrefilterMap, iblPrefilterSampler,
-        iblBrdfLut, iblBrdfLutSampler, drawPc.mMaxPrefilterMipLevel, drawPc.mIblIntensity, drawPc.mIblComponents, shadow2DMaps, shadowCubeMaps, shadowSampler
+        iblBrdfLut, iblBrdfLutSampler, drawPc.mMaxPrefilterMipLevel, drawPc.mIblIntensity, drawPc.mIblComponents, shadows2DMaps, shadowsCubeMaps, shadowsSampler
     );
     uint emissiveIdx = NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET);
     litColor += materialTextures[emissiveIdx].Sample(materialSamplers[emissiveIdx], in.mUv).rgb * mc.mEmissiveFactor.rgb;

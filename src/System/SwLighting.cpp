@@ -12,11 +12,11 @@
 #include <limits>
 #include <utility>
 
-SwDescriptorLayout SwLighting::Resources::sShadowConsumeDescriptorLayout{};
+SwDescriptorLayout SwLighting::Resources::sShadowsConsumeDescriptorLayout{};
 
 void SwLighting::Resources::init() {
-    sShadowConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "ShadowConsumeDescriptorLayout",
+    sShadowsConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+        "ShadowsConsumeDescriptorLayout",
         {
             {0, vk::DescriptorType::eSampledImage, MAX_NUM_SHADOW_CASTERS},
             {1, vk::DescriptorType::eSampledImage, MAX_NUM_SHADOW_CASTERS},
@@ -26,7 +26,7 @@ void SwLighting::Resources::init() {
     );
 }
 
-void SwLighting::Resources::cleanup() { sShadowConsumeDescriptorLayout.destroy(); }
+void SwLighting::Resources::cleanup() { sShadowsConsumeDescriptorLayout.destroy(); }
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -51,44 +51,44 @@ void SwLighting::System::initializeResources() {
     };
 
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-        mResources.mShadow2DMaps[i] = SwImageFactory::createDepthImage2D(
+        mResources.mShadows2DMaps[i] = SwImageFactory::createDepthImage2D(
             std::format("Shadow2DMap{}", i),
-            LIGHTING_SHADOW_MAP_FORMAT,
-            vk::Extent3D{LIGHTING_SHADOW_2D_MAP_WIDTH_HEIGHT, LIGHTING_SHADOW_2D_MAP_WIDTH_HEIGHT, 1},
+            LIGHTING_SHADOWS_MAP_FORMAT,
+            vk::Extent3D{LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT, LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             true
         );
     }
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-        mResources.mShadowCubeMaps[i] = SwImageFactory::createDepthImageCubemap(
+        mResources.mShadowsCubeMaps[i] = SwImageFactory::createDepthImageCubemap(
             std::format("ShadowCubeMap{}", i),
-            LIGHTING_SHADOW_MAP_FORMAT,
-            vk::Extent3D{LIGHTING_SHADOW_CUBEMAP_WIDTH_HEIGHT, LIGHTING_SHADOW_CUBEMAP_WIDTH_HEIGHT, 1},
+            LIGHTING_SHADOWS_MAP_FORMAT,
+            vk::Extent3D{LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT, LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             false
         );
     }
 
-    mResources.mShadowMapsSampler = makeComparisonSampler("ShadowMapsSampler", vk::SamplerAddressMode::eClampToBorder);
-    mResources.mShadowMapsDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("ShadowMapsDescriptorSet", Resources::sShadowConsumeDescriptorLayout);
+    mResources.mShadowsMapsSampler = makeComparisonSampler("ShadowsMapsSampler", vk::SamplerAddressMode::eClampToBorder);
+    mResources.mShadowsMapsDescriptorSet =
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("ShadowsMapsDescriptorSet", Resources::sShadowsConsumeDescriptorLayout);
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-        mResources.mShadowMapsDescriptorSet.writeImage(
-            0, mResources.mShadow2DMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+        mResources.mShadowsMapsDescriptorSet.writeImage(
+            0, mResources.mShadows2DMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
         );
     }
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-        mResources.mShadowMapsDescriptorSet.writeImage(
-            1, mResources.mShadowCubeMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+        mResources.mShadowsMapsDescriptorSet.writeImage(
+            1, mResources.mShadowsCubeMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
         );
     }
-    mResources.mShadowMapsDescriptorSet.writeSampler(2, mResources.mShadowMapsSampler.getHandle());
-    mResources.mShadowMapsDescriptorSet.pushWrites();
+    mResources.mShadowsMapsDescriptorSet.writeSampler(2, mResources.mShadowsMapsSampler.getHandle());
+    mResources.mShadowsMapsDescriptorSet.pushWrites();
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            mResources.mShadow2DMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
-            mResources.mShadowCubeMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+            mResources.mShadows2DMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+            mResources.mShadowsCubeMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
         }
     });
 
@@ -97,26 +97,26 @@ void SwLighting::System::initializeResources() {
     mResources.mLightsCullPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("LightsCullPipeline", {lightsCullShader.getHandle(), mResources.mLightsCullPipelineLayout.getHandle()});
 
-    mResources.mShadowResetPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ShadowResetPipelineLayout", nullptr, SwLighting::ResetPC::getRange());
-    SwShader resetShader = SwShaderFactory::createShader("ShadowResetShaderModule", SwLighting::LIGHTING_SHADOW_RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mResources.mShadowResetPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("ShadowResetPipeline", {resetShader.getHandle(), mResources.mShadowResetPipelineLayout.getHandle()});
+    mResources.mShadowsResetPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("ShadowsResetPipelineLayout", nullptr, SwLighting::ResetPC::getRange());
+    SwShader resetShader = SwShaderFactory::createShader("ShadowsResetShaderModule", SwLighting::LIGHTING_SHADOWS_RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mShadowsResetPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline("ShadowsResetPipeline", {resetShader.getHandle(), mResources.mShadowsResetPipelineLayout.getHandle()});
 
-    mResources.mShadowCullPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowCullPipelineLayout", nullptr, SwLighting::CullPC::getRange());
-    SwShader cullShader = SwShaderFactory::createShader("ShadowCullShaderModule", SwLighting::LIGHTING_SHADOW_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
-    mResources.mShadowCullPipelineBundle =
-        SwComputePipelineFactory::createComputePipeline("ShadowCullPipeline", {cullShader.getHandle(), mResources.mShadowCullPipelineLayout.getHandle()});
+    mResources.mShadowsCullPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsCullPipelineLayout", nullptr, SwLighting::CullPC::getRange());
+    SwShader cullShader = SwShaderFactory::createShader("ShadowsCullShaderModule", SwLighting::LIGHTING_SHADOWS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mShadowsCullPipelineBundle =
+        SwComputePipelineFactory::createComputePipeline("ShadowsCullPipeline", {cullShader.getHandle(), mResources.mShadowsCullPipelineLayout.getHandle()});
 
-    mResources.mShadowDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowDrawPipelineLayout", nullptr, SwLighting::DrawPC::getRange());
+    mResources.mShadowsDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsDrawPipelineLayout", nullptr, SwLighting::DrawPC::getRange());
     SwShader drawVertexShader =
-        SwShaderFactory::createShader("ShadowDrawVertexShaderModule", SwLighting::LIGHTING_SHADOW_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+        SwShaderFactory::createShader("ShadowsDrawVertexShaderModule", SwLighting::LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.blendEnable = VK_FALSE;
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
     drawPipelineOptions.mVertexShader = drawVertexShader.getHandle();
     drawPipelineOptions.mFragmentShader = std::nullopt;
-    drawPipelineOptions.mLayout = mResources.mShadowDrawPipelineLayout.getHandle();
+    drawPipelineOptions.mLayout = mResources.mShadowsDrawPipelineLayout.getHandle();
     drawPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     drawPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
     drawPipelineOptions.mCullMode = vk::CullModeFlagBits::eFront;
@@ -124,35 +124,35 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mMultisamplingEnabled = false;
     drawPipelineOptions.mSampleShadingEnabled = false;
     drawPipelineOptions.mColorAttachments = {};
-    drawPipelineOptions.mDepthFormat = LIGHTING_SHADOW_MAP_FORMAT;
+    drawPipelineOptions.mDepthFormat = LIGHTING_SHADOWS_MAP_FORMAT;
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
 
-    drawPipelineOptions.mVertexEntryPoint = LIGHTING_SHADOW_DRAW_OPAQUE_ENTRY_POINT;
-    mResources.mShadowDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowDrawPipeline", drawPipelineOptions);
+    drawPipelineOptions.mVertexEntryPoint = LIGHTING_SHADOWS_DRAW_OPAQUE_ENTRY_POINT;
+    mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
 
-    drawPipelineOptions.mVertexEntryPoint = LIGHTING_SHADOW_DRAW_MASKED_ENTRY_POINT;
-    mResources.mShadowDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowDrawPipeline", drawPipelineOptions);
+    drawPipelineOptions.mVertexEntryPoint = LIGHTING_SHADOWS_DRAW_MASKED_ENTRY_POINT;
+    mResources.mShadowsDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
 }
 
 void SwLighting::System::initializePasses() {
     // Shadows Reset
-    mScene.insertPass(SwPass::Type::LightingShadowReset, [&](vk::CommandBuffer cmd) {
+    mScene.insertPass(SwPass::Type::LightingShadowsReset, [&](vk::CommandBuffer cmd) {
         /*cmd.fillBuffer(mScene.getSceneLightsInfoBuffer().getHandle(), 0, vk::WholeSize, 0);
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            cmd.fillBuffer(mResources.mShadowRisIndicesBuffer[i].getHandle(), 0, vk::WholeSize, 0);
+            cmd.fillBuffer(mResources.mShadowsRisIndicesBuffer[i].getHandle(), 0, vk::WholeSize, 0);
         }
 
-        const std::uint32_t rcsCount = static_cast<std::uint32_t>(mResources.mShadowRcs.size());
+        const std::uint32_t rcsCount = static_cast<std::uint32_t>(mResources.mShadowsRcs.size());
         if (rcsCount == 0) return;
 
-        auto& resetPipeline = mResources.mShadowResetPipelineBundle;
+        auto& resetPipeline = mResources.mShadowsResetPipelineBundle;
         cmd.bindPipeline(resetPipeline.getBindPoint(), resetPipeline.getPipelineHandle());
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            mResources.mShadowResetPc.mShadowRcsBuffer = mResources.mShadowRcsBuffer[i].getDeviceAddress().value();
-            mResources.mShadowResetPc.mShadowRcsLimit = rcsCount;
-            cmd.pushConstants<SwLighting::ResetPC>(resetPipeline.getLayoutHandle(), SwLighting::ResetPC::sStages, 0, mResources.mShadowResetPc);
+            mResources.mShadowsResetPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer[i].getDeviceAddress().value();
+            mResources.mShadowsResetPc.mShadowsRcsLimit = rcsCount;
+            cmd.pushConstants<SwLighting::ResetPC>(resetPipeline.getLayoutHandle(), SwLighting::ResetPC::sStages, 0, mResources.mShadowsResetPc);
             cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
         }*/
     });
@@ -162,12 +162,7 @@ void SwLighting::System::initializePasses() {
     // Mark Active Clusters
 
     // Lights Cull
-    mScene.insertPass(SwPass::Type::LightingLightsCull, [&](vk::CommandBuffer cmd) {
-        auto& pipeline = mResources.mLightsCullPipelineBundle;
-        cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ClusterCullLightsPC>(pipeline.getLayoutHandle(), SwLighting::ClusterCullLightsPC::sStages, 0, mResources.mLightsCullPc);
-        cmd.dispatch(SwHelper::fastDivCeil(MAX_NUM_SHADOW_CASTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-    });
+    mScene.insertPass(SwPass::Type::LightingLightsCull, [&](vk::CommandBuffer cmd) {});
 
     // Shadows Cull
     mScene.insertPass(SwPass::Type::LightingShadowsCull, [&](vk::CommandBuffer cmd) {});
@@ -176,24 +171,24 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {});
 }
 
-void SwLighting::System::regenerateShadowRcs() {
-    /*mResources.mShadowRcs.clear();
+void SwLighting::System::regenerateShadowsRcs() {
+    /*mResources.mShadowsRcs.clear();
 
     for (auto& batch : mScene.getBatchIt({SwMaterial::Type::Opaque, SwMaterial::Type::Mask})) {
         const std::vector<SwRenderCommand>& rcs = batch.getRcs();
-        mResources.mInitialShadowRcs.insert(mResources.mInitialShadowRcs.end(), rcs.begin(), rcs.end());
+        mResources.mInitialShadowsRcs.insert(mResources.mInitialShadowsRcs.end(), rcs.begin(), rcs.end());
     }
 
     vk::BufferCopy rcsCopy{};
     rcsCopy.srcOffset = 0;
     rcsCopy.dstOffset = 0;
-    rcsCopy.size = mResources.mShadowRcs.size() * sizeof(SwRenderCommand);
+    rcsCopy.size = mResources.mShadowsRcs.size() * sizeof(SwRenderCommand);
     if (rcsCopy.size == 0) return;
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsCopy](vk::CommandBuffer cmd) {
         SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
         for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            stagingRing->upload(cmd, mResources.mShadowRcsBuffer[i], mResources.mShadowRcs.data(), rcsCopy.size);
+            stagingRing->upload(cmd, mResources.mShadowsRcsBuffer[i], mResources.mShadowsRcs.data(), rcsCopy.size);
         }
     });*/
 }
@@ -201,7 +196,7 @@ void SwLighting::System::regenerateShadowRcs() {
 void SwLighting::System::refreshDependencies() {
     // Shadows Reset
     {
-        SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowReset].getDeps();
+        SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowsReset].getDeps();
         d.clear();
         d.mWriteBuffers.emplace_back(&mScene.getSceneLightsInfoBuffer(), SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneShadowsRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
@@ -239,7 +234,7 @@ void SwLighting::System::refreshDependencies() {
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowsDraw].getDeps();
         d.clear();
         for (std::size_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            d.mWriteImages.emplace_back(&mResources.mShadow2DMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
+            d.mWriteImages.emplace_back(&mResources.mShadows2DMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
         }
         d.mReadBuffers.emplace_back(&mScene.getSceneShadowsRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneShadowsRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
@@ -258,16 +253,16 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mLightsCullPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
     mResources.mLightsCullPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
 
-    mResources.mShadowCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mShadowCullPc.mSceneBoundsBuffer = SwRenderer::sRendererContext.mScene->getSceneBoundsBuffer().getDeviceAddress().value();
-    mResources.mShadowCullPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mShadowCullPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mShadowCullPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
+    mResources.mShadowsCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
+    mResources.mShadowsCullPc.mSceneBoundsBuffer = SwRenderer::sRendererContext.mScene->getSceneBoundsBuffer().getDeviceAddress().value();
+    mResources.mShadowsCullPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mShadowsCullPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mShadowsCullPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
 
-    mResources.mShadowDrawPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mShadowDrawPc.mSceneVertexBuffer = SwRenderer::sRendererContext.mScene->getSceneVertexBuffer().getDeviceAddress().value();
-    mResources.mShadowDrawPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mShadowDrawPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
-    mResources.mShadowDrawPc.mSceneMaterialConstantsBuffer = SwRenderer::sRendererContext.mScene->getSceneMaterialConstantsBuffer().getDeviceAddress().value();
-    mResources.mShadowDrawPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
+    mResources.mShadowsDrawPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
+    mResources.mShadowsDrawPc.mSceneVertexBuffer = SwRenderer::sRendererContext.mScene->getSceneVertexBuffer().getDeviceAddress().value();
+    mResources.mShadowsDrawPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mShadowsDrawPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mShadowsDrawPc.mSceneMaterialConstantsBuffer = SwRenderer::sRendererContext.mScene->getSceneMaterialConstantsBuffer().getDeviceAddress().value();
+    mResources.mShadowsDrawPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
 }
