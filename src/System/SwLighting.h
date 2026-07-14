@@ -44,53 +44,53 @@ struct LightsInfo {
     vk::DeviceAddress mShadowCastIndices{0};
 };
 
-struct ResetPC : SwPC<ResetPC> {
-    vk::DeviceAddress mShadowsRcsBuffer{0};
-    std::uint32_t mShadowsRcsLimit{0};
-
-    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
-};
-
-struct ClusterBuildPC : SwPC<ClusterBuildPC> {
+struct ClustersBuildPC : SwPC<ClustersBuildPC> {
     vk::DeviceAddress mClustersBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct ClusterMarkActivePC : SwPC<ClusterMarkActivePC> {
-    vk::DeviceAddress mActiveClustersIndicesBuffer{0};
+struct ClustersMarkActivePC : SwPC<ClustersMarkActivePC> {
+    vk::DeviceAddress mClustersActiveIndicesBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct ClusterCullLightsPC : SwPC<ClusterCullLightsPC> {
+struct ClustersCullPC : SwPC<ClustersCullPC> {
     vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mSceneLightsBuffer{0};
+    vk::DeviceAddress mSceneLightsInfoBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
-    vk::DeviceAddress mSceneLightsInfoBuffer{0};
-    vk::DeviceAddress mActiveClustersIndicesBuffer{0};
+    vk::DeviceAddress mClustersActiveIndicesBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct CullPC : SwPC<CullPC> {
-    vk::DeviceAddress mShadowsRcsBuffer{0};
-    vk::DeviceAddress mShadowsRisBuffer{0};
-    vk::DeviceAddress mShadowsRisIndicesBuffer{0};
+struct ShadowsResetPC : SwPC<ShadowsResetPC> {
+    vk::DeviceAddress mSceneShadowsRcsBuffer{0};
+    std::uint32_t mSceneShadowsRcsLimit{0};
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct ShadowsCullPC : SwPC<ShadowsCullPC> {
+    vk::DeviceAddress mSceneShadowsRcsBuffer{0};
+    vk::DeviceAddress mSceneShadowsRisBuffer{0};
+    vk::DeviceAddress mSceneShadowsRisIndicesBuffer{0};
     vk::DeviceAddress mSceneLightsBuffer{0};
     vk::DeviceAddress mSceneLightsInfoBuffer{0};
     vk::DeviceAddress mSceneBoundsBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
-    std::uint32_t mShadowsRisLimit{0};
+    std::uint32_t mSceneShadowsRisLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct DrawPC : SwPC<DrawPC> { // MRTs then select the light's shadow map
-    vk::DeviceAddress mShadowsRcsBuffer{0};
-    vk::DeviceAddress mShadowsRisIndicesBuffer{0};
+struct ShadowDrawPC : SwPC<ShadowDrawPC> {  // MRTs then select the light's shadow map
+    vk::DeviceAddress mSceneShadowsRcsBuffer{0};
+    vk::DeviceAddress mSceneShadowsRisIndicesBuffer{0};
     vk::DeviceAddress mSceneLightsBuffer{0};
     vk::DeviceAddress mSceneLightsInfoBuffer{0};
     vk::DeviceAddress mSceneVertexBuffer{0};
@@ -112,27 +112,27 @@ struct Resources {
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
-    ResetPC mShadowsResetPc;
+    ClustersBuildPC mClustersBuildPc;
+    SwPipelineLayout mClustersBuildPipelineLayout;
+    SwComputePipelineBundle mClustersBuildPipelineBundle;
+
+    ClustersMarkActivePC mClustersMarkActivePc;
+    SwPipelineLayout mClustersMarkActivePipelineLayout;
+    SwComputePipelineBundle mClustersMarkActivePipelineBundle;
+
+    ClustersCullPC mClustersCullPc;
+    SwPipelineLayout mClustersCullPipelineLayout;
+    SwComputePipelineBundle mClustersCullPipelineBundle;
+
+    ShadowsResetPC mShadowsResetPc;
     SwPipelineLayout mShadowsResetPipelineLayout;
     SwComputePipelineBundle mShadowsResetPipelineBundle;
 
-    ClusterBuildPC mBuildClustersPc;
-    SwPipelineLayout mBuildClustersPipelineLayout;
-    SwComputePipelineBundle mBuildClustersPipelineBundle;
-
-    ClusterMarkActivePC mMarkActiveClustersPc;
-    SwPipelineLayout mMarkActiveClustersPipelineLayout;
-    SwComputePipelineBundle mMarkActiveClustersPipelineBundle;
-
-    ClusterCullLightsPC mLightsCullPc;
-    SwPipelineLayout mLightsCullPipelineLayout;
-    SwComputePipelineBundle mLightsCullPipelineBundle;
-
-    CullPC mShadowsCullPc;
+    ShadowsCullPC mShadowsCullPc;
     SwPipelineLayout mShadowsCullPipelineLayout;
     SwComputePipelineBundle mShadowsCullPipelineBundle;
 
-    DrawPC mShadowsDrawPc;
+    ShadowDrawPC mShadowsDrawPc;
     SwPipelineLayout mShadowsDrawPipelineLayout;
     SwGraphicsPipelineBundle mShadowsDrawOpaquePipelineBundle;
     SwGraphicsPipelineBundle mShadowsDrawMaskedPipelineBundle;

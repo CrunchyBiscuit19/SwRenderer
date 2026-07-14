@@ -191,6 +191,7 @@ public:
     inline SwAllocatedBuffer& getSceneBatchesBuffer() { return mSceneBatchesBuffer; }
     inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
     inline SwAllocatedBuffer& getSceneLightsInfoBuffer() { return mSceneLightsInfoBuffer; };
+
     inline SwAllocatedBuffer& getSceneShadowsRcsBuffer() { return mSceneShadowsRcsBuffer; };
     inline SwAllocatedBuffer& getSceneShadowsRisBuffer() { return mSceneShadowsRisBuffer; };
     inline SwAllocatedBuffer& getSceneShadowsRisIndicesBuffer() { return mSceneShadowsRisIndicesBuffer; };

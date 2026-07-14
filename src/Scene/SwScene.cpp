@@ -41,7 +41,8 @@ void SwScene::initializeMiscPasses() {
 }
 
 void SwScene::initializeResources() {
-    mSceneVertexBuffer = SwBufferFactory::createAllocatedBuffer("SceneVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_VERTEX_BUFFER_SIZE, true);
+    mSceneVertexBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneVertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_VERTEX_BUFFER_SIZE, true);
     mSceneIndexBuffer = SwBufferFactory::createAllocatedBuffer("SceneIndexBuffer", vk::BufferUsageFlagBits::eIndexBuffer, 0, SCENE_INITIAL_INDEX_BUFFER_SIZE);
     mSceneMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneMaterialConstantsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE, true
@@ -49,10 +50,10 @@ void SwScene::initializeResources() {
     mSceneNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneNodeTransformsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE, true
     );
-    mSceneInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneInstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_INSTANCES_BUFFER_SIZE, true
-    );
-    mSceneBoundsBuffer = SwBufferFactory::createAllocatedBuffer("SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_BOUNDS_BUFFER_SIZE, true);
+    mSceneInstancesBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneInstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_INSTANCES_BUFFER_SIZE, true);
+    mSceneBoundsBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneBoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_BOUNDS_BUFFER_SIZE, true);
     mSceneRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
     );
@@ -62,19 +63,39 @@ void SwScene::initializeResources() {
         );
     }
     mSceneInitialRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneInitialRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE, true
+        "SceneInitialRcsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
+        true
     );
     mSceneEarlyRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneEarlyRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE, true
+        "SceneEarlyRcsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
+        true
     );
     mSceneEarlyRcsCount = SwBufferFactory::createAllocatedBuffer(
-        "SceneEarlyRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE, true
+        "SceneEarlyRcsCount",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE,
+        true
     );
     mSceneLateRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneLateRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE, true
+        "SceneLateRcsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE,
+        true
     );
     mSceneLateRcsCount = SwBufferFactory::createAllocatedBuffer(
-        "SceneLateRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE, true
+        "SceneLateRcsCount",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE,
+        true
     );
     mSceneRisBuffer =
         SwBufferFactory::createAllocatedBuffer("SceneRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true);
@@ -87,9 +108,8 @@ void SwScene::initializeResources() {
     mSceneMaterialTexturesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "SceneMaterialTexturesDescriptorSet", SwMaterialResources::sMaterialTexturesDescriptorLayout, SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
-    mSceneLightsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true
-    );
+    mSceneLightsBuffer =
+        SwBufferFactory::createAllocatedBuffer("SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true);
     mSceneLightsInfoBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneLightsInfosBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_INFO_BUFFER_SIZE, true
     );
@@ -421,29 +441,28 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
         batchStart = batchEnd;
     }
 
-    if (!mRcs.empty()) {
-        const std::uint64_t rcsBytes = mRcs.size() * sizeof(SwRenderCommand);
-        const std::uint64_t risBytes = mRis.size() * sizeof(SwRenderItem);
+    if (!mRcs.empty()) return;
 
-        SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsBytes, risBytes](vk::CommandBuffer cmd) {
-            SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
+    const std::uint64_t rcsBytes = mRcs.size() * sizeof(SwRenderCommand);
+    const std::uint64_t risBytes = mRis.size() * sizeof(SwRenderItem);
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsBytes, risBytes](vk::CommandBuffer cmd) {
+        SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
 
-            mSceneInitialRcsBuffer.ensureCapacity(cmd, rcsBytes);
-            cmd.fillBuffer(mSceneInitialRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
-            mSceneInitialRcsBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-            stagingRing->upload(cmd, mSceneInitialRcsBuffer, mRcs.data(), rcsBytes);
+        mSceneInitialRcsBuffer.ensureCapacity(cmd, rcsBytes);
+        cmd.fillBuffer(mSceneInitialRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
+        mSceneInitialRcsBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+        stagingRing->upload(cmd, mSceneInitialRcsBuffer, mRcs.data(), rcsBytes);
 
-            mSceneRisBuffer.ensureCapacity(cmd, risBytes);
-            cmd.fillBuffer(mSceneRisBuffer.getHandle(), 0, vk::WholeSize, 0);
-            mSceneRisBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-            stagingRing->upload(cmd, mSceneRisBuffer, mRis.data(), risBytes);
+        mSceneRisBuffer.ensureCapacity(cmd, risBytes);
+        cmd.fillBuffer(mSceneRisBuffer.getHandle(), 0, vk::WholeSize, 0);
+        mSceneRisBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+        stagingRing->upload(cmd, mSceneRisBuffer, mRis.data(), risBytes);
 
-            mSceneEarlyRcsBuffer.ensureCapacity(cmd, rcsBytes);  // At least as big as mSceneInitialRcsBuffer
-            mSceneLateRcsBuffer.ensureCapacity(cmd, rcsBytes);   // At least as big as mSceneInitialRcsBuffer
-        });
-    }
+        mSceneEarlyRcsBuffer.ensureCapacity(cmd, rcsBytes);  // At least as big as mSceneInitialRcsBuffer
+        mSceneLateRcsBuffer.ensureCapacity(cmd, rcsBytes);   // At least as big as mSceneInitialRcsBuffer
 
-    // mLighting.regenerateShadowsRcs();
+        // TODO regen shadow RCs
+    });
 }
 
 void SwScene::reloadSceneBatchesBuffer() {
