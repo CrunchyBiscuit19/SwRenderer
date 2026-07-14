@@ -6,7 +6,6 @@
 #include <Resource/SwDescriptor.h>
 
 #include <algorithm>
-#include <unordered_set>
 
 SwRendererContext::SwRendererContext(
     vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
@@ -31,13 +30,4 @@ SwRendererContext::SwRendererContext(
       mEvents(events),
       mScene(scene),
       mStats(stats),
-      mLogger(logger) {
-    std::unordered_set<std::uint32_t> concurrentUploadFamilies;
-    for (std::uint32_t family : {graphicsQueueFamily, computeQueueFamily, transferQueueFamily}) {
-        concurrentUploadFamilies.insert(family);
-    }
-    mConcurrentUploadFamilies.reserve(concurrentUploadFamilies.size());
-    for (std::uint32_t family : concurrentUploadFamilies) {
-            mConcurrentUploadFamilies.emplace_back(family);
-    }
-}
+      mLogger(logger) {}

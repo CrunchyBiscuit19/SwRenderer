@@ -76,8 +76,6 @@ struct SwRendererContext {
     std::uint32_t mGraphicsQueueFamily{0};
     std::uint32_t mComputeQueueFamily{0};
     std::uint32_t mTransferQueueFamily{0};
-    // Unique family indices among graphics/compute/transfer, used for CONCURRENT-shared upload buffers. One entry means no sharing needed.
-    std::vector<std::uint32_t> mConcurrentUploadFamilies;
     SwDescriptorAllocator* mDescriptorAllocator{nullptr};
     SwSwapchain* mSwapchain{nullptr};
     SwImmSubmit* mImmSubmit{nullptr};

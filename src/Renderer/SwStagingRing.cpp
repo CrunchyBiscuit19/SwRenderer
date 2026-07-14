@@ -10,7 +10,7 @@ void SwStagingRing::initialize(std::uint64_t capacity) {
     const vk::PhysicalDeviceLimits& limits = SwRenderer::sRendererContext.mChosenGPU->getProperties().limits;
     mAlignment = std::max<std::uint64_t>({limits.optimalBufferCopyOffsetAlignment, limits.nonCoherentAtomSize, 4});
     mCapacity = alignUp(capacity, mAlignment);
-    mRing = SwBufferFactory::createStagingBuffer("StagingRingBuffer", mCapacity, false, true);
+    mRing = SwBufferFactory::createStagingBuffer("StagingRingBuffer", mCapacity, false);
     mHead = 0;
     mTail = 0;
     mInFlight.clear();
@@ -24,7 +24,7 @@ void SwStagingRing::destroy() {
 void SwStagingRing::grow(std::uint64_t requiredSize) {
     const std::uint64_t newCapacity = alignUp(std::max(requiredSize, mCapacity * 2), mAlignment);
 
-    SwStagingBuffer newRing = SwBufferFactory::createStagingBuffer("StagingRingBuffer", newCapacity, false, true);
+    SwStagingBuffer newRing = SwBufferFactory::createStagingBuffer("StagingRingBuffer", newCapacity, false);
 
     // Already-recorded copies in the current frame still read the old buffer,
     // Defer destruction until every in-flight frame that references it has completed.

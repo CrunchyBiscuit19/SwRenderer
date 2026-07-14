@@ -19,7 +19,6 @@ protected:
     vk::BufferUsageFlags mUsage;
     std::uint64_t mSize{0};
     std::uint32_t mGeneration{0};
-    vk::SharingMode mSharingMode{vk::SharingMode::eExclusive};
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
     VmaAllocator mAllocator{nullptr};
@@ -30,7 +29,7 @@ protected:
 
     SwBuffer(
         std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, vk::SharingMode sharingMode
+        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
     // Allocates new bigger buffer, copies old content, restores pipeline stage/access on the new buffer
@@ -78,7 +77,7 @@ public:
 
     SwAllocatedBuffer(
         std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, vk::SharingMode sharingMode
+        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
     );
 
     using SwBuffer::copyFrom;
@@ -100,10 +99,7 @@ private:
 public:
     SwStagingBuffer();
 
-    SwStagingBuffer(
-        std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size,
-        vk::SharingMode sharingMode
-    );
+    SwStagingBuffer(std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size);
 
     using SwBuffer::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
@@ -132,11 +128,10 @@ public:
     static void init();
 
     static SwAllocatedBuffer createAllocatedBuffer(
-        std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable = false, bool resizable = true,
-        bool crossQueue = false
+        std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable = false, bool resizable = true
     );
 
-    static SwStagingBuffer createStagingBuffer(std::string name, std::uint64_t size, bool resizable = true, bool crossQueue = false);
+    static SwStagingBuffer createStagingBuffer(std::string name, std::uint64_t size, bool resizable = true);
 
     // Queues a buffer for destruction after NUM_FRAME_OVERLAP frames have passed.
     // Call this instead of letting resize destroy the old handle immediately.
