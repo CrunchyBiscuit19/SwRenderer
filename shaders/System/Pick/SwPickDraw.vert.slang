@@ -11,7 +11,7 @@ SwPick::VSOutput computeVertex(SwPick::VSInput in) {
 
     SwBatch::RenderCommand rc = pickDrawPc.mSceneRcsBuffer[in.mDrawIndex];
 
-    uint mSceneInstanceIndex = pickDrawPc.mSceneRisIndicesBuffer[in.mInstanceIndex];
+    uint mSceneInstanceIndex = pickDrawPc.mSceneRisIndicesBuffer[in.mRenderItemIndex];
     float4x4 instanceTransformMatrix = pickDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
     uint mSceneNodeTransformIndex = rc.mNodeTransformIndex;

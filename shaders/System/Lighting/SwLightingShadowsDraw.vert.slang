@@ -11,7 +11,7 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
 
     SwBatch::RenderCommand rc = shadowsDrawPc.mSceneShadowsRcsBuffer[in.mDrawIndex];
 
-    uint mSceneInstanceIndex = shadowsDrawPc.mSceneShadowsRisIndicesBuffer[in.mInstanceIndex];
+    uint mSceneInstanceIndex = shadowsDrawPc.mSceneShadowsRisIndicesBuffer[in.mRenderItemIndex];
     float4x4 instanceTransformMatrix = shadowsDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
 
     uint mSceneNodeTransformIndex = rc.mNodeTransformIndex;

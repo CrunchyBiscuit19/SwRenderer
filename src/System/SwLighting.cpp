@@ -141,7 +141,9 @@ void SwLighting::System::initializeResources() {
 
 void SwLighting::System::initializePasses() {
     // Clusters Build
-    mScene.insertPass(SwPass::Type::LightingClustersBuild, [&](vk::CommandBuffer cmd) {});
+    mScene.insertPass(SwPass::Type::LightingClustersBuild, [&](vk::CommandBuffer cmd) {
+        cmd.fillBuffer(mScene.getSceneLightsInfoBuffer().getHandle(), 0, vk::WholeSize, 0);
+    });
 
     // Clusters Mark Active
     mScene.insertPass(SwPass::Type::LightingClustersMarkActive, [&](vk::CommandBuffer cmd) {});
@@ -151,22 +153,11 @@ void SwLighting::System::initializePasses() {
 
     // Shadows Reset
     mScene.insertPass(SwPass::Type::LightingShadowsReset, [&](vk::CommandBuffer cmd) {
-        /*cmd.fillBuffer(mScene.getSceneLightsInfoBuffer().getHandle(), 0, vk::WholeSize, 0);
-        for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            cmd.fillBuffer(mResources.mShadowsRisIndicesBuffer[i].getHandle(), 0, vk::WholeSize, 0);
-        }
-
-        const std::uint32_t rcsCount = static_cast<std::uint32_t>(mResources.mShadowsRcs.size());
-        if (rcsCount == 0) return;
-
+        cmd.fillBuffer(mScene.getSceneShadowsRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
         auto& resetPipeline = mResources.mShadowsResetPipelineBundle;
         cmd.bindPipeline(resetPipeline.getBindPoint(), resetPipeline.getPipelineHandle());
-        for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            mResources.mShadowsResetPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer[i].getDeviceAddress().value();
-            mResources.mShadowsResetPc.mShadowsRcsLimit = rcsCount;
-            cmd.pushConstants<SwLighting::ResetPC>(resetPipeline.getLayoutHandle(), SwLighting::ResetPC::sStages, 0, mResources.mShadowsResetPc);
-            cmd.dispatch(SwHelper::fastDivCeil(rcsCount, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-        }*/
+        cmd.pushConstants<SwLighting::ShadowsResetPC>(resetPipeline.getLayoutHandle(), SwLighting::ShadowsResetPC::sStages, 0, mResources.mShadowsResetPc);
+        cmd.dispatch(SwHelper::fastDivCeil(mResources.mShadowsResetPc.mSceneShadowsRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
     // Shadows Cull
@@ -194,7 +185,6 @@ void SwLighting::System::refreshDependencies() {
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowsReset].getDeps();
         d.clear();
-        d.mWriteBuffers.emplace_back(&mScene.getSceneLightsInfoBuffer(), SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneShadowsRcsBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneShadowsRisIndicesBuffer(), SwDependency::BufferDepType::TransferWrite);
     }

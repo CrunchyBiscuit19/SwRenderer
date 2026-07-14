@@ -6,11 +6,9 @@ SwLighting::ShadowsResetPC shadowsResetPc;
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
-    // Get thread ID as index into render command
     uint rcsIndex = in.mDispatchThreadID.x;
     if (rcsIndex >= shadowsResetPc.mSceneShadowsRcsLimit)
         return;
 
-    // Reset render command instance count to zero
     shadowsResetPc.mSceneShadowsRcsBuffer[rcsIndex].mRiCount = 0;
 }

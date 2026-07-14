@@ -11,13 +11,13 @@ SwGeometry::VSOutput main(SwGeometry::VSInput in) {
 
     SwBatch::RenderCommand rc = drawPc.mSceneRcsBuffer[in.mDrawIndex];
 
-    uint sceneInstanceIndex = drawPc.mSceneRisIndicesBuffer[in.mInstanceIndex];
+    uint sceneInstanceIndex = drawPc.mSceneRisIndicesBuffer[in.mRenderItemIndex];
     float4x4 instanceTransformMatrix = drawPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
 
-    uint sceneNodeTransformIndex = drawPc.mSceneRcsBuffer[in.mDrawIndex].mNodeTransformIndex;
+    uint sceneNodeTransformIndex = rc.mNodeTransformIndex;
     float4x4 nodeTransformMatrix = drawPc.mSceneNodeTransformsBuffer[sceneNodeTransformIndex];
 
-    uint sceneMaterialIndex = drawPc.mSceneRcsBuffer[in.mDrawIndex].mMaterialIndex;
+    uint sceneMaterialIndex = rc.mMaterialIndex;
     SwMaterial::Constant materialConstant = drawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
 
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);

@@ -75,7 +75,7 @@ namespace SwLighting {
 
     public struct VSInput {
         public uint mVertexIndex : SV_VulkanVertexID;
-        public uint mInstanceIndex : SV_VulkanInstanceID;
+        public uint mRenderItemIndex : SV_VulkanInstanceID;
         public uint mDrawIndex : SV_DrawIndex;
     };
 
