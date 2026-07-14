@@ -11,6 +11,6 @@ namespace SwCamera {
     public struct Data {
         public Perspective mPerspective;
         public float3 mWorldPos;
-        public SwFrustum::Data mFrustum;
+        public SwFrustum mFrustum;
     };
 }

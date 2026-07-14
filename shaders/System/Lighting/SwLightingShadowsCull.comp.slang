@@ -20,7 +20,7 @@ void constructCorners(SwBounds* riBounds, float4x4 riModelMatrix, out float4 cor
 }
 
 // At least one corner on the inward side of all six planes means the world-space AABB intersects the frustum.
-bool frustumTest(SwFrustum::Data frustum, float4 corners[SwMesh::NUM_AABB_CORNERS]) {
+bool frustumTest(SwFrustum frustum, float4 corners[SwMesh::NUM_AABB_CORNERS]) {
     float4 aabbMin = corners[0];
     float4 aabbMax = corners[0];
     for (uint j = 1; j < SwMesh::NUM_AABB_CORNERS; j++) {
@@ -89,7 +89,7 @@ void main(SwLighting::CSInput in) {
 
     bool visible = true;
     if (light->mType == SwLight::Type::Spot) {
-        //SwFrustum::Data frustumData = shadowsCullPc.mSceneLightsInfoBuffer->mActiveLightFrustums[activeLightIndex];
+        //SwFrustum frustumData = shadowsCullPc.mSceneLightsInfoBuffer->mActiveLightFrustums[activeLightIndex];
         //visible = frustumTest(frustumData, corners);
     }
     if (visible && light->mType != SwLight::Type::Directional) {

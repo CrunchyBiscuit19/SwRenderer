@@ -35,7 +35,7 @@ public:
     struct Data {
         Perspective mPerspective;
         glm::vec3 mWorldPos{0.f};
-        SwFrustum::Data mFrustum;
+        SwFrustum mFrustum;
     };
 
 private:
@@ -56,7 +56,7 @@ private:
     float mSpeed{1.f};
     bool mRelativeMode{false};
     SwMovementMode mMovementMode{FREEFLY};
-    SwFrustum::Data mFrustum;
+    SwFrustum mFrustum;
     std::array<SwAllocatedBuffer, SwSwapchain::NUM_FRAME_OVERLAP> mCameraBuffers;
 
 public:
@@ -76,7 +76,7 @@ public:
     glm::mat4 getSpawnTransform(float distance = 5.f, float scale = 1.f, bool rotated = false) const;
     void update(float deltaTime, float expectedDeltaTime);
 
-    inline SwFrustum::Data& getFrustum() { return mFrustum; }
+    inline SwFrustum& getFrustum() { return mFrustum; }
     SwAllocatedBuffer& getCameraBuffer();
     inline bool getRelativeMode() const { return mRelativeMode; }
     inline SwMovementMode getMovementMode() const { return mMovementMode; }

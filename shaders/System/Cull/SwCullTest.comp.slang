@@ -17,7 +17,7 @@ void transformCornersToWorld(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners,
     }
 }
 
-bool frustumTest(SwFrustum::Data* frustum, float4[SwMesh::NUM_AABB_CORNERS] aabbCorners) {
+bool frustumTest(SwFrustum* frustum, float4[SwMesh::NUM_AABB_CORNERS] aabbCorners) {
     bool visible = true;
 
     // Get the min and max corners of the (already world-space) AABB
@@ -122,7 +122,7 @@ void main(SwCull::CSInput in) {
     SwBounds* bounds = &testPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     SwNode::Transform* nodeTransform = &testPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
     SwInstance::Data* instance = &testPc.mSceneInstancesBuffer[ri->mInstanceIndex];
-    SwFrustum::Data* frustum = &testPc.mFrameBuffer->mCameraBuffer->mFrustum;
+    SwFrustum* frustum = &testPc.mFrameBuffer->mCameraBuffer->mFrustum;
     SwCamera::Perspective* perspective = &testPc.mFrameBuffer->mCameraBuffer->mPerspective;
     float4[SwMesh::NUM_AABB_CORNERS] aabbCorners = {
         float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),

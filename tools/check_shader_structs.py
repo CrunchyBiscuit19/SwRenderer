@@ -20,7 +20,6 @@ QUALIFIERS = {
     "linear", "sample", "row_major", "column_major", "globallycoherent",
 }
 
-# Struct name keys too generic to disambiguate a pairing on their own.
 # Primitive scalar and vector types reduced to a common canonical tag per language.
 SLANG_CANON = {
     "float": "F32", "double": "F64", "half": "F16",

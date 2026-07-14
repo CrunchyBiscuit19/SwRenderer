@@ -95,9 +95,9 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Camera
 
-* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed and computes its view frustum as a `SwFrustum::Data` (`SwCamera::getFrustum()`). It owns and writes the camera GPU buffers (`SwCamera::Data`: perspective, world position, and the frustum) that the frame's data buffer points at, consumed by the cull and geometry passes. One buffer per frame-in-flight (indexed by frame number) so the CPU write for the next frame never races an in-flight frame's GPU read. Offers a spawn transform helper for placing new instances in front of the camera.
+* **`SwCamera`** — a movable camera supporting free-fly and drone movement modes (`SwMovementMode`), driven by SDL events. Holds position/pitch/yaw/speed and computes its view frustum as a `SwFrustum` (`SwCamera::getFrustum()`). It owns and writes the camera GPU buffers (`SwCamera::Data`: perspective, world position, and the frustum) that the frame's data buffer points at, consumed by the cull and geometry passes. One buffer per frame-in-flight (indexed by frame number) so the CPU write for the next frame never races an in-flight frame's GPU read. Offers a spawn transform helper for placing new instances in front of the camera.
 * **`SwCamera::Perspective`** — a view + projection matrix pair (reversed-Z, Y-flipped Vulkan projection); produced by `SwCamera::getPerspective()`.
-* **`SwFrustum::Data`** — the six bounding planes (near/far/left/right/top/bottom) built by `SwFrustum::calculateFrustum(...)`; **`SwPlane`** is a single plane (normal + signed distance). The camera bakes its `SwFrustum::Data` into `SwCamera::Data` for the GPU cull pass.
+* **`SwFrustum`** — the six bounding planes (near/far/left/right/top/bottom) built by `SwFrustum::calculateFrustum(...)`; **`SwPlane`** is a single plane (normal + signed distance). The camera bakes its `SwFrustum` into `SwCamera::Data` for the GPU cull pass.
 
 ### Asset
 

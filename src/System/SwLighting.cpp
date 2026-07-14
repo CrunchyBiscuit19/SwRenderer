@@ -195,7 +195,6 @@ void SwLighting::System::refreshDependencies() {
         d.clear();
         d.mReadBuffers.emplace_back(&mScene.getSceneShadowsRcsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneShadowsRcsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
-        d.mReadBuffers.emplace_back(&mScene.getSceneShadowsRisBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mScene.getSceneShadowsRisIndicesBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mReadBuffers.emplace_back(&mScene.getSceneLightsInfoBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -232,7 +231,6 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mShadowsResetPc.mSceneShadowsRcsLimit = SwRenderer::sRendererContext.mScene->getSceneRcs().size() * MAX_NUM_SHADOW_CASTERS;
 
     mResources.mShadowsCullPc.mSceneShadowsRcsBuffer = SwRenderer::sRendererContext.mScene->getSceneShadowsRcsBuffer().getDeviceAddress().value();
-    mResources.mShadowsCullPc.mSceneShadowsRisBuffer = SwRenderer::sRendererContext.mScene->getSceneShadowsRisBuffer().getDeviceAddress().value();
     mResources.mShadowsCullPc.mSceneShadowsRisIndicesBuffer = SwRenderer::sRendererContext.mScene->getSceneShadowsRisIndicesBuffer().getDeviceAddress().value();
     mResources.mShadowsCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
     mResources.mShadowsCullPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();

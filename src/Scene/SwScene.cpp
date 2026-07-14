@@ -116,9 +116,6 @@ void SwScene::initializeResources() {
     mSceneShadowsRcsBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE, true
     );
-    mSceneShadowsRisBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneShadowsRisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE, true
-    );
     mSceneShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
     );
