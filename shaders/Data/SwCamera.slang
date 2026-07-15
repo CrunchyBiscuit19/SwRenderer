@@ -12,5 +12,6 @@ namespace SwCamera {
         public Perspective mPerspective;
         public float3 mWorldPos;
         public SwFrustum mFrustum;
+        public float2 mPlanes;
     };
 }

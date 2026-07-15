@@ -168,9 +168,9 @@ void SwLighting::System::initializePasses() {
             clustersBuildPipeline.getLayoutHandle(), SwLighting::ClustersBuildPC::sStages, 0, mResources.mClustersBuildPc
         );
         cmd.dispatch(
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_SIZE.x, SwRenderer::MAX_3D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_SIZE.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_SIZE.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
+            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.x, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
         );
     });
 
@@ -182,9 +182,9 @@ void SwLighting::System::initializePasses() {
             clustersMarkActivePipeline.getLayoutHandle(), SwLighting::ClustersMarkActivePC::sStages, 0, mResources.mClustersMarkActivePc
         );
         cmd.dispatch(
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_SIZE.x, SwRenderer::MAX_3D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_SIZE.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_SIZE.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
+            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.x, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
         );
     });
 
@@ -214,6 +214,9 @@ void SwLighting::System::refreshDependencies() {
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersBuild].getDeps();
         d.clear();
+        d.mReadBuffers.emplace_back(
+            &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
+        );
         d.mWriteBuffers.emplace_back(&mScene.getSceneLightsInfoBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mScene.getSceneClustersBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
@@ -279,7 +282,11 @@ void SwLighting::System::refreshDependencies() {
 }
 
 void SwLighting::System::refreshPushConstants() {
+    mResources.mClustersBuildPc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mClustersBuildPc.mSceneClustersBuffer = SwRenderer::sRendererContext.mScene->getSceneClustersBuffer().getDeviceAddress().value();
+    mResources.mClustersBuildPc.mInvProj = glm::inverse(SwRenderer::sRendererContext.mScene->getCamera().getPerspective().getProjVk());
+    mResources.mClustersBuildPc.mTargetSize =
+        glm::uvec2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().width, SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().height);
 
     mResources.mClustersMarkActivePc.mSceneClustersBuffer = SwRenderer::sRendererContext.mScene->getSceneClustersBuffer().getDeviceAddress().value();
     mResources.mClustersMarkActivePc.mSceneClustersActiveIndicesBuffer =

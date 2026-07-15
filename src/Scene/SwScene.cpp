@@ -862,7 +862,7 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     }
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCull]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsReset]);

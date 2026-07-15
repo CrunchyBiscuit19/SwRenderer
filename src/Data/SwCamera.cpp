@@ -124,6 +124,7 @@ void SwCamera::update(float deltaTime, float expectedDeltaTime) {
         .mPerspective = getPerspective(),
         .mWorldPos = mPosition,
         .mFrustum = mFrustum,
+        .mPlanes = {NEAR_PLANE, FAR_PLANE},
     };
     getCameraBuffer().copyFromUnchecked(&cameraData, sizeof(Data));
 }

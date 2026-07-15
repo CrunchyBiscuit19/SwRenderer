@@ -36,7 +36,7 @@ static constexpr std::uint64_t LIGHTING_INITIAL_SHADOWS_RENDER_COMMANDS_BUFFER_S
 static constexpr std::uint32_t LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::Format LIGHTING_SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
-static constexpr glm::uvec3 LIGHTING_CLUSTERS_SIZE{16, 9, 24};
+static constexpr glm::uvec3 LIGHTING_CLUSTERS_DIMENSIONS{16, 9, 24};
 static constexpr std::uint32_t LIGHTING_NUM_CLUSTERS{3456};
 
 struct Cluster {
@@ -52,7 +52,10 @@ struct LightsInfo {
 };
 
 struct ClustersBuildPC : SwPC<ClustersBuildPC> {
+    vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mSceneClustersBuffer{0};
+    glm::mat4 mInvProj{1.f};
+    glm::uvec2 mTargetSize{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

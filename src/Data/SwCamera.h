@@ -36,6 +36,7 @@ public:
         Perspective mPerspective;
         glm::vec3 mWorldPos{0.f};
         SwFrustum mFrustum;
+        glm::vec2 mPlanes;
     };
 
 private:

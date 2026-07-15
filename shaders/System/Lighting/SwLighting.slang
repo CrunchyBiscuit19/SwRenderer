@@ -18,12 +18,12 @@ namespace SwLighting {
     public static const uint MAX_NUM_SHADOW_CASTERS = 16;
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
-    public static const uint3 CLUSTERS_SIZE = (16,9,24);
+    public static const uint3 CLUSTERS_DIMENSIONS = uint3(16,9,24);
     public static const uint NUM_CLUSTERS = 3456;
 
     public struct Cluster {
-        float3 mMin;
-        float3 mMax;
+        public float3 mMin;
+        public float3 mMax;
     };
 
     public struct LightsInfo {
@@ -34,7 +34,10 @@ namespace SwLighting {
     };
 
     public struct ClustersBuildPC {
+        public SwFrame::Data* mFrameBuffer;
         public Cluster* mSceneClustersBuffer;
+        public float4x4 mInvProj;
+        public uint2 mTargetSize;
     };
 
     public struct ClustersMarkActivePC {
