@@ -25,7 +25,7 @@ static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SH
 static const std::filesystem::path LIGHTING_CLUSTERS_BUILD_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersBuild.comp.spv"};
 static const std::filesystem::path LIGHTING_CLUSTERS_MARK_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersMarkActive.comp.spv"};
 static const std::filesystem::path LIGHTING_CLUSTERS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCull.comp.spv"};
-static const std::filesystem::path LIGHTING_SHADOWS_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsReset.comp.spv"};
+static const std::filesystem::path LIGHTING_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingReset.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsCull.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsDraw.vert.spv"};
 static constexpr std::string_view LIGHTING_SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
@@ -51,6 +51,13 @@ struct LightsInfo {
     vk::DeviceAddress mShadowCastIndices{0};
 };
 
+struct ResetPC : SwPC<ResetPC> {
+    vk::DeviceAddress mSceneShadowsRcsBuffer{0};
+    std::uint32_t mSceneShadowsRcsLimit{0};
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
 struct ClustersBuildPC : SwPC<ClustersBuildPC> {
     vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mSceneClustersBuffer{0};
@@ -63,6 +70,7 @@ struct ClustersBuildPC : SwPC<ClustersBuildPC> {
 struct ClustersMarkActivePC : SwPC<ClustersMarkActivePC> {
     vk::DeviceAddress mSceneClustersBuffer{0};
     vk::DeviceAddress mSceneClustersActiveIndicesBuffer{0};
+    vk::DeviceAddress mSceneClustersActiveCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -74,13 +82,6 @@ struct ClustersCullPC : SwPC<ClustersCullPC> {
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
-
-    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
-};
-
-struct ShadowsResetPC : SwPC<ShadowsResetPC> {
-    vk::DeviceAddress mSceneShadowsRcsBuffer{0};
-    std::uint32_t mSceneShadowsRcsLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -123,6 +124,10 @@ struct Resources {
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
+    ResetPC mResetPc;
+    SwPipelineLayout mResetPipelineLayout;
+    SwComputePipelineBundle mResetPipelineBundle;
+
     ClustersBuildPC mClustersBuildPc;
     SwPipelineLayout mClustersBuildPipelineLayout;
     SwComputePipelineBundle mClustersBuildPipelineBundle;
@@ -134,10 +139,6 @@ struct Resources {
     ClustersCullPC mClustersCullPc;
     SwPipelineLayout mClustersCullPipelineLayout;
     SwComputePipelineBundle mClustersCullPipelineBundle;
-
-    ShadowsResetPC mShadowsResetPc;
-    SwPipelineLayout mShadowsResetPipelineLayout;
-    SwComputePipelineBundle mShadowsResetPipelineBundle;
 
     ShadowsCullPC mShadowsCullPc;
     SwPipelineLayout mShadowsCullPipelineLayout;

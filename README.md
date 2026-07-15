@@ -208,7 +208,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 * **`AssetLight`** — a per-instance binding emitted by asset `SwLightNode`s during regen: a non-owning pointer to the asset-owned `SwLight`, its owning instance pointer and asset id, its node-transform and instance indices, and the cached world position and direction. The system references the light object rather than copying its `SwLight::Data`.
 * **`Resources`** — the scene's lights: a single global `SwSunlight` and the `AssetLight` references. All punctual lights belong to assets. Lights spawned from the GUI are loaded from `resources/lights/{point,spot,directional}.gltf` as standalone assets (`SwScene::spawnStandaloneLight`) that live in `mAssets` but are flagged `standalone` so they are hidden from the assets menu and transformable from the lighting panel.
 * **`System`** — flattens its `AssetLight` references into `SwLight::Data` via `collectLightData()`; the scene packs that into `mSceneLightsBuffer` (`reloadSceneLightsBuffer`).
-* **Shadow mapping (in progress)** — the system also owns the shadow-caster resources: per-caster arrays of `SwDepthImage2D` / `SwDepthImageCubemap` maps (`MAX_NUM_SHADOW_CASTERS`), their sampler and consume descriptor set (`sShadowsConsumeDescriptorLayout`, bound during the geometry passes), the per-caster shadow render-command/item buffers, and the reset/cull/draw compute and graphics pipelines. It registers the `LightingShadowsReset`, `LightingLightsCull`, `LightingShadowsCull`, and `LightingShadowsDraw` passes; reset and light-culling are live, while the shadow cull and draw callbacks are still stubs. The `LightingBuildClusters` / `LightingMarkActiveClusters` pass types are reserved for planned clustered lighting and are not yet registered.
+* **Shadow mapping (in progress)** — the system also owns the shadow-caster resources: per-caster arrays of `SwDepthImage2D` / `SwDepthImageCubemap` maps (`MAX_NUM_SHADOW_CASTERS`), their sampler and consume descriptor set (`sShadowsConsumeDescriptorLayout`, bound during the geometry passes), the per-caster shadow render-command/item buffers, and the reset/cull/draw compute and graphics pipelines. It registers the `LightingReset`, `LightingLightsCull`, `LightingShadowsCull`, and `LightingShadowsDraw` passes; reset and light-culling are live, while the shadow cull and draw callbacks are still stubs. The `LightingBuildClusters` / `LightingMarkActiveClusters` pass types are reserved for planned clustered lighting and are not yet registered.
 * **Relations** — feeds the light buffer that `SwGeometry`'s shaders consume, and the shadow-map descriptor set that its geometry pipeline layouts sample; the sunlight is uploaded per frame via the per-frame buffer.
 
 ### Image-Based Lighting `SwIBL`
@@ -410,7 +410,7 @@ The per-frame pass order — each pass is owned by the system of the same name (
 ```
 ClearImages → [IBLSkybox] → CullEarlyReset → CullEarlyTest → CullEarlyCompact
 → GeometryEarlyOpaque → CullPrepOcclusion → CullLateReset → CullLateTest
-→ CullLateCompact → CullPublishCount → LightingShadowsReset → LightingLightsCull
+→ CullLateCompact → CullPublishCount → LightingReset → LightingLightsCull
 → [LightingShadowsCull → LightingShadowsDraw] → GeometryLateOpaque → GeometryMasked
 → GeometryTransparent → [PickDraw → PickReadback → PickSelect] → WBOITComposite
 → Tonemap → [FXAA] → CopyToSwapchain → Gui

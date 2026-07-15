@@ -109,6 +109,7 @@ private:
     SwAllocatedBuffer mSceneShadowsRisIndicesBuffer;
     SwAllocatedBuffer mSceneClustersBuffer;
     SwAllocatedBuffer mSceneClustersActiveIndicesBuffer;
+    SwAllocatedBuffer mSceneClustersActiveCount;
 
     SwRenderGraph mRenderGraph;
 
@@ -198,6 +199,7 @@ public:
     inline SwAllocatedBuffer& getSceneShadowsRisIndicesBuffer() { return mSceneShadowsRisIndicesBuffer; }
     inline SwAllocatedBuffer& getSceneClustersBuffer() { return mSceneClustersBuffer; }
     inline SwAllocatedBuffer& getSceneClustersActiveIndicesBuffer() { return mSceneClustersActiveIndicesBuffer; }
+    inline SwAllocatedBuffer& getSceneClustersActiveCount() { return mSceneClustersActiveCount; }
 
     inline SwInput::System& getInputSystem() { return mInput; }
     inline SwCull::System& getCullSystem() { return mCull; }

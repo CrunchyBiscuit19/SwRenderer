@@ -2,13 +2,13 @@ import System.Lighting.SwLighting;
 import Data.SwConstants;
 
 [[vk::push_constant]]
-SwLighting::ShadowsResetPC shadowsResetPc;
+SwLighting::ResetPC resetPc;
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
     uint rcsIndex = in.mDispatchThreadID.x;
-    if (rcsIndex >= shadowsResetPc.mSceneShadowsRcsLimit)
+    if (rcsIndex >= resetPc.mSceneShadowsRcsLimit)
         return;
 
-    shadowsResetPc.mSceneShadowsRcsBuffer[rcsIndex].mRiCount = 0;
+    resetPc.mSceneShadowsRcsBuffer[rcsIndex].mRiCount = 0;
 }

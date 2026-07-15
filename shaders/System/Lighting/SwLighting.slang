@@ -43,6 +43,7 @@ namespace SwLighting {
     public struct ClustersMarkActivePC {
         public Cluster* mSceneClustersBuffer;    
         public uint* mSceneClustersActiveIndicesBuffer;
+        public uint* mSceneClustersActiveCount;
     };
 
     public struct ClustersCullPC {
@@ -54,7 +55,7 @@ namespace SwLighting {
         public uint* mClustersActiveIndicesBuffer;
     };
 
-    public struct ShadowsResetPC {
+    public struct ResetPC {
         public SwRenderCommand* mSceneShadowsRcsBuffer;
         public uint mSceneShadowsRcsLimit;
     };

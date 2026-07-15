@@ -125,6 +125,9 @@ void SwScene::initializeResources() {
     mSceneClustersActiveIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true, false
     );
+    mSceneClustersActiveCount = SwBufferFactory::createAllocatedBuffer(
+        "SceneClustersActiveCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, sizeof(std::uint32_t), true, false
+    );
 
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
@@ -862,10 +865,10 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     }
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingReset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCull]);
-    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsReset]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);
