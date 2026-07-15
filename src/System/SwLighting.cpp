@@ -58,8 +58,11 @@ void SwLighting::System::initializeResources() {
     mResources.mClustersBuffer = SwBufferFactory::createAllocatedBuffer(
         "ClustersBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_CLUSTERS_BUFFER_SIZE, true, false
     );
+    mResources.mClustersActiveBooleansBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ClustersActiveBooleansBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE, true, false
+    );
     mResources.mClustersActiveIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE, true, false
+        "ClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true, false
     );
     mResources.mClustersActiveCount =
         SwBufferFactory::createAllocatedBuffer("ClustersActiveCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, sizeof(std::uint32_t), true, false);
@@ -212,6 +215,7 @@ void SwLighting::System::initializePasses() {
     // Reset
     mScene.insertPass(SwPass::Type::LightingReset, [&](vk::CommandBuffer cmd) {
         cmd.fillBuffer(mResources.mShadowsRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mResources.mClustersActiveBooleansBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveIndicesBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveCount.getHandle(), 0, vk::WholeSize, 0);
         auto& resetPipeline = mResources.mResetPipelineBundle;
@@ -236,6 +240,10 @@ void SwLighting::System::initializePasses() {
 
     // Clusters Mark Active
     mScene.insertPass(SwPass::Type::LightingClustersMarkActive, [&](vk::CommandBuffer cmd) {
+    });
+
+    // Clusters Compact Active
+    mScene.insertPass(SwPass::Type::LightingClustersCompactActive, [&](vk::CommandBuffer cmd) {
     });
 
     // Clusters Cull
@@ -281,7 +289,7 @@ void SwLighting::System::refreshDependencies() {
 
     // Clusters Mark Active
     {
-        SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersBuild].getDeps();
+        SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersMarkActive].getDeps();
         d.clear();
         d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::ComputeShaderSampledRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersBuffer, SwDependency::BufferDepType::ComputeStorageRead);
@@ -290,7 +298,7 @@ void SwLighting::System::refreshDependencies() {
 
     // Clusters Compact Active
     {
-        SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersBuild].getDeps();
+        SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersCompactActive].getDeps();
         d.clear();
         d.mReadBuffers.emplace_back(&mResources.mClustersActiveBooleansBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
@@ -354,7 +362,7 @@ void SwLighting::System::refreshPushConstants() {
         glm::uvec2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().width, SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().height);
 
     mResources.mClustersMarkActivePc.mClustersBuffer = mResources.mClustersBuffer.getDeviceAddress().value();
-    mResources.mClustersMarkActivePc.mClustersActiveBooleansBuffer = mResources.mClustersActiveIndicesBuffer.getDeviceAddress().value();
+    mResources.mClustersMarkActivePc.mClustersActiveBooleansBuffer = mResources.mClustersActiveBooleansBuffer.getDeviceAddress().value();
 
     mResources.mClustersCompactActivePc.mClustersActiveBooleansBuffer = mResources.mClustersActiveBooleansBuffer.getDeviceAddress().value();
     mResources.mClustersCompactActivePc.mClustersActiveIndicesBuffer = mResources.mClustersActiveIndicesBuffer.getDeviceAddress().value();

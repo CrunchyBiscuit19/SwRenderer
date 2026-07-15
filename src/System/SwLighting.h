@@ -47,7 +47,8 @@ struct Cluster {
 };
 
 static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(Cluster)};
-static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(std::uint32_t)};
+static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(bool)};
+static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(std::uint32_t)};
 
 struct LightsInfo {
     std::uint32_t mLitCount{0};
