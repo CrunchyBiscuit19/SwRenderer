@@ -7,8 +7,8 @@ SwLighting::ResetPC resetPc;
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
     uint rcsIndex = in.mDispatchThreadID.x;
-    if (rcsIndex >= resetPc.mSceneShadowsRcsLimit)
+    if (rcsIndex >= resetPc.mShadowsRcsLimit)
         return;
 
-    resetPc.mSceneShadowsRcsBuffer[rcsIndex].mRiCount = 0;
+    resetPc.mShadowsRcsBuffer[rcsIndex].mRiCount = 0;
 }

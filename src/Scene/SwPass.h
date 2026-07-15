@@ -25,6 +25,7 @@ public:
         LightingReset,
         LightingClustersBuild,
         LightingClustersMarkActive,
+        LightingClustersCompactActive,
         LightingClustersCull,
         LightingShadowsCull,
         LightingShadowsDraw,

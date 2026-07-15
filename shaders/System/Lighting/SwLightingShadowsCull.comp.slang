@@ -64,12 +64,12 @@ bool rangeTest(float4 corners[SwMesh::NUM_AABB_CORNERS], float3 center, float ra
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
-    if (risIndex >= shadowsCullPc.mSceneShadowsRisLimit) {
+    if (risIndex >= shadowsCullPc.mShadowsRisLimit) {
         return;
     }
 
-    SwRenderItem* ri = &shadowsCullPc.mSceneShadowsRisBuffer[risIndex];
-    SwRenderCommand* rc = &shadowsCullPc.mSceneShadowsRcsBuffer[ri->mRcIndex];
+    SwRenderItem* ri = &shadowsCullPc.mShadowsRisBuffer[risIndex];
+    SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[ri->mRcIndex];
 
     SwBounds* riBounds = &shadowsCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
@@ -99,6 +99,6 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowsCullPc.mSceneShadowsRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
+        shadowsCullPc.mShadowsRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
     }
 }

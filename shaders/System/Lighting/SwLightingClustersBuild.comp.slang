@@ -51,6 +51,6 @@ void main(SwLighting::CSInput in) {
     float3 minPointAABB = min(min(minPointNear, minPointFar),min(maxPointNear, maxPointFar));
     float3 maxPointAABB = max(max(minPointNear, minPointFar),max(maxPointNear, maxPointFar));
 
-    clustersBuildPc.mSceneClustersBuffer[clusterIndex].mMin = minPointAABB;
-    clustersBuildPc.mSceneClustersBuffer[clusterIndex].mMax = maxPointAABB;
+    clustersBuildPc.mClustersBuffer[clusterIndex].mMin = minPointAABB;
+    clustersBuildPc.mClustersBuffer[clusterIndex].mMax = maxPointAABB;
 }

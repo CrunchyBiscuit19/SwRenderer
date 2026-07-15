@@ -113,21 +113,6 @@ void SwScene::initializeResources() {
     mSceneLightsInfoBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneLightsInfosBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_INFO_BUFFER_SIZE, true
     );
-    mSceneShadowsRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE, true
-    );
-    mSceneShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
-    );
-    mSceneClustersBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneClustersBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_CLUSTERS_BUFFER_SIZE, true, false
-    );
-    mSceneClustersActiveIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true, false
-    );
-    mSceneClustersActiveCount = SwBufferFactory::createAllocatedBuffer(
-        "SceneClustersActiveCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, sizeof(std::uint32_t), true, false
-    );
 
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
@@ -452,10 +437,9 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
     const std::uint64_t rcsBytes = mRcs.size() * sizeof(SwRenderCommand);
     const std::uint64_t risBytes = mRis.size() * sizeof(SwRenderItem);
     const std::uint64_t risIndicesBytes = mRis.size() * sizeof(std::uint32_t);
-    const std::uint64_t shadowRisIndicesBytes = risIndicesBytes * SwLighting::MAX_NUM_SHADOW_CASTERS;
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback(
-        SwQueueType::Graphics, [this, rcsBytes, risBytes, risIndicesBytes, shadowRisIndicesBytes](vk::CommandBuffer cmd) {
+        SwQueueType::Graphics, [this, rcsBytes, risBytes, risIndicesBytes](vk::CommandBuffer cmd) {
             SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
 
             mSceneInitialRcsBuffer.ensureCapacity(cmd, rcsBytes);
@@ -475,16 +459,10 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
 
             mSceneEarlyRcsBuffer.ensureCapacity(cmd, rcsBytes);  // At least as big as mSceneInitialRcsBuffer
             mSceneLateRcsBuffer.ensureCapacity(cmd, rcsBytes);   // At least as big as mSceneInitialRcsBuffer
-
-            std::array<vk::BufferCopy, SwLighting::MAX_NUM_SHADOW_CASTERS> shadowRcsCopies;
-            for (std::uint32_t i = 0; i < SwLighting::MAX_NUM_SHADOW_CASTERS; i++) {
-                shadowRcsCopies[i] = vk::BufferCopy{0, i * rcsBytes, rcsBytes};
-            }
-            mSceneShadowsRcsBuffer.copyFrom(cmd, mSceneInitialRcsBuffer, shadowRcsCopies);
-
-            mSceneShadowsRisIndicesBuffer.ensureCapacity(cmd, shadowRisIndicesBytes);
         }
     );
+
+    mLighting.regenerateShadowsRcs();
 }
 
 void SwScene::reloadSceneBatchesBuffer() {

@@ -35,15 +35,15 @@ namespace SwLighting {
 
     public struct ClustersBuildPC {
         public SwFrame::Data* mFrameBuffer;
-        public Cluster* mSceneClustersBuffer;
+        public Cluster* mClustersBuffer;
         public float4x4 mInvProj;
         public uint2 mTargetSize;
     };
 
     public struct ClustersMarkActivePC {
-        public Cluster* mSceneClustersBuffer;    
-        public uint* mSceneClustersActiveIndicesBuffer;
-        public uint* mSceneClustersActiveCount;
+        public Cluster* mClustersBuffer;    
+        public uint* mClustersActiveIndicesBuffer;
+        public uint* mClustersActiveCount;
     };
 
     public struct ClustersCullPC {
@@ -56,25 +56,25 @@ namespace SwLighting {
     };
 
     public struct ResetPC {
-        public SwRenderCommand* mSceneShadowsRcsBuffer;
-        public uint mSceneShadowsRcsLimit;
+        public SwRenderCommand* mShadowsRcsBuffer;
+        public uint mShadowsRcsLimit;
     };
 
     public struct ShadowsCullPC {
-        public SwRenderCommand* mSceneShadowsRcsBuffer;
-        public SwRenderItem* mSceneShadowsRisBuffer;
-        public uint* mSceneShadowsRisIndicesBuffer;
+        public SwRenderCommand* mShadowsRcsBuffer;
+        public SwRenderItem* mShadowsRisBuffer;
+        public uint* mShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public SwBounds* mSceneBoundsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;
         public SwInstance::Data* mSceneInstancesBuffer;
-        public uint mSceneShadowsRisLimit;
+        public uint mShadowsRisLimit;
     };
 
     public struct ShadowDrawPC {
-        public SwRenderCommand* mSceneShadowsRcsBuffer;
-        public uint* mSceneShadowsRisIndicesBuffer;
+        public SwRenderCommand* mShadowsRcsBuffer;
+        public uint* mShadowsRisIndicesBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
         public SwVertex* mSceneVertexBuffer;
