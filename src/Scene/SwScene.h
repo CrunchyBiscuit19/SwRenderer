@@ -107,6 +107,8 @@ private:
     SwAllocatedBuffer mSceneLightsInfoBuffer;
     SwAllocatedBuffer mSceneShadowsRcsBuffer;
     SwAllocatedBuffer mSceneShadowsRisIndicesBuffer;
+    SwAllocatedBuffer mSceneClustersBuffer;
+    SwAllocatedBuffer mSceneClustersActiveIndicesBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -138,6 +140,8 @@ public:
     static constexpr std::size_t SCENE_INITIAL_BATCHES_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(SwBatch::Data)};
     static constexpr std::size_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
     static constexpr std::size_t SCENE_INITIAL_LIGHTS_INFO_BUFFER_SIZE{(1 << 6) * sizeof(SwLighting::LightsInfo)};
+    static constexpr std::size_t SCENE_INITIAL_CLUSTERS_BUFFER_SIZE{SwLighting::LIGHTING_NUM_CLUSTERS * sizeof(SwLighting::Cluster)};
+    static constexpr std::size_t SCENE_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{SwLighting::LIGHTING_NUM_CLUSTERS * sizeof(std::uint32_t)};
 
     Flags mFlags;
 
@@ -189,10 +193,11 @@ public:
     inline SwAllocatedBuffer& getSceneRisBuffer() { return mSceneRisBuffer; }
     inline SwAllocatedBuffer& getSceneBatchesBuffer() { return mSceneBatchesBuffer; }
     inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
-    inline SwAllocatedBuffer& getSceneLightsInfoBuffer() { return mSceneLightsInfoBuffer; };
-
-    inline SwAllocatedBuffer& getSceneShadowsRcsBuffer() { return mSceneShadowsRcsBuffer; };
-    inline SwAllocatedBuffer& getSceneShadowsRisIndicesBuffer() { return mSceneShadowsRisIndicesBuffer; };
+    inline SwAllocatedBuffer& getSceneLightsInfoBuffer() { return mSceneLightsInfoBuffer; }
+    inline SwAllocatedBuffer& getSceneShadowsRcsBuffer() { return mSceneShadowsRcsBuffer; }
+    inline SwAllocatedBuffer& getSceneShadowsRisIndicesBuffer() { return mSceneShadowsRisIndicesBuffer; }
+    inline SwAllocatedBuffer& getSceneClustersBuffer() { return mSceneClustersBuffer; }
+    inline SwAllocatedBuffer& getSceneClustersActiveIndicesBuffer() { return mSceneClustersActiveIndicesBuffer; }
 
     inline SwInput::System& getInputSystem() { return mInput; }
     inline SwCull::System& getCullSystem() { return mCull; }

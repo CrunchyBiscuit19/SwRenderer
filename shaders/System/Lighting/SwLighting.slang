@@ -14,13 +14,18 @@ import System.BRDF.SwBRDF;
 import System.IBL.SwIBL;
 
 namespace SwLighting {
-    public struct Cluster{};
-
     public static const uint SHADOWS_MAP_SIZE = 1024;
     public static const uint MAX_NUM_SHADOW_CASTERS = 16;
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
-    
+    public static const uint3 CLUSTERS_SIZE = (16,9,24);
+    public static const uint NUM_CLUSTERS = 3456;
+
+    public struct Cluster {
+        float3 mMin;
+        float3 mMax;
+    };
+
     public struct LightsInfo {
         public uint mLitCount;
         public uint* mLitIndices;
@@ -29,11 +34,12 @@ namespace SwLighting {
     };
 
     public struct ClustersBuildPC {
-        public Cluster* mClustersBuffer;
+        public Cluster* mSceneClustersBuffer;
     };
 
     public struct ClustersMarkActivePC {
-        public uint* mClustersActiveIndicesBuffer;
+        public Cluster* mSceneClustersBuffer;    
+        public uint* mSceneClustersActiveIndicesBuffer;
     };
 
     public struct ClustersCullPC {

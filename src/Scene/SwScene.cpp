@@ -119,6 +119,12 @@ void SwScene::initializeResources() {
     mSceneShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "SceneShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
     );
+    mSceneClustersBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneClustersBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_CLUSTERS_BUFFER_SIZE, true, false
+    );
+    mSceneClustersActiveIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        "SceneClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true, false
+    );
 
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
@@ -447,34 +453,35 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback(
         SwQueueType::Graphics, [this, rcsBytes, risBytes, risIndicesBytes, shadowRisIndicesBytes](vk::CommandBuffer cmd) {
-        SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
+            SwStagingRing* stagingRing = SwRenderer::sRendererContext.mStagingRing;
 
-        mSceneInitialRcsBuffer.ensureCapacity(cmd, rcsBytes);
-        cmd.fillBuffer(mSceneInitialRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
-        mSceneInitialRcsBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-        stagingRing->upload(cmd, mSceneInitialRcsBuffer, mRcs.data(), rcsBytes);
+            mSceneInitialRcsBuffer.ensureCapacity(cmd, rcsBytes);
+            cmd.fillBuffer(mSceneInitialRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
+            mSceneInitialRcsBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+            stagingRing->upload(cmd, mSceneInitialRcsBuffer, mRcs.data(), rcsBytes);
 
-        mSceneRisBuffer.ensureCapacity(cmd, risBytes);
-        cmd.fillBuffer(mSceneRisBuffer.getHandle(), 0, vk::WholeSize, 0);
-        mSceneRisBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
-        stagingRing->upload(cmd, mSceneRisBuffer, mRis.data(), risBytes);
+            mSceneRisBuffer.ensureCapacity(cmd, risBytes);
+            cmd.fillBuffer(mSceneRisBuffer.getHandle(), 0, vk::WholeSize, 0);
+            mSceneRisBuffer.emitBarrier(cmd, SwDependency::BufferDepType::TransferWrite);
+            stagingRing->upload(cmd, mSceneRisBuffer, mRis.data(), risBytes);
 
-        mSceneRisIndicesBuffer.ensureCapacity(cmd, risIndicesBytes);
-        for (SwAllocatedBuffer& sceneVisibilityRisBuffer : mSceneVisibilityRisBuffers) {
-            sceneVisibilityRisBuffer.ensureCapacity(cmd, risIndicesBytes);
+            mSceneRisIndicesBuffer.ensureCapacity(cmd, risIndicesBytes);
+            for (SwAllocatedBuffer& sceneVisibilityRisBuffer : mSceneVisibilityRisBuffers) {
+                sceneVisibilityRisBuffer.ensureCapacity(cmd, risIndicesBytes);
+            }
+
+            mSceneEarlyRcsBuffer.ensureCapacity(cmd, rcsBytes);  // At least as big as mSceneInitialRcsBuffer
+            mSceneLateRcsBuffer.ensureCapacity(cmd, rcsBytes);   // At least as big as mSceneInitialRcsBuffer
+
+            std::array<vk::BufferCopy, SwLighting::MAX_NUM_SHADOW_CASTERS> shadowRcsCopies;
+            for (std::uint32_t i = 0; i < SwLighting::MAX_NUM_SHADOW_CASTERS; i++) {
+                shadowRcsCopies[i] = vk::BufferCopy{0, i * rcsBytes, rcsBytes};
+            }
+            mSceneShadowsRcsBuffer.copyFrom(cmd, mSceneInitialRcsBuffer, shadowRcsCopies);
+
+            mSceneShadowsRisIndicesBuffer.ensureCapacity(cmd, shadowRisIndicesBytes);
         }
-
-        mSceneEarlyRcsBuffer.ensureCapacity(cmd, rcsBytes);  // At least as big as mSceneInitialRcsBuffer
-        mSceneLateRcsBuffer.ensureCapacity(cmd, rcsBytes);   // At least as big as mSceneInitialRcsBuffer
-
-        std::array<vk::BufferCopy, SwLighting::MAX_NUM_SHADOW_CASTERS> shadowRcsCopies;
-        for (std::uint32_t i = 0; i < SwLighting::MAX_NUM_SHADOW_CASTERS; i++) {
-            shadowRcsCopies[i] = vk::BufferCopy{0, i * rcsBytes, rcsBytes};
-        }
-        mSceneShadowsRcsBuffer.copyFrom(cmd, mSceneInitialRcsBuffer, shadowRcsCopies);
-
-        mSceneShadowsRisIndicesBuffer.ensureCapacity(cmd, shadowRisIndicesBytes);
-    });
+    );
 }
 
 void SwScene::reloadSceneBatchesBuffer() {
@@ -855,12 +862,12 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullLateCompact]);
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     }
-    //mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
-    //mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
-    //mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCull]);
+    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
+    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
+    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCull]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsReset]);
-    //mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
-    //mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);
+    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
+    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryMasked]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);

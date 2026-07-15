@@ -24,7 +24,7 @@ namespace SwLighting {
 static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Lighting"};
 static const std::filesystem::path LIGHTING_CLUSTERS_BUILD_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersBuild.comp.spv"};
 static const std::filesystem::path LIGHTING_CLUSTERS_MARK_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersMarkActive.comp.spv"};
-static const std::filesystem::path LIGHTING_CLUSTER_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCull.comp.spv"};
+static const std::filesystem::path LIGHTING_CLUSTERS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCull.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsReset.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsCull.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsDraw.vert.spv"};
@@ -32,10 +32,17 @@ static constexpr std::string_view LIGHTING_SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"main
 static constexpr std::string_view LIGHTING_SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
-constexpr std::uint64_t LIGHTING_INITIAL_SHADOWS_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
-constexpr std::uint32_t LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
-constexpr std::uint32_t LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
-constexpr vk::Format LIGHTING_SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
+static constexpr std::uint64_t LIGHTING_INITIAL_SHADOWS_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
+static constexpr std::uint32_t LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
+static constexpr std::uint32_t LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
+static constexpr vk::Format LIGHTING_SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
+static constexpr glm::uvec3 LIGHTING_CLUSTERS_SIZE{16, 9, 24};
+static constexpr std::uint32_t LIGHTING_NUM_CLUSTERS{3456};
+
+struct Cluster {
+    glm::vec3 mMin{0};
+    glm::vec3 mMax{0};
+};
 
 struct LightsInfo {
     std::uint32_t mLitCount{0};
@@ -45,13 +52,14 @@ struct LightsInfo {
 };
 
 struct ClustersBuildPC : SwPC<ClustersBuildPC> {
-    vk::DeviceAddress mClustersBuffer{0};
+    vk::DeviceAddress mSceneClustersBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
 struct ClustersMarkActivePC : SwPC<ClustersMarkActivePC> {
-    vk::DeviceAddress mClustersActiveIndicesBuffer{0};
+    vk::DeviceAddress mSceneClustersBuffer{0};
+    vk::DeviceAddress mSceneClustersActiveIndicesBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
