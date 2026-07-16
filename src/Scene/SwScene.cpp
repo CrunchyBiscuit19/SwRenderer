@@ -846,7 +846,7 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryZPass]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingReset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCompactActive]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCull]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);

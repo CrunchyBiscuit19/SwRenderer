@@ -240,11 +240,20 @@ void SwLighting::System::initializePasses() {
 
     // Clusters Mark Active
     mScene.insertPass(SwPass::Type::LightingClustersMarkActive, [&](vk::CommandBuffer cmd) {
+        auto& clustersMarkActivePipeline = mResources.mClustersMarkActivePipelineBundle;
+        cmd.bindPipeline(clustersMarkActivePipeline.getBindPoint(), clustersMarkActivePipeline.getPipelineHandle());
+        cmd.pushConstants<SwLighting::ClustersMarkActivePC>(
+            clustersMarkActivePipeline.getLayoutHandle(), SwLighting::ClustersMarkActivePC::sStages, 0, mResources.mClustersMarkActivePc
+        );
+        cmd.dispatch(
+            SwHelper::fastDivCeil(SwRenderer::sRendererContext.mSwapchain->getDepthImage().getExtent().width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(SwRenderer::sRendererContext.mSwapchain->getDepthImage().getExtent().height, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            1
+        );
     });
 
     // Clusters Compact Active
-    mScene.insertPass(SwPass::Type::LightingClustersCompactActive, [&](vk::CommandBuffer cmd) {
-    });
+    mScene.insertPass(SwPass::Type::LightingClustersCompactActive, [&](vk::CommandBuffer cmd) {});
 
     // Clusters Cull
     mScene.insertPass(SwPass::Type::LightingClustersCull, [&](vk::CommandBuffer cmd) {});
@@ -305,7 +314,6 @@ void SwLighting::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(&mResources.mClustersActiveCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
     }
-
 
     // Clusters Cull
     {

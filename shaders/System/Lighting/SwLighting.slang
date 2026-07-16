@@ -41,6 +41,7 @@ namespace SwLighting {
     };
 
     public struct ClustersMarkActivePC {
+        public SwFrame::Data* mFrameBuffer;    
         public Cluster* mClustersBuffer;
         public uint8_t* mClustersActiveBooleansBuffer;
     };

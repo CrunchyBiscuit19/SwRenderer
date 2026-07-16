@@ -74,6 +74,7 @@ struct ClustersBuildPC : SwPC<ClustersBuildPC> {
 };
 
 struct ClustersMarkActivePC : SwPC<ClustersMarkActivePC> {
+    vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mClustersBuffer{0};
     vk::DeviceAddress mClustersActiveBooleansBuffer{0};
 
