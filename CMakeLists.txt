@@ -84,6 +84,9 @@ foreach(SHADER IN LISTS SLANG_ENTRY_SOURCES)
 
     # Files that declare [shader("...")] entry points name each one explicitly so slangc packs them
     # into a single module, while the rest compile their implicit "main" for the filename's stage.
+    # The extraction below happens at configure time, so a content change must re-run configuration.
+    # Otherwise adding or renaming an entry point inside an existing file leaves the baked -entry list stale.
+    set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${SHADER}")
     file(READ "${SHADER}" SHADER_TEXT)
     string(REGEX MATCHALL "\\[shader\\(\"[a-z]+\"\\)\\][^(]*\\(" SHADER_ENTRY_DECLS "${SHADER_TEXT}")
     set(SHADER_STAGE_ARGS "")

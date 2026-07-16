@@ -114,6 +114,10 @@ void SwMaterial::init() {
         SwShaderFactory::createShader("GeometryTransparentFragmentShaderModule", GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
 
+vk::ShaderModule SwMaterial::getGeometryVertexShaderModule() { return sVertexShader.getHandle(); }
+
+vk::ShaderModule SwMaterial::getOpaqueMaskedFragmentShaderModule() { return sOpaqueMaskedFragmentShader.getHandle(); }
+
 std::uint32_t SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const {
     vk::CullModeFlags cullMode = materialPipelineOptions.doubleSided ? vk::CullModeFlagBits::eNone : vk::CullModeFlagBits::eBack;
 

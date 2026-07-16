@@ -29,6 +29,10 @@ struct DrawPC : SwPC<DrawPC> {
 struct Resources {
     DrawPC mDrawPushConstants;
 
+    static constexpr std::string_view ZPASS_MASKED_ENTRY_POINT{"mainZPassMasked"};
+    SwGraphicsPipelineBundle mZPassOpaquePipelineBundle;
+    SwGraphicsPipelineBundle mZPassMaskedPipelineBundle;
+
     static std::array<vk::DescriptorSetLayout, 4> sGeometrySetLayouts;
 
     static void init();
@@ -40,6 +44,7 @@ private:
     Resources mResources;
 
     void drawBatches(vk::CommandBuffer cmd, std::array<std::optional<SwMaterial::Type>, SwMaterial::NUM_TYPES> matTypes, bool early);
+    void drawZBatches(vk::CommandBuffer cmd, SwGraphicsPipelineBundle& pipeline, SwMaterial::Type matType, bool bindMaterialSets);
 
     void initializeResources() override;
     void initializePasses() override;

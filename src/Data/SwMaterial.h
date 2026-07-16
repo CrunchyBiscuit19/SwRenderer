@@ -140,6 +140,10 @@ public:
 
     static SwGraphicsPipelineBundle& getPipelineBundleById(std::uint32_t pipelineId) { return sMaterialPipelineBundles.at(pipelineId); }
 
+    static vk::ShaderModule getGeometryVertexShaderModule();
+    static vk::ShaderModule getOpaqueMaskedFragmentShaderModule();
+    static vk::PipelineLayout getOpaquePipelineLayoutHandle() { return sOpaquePipelineLayout.getHandle(); }
+
     inline fastgltf::AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
     inline Type getType() { return getMaterialTypeFromAlphaMode(mMaterialPipelineOptions.alphaMode); }
 

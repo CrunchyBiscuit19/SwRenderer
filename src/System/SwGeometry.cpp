@@ -67,7 +67,69 @@ void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::opti
     }
 }
 
-void SwGeometry::System::initializeResources() {}
+void SwGeometry::System::initializeResources() {
+    SwGraphicsPipelineFactory::SwGraphicsPipelineOptions zPassOptions;
+    zPassOptions.mVertexShader = SwMaterial::getGeometryVertexShaderModule();
+    zPassOptions.mLayout = SwMaterial::getOpaquePipelineLayoutHandle();
+    zPassOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
+    zPassOptions.mPolygonMode = vk::PolygonMode::eFill;
+    zPassOptions.mCullMode = vk::CullModeFlagBits::eBack; // Not technically correct but close enough for most assets
+    zPassOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
+    zPassOptions.mMultisamplingEnabled = false;
+    zPassOptions.mSampleShadingEnabled = false;
+    zPassOptions.mColorAttachments = {};
+    zPassOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;
+    zPassOptions.mDepthTestEnabled = true;
+    zPassOptions.mDepthWriteEnabled = true;
+    zPassOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+
+    zPassOptions.mFragmentShader = std::nullopt;
+    mResources.mZPassOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("GeometryZPassOpaquePipeline", zPassOptions);
+
+    zPassOptions.mFragmentShader = SwMaterial::getOpaqueMaskedFragmentShaderModule();
+    zPassOptions.mFragmentEntryPoint = std::string(SwGeometry::Resources::ZPASS_MASKED_ENTRY_POINT);
+    mResources.mZPassMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("GeometryZPassMaskedPipeline", zPassOptions);
+}
+
+void SwGeometry::System::drawZBatches(vk::CommandBuffer cmd, SwGraphicsPipelineBundle& pipeline, SwMaterial::Type matType, bool bindMaterialSets) {
+    SwAllocatedBuffer& rcsBuffer = mScene.getSceneLateRcsBuffer();
+    SwAllocatedBuffer& rcsCount = mScene.getSceneLateRcsCount();
+
+    for (auto& batch : mScene.getBatchIt({matType})) {
+        if (batch.getRcsSize() == 0) continue;
+
+        // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
+        mResources.mDrawPushConstants.mSceneRcsBuffer = rcsBuffer.getDeviceAddress().value() + batch.getRcsIndex() * sizeof(SwRenderCommand);
+
+        cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+        SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
+
+        cmd.bindIndexBuffer(mScene.getSceneIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
+
+        if (bindMaterialSets) {
+            cmd.bindDescriptorSets(
+                pipeline.getBindPoint(),
+                pipeline.getLayoutHandle(),
+                0,
+                {mScene.getSceneMaterialSamplersDescriptorSet().getHandle(), mScene.getSceneMaterialTexturesDescriptorSet().getHandle()},
+                nullptr
+            );
+        }
+
+        cmd.pushConstants<SwGeometry::DrawPC>(pipeline.getLayoutHandle(), SwGeometry::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+
+        cmd.drawIndexedIndirectCount(
+            rcsBuffer.getHandle(),
+            batch.getRcsIndex() * sizeof(SwRenderCommand),
+            rcsCount.getHandle(),
+            batch.getBatchIndex() * sizeof(std::uint32_t),
+            static_cast<std::uint32_t>(batch.getRcsSize()),
+            sizeof(SwRenderCommand)
+        );
+
+        SwRenderer::sRendererContext.mStats->mNumDrawCall++;
+    }
+}
 
 void SwGeometry::System::initializePasses() {
     // EarlyOpaque / LateOpaque / Masked all render to the draw image with the standard opaque setup.
@@ -83,6 +145,15 @@ void SwGeometry::System::initializePasses() {
             cmd.endRendering();
         });
     }
+
+    // Depth pre-pass draw the newly-visible (late-cull) non-transparent geometry into the depth image only.
+    mScene.insertPass(SwPass::Type::GeometryZPass, [&](vk::CommandBuffer cmd) {
+        vk::RenderingAttachmentInfo depth = SwRenderer::sRendererContext.mSwapchain->getDepthImage().generateRenderingAttachment();
+        cmd.beginRendering(SwPass::generateRenderingInfo(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D(), {}, depth));
+        drawZBatches(cmd, mResources.mZPassOpaquePipelineBundle, SwMaterial::Type::Opaque, false);
+        drawZBatches(cmd, mResources.mZPassMaskedPipelineBundle, SwMaterial::Type::Mask, true);
+        cmd.endRendering();
+    });
 
     // Transparent renders into the WBOIT accum/reveal targets instead of the draw image.
     mScene.insertPass(SwPass::Type::GeometryTransparent, [&](vk::CommandBuffer cmd) {
@@ -145,6 +216,21 @@ void SwGeometry::System::refreshDependencies() {
     build(SwPass::Type::GeometryLateOpaque, SwMaterial::Type::Opaque, false, false);
     build(SwPass::Type::GeometryMasked, SwMaterial::Type::Mask, false, false);
     build(SwPass::Type::GeometryTransparent, SwMaterial::Type::Transparent, false, true);
+
+    SwDependency& d = mScene.mPasses[SwPass::Type::GeometryZPass].getDeps();
+    d.clear();
+    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+    d.mReadBuffers.emplace_back(&mScene.getSceneVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    d.mReadBuffers.emplace_back(&mScene.getSceneMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+    d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+    d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+    d.mReadBuffers.emplace_back(&mScene.getSceneRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+    d.mReadBuffers.emplace_back(
+        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+    );
+    d.mReadBuffers.emplace_back(&mScene.getSceneIndexBuffer(), SwDependency::BufferDepType::IndexRead);
+    d.mReadBuffers.emplace_back(&mScene.getSceneLateRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
+    d.mReadBuffers.emplace_back(&mScene.getSceneLateRcsCount(), SwDependency::BufferDepType::IndirectRead);
 }
 
 void SwGeometry::System::refreshPushConstants() {

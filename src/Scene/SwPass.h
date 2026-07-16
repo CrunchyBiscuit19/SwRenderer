@@ -22,6 +22,7 @@ public:
         CullLateTest,
         CullLateCompact,
         CullPublishCount,
+        GeometryZPass,
         LightingReset,
         LightingClustersBuild,
         LightingClustersMarkActive,
