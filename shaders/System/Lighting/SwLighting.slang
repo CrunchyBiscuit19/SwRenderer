@@ -41,7 +41,7 @@ namespace SwLighting {
     };
 
     public struct ClustersMarkActivePC {
-        public SwFrame::Data* mFrameBuffer;    
+        public SwFrame::Data* mFrameBuffer;
         public Cluster* mClustersBuffer;
         public uint8_t* mClustersActiveBooleansBuffer;
     };
@@ -114,6 +114,13 @@ namespace SwLighting {
     public struct CSInput {
         public uint3 mDispatchThreadID : SV_DispatchThreadID;
     };
+
+    public float3 screenToView(float4x4 invProj, float2 screenPixel, float ndcZ, uint2 targetSize) {
+        float2 uv = screenPixel / float2(targetSize);
+        float4 clip = float4(uv * 2.f - 1.f, ndcZ, 1.f);  // Vulkan NDC y-down matches top-down pixels, no extra flip
+        float4 view = mul(invProj, clip);
+        return view.xyz / view.w;
+    }
 
     // Resolve punctual light's world-space transform and return Cook-Torrance contribution 
     // Point: Inverse-square + range falloff, Spot: Cone falloff.

@@ -236,6 +236,7 @@ void SwLighting::System::initializePasses() {
             SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
             SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
         );
+        glm::perspectiveRH_ZO
     });
 
     // Clusters Mark Active
@@ -369,6 +370,7 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mClustersBuildPc.mTargetSize =
         glm::uvec2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().width, SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().height);
 
+    mResources.mClustersMarkActivePc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mClustersMarkActivePc.mClustersBuffer = mResources.mClustersBuffer.getDeviceAddress().value();
     mResources.mClustersMarkActivePc.mClustersActiveBooleansBuffer = mResources.mClustersActiveBooleansBuffer.getDeviceAddress().value();
 
