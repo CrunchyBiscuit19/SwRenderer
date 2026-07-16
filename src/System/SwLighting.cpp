@@ -236,7 +236,6 @@ void SwLighting::System::initializePasses() {
             SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
             SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
         );
-        glm::perspectiveRH_ZO
     });
 
     // Clusters Mark Active
@@ -254,7 +253,18 @@ void SwLighting::System::initializePasses() {
     });
 
     // Clusters Compact Active
-    mScene.insertPass(SwPass::Type::LightingClustersCompactActive, [&](vk::CommandBuffer cmd) {});
+    mScene.insertPass(SwPass::Type::LightingClustersCompactActive, [&](vk::CommandBuffer cmd) {
+        auto& clustersCompactActivePipeline = mResources.mClustersCompactActivePipelineBundle;
+        cmd.bindPipeline(clustersCompactActivePipeline.getBindPoint(), clustersCompactActivePipeline.getPipelineHandle());
+        cmd.pushConstants<SwLighting::ClustersCompactActivePC>(
+            clustersCompactActivePipeline.getLayoutHandle(), SwLighting::ClustersCompactActivePC::sStages, 0, mResources.mClustersCompactActivePc
+        );
+        cmd.dispatch(
+            SwHelper::fastDivCeil(LIGHTING_NUM_CLUSTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS),
+            1,
+            1
+        );    
+    });
 
     // Clusters Cull
     mScene.insertPass(SwPass::Type::LightingClustersCull, [&](vk::CommandBuffer cmd) {});

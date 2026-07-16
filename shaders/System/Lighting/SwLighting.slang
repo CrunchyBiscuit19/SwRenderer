@@ -19,7 +19,7 @@ namespace SwLighting {
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
     public static const uint3 CLUSTERS_DIMENSIONS = uint3(16,9,24);
-    public static const uint NUM_CLUSTERS = 3456;
+    public static const uint NUM_CLUSTERS = CLUSTERS_DIMENSIONS.x * CLUSTERS_DIMENSIONS.y * CLUSTERS_DIMENSIONS.z;
 
     public struct Cluster {
         public float3 mMin;
@@ -114,13 +114,6 @@ namespace SwLighting {
     public struct CSInput {
         public uint3 mDispatchThreadID : SV_DispatchThreadID;
     };
-
-    public float3 screenToView(float4x4 invProj, float2 screenPixel, float ndcZ, uint2 targetSize) {
-        float2 uv = screenPixel / float2(targetSize);
-        float4 clip = float4(uv * 2.f - 1.f, ndcZ, 1.f);  // Vulkan NDC y-down matches top-down pixels, no extra flip
-        float4 view = mul(invProj, clip);
-        return view.xyz / view.w;
-    }
 
     // Resolve punctual light's world-space transform and return Cook-Torrance contribution 
     // Point: Inverse-square + range falloff, Spot: Cone falloff.

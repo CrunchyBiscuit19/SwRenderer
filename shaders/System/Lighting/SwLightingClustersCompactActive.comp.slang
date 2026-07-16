@@ -6,5 +6,13 @@ SwLighting::ClustersCompactActivePC clustersCompactActivePc;
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
-    // TODO implement active cluster marking from the depth buffer
+    uint clusterBooleanIndex = in.mDispatchThreadID.x;
+
+    bool clusterActive = (bool)clustersCompactActivePc.mClustersActiveBooleansBuffer[clusterBooleanIndex];
+    if (!clusterActive) return;
+
+    uint clusterIndicesIndex; 
+    InterlockedAdd(*clustersCompactActivePc.mClustersActiveCount, 1, clusterIndicesIndex);
+
+    clustersCompactActivePc.mClustersActiveIndicesBuffer[clusterIndicesIndex] = clusterBooleanIndex;
 }

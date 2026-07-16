@@ -39,7 +39,7 @@ static constexpr std::uint32_t LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::Format LIGHTING_SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
 static constexpr glm::uvec3 LIGHTING_CLUSTERS_DIMENSIONS{16, 9, 24};
-static constexpr std::uint32_t LIGHTING_NUM_CLUSTERS{3456};
+static constexpr std::uint32_t LIGHTING_NUM_CLUSTERS{LIGHTING_CLUSTERS_DIMENSIONS.x * LIGHTING_CLUSTERS_DIMENSIONS.y * LIGHTING_CLUSTERS_DIMENSIONS.z};
 
 struct Cluster {
     glm::vec3 mMin{0};

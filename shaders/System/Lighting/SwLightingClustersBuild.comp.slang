@@ -4,6 +4,13 @@ import Data.SwConstants;
 [[vk::push_constant]]
 SwLighting::ClustersBuildPC clustersBuildPc;
 
+float3 screenToView(float4x4 invProj, float2 screenPixel, float ndcZ, uint2 targetSize) {
+    float2 uv = screenPixel / float2(targetSize);
+    float4 clip = float4(uv * 2.f - 1.f, ndcZ, 1.f);  // Vulkan NDC y-down matches top-down pixels, no extra flip
+    float4 view = mul(invProj, clip);
+    return view.xyz / view.w;
+}
+
 float3 lineIntersectionToZPlane(float3 eyePos, float3 viewPoint, float tileZ) {
     float3 dir = viewPoint - eyePos;
     float t = (tileZ - eyePos.z) / dir.z;  // plane normal is (0, 0, 1)
@@ -26,8 +33,8 @@ void main(SwLighting::CSInput in) {
     float2 maxPointScreen = (in.mDispatchThreadID.xy + float2(1.f)) * tileSize;
 
     // Pass min and max to view space
-    float3 maxPointView = SwLighting::screenToView(clustersBuildPc.mInvProj, maxPointScreen, 1.f, clustersBuildPc.mTargetSize);
-    float3 minPointView = SwLighting::screenToView(clustersBuildPc.mInvProj, minPointScreen, 1.f, clustersBuildPc.mTargetSize);
+    float3 maxPointView = screenToView(clustersBuildPc.mInvProj, maxPointScreen, 1.f, clustersBuildPc.mTargetSize);
+    float3 minPointView = screenToView(clustersBuildPc.mInvProj, minPointScreen, 1.f, clustersBuildPc.mTargetSize);
 
     // Near and far values of the cluster in view space
     float zNear     = clustersBuildPc.mFrameBuffer.mCameraBuffer.mPlanes.x;
