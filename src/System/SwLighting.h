@@ -25,6 +25,7 @@ static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SH
 static const std::filesystem::path LIGHTING_CLUSTERS_BUILD_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersBuild.comp.spv"};
 static const std::filesystem::path LIGHTING_CLUSTERS_MARK_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersMarkActive.comp.spv"};
 static const std::filesystem::path LIGHTING_CLUSTERS_COMPACT_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCompactActive.comp.spv"};
+static const std::filesystem::path LIGHTING_LIGHTS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingLightsCull.comp.spv"};
 static const std::filesystem::path LIGHTING_CLUSTERS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCull.comp.spv"};
 static const std::filesystem::path LIGHTING_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingReset.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsCull.comp.spv"};
@@ -38,24 +39,20 @@ static constexpr std::uint64_t LIGHTING_INITIAL_SHADOWS_RENDER_ITEMS_INDICES_BUF
 static constexpr std::uint32_t LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::Format LIGHTING_SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
-static constexpr glm::uvec3 LIGHTING_CLUSTERS_DIMENSIONS{16, 9, 24};
-static constexpr std::uint32_t LIGHTING_NUM_CLUSTERS{LIGHTING_CLUSTERS_DIMENSIONS.x * LIGHTING_CLUSTERS_DIMENSIONS.y * LIGHTING_CLUSTERS_DIMENSIONS.z};
+static constexpr std::uint64_t LIGHTING_INITIAL_LIT_INDICES_BUFFER_SIZE{(1 + 1 << 5) * sizeof(std::uint32_t)};
+static constexpr std::uint64_t LIGHTING_INITIAL_SHADOW_CAST_INDICES_BUFFER_SIZE{(1 + MAX_NUM_SHADOW_CASTERS) * sizeof(std::uint32_t)};
 
 struct Cluster {
     glm::vec3 mMin{0};
     glm::vec3 mMax{0};
 };
 
+static constexpr glm::uvec3 LIGHTING_CLUSTERS_DIMENSIONS{16, 9, 24};
+static constexpr std::uint32_t LIGHTING_NUM_CLUSTERS{LIGHTING_CLUSTERS_DIMENSIONS.x * LIGHTING_CLUSTERS_DIMENSIONS.y * LIGHTING_CLUSTERS_DIMENSIONS.z};
 static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(Cluster)};
 static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(bool)};
 static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(std::uint32_t)};
 
-struct LightsInfo {
-    std::uint32_t mLitCount{0};
-    vk::DeviceAddress mLitIndices{0};
-    std::uint32_t mShadowCastCount{0};
-    vk::DeviceAddress mShadowCastIndices{0};
-};
 
 struct ResetPC : SwPC<ResetPC> {
     vk::DeviceAddress mShadowsRcsBuffer{0};
@@ -89,10 +86,21 @@ struct ClustersCompactActivePC : SwPC<ClustersCompactActivePC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
+struct LightsCullPC : SwPC<LightsCullPC> {
+    vk::DeviceAddress mFrameBuffer;
+    vk::DeviceAddress mSceneLightsBuffer{0};
+    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
+    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mLitIndicesBuffer{0};
+    vk::DeviceAddress mShadowCastsIndicesBuffer{0};
+    std::uint32_t mLightsCount{0};
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
 struct ClustersCullPC : SwPC<ClustersCullPC> {
     vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mSceneLightsBuffer{0};
-    vk::DeviceAddress mSceneLightsInfoBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
@@ -105,7 +113,6 @@ struct ShadowsCullPC : SwPC<ShadowsCullPC> {
     vk::DeviceAddress mShadowsRisBuffer{0};
     vk::DeviceAddress mShadowsRisIndicesBuffer{0};
     vk::DeviceAddress mSceneLightsBuffer{0};
-    vk::DeviceAddress mSceneLightsInfoBuffer{0};
     vk::DeviceAddress mSceneBoundsBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
@@ -118,7 +125,6 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {  // MRTs then select the light's shad
     vk::DeviceAddress mShadowsRcsBuffer{0};
     vk::DeviceAddress mShadowsRisIndicesBuffer{0};
     vk::DeviceAddress mSceneLightsBuffer{0};
-    vk::DeviceAddress mSceneLightsInfoBuffer{0};
     vk::DeviceAddress mSceneVertexBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
     vk::DeviceAddress mSceneInstancesBuffer{0};
@@ -138,6 +144,8 @@ struct Resources {
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
+    SwAllocatedBuffer mLitIndicesBuffer;
+    SwAllocatedBuffer mShadowCastsIndicesBuffer;
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
 
@@ -163,6 +171,10 @@ struct Resources {
     ClustersCompactActivePC mClustersCompactActivePc;
     SwPipelineLayout mClustersCompactActivePipelineLayout;
     SwComputePipelineBundle mClustersCompactActivePipelineBundle;
+
+    LightsCullPC mLightsCullPc;
+    SwPipelineLayout mLightsCullPipelineLayout;
+    SwComputePipelineBundle mLightsCullPipelineBundle;
 
     ClustersCullPC mClustersCullPc;
     SwPipelineLayout mClustersCullPipelineLayout;

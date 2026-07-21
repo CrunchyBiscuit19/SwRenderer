@@ -27,6 +27,7 @@ public:
         LightingClustersBuild,
         LightingClustersMarkActive,
         LightingClustersCompactActive,
+        LightingLightsCull,
         LightingClustersCull,
         LightingShadowsCull,
         LightingShadowsDraw,

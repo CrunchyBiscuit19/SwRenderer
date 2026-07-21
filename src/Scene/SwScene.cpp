@@ -110,9 +110,6 @@ void SwScene::initializeResources() {
     );
     mSceneLightsBuffer =
         SwBufferFactory::createAllocatedBuffer("SceneLightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_BUFFER_SIZE, true);
-    mSceneLightsInfoBuffer = SwBufferFactory::createAllocatedBuffer(
-        "SceneLightsInfosBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SCENE_INITIAL_LIGHTS_INFO_BUFFER_SIZE, true
-    );
 
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
@@ -418,10 +415,10 @@ void SwScene::reloadSceneRcsAndRisBuffers() {
             pending.mRc.mRiCount = 0;  // Render item count starts at zero and is incremented inside the culling compute shader.
             pending.mRc.mBatchIndex = batchIndex;
             mRcs.emplace_back(pending.mRc);
-            for (std::uint32_t i = 0; i < pending.mInstanceCount; i++) {
+            for (std::uint32_t i = 0; i < pending.mNumInstance; i++) {
                 mRis.emplace_back(rcIndex, pending.mRc.mFirstInstance + i);
             }
-            SwBatch::sFirstRiOffset += pending.mInstanceCount;
+            SwBatch::sFirstRiOffset += pending.mNumInstance;
         }
 
         mBatches[materialType].try_emplace(

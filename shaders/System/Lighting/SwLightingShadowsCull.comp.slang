@@ -77,7 +77,7 @@ void main(SwLighting::CSInput in) {
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
     uint activeLightIndex = 0;  // TODO: source the per-dispatch shadow-caster index once the cull dispatch is rebuilt
-    uint sceneLightsIndex = shadowsCullPc.mSceneLightsInfoBuffer->mLitIndices[activeLightIndex];
+    uint sceneLightsIndex = activeLightIndex;  // TODO: map the shadow-caster slot to its scene light index
     SwLight::Data* light = &shadowsCullPc.mSceneLightsBuffer[sceneLightsIndex];
     float4x4 lightNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[light->mNodeTransformIndex]; 
     float4x4 lightInstanceTransform = shadowsCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
@@ -89,7 +89,7 @@ void main(SwLighting::CSInput in) {
 
     bool visible = true;
     if (light->mType == SwLight::Type::Spot) {
-        //SwFrustum frustumData = shadowsCullPc.mSceneLightsInfoBuffer->mActiveLightFrustums[activeLightIndex];
+        //SwFrustum frustumData = ...;  // TODO: source the rebuilt per-light frustum
         //visible = frustumTest(frustumData, corners);
     }
     if (visible && light->mType != SwLight::Type::Directional) {

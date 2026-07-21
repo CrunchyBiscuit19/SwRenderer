@@ -54,16 +54,12 @@ void SwRenderGraph::pruneUnreachablePasses() {
         if (p->isMustRun()) visit(p);
     }
 
-    // For each enqueued pass:
-    //   (a) Follow read dependencies backward to whichever passes produce those reads.
-    //   (b) Follow write dependencies to pull in earlier co-writers of the same resource
-    //       (W→W chain) — ensures initialization / clear passes are not mistakenly pruned
-    //       even when no downstream pass explicitly reads from them.
+    // Follow read backward to whichever passes produce those reads.
+    // Follow write to pull in earlier co-writers of the same resource
     while (!work.empty()) {
         SwPass* p = work.front();
         work.pop();
 
-        // (a) Read-dep backward walk
         for (const SwDependency* deps : {&p->getDeps()}) {
             for (auto& dep : deps->mReadImages) {
                 if (auto it = imageWriters.find(dep.mImage); it != imageWriters.end()) {
@@ -76,7 +72,6 @@ void SwRenderGraph::pruneUnreachablePasses() {
                 }
             }
 
-            // (b) Earlier co-writer inclusion (W→W)
             const std::size_t pIdx = passIndex.at(p);
             for (auto& dep : deps->mWriteImages) {
                 if (auto it = imageWriters.find(dep.mImage); it != imageWriters.end()) {
@@ -124,9 +119,6 @@ void SwRenderGraph::sortTopological() {
     }
 
     // Set-based adjacency prevents duplicate edges from being counted multiple times.
-    // W→R, R→W, and W→W edges can all connect the same pair of passes via the same
-    // resource; storing them in a set ensures inDegree is only incremented once per
-    // unique directed edge, keeping Kahn's algorithm and cycle detection accurate.
     std::unordered_map<SwPass*, std::unordered_set<SwPass*>> adj;
     std::unordered_map<SwPass*, int> inDegree;
     for (SwPass* p : mSortedPasses) inDegree[p] = 0;
@@ -165,8 +157,7 @@ void SwRenderGraph::sortTopological() {
     }
 
     // W→W: order concurrent writers by registration index (earlier write before later write).
-    // Iterate each unordered pair once (j > i) and try both directions; addEdge keeps only
-    // the one going from lower to higher regIndex.
+    // Iterate each unordered pair once (j > i) and try both directions
     for (auto& [img, writers] : imageWriters) {
         for (std::size_t i = 0; i < writers.size(); ++i) {
             for (std::size_t j = i + 1; j < writers.size(); ++j) {

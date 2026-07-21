@@ -48,6 +48,11 @@ void SwLighting::System::regenerateShadowsRcs() {
 }
 
 void SwLighting::System::initializeResources() {
+    mResources.mLitIndicesBuffer =
+        SwBufferFactory::createAllocatedBuffer("LitIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_LIT_INDICES_BUFFER_SIZE, true);
+    mResources.mShadowCastsIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ShadowCastsIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_SHADOW_CAST_INDICES_BUFFER_SIZE, true
+    );
     mResources.mShadowsRcsBuffer = SwBufferFactory::createAllocatedBuffer(
         "ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_SHADOWS_RENDER_COMMANDS_BUFFER_SIZE, true
     );
@@ -169,6 +174,13 @@ void SwLighting::System::initializeResources() {
         "ClustersCompactActivePipeline", {clustersCompactActiveShader.getHandle(), mResources.mClustersCompactActivePipelineLayout.getHandle()}
     );
 
+    mResources.mLightsCullPipelineLayout = SwPipelineFactory::createPipelineLayout("LightsCullPipelineLayout", nullptr, SwLighting::LightsCullPC::getRange());
+    SwShader lightsCullShader =
+        SwShaderFactory::createShader("LightsCullShaderModule", SwLighting::LIGHTING_LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mLightsCullPipelineBundle = SwComputePipelineFactory::createComputePipeline(
+        "ClustersCullPipeline", {lightsCullShader.getHandle(), mResources.mLightsCullPipelineLayout.getHandle()}
+    );
+
     mResources.mClustersCullPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ClustersCullPipelineLayout", nullptr, SwLighting::ClustersCullPC::getRange());
     SwShader clustersCullShader =
@@ -215,6 +227,7 @@ void SwLighting::System::initializePasses() {
     // Reset
     mScene.insertPass(SwPass::Type::LightingReset, [&](vk::CommandBuffer cmd) {
         cmd.fillBuffer(mResources.mShadowsRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mResources.mLitIndicesBuffer.getHandle(), 0, sizeof(std::uint32_t), 0);
         cmd.fillBuffer(mResources.mClustersActiveBooleansBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveIndicesBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveCount.getHandle(), 0, vk::WholeSize, 0);
@@ -259,11 +272,15 @@ void SwLighting::System::initializePasses() {
         cmd.pushConstants<SwLighting::ClustersCompactActivePC>(
             clustersCompactActivePipeline.getLayoutHandle(), SwLighting::ClustersCompactActivePC::sStages, 0, mResources.mClustersCompactActivePc
         );
-        cmd.dispatch(
-            SwHelper::fastDivCeil(LIGHTING_NUM_CLUSTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS),
-            1,
-            1
-        );    
+        cmd.dispatch(SwHelper::fastDivCeil(LIGHTING_NUM_CLUSTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+    });
+
+    // Lights Cull
+    mScene.insertPass(SwPass::Type::LightingLightsCull, [&](vk::CommandBuffer cmd) {
+        auto& lightsCullPipeline = mResources.mLightsCullPipelineBundle;
+        cmd.bindPipeline(lightsCullPipeline.getBindPoint(), lightsCullPipeline.getPipelineHandle());
+        cmd.pushConstants<SwLighting::LightsCullPC>(lightsCullPipeline.getLayoutHandle(), SwLighting::LightsCullPC::sStages, 0, mResources.mLightsCullPc);
+        cmd.dispatch(SwHelper::fastDivCeil(mScene.getLightIds().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
     // Clusters Cull
@@ -291,6 +308,7 @@ void SwLighting::System::refreshDependencies() {
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingReset].getDeps();
         d.clear();
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveBooleansBuffer, SwDependency::BufferDepType::TransferWrite);
@@ -326,6 +344,22 @@ void SwLighting::System::refreshDependencies() {
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
     }
 
+    // Lights Cull
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::LightingLightsCull].getDeps();
+        d.clear();
+        d.mReadBuffers.emplace_back(
+            &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
+        );
+        d.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mReadBuffers.emplace_back(&mResources.mShadowCastsIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowCastsIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
+    }
+
     // Clusters Cull
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersCull].getDeps();
@@ -336,7 +370,6 @@ void SwLighting::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mWriteBuffers.emplace_back(&mScene.getSceneLightsInfoBuffer(), SwDependency::BufferDepType::ComputeStorageWrite);
     }
 
     // Shadows Cull
@@ -346,7 +379,6 @@ void SwLighting::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
-        d.mReadBuffers.emplace_back(&mScene.getSceneLightsInfoBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getSceneNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
@@ -388,16 +420,22 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mClustersCompactActivePc.mClustersActiveIndicesBuffer = mResources.mClustersActiveIndicesBuffer.getDeviceAddress().value();
     mResources.mClustersCompactActivePc.mClustersActiveCount = mResources.mClustersActiveCount.getDeviceAddress().value();
 
+    mResources.mLightsCullPc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
+    mResources.mLightsCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
+    mResources.mLightsCullPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mLightsCullPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
+    mResources.mLightsCullPc.mLitIndicesBuffer = mResources.mLitIndicesBuffer.getDeviceAddress().value();
+    mResources.mLightsCullPc.mShadowCastsIndicesBuffer = mResources.mShadowCastsIndicesBuffer.getDeviceAddress().value();
+    mResources.mLightsCullPc.mLightsCount = SwRenderer::sRendererContext.mScene->getLightIds().size();
+
     mResources.mClustersCullPc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mClustersCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mClustersCullPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
     mResources.mClustersCullPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mClustersCullPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
 
     mResources.mShadowsCullPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer.getDeviceAddress().value();
     mResources.mShadowsCullPc.mShadowsRisIndicesBuffer = mResources.mShadowsRisIndicesBuffer.getDeviceAddress().value();
     mResources.mShadowsCullPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mShadowsCullPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
     mResources.mShadowsCullPc.mSceneBoundsBuffer = SwRenderer::sRendererContext.mScene->getSceneBoundsBuffer().getDeviceAddress().value();
     mResources.mShadowsCullPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mShadowsCullPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();
@@ -406,7 +444,6 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mShadowsDrawPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer.getDeviceAddress().value();
     mResources.mShadowsDrawPc.mShadowsRisIndicesBuffer = mResources.mShadowsRisIndicesBuffer.getDeviceAddress().value();
     mResources.mShadowsDrawPc.mSceneLightsBuffer = SwRenderer::sRendererContext.mScene->getSceneLightsBuffer().getDeviceAddress().value();
-    mResources.mShadowsDrawPc.mSceneLightsInfoBuffer = mScene.getSceneLightsInfoBuffer().getDeviceAddress().value();
     mResources.mShadowsDrawPc.mSceneVertexBuffer = SwRenderer::sRendererContext.mScene->getSceneVertexBuffer().getDeviceAddress().value();
     mResources.mShadowsDrawPc.mSceneNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getSceneNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mShadowsDrawPc.mSceneInstancesBuffer = SwRenderer::sRendererContext.mScene->getSceneInstancesBuffer().getDeviceAddress().value();

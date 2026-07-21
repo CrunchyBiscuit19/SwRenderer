@@ -64,7 +64,7 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
         in.mWorldPos,
         normal,
         view,
-        drawPc.mSceneLightsInfoBuffer,
+        drawPc.mSceneLitIndicesBuffer,
         drawPc.mSceneLightsBuffer,
         drawPc.mSceneInstancesBuffer,
         drawPc.mSceneNodeTransformsBuffer,

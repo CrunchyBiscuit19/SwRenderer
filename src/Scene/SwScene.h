@@ -70,7 +70,7 @@ private:
         SwRenderCommand mRc;
         SwMaterial::Type mMaterialType{SwMaterial::Type::Opaque};
         std::uint32_t mPipelineId{0};
-        std::uint32_t mInstanceCount{0};
+        std::uint32_t mNumInstance{0};
     };
     std::vector<PendingRenderCommand> mPendingRcs;
 
@@ -104,7 +104,6 @@ private:
     SwAllocatedBuffer mSceneRisIndicesBuffer;
     SwAllocatedBuffer mSceneBatchesBuffer;
     SwAllocatedBuffer mSceneLightsBuffer;
-    SwAllocatedBuffer mSceneLightsInfoBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -135,7 +134,6 @@ public:
     static constexpr std::size_t SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(std::uint32_t)};
     static constexpr std::size_t SCENE_INITIAL_BATCHES_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(SwBatch::Data)};
     static constexpr std::size_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
-    static constexpr std::size_t SCENE_INITIAL_LIGHTS_INFO_BUFFER_SIZE{(1 << 6) * sizeof(SwLighting::LightsInfo)};
 
     Flags mFlags;
 
@@ -187,7 +185,6 @@ public:
     inline SwAllocatedBuffer& getSceneRisBuffer() { return mSceneRisBuffer; }
     inline SwAllocatedBuffer& getSceneBatchesBuffer() { return mSceneBatchesBuffer; }
     inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
-    inline SwAllocatedBuffer& getSceneLightsInfoBuffer() { return mSceneLightsInfoBuffer; }
 
     inline SwInput::System& getInputSystem() { return mInput; }
     inline SwCull::System& getCullSystem() { return mCull; }

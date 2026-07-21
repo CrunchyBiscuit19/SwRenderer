@@ -27,7 +27,7 @@ namespace SwGeometry {
         public SwRenderCommand* mSceneRcsBuffer;
         public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mSceneLightsBuffer;
-        public SwLighting::LightsInfo* mSceneLightsInfoBuffer;
+        public uint* mSceneLitIndicesBuffer;
         public float mMaxPrefilterMipLevel;
         public float mIblIntensity;
         public uint mIblComponents;
