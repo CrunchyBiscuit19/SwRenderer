@@ -28,7 +28,7 @@ public:
         LightingClustersMarkActive,
         LightingClustersCompactActive,
         LightingLightsCull,
-        LightingClustersCull,
+        LightingClustersLightSelect,
         LightingShadowsCull,
         LightingShadowsDraw,
         GeometryLateOpaque,

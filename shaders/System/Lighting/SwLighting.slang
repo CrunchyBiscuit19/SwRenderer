@@ -55,7 +55,7 @@ namespace SwLighting {
         public uint mLightsLimit;
     };
 
-    public struct ClustersCullPC {
+    public struct ClustersLightSelectPC {
         public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mSceneLightsBuffer;
         public SwNode::Transform* mSceneNodeTransformsBuffer;

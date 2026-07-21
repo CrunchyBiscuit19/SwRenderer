@@ -26,7 +26,7 @@ static const std::filesystem::path LIGHTING_CLUSTERS_BUILD_SHADER_PATH{LIGHTING_
 static const std::filesystem::path LIGHTING_CLUSTERS_MARK_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersMarkActive.comp.spv"};
 static const std::filesystem::path LIGHTING_CLUSTERS_COMPACT_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCompactActive.comp.spv"};
 static const std::filesystem::path LIGHTING_LIGHTS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingLightsCull.comp.spv"};
-static const std::filesystem::path LIGHTING_CLUSTERS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCull.comp.spv"};
+static const std::filesystem::path LIGHTING_CLUSTERS_LIGHT_SELECT_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersLightSelect.comp.spv"};
 static const std::filesystem::path LIGHTING_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingReset.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsCull.comp.spv"};
 static const std::filesystem::path LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsDraw.vert.spv"};
@@ -98,7 +98,7 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct ClustersCullPC : SwPC<ClustersCullPC> {
+struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mSceneLightsBuffer{0};
     vk::DeviceAddress mSceneNodeTransformsBuffer{0};
@@ -176,9 +176,9 @@ struct Resources {
     SwPipelineLayout mLightsCullPipelineLayout;
     SwComputePipelineBundle mLightsCullPipelineBundle;
 
-    ClustersCullPC mClustersCullPc;
-    SwPipelineLayout mClustersCullPipelineLayout;
-    SwComputePipelineBundle mClustersCullPipelineBundle;
+    ClustersLightSelectPC mClustersLightSelectPc;
+    SwPipelineLayout mClustersLightSelectPipelineLayout;
+    SwComputePipelineBundle mClustersLightSelectPipelineBundle;
 
     ShadowsCullPC mShadowsCullPc;
     SwPipelineLayout mShadowsCullPipelineLayout;
