@@ -176,13 +176,13 @@ void SwCull::System::initializeLatePasses() {
 void SwCull::System::initializeResources() {
     // Reset*
     mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("CullResetPipelineLayout", nullptr, SwCull::ResetPC::getRange());
-    SwShader resetShader = SwShaderFactory::createShader("CullResetShaderModule", CULL_RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader resetShader = SwShaderFactory::createShader("CullResetShaderModule", RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mResetPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("CullResetPipeline", {resetShader.getHandle(), mResources.mResetPipelineLayout.getHandle()});
 
     // Compact*
     mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout("CullCompactPipelineLayout", nullptr, SwCull::CompactPC::getRange());
-    SwShader compactShader = SwShaderFactory::createShader("CullCompactShaderModule", CULL_COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader compactShader = SwShaderFactory::createShader("CullCompactShaderModule", COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mCompactPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("CullCompactPipeline", {compactShader.getHandle(), mResources.mCompactPipelineLayout.getHandle()});
 
@@ -190,8 +190,8 @@ void SwCull::System::initializeResources() {
     mResources.mPrepOcclusionDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "CullPrepOcclusionDescriptorSetLayout",
         {{0, vk::DescriptorType::eSampledImage, 1},
-         {1, vk::DescriptorType::eSampledImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
-         {2, vk::DescriptorType::eStorageImage, CULL_MAX_DEPTH_PYRAMID_LEVELS},
+         {1, vk::DescriptorType::eSampledImage, MAX_DEPTH_PYRAMID_LEVELS},
+         {2, vk::DescriptorType::eStorageImage, MAX_DEPTH_PYRAMID_LEVELS},
          {3, vk::DescriptorType::eSampler, 1}},
         vk::ShaderStageFlagBits::eCompute
     );
@@ -215,7 +215,7 @@ void SwCull::System::initializeResources() {
         "CullPrepOcclusionPipelineLayout", mResources.mPrepOcclusionDescriptorLayout.getHandle(), SwCull::PrepOcclusionPC::getRange()
     );
     SwShader depthPyramidShader =
-        SwShaderFactory::createShader("CullPrepOcclusionShaderModule", CULL_PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwShaderFactory::createShader("CullPrepOcclusionShaderModule", PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mPrepOcclusionPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "CullPrepOcclusionPipeline", {depthPyramidShader.getHandle(), mResources.mPrepOcclusionPipelineLayout.getHandle()}
     );
@@ -242,7 +242,7 @@ void SwCull::System::initializeResources() {
 
     mResources.mTestPipelineLayout =
         SwPipelineFactory::createPipelineLayout("CullTestPipelineLayout", mResources.mTestDescriptorLayout.getHandle(), SwCull::TestPC::getRange());
-    SwShader testShader = SwShaderFactory::createShader("CullTestShaderModule", CULL_TEST_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader testShader = SwShaderFactory::createShader("CullTestShaderModule", TEST_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mTestPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("CullTestPipeline", {testShader.getHandle(), mResources.mTestPipelineLayout.getHandle()});
 
@@ -407,7 +407,7 @@ void SwCull::System::reInitializeOnResize() {
     mResources.mPrepOcclusionDescriptorSet.writeImage(
         0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
-    for (std::uint32_t i = 0; i < CULL_MAX_DEPTH_PYRAMID_LEVELS; i++) {
+    for (std::uint32_t i = 0; i < MAX_DEPTH_PYRAMID_LEVELS; i++) {
         const std::uint32_t viewIndex = std::min(i, mResources.mDepthPyramidLevels - 1);  // Write over later slots with the last level view
         mResources.mPrepOcclusionDescriptorSet.writeImage(
             1, mResources.mDepthPyramidImage.getOtherImageViewHandle(viewIndex), nullptr, vk::ImageLayout::eGeneral, i

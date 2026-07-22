@@ -73,14 +73,14 @@ void SwIBL::System::initializeResources() {
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLConsumeDescriptorSet", SwIBL::Resources::sConsumeDescriptorLayout);
 
     const vk::ImageUsageFlags iblUsage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
-    mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradianceImage", IBL_FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
-    mResources.mPrefilterImage = SwImageFactory::createColorImage2D("IBLPrefilterImage", IBL_FORMAT, PREFILTER_EXTENT, iblUsage, true);
+    mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradianceImage", FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
+    mResources.mPrefilterImage = SwImageFactory::createColorImage2D("IBLPrefilterImage", FORMAT, PREFILTER_EXTENT, iblUsage, true);
     mResources.mBrdfLutImage = SwImageFactory::createColorImage2D("IBLBrdfLutImage", BRDF_LUT_FORMAT, BRDF_LUT_EXTENT, iblUsage, false);
 
     mPrefilterMipLevels = SwHelper::calculateMipMapLevels(PREFILTER_EXTENT);
     for (std::uint32_t mip = 0; mip < mPrefilterMipLevels; mip++) {
         mResources.mPrefilterImage.addImageView(
-            "IBLPrefilterMip" + std::to_string(mip), IBL_FORMAT, vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, mip, 1
+            "IBLPrefilterMip" + std::to_string(mip), FORMAT, vk::ImageAspectFlagBits::eColor, vk::ImageViewType::e2D, mip, 1
         );
     }
 

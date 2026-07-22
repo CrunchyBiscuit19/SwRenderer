@@ -117,23 +117,23 @@ private:
     void finalPresentTransition(SwCommandBuffer& commandBuffer);
 
 public:
-    static constexpr std::size_t SCENE_INITIAL_VERTEX_BUFFER_SIZE{1ull << 28};
-    static constexpr std::size_t SCENE_INITIAL_INDEX_BUFFER_SIZE{1ull << 28};
-    static constexpr std::size_t SCENE_INITIAL_NUM_MATERIALS{1 << 8};
-    static constexpr std::size_t SCENE_INITIAL_MATERIAL_CONSTANTS_BUFFER_SIZE{SCENE_INITIAL_NUM_MATERIALS * sizeof(SwMaterial::Constant)};
-    static constexpr std::size_t SCENE_INITIAL_NODE_TRANSFORMS_BUFFER_SIZE{(1 << 12) * sizeof(glm::mat4)};
-    static constexpr std::size_t SCENE_INITIAL_INSTANCES_BUFFER_SIZE{(1 << 8) * sizeof(SwInstance::Data)};
-    static constexpr std::size_t SCENE_INITIAL_BOUNDS_BUFFER_SIZE{(1 << 12) * sizeof(SwBounds)};
-    static constexpr std::size_t SCENE_INITIAL_NUM_RENDER_ITEMS{1 << 12};
-    static constexpr std::size_t SCENE_INITIAL_NUM_RENDER_COMMANDS{1 << 10};
-    static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(SwRenderCommand)};
-    static constexpr std::size_t SCENE_INITIAL_RENDER_COMMANDS_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_COMMANDS * sizeof(std::uint32_t)};
-    static constexpr std::size_t SCENE_INITIAL_RENDER_ITEMS_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
-    static constexpr std::size_t SCENE_INITIAL_RENDER_ITEMS_INDICES_BUFFER_SIZE{SCENE_INITIAL_NUM_RENDER_ITEMS * sizeof(std::uint32_t)};
-    static constexpr std::size_t SCENE_INITIAL_NUM_BATCHES{1 << 8};
-    static constexpr std::size_t SCENE_INITIAL_BATCHES_COUNT_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(std::uint32_t)};
-    static constexpr std::size_t SCENE_INITIAL_BATCHES_BUFFER_SIZE{SCENE_INITIAL_NUM_BATCHES * sizeof(SwBatch::Data)};
-    static constexpr std::size_t SCENE_INITIAL_LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
+    static constexpr std::size_t VERTEX_BUFFER_SIZE{1ull << 28};
+    static constexpr std::size_t INDEX_BUFFER_SIZE{1ull << 28};
+    static constexpr std::size_t NUM_MATERIALS{1 << 8};
+    static constexpr std::size_t MATERIAL_CONSTANTS_BUFFER_SIZE{NUM_MATERIALS * sizeof(SwMaterial::Constant)};
+    static constexpr std::size_t NODE_TRANSFORMS_BUFFER_SIZE{(1 << 12) * sizeof(glm::mat4)};
+    static constexpr std::size_t INSTANCES_BUFFER_SIZE{(1 << 8) * sizeof(SwInstance::Data)};
+    static constexpr std::size_t BOUNDS_BUFFER_SIZE{(1 << 12) * sizeof(SwBounds)};
+    static constexpr std::size_t NUM_RENDER_ITEMS{1 << 12};
+    static constexpr std::size_t NUM_RENDER_COMMANDS{1 << 10};
+    static constexpr std::size_t RENDER_COMMANDS_BUFFER_SIZE{NUM_RENDER_COMMANDS * sizeof(SwRenderCommand)};
+    static constexpr std::size_t RENDER_COMMANDS_COUNT_BUFFER_SIZE{NUM_RENDER_COMMANDS * sizeof(std::uint32_t)};
+    static constexpr std::size_t RENDER_ITEMS_BUFFER_SIZE{NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
+    static constexpr std::size_t RENDER_ITEMS_INDICES_BUFFER_SIZE{NUM_RENDER_ITEMS * sizeof(std::uint32_t)};
+    static constexpr std::size_t NUM_BATCHES{1 << 8};
+    static constexpr std::size_t BATCHES_COUNT_BUFFER_SIZE{NUM_BATCHES * sizeof(std::uint32_t)};
+    static constexpr std::size_t BATCHES_BUFFER_SIZE{NUM_BATCHES * sizeof(SwBatch::Data)};
+    static constexpr std::size_t LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
 
     Flags mFlags;
 

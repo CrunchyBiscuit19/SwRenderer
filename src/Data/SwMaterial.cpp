@@ -43,13 +43,13 @@ SwMaterialResources::SwMaterialResources(
 void SwMaterialResources::init() {
     sMaterialSamplersDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "MaterialSamplersDescriptorSetLayout",
-        {{0, vk::DescriptorType::eSampler, SwScene::SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
+        {{0, vk::DescriptorType::eSampler, SwScene::NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         true
     );
     sMaterialTexturesDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "MaterialTexturesDescriptorSetLayout",
-        {{0, vk::DescriptorType::eSampledImage, SwScene::SCENE_INITIAL_NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
+        {{0, vk::DescriptorType::eSampledImage, SwScene::NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES}},
         vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment,
         true
     );
@@ -71,12 +71,12 @@ std::unordered_map<SwMaterialPipelineOptions, std::uint32_t> SwMaterial::sMateri
 std::unordered_map<std::uint32_t, SwGraphicsPipelineBundle> SwMaterial::sMaterialPipelineBundles{};
 SwPipelineLayout SwMaterial::sOpaquePipelineLayout;
 SwPipelineLayout SwMaterial::sTransparentPipelineLayout;
-static const std::filesystem::path GEOMETRY_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Geometry"};
-const std::filesystem::path SwMaterial::GEOMETRY_VERTEX_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometry.vert.spv"};
+static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/Geometry"};
+const std::filesystem::path SwMaterial::VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Geometry.vert.spv"};
 SwShader SwMaterial::sVertexShader;
-const std::filesystem::path SwMaterial::GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometryOpaqueMasked.frag.spv"};
+const std::filesystem::path SwMaterial::OPAQUE_MASKED_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "OpaqueMasked.frag.spv"};
 SwShader SwMaterial::sOpaqueMaskedFragmentShader;
-const std::filesystem::path SwMaterial::GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH{GEOMETRY_SHADERS_DIR / "SwGeometryTransparent.frag.spv"};
+const std::filesystem::path SwMaterial::TRANSPARENT_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Transparent.frag.spv"};
 SwShader SwMaterial::sTransparentFragmentShader;
 
 SwMaterial::SwMaterial(
@@ -106,12 +106,12 @@ void SwMaterial::init() {
         "GeometryTransparentPipelineLayout", SwGeometry::Resources::sGeometrySetLayouts, SwGeometry::DrawPC::getRange()
     );
 
-    sVertexShader = SwShaderFactory::createShader("GeometryVertexShaderModule", GEOMETRY_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    sVertexShader = SwShaderFactory::createShader("GeometryVertexShaderModule", VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     sOpaqueMaskedFragmentShader = SwShaderFactory::createShader(
-        "GeometryOpaqueMaskedFragmentShaderModule", GEOMETRY_OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment
+        "GeometryOpaqueMaskedFragmentShaderModule", OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment
     );
     sTransparentFragmentShader =
-        SwShaderFactory::createShader("GeometryTransparentFragmentShaderModule", GEOMETRY_TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+        SwShaderFactory::createShader("GeometryTransparentFragmentShaderModule", TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
 
 vk::ShaderModule SwMaterial::getGeometryVertexShaderModule() { return sVertexShader.getHandle(); }
@@ -165,8 +165,8 @@ std::uint32_t SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions ma
             // opaque entry point keeps [earlydepthstencil].
             graphicsPipelineOptions.mFragmentShader = sOpaqueMaskedFragmentShader.getHandle();
             graphicsPipelineOptions.mFragmentEntryPoint = materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask
-                                                              ? std::string(GEOMETRY_MASKED_ENTRY_POINT)
-                                                              : std::string(GEOMETRY_OPAQUE_ENTRY_POINT);
+                                                              ? std::string(MASKED_ENTRY_POINT)
+                                                              : std::string(OPAQUE_ENTRY_POINT);
             graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getHandle();
             graphicsPipelineOptions.mColorAttachments =
                 std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};

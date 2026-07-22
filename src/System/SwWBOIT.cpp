@@ -18,8 +18,8 @@ void SwWBOIT::System::initializeResources() {
 
     mResources.mCompositePipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITCompositePipelineLayout", mResources.mCompositeDescriptorLayout.getHandle(), nullptr);
 
-    SwShader wboitVertexShader = SwShaderFactory::createShader("WBOITVertexShaderModule", WBOIT_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    SwShader wboitFragmentShader = SwShaderFactory::createShader("WBOITFragmentShaderModule", WBOIT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    SwShader wboitVertexShader = SwShaderFactory::createShader("WBOITVertexShaderModule", VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    SwShader wboitFragmentShader = SwShaderFactory::createShader("WBOITFragmentShaderModule", FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 
     vk::PipelineColorBlendAttachmentState compositeBlendAttachment{};
     compositeBlendAttachment.colorWriteMask =

@@ -221,7 +221,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Geometry `SwGeometry`
 
-* **`DrawPC`** — the vertex+fragment push constants shared by every geometry pass: device addresses for the scene vertex / material / node-transform / instance / draw-RI-indices / indirect-RC / lights / visible-lights buffers, plus the IBL parameters (max prefilter mip level, intensity, component mask). Backed by `SwGeometry.vert` and the `SwGeometryOpaqueMasked` / `SwGeometryTransparent` fragment shaders.
+* **`DrawPC`** — the vertex+fragment push constants shared by every geometry pass: device addresses for the scene vertex / material / node-transform / instance / draw-RI-indices / indirect-RC / lights / visible-lights buffers, plus the IBL parameters (max prefilter mip level, intensity, component mask). Backed by `Geometry.vert` and the `OpaqueMasked` / `Transparent` fragment shaders.
 * **`Resources`** — just holds the push-constant block (the material pipelines themselves are owned by `SwMaterial`).
 * **`System`** — issues the indirect draws across the early and late opaque, masked, and transparent passes, each using its material's pipeline.
 * **Relations** — consumes the indirect draw lists from `SwCull`, the lights from `SwLighting`, and the IBL maps from `SwIBL`.
@@ -367,7 +367,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Culling to Indirect Draw Commands (Render Commands)
 
-* Each cull thread takes one RI and reconstructs its full draw context purely by following the indices above (`SwCullTest.comp.slang`):
+* Each cull thread takes one RI and reconstructs its full draw context purely by following the indices above (`Test.comp.slang`):
 
 ```
 ri  = mRisBuffer[threadId]

@@ -134,18 +134,18 @@ void SwGui::System::initializeResources() {
             }
             ImGui::SliderFloat("IBL Intensity", mScene.getIBLSystem().getIblIntensityPtr(), 0.f, 2.f, "%.2f");
 
-            std::uint32_t* iblComponents = mScene.getIBLSystem().getIblComponentsPtr();
+            SwIBL::Component* iblComponents = mScene.getIBLSystem().getIblComponentsPtr();
             ImGui::TextUnformatted("IBL Components");
-            if (ImGui::RadioButton("Diffuse", *iblComponents == SwIBL::IBL_DIFFUSE)) {
-                *iblComponents = SwIBL::IBL_DIFFUSE;
+            if (ImGui::RadioButton("Diffuse", *iblComponents == SwIBL::Component::Diffuse)) {
+                *iblComponents = SwIBL::Component::Diffuse;
             }
             ImGui::SameLine();
-            if (ImGui::RadioButton("Specular", *iblComponents == SwIBL::IBL_SPECULAR)) {
-                *iblComponents = SwIBL::IBL_SPECULAR;
+            if (ImGui::RadioButton("Specular", *iblComponents == SwIBL::Component::Specular)) {
+                *iblComponents = SwIBL::Component::Specular;
             }
             ImGui::SameLine();
-            if (ImGui::RadioButton("Both", *iblComponents == (SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR))) {
-                *iblComponents = SwIBL::IBL_DIFFUSE | SwIBL::IBL_SPECULAR;
+            if (ImGui::RadioButton("Both", *iblComponents == (SwIBL::Component::Diffuse | SwIBL::Component::Specular))) {
+                *iblComponents = SwIBL::Component::Diffuse | SwIBL::Component::Specular;
             }
         }
 

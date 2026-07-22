@@ -13,16 +13,17 @@
 
 #include <filesystem>
 #include <glm/glm.hpp>
+#include <string_view>
 #include <vulkan/vulkan.hpp>
 
 namespace SwPick {
-constexpr float PICK_IMGUIZMO_SIZE = 0.15f;
-static const std::filesystem::path PICK_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Pick"};
-static const std::filesystem::path PICK_DRAW_VERTEX_SHADER_PATH{PICK_SHADERS_DIR / "SwPickDraw.vert.spv"};
-static const std::filesystem::path PICK_DRAW_FRAGMENT_SHADER_PATH{PICK_SHADERS_DIR / "SwPickDraw.frag.spv"};
-static const std::filesystem::path PICK_READBACK_COMPUTE_SHADER_PATH{PICK_SHADERS_DIR / "SwPickReadback.comp.spv"};
-constexpr std::string_view PICK_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
-constexpr std::string_view PICK_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
+constexpr float IMGUIZMO_SIZE = 0.15f;
+static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/Pick"};
+static const std::filesystem::path DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Draw.vert.spv"};
+static const std::filesystem::path DRAW_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Draw.frag.spv"};
+static const std::filesystem::path READBACK_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Readback.comp.spv"};
+constexpr std::string_view DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
+constexpr std::string_view DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mSceneVertexBuffer{0};

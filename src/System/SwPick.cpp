@@ -53,9 +53,9 @@ void SwPick::System::initializeResources() {
         SwPick::DrawPC::getRange()
     );
 
-    SwShader drawVertexShader = SwShaderFactory::createShader("PickDrawVertexShaderModule", PICK_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+    SwShader drawVertexShader = SwShaderFactory::createShader("PickDrawVertexShaderModule", DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader drawFragmentShader =
-        SwShaderFactory::createShader("PickDrawFragmentShaderModule", PICK_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+        SwShaderFactory::createShader("PickDrawFragmentShaderModule", DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.colorWriteMask =
@@ -78,19 +78,19 @@ void SwPick::System::initializeResources() {
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
 
-    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
-    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_OPAQUE_ENTRY_POINT);
+    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::DRAW_OPAQUE_ENTRY_POINT);
+    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::DRAW_OPAQUE_ENTRY_POINT);
     mResources.mDrawOpaqueTransparentPipelineBundle =
         SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawOpaqueTransparentPipeline", drawPipelineOptions);
 
-    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
-    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::PICK_DRAW_MASKED_ENTRY_POINT);
+    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::DRAW_MASKED_ENTRY_POINT);
+    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::DRAW_MASKED_ENTRY_POINT);
     mResources.mDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawMaskedPipeline", drawPipelineOptions);
 
     mResources.mReadbackPipelineLayout =
         SwPipelineFactory::createPipelineLayout("PickReadbackPipelineLayout", mResources.mReadbackDescriptorLayout.getHandle(), SwPick::ReadbackPC::getRange());
 
-    SwShader readbackShader = SwShaderFactory::createShader("PickReadbackShaderModule", PICK_READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader readbackShader = SwShaderFactory::createShader("PickReadbackShaderModule", READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mReadbackPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("PickReadbackPipeline", {readbackShader.getHandle(), mResources.mReadbackPipelineLayout.getHandle()});
 
@@ -281,7 +281,7 @@ void SwPick::System::generatePickFrame() {
 
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
-    ImGuizmo::SetGizmoSizeClipSpace(SwPick::PICK_IMGUIZMO_SIZE);
+    ImGuizmo::SetGizmoSizeClipSpace(SwPick::IMGUIZMO_SIZE);
 
     ImGuizmo::SetRect(
         0,

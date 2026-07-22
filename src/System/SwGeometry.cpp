@@ -246,5 +246,5 @@ void SwGeometry::System::refreshPushConstants() {
     mResources.mDrawPushConstants.mSceneLitIndicesBuffer = mScene.getLightingSystem().getResources().mLitIndicesBuffer.getDeviceAddress().value();
     mResources.mDrawPushConstants.mMaxPrefilterMipLevel = mScene.getIBLSystem().getMaxPrefilterMip();
     mResources.mDrawPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
-    mResources.mDrawPushConstants.mIblComponents = mScene.getIBLSystem().getIblComponents();
+    mResources.mDrawPushConstants.mIblComponents = static_cast<std::uint32_t>(mScene.getIBLSystem().getIblComponents());
 }

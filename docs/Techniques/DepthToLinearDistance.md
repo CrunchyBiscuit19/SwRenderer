@@ -1,6 +1,6 @@
 # Depth Values to Linear Distance
 
-A reference for converting a depth buffer sample back into a linear view-space distance, covering both the standard (non-reversed) and the reversed-Z conventions. The reversed-Z result is the one used by the clustered shading depth-slice code in `SwLightingClustersMarkActive.comp.slang`.
+A reference for converting a depth buffer sample back into a linear view-space distance, covering both the standard (non-reversed) and the reversed-Z conventions. The reversed-Z result is the one used by the clustered shading depth-slice code in `ClustersMarkActive.comp.slang`.
 
 ## Notation
 
@@ -83,4 +83,4 @@ The two formulas have identical structure and identical cost, one multiply and o
 
 ## Note on the inverse matrix alternative
 
-The closed forms above assume a conventional finite perspective projection. A projection built by swapping the near and far planes, or one with an infinite far plane, would need different algebra. A fully general alternative is to unproject the pixel with the inverse projection matrix and read the resulting view-space $z$, which works for any projection because it inverts whatever matrix was actually used. That path is heavier, since it computes a full view-space position and discards the $x$ and $y$, so the closed form is preferred wherever only the distance is needed and the projection is known to be a standard perspective. The cluster AABB build in `SwLightingClustersBuild.comp.slang` uses the inverse matrix path because it genuinely needs the full view-space position.
+The closed forms above assume a conventional finite perspective projection. A projection built by swapping the near and far planes, or one with an infinite far plane, would need different algebra. A fully general alternative is to unproject the pixel with the inverse projection matrix and read the resulting view-space $z$, which works for any projection because it inverts whatever matrix was actually used. That path is heavier, since it computes a full view-space position and discards the $x$ and $y$, so the closed form is preferred wherever only the distance is needed and the projection is known to be a standard perspective. The cluster AABB build in `ClustersBuild.comp.slang` uses the inverse matrix path because it genuinely needs the full view-space position.

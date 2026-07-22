@@ -6,14 +6,15 @@
 #include <Scene/SwSystem.h>
 
 #include <filesystem>
+#include <string_view>
 
 namespace SwWBOIT {
 
 constexpr vk::ClearColorValue RVL_CLEAR_VALUE{1.f, 0.f, 0.f, 0.f};
 constexpr vk::Format RVL_FORMAT{vk::Format::eR16Sfloat};
-static const std::filesystem::path WBOIT_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "WBOIT"};
-static const std::filesystem::path WBOIT_VERTEX_SHADER_PATH{WBOIT_SHADERS_DIR / "SwWBOITComposite.vert.spv"};
-static const std::filesystem::path WBOIT_FRAGMENT_SHADER_PATH{WBOIT_SHADERS_DIR / "SwWBOITComposite.frag.spv"};
+static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/WBOIT"};
+static const std::filesystem::path VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Composite.vert.spv"};
+static const std::filesystem::path FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Composite.frag.spv"};
 
 struct Resources {
     SwColorImage2D mAccumImage;

@@ -47,7 +47,7 @@ So $\Omega_\text{texel}$ is the yardstick the mip math in sections 2 and 3 measu
 > Radiance $L_{i}(L)$ — The light traveling along a single ray/direction (a brightness-per-direction).
 > Irradiance $E(N)$ — The total light landing on a surface, summed over every incoming direction in the hemisphere, with each direction weighted by its grazing angle ($N \cdot L$).
 
-`SwIBLIrradiance.comp.slang` bakes a small (64x32) map where each texel stores the **irradiance** arriving at a surface whose normal points in that texel's direction.
+`Irradiance.comp.slang` bakes a small (64x32) map where each texel stores the **irradiance** arriving at a surface whose normal points in that texel's direction.
 
 For a Lambertian surface the diffuse BRDF is constant, $f_r = \dfrac{C_{\text{diffuse}}}{\pi}$, so it pulls out of the integral and what remains is the cosine-weighted integral of incoming radiance.
 
@@ -82,7 +82,7 @@ Epic's **split-sum approximation** factors it into two independent pieces.
 
 $\text{specular}_\text{IBL} \approx \underbrace{\text{prefiltered}(R, r)}_{\text{Prefilter}} \cdot \underbrace{(F_0\,\text{scale} + \text{bias})}_{\text{Integration LUT}}$
 
-`SwIBLPrefilter.comp.slang` bakes the first factor. The map (128x64) is **mip-chained**, and the mip index encodes roughness. 
+`Prefilter.comp.slang` bakes the first factor. The map (128x64) is **mip-chained**, and the mip index encodes roughness. 
 Mip level $m$ is baked with $r = \dfrac{m}{m_\text{max}}$ where $m_\text{max} = \text{mipCount} - 1$. 
 The sharpest mip is a mirror reflection and each coarser mip is blurred by a wider GGX lobe.
 
@@ -111,7 +111,7 @@ $D(N \cdot H) = \dfrac{a^2}{\pi\big((N \cdot H)^2 (a^2 - 1) + 1\big)^2}, \qquad 
 
 ## BRDF Integration LUT
 
-`SwIBLBrdfLut.comp.slang` bakes the second split-sum factor, the $(\text{scale}, \text{bias})$ pair. 
+`BrdfLut.comp.slang` bakes the second split-sum factor, the $(\text{scale}, \text{bias})$ pair. 
 
 This term is **environment-independent**: it only depends on $N \cdot V$ and roughness, so it is a 512x512 two-channel LUT baked once at startup (parameterized as $u = N \cdot V$, $v = r$).
 
@@ -155,7 +155,7 @@ Both baked maps are **linear** in the environment pixels, so dividing the final 
 
 ## Skybox draw
 
-`SwIBLSkybox.vert/frag.slang` rasterize the same equirect HDR as the visible backdrop. 
+`Skybox.vert/frag.slang` rasterize the same equirect HDR as the visible backdrop. 
 A unit cube is drawn with the camera's **translation stripped from the view matrix** $V_0$, so the cube stays centered on the camera.
 
 $\text{clip} = P \cdot V_0 \cdot \text{position}$
@@ -169,17 +169,17 @@ Only the light the surfaces *receive* is normalized, not the backdrop itself.
 
 | Map        | Shader                 | Size          | Format  | Encodes                                                        |
 | ---------- | ---------------------- | ------------- | ------- | -------------------------------------------------------------- |
-| Irradiance | `SwIBLIrradiance.comp` | 64x32         | RGBA16F | cosine-convolved diffuse irradiance per normal                 |
-| Prefilter  | `SwIBLPrefilter.comp`  | 128x64 + mips | RGBA16F | GGX-prefiltered specular, roughness per mip                    |
-| BRDF LUT   | `SwIBLBrdfLut.comp`    | 512x512       | RG16F   | split-sum $(\text{scale}, \text{bias})$ over $(N \cdot V,\ r)$ |
+| Irradiance | `Irradiance.comp` | 64x32         | RGBA16F | cosine-convolved diffuse irradiance per normal                 |
+| Prefilter  | `Prefilter.comp`  | 128x64 + mips | RGBA16F | GGX-prefiltered specular, roughness per mip                    |
+| BRDF LUT   | `BrdfLut.comp`    | 512x512       | RG16F   | split-sum $(\text{scale}, \text{bias})$ over $(N \cdot V,\ r)$ |
 
 ## Related Files
 
 | File                                     | Role                                                          |
 | ---------------------------------------- | ------------------------------------------------------------- |
-| `shaders/System/IBL/SwIBLIrradiance.comp.slang` | Diffuse irradiance convolution                                |
-| `shaders/System/IBL/SwIBLPrefilter.comp.slang`  | GGX specular prefilter (one dispatch per mip)                 |
-| `shaders/System/IBL/SwIBLBrdfLut.comp.slang`    | Environment-BRDF pre-integration                              |
+| `shaders/System/IBL/Irradiance.comp.slang` | Diffuse irradiance convolution                                |
+| `shaders/System/IBL/Prefilter.comp.slang`  | GGX specular prefilter (one dispatch per mip)                 |
+| `shaders/System/IBL/BrdfLut.comp.slang`    | Environment-BRDF pre-integration                              |
 | `shaders/System/IBL/SwIBL.slang`              | Hammersley, Van der Corput, `importanceSampleGGX`             |
 | `shaders/System/BRDF/SwBRDF.slang`            | Equirect mapping, `distributionGGX`, Fresnel/geometry         |
 | `shaders/System/Geometry/SwGeometry.slang`    | `ambientIBL` / `shadeLit` runtime application                 |

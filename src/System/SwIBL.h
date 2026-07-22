@@ -10,23 +10,24 @@
 
 #include <filesystem>
 #include <optional>
+#include <string_view>
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
 class SwScene;
 
 namespace SwIBL {
-static const std::filesystem::path IBL_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "IBL"};
-static const std::filesystem::path IRRADIANCE_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLIrradiance.comp.spv"};
-static const std::filesystem::path PREFILTER_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLPrefilter.comp.spv"};
-static const std::filesystem::path BRDF_LUT_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLBrdfLut.comp.spv"};
+static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/IBL"};
+static const std::filesystem::path IRRADIANCE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Irradiance.comp.spv"};
+static const std::filesystem::path PREFILTER_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Prefilter.comp.spv"};
+static const std::filesystem::path BRDF_LUT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "BrdfLut.comp.spv"};
 
 constexpr std::uint32_t NUM_SKYBOX_VERTICES{36};
-static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLSkybox.vert.spv"};
-static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{IBL_SHADERS_DIR / "SwIBLSkybox.frag.spv"};
+static const std::filesystem::path SKYBOX_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Skybox.vert.spv"};
+static const std::filesystem::path SKYBOX_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Skybox.frag.spv"};
 static const std::filesystem::path SKYBOX_DEFAULT_HDR_PATH{std::filesystem::path(SKYBOXES_PATH) / "AutumnHillView2k.hdr"};
 
-constexpr vk::Format IBL_FORMAT{vk::Format::eR16G16B16A16Sfloat};
+constexpr vk::Format FORMAT{vk::Format::eR16G16B16A16Sfloat};
 constexpr vk::Format BRDF_LUT_FORMAT{vk::Format::eR16G16Sfloat};
 
 constexpr vk::Extent3D IRRADIANCE_EXTENT{64, 32, 1};
@@ -35,8 +36,16 @@ constexpr vk::Extent3D BRDF_LUT_EXTENT{512, 512, 1};
 
 constexpr std::uint32_t MAX_PREFILTER_MIP_LEVELS{1 << 4};
 
-constexpr std::uint32_t IBL_DIFFUSE{1u};
-constexpr std::uint32_t IBL_SPECULAR{2u};
+enum class Component : std::uint32_t {
+    Diffuse = 1u << 0,
+    Specular = 1u << 1,
+};
+constexpr Component operator|(Component a, Component b) {
+    return static_cast<Component>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
+}
+constexpr Component operator&(Component a, Component b) {
+    return static_cast<Component>(static_cast<std::uint32_t>(a) & static_cast<std::uint32_t>(b));
+}
 
 // Bindings consumed by the geometry/transparent fragment shaders. Samplers keep the original binding
 // slots, the sampled images follow directly after them.
@@ -130,7 +139,7 @@ private:
     Resources mResources;
     std::uint32_t mPrefilterMipLevels{0};
     float mIblIntensity{1.f};
-    std::uint32_t mIblComponents{IBL_DIFFUSE | IBL_SPECULAR};  // which ambient terms to apply (GUI-controlled)
+    Component mIblComponents{Component::Diffuse | Component::Specular};  // which ambient terms to apply (GUI-controlled)
     // Cosine-weighted average luminance of the loaded environment. The IBL ambient is divided by this so a
     // bright HDR does not flood surfaces: IBL Intensity then scales a unit-mean fill, independent of the
     // environment's absolute radiance. Defaults to 1 (no normalization) until an environment is loaded.
@@ -161,8 +170,8 @@ public:
     inline float getMaxPrefilterMip() const { return mPrefilterMipLevels > 0 ? static_cast<float>(mPrefilterMipLevels - 1) : 0.f; }
     inline float getIblIntensity() const { return mIblIntensity; }
     inline float* getIblIntensityPtr() { return &mIblIntensity; }
-    inline std::uint32_t getIblComponents() const { return mIblComponents; }
-    inline std::uint32_t* getIblComponentsPtr() { return &mIblComponents; }
+    inline Component getIblComponents() const { return mIblComponents; }
+    inline Component* getIblComponentsPtr() { return &mIblComponents; }
     inline float getEnvAvgLuminance() const { return mEnvAvgLuminance; }
     inline Resources& getResources() { return mResources; }
 };

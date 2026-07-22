@@ -49,25 +49,25 @@ void SwLighting::System::regenerateShadowsRcs() {
 
 void SwLighting::System::initializeResources() {
     mResources.mLitIndicesBuffer =
-        SwBufferFactory::createAllocatedBuffer("LitIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_LIT_INDICES_BUFFER_SIZE, true);
+        SwBufferFactory::createAllocatedBuffer("LitIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIT_INDICES_BUFFER_SIZE, true);
     mResources.mShadowCastsIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowCastsIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_SHADOW_CAST_INDICES_BUFFER_SIZE, true
+        "ShadowCastsIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOW_CAST_INDICES_BUFFER_SIZE, true
     );
     mResources.mShadowsRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_SHADOWS_RENDER_COMMANDS_BUFFER_SIZE, true
+        "ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_RENDER_COMMANDS_BUFFER_SIZE, true
     );
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
+        "ShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
     );
 
     mResources.mClustersBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ClustersBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_CLUSTERS_BUFFER_SIZE, true, false
+        "ClustersBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_BUFFER_SIZE, true, false
     );
     mResources.mClustersActiveBooleansBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ClustersActiveBooleansBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE, true, false
+        "ClustersActiveBooleansBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE, true, false
     );
     mResources.mClustersActiveIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTING_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true, false
+        "ClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true, false
     );
     mResources.mClustersActiveCount =
         SwBufferFactory::createAllocatedBuffer("ClustersActiveCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, sizeof(std::uint32_t), true, false);
@@ -94,8 +94,8 @@ void SwLighting::System::initializeResources() {
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
         mResources.mShadows2DMaps[i] = SwImageFactory::createDepthImage2D(
             std::format("Shadow2DMap{}", i),
-            LIGHTING_SHADOWS_MAP_FORMAT,
-            vk::Extent3D{LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT, LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
+            SHADOWS_MAP_FORMAT,
+            vk::Extent3D{SHADOWS_2D_MAP_WIDTH_HEIGHT, SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             true
         );
@@ -103,8 +103,8 @@ void SwLighting::System::initializeResources() {
     for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
         mResources.mShadowsCubeMaps[i] = SwImageFactory::createDepthImageCubemap(
             std::format("ShadowCubeMap{}", i),
-            LIGHTING_SHADOWS_MAP_FORMAT,
-            vk::Extent3D{LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT, LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT, 1},
+            SHADOWS_MAP_FORMAT,
+            vk::Extent3D{SHADOWS_CUBEMAP_WIDTH_HEIGHT, SHADOWS_CUBEMAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             false
         );
@@ -133,14 +133,14 @@ void SwLighting::System::initializeResources() {
     });
 
     mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("ResetPipelineLayout", nullptr, SwLighting::ResetPC::getRange());
-    SwShader resetShader = SwShaderFactory::createShader("ResetShaderModule", SwLighting::LIGHTING_RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    SwShader resetShader = SwShaderFactory::createShader("ResetShaderModule", SwLighting::RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mResetPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("ResetPipeline", {resetShader.getHandle(), mResources.mResetPipelineLayout.getHandle()});
 
     mResources.mClustersBuildPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ClustersBuildPipelineLayout", nullptr, SwLighting::ClustersBuildPC::getRange());
     SwShader clustersBuildShader =
-        SwShaderFactory::createShader("ClustersBuildShaderModule", SwLighting::LIGHTING_CLUSTERS_BUILD_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwShaderFactory::createShader("ClustersBuildShaderModule", SwLighting::CLUSTERS_BUILD_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mClustersBuildPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersBuildPipeline", {clustersBuildShader.getHandle(), mResources.mClustersBuildPipelineLayout.getHandle()}
     );
@@ -159,7 +159,7 @@ void SwLighting::System::initializeResources() {
         "ClustersMarkActivePipelineLayout", mResources.mClustersMarkActiveDescriptorLayout.getHandle(), SwLighting::ClustersMarkActivePC::getRange()
     );
     SwShader clustersMarkActiveShader = SwShaderFactory::createShader(
-        "ClustersMarkActiveShaderModule", SwLighting::LIGHTING_CLUSTERS_MARK_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
+        "ClustersMarkActiveShaderModule", SwLighting::CLUSTERS_MARK_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
     );
     mResources.mClustersMarkActivePipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersMarkActivePipeline", {clustersMarkActiveShader.getHandle(), mResources.mClustersMarkActivePipelineLayout.getHandle()}
@@ -168,7 +168,7 @@ void SwLighting::System::initializeResources() {
     mResources.mClustersCompactActivePipelineLayout =
         SwPipelineFactory::createPipelineLayout("ClustersCompactActivePipelineLayout", nullptr, SwLighting::ClustersCompactActivePC::getRange());
     SwShader clustersCompactActiveShader = SwShaderFactory::createShader(
-        "ClustersCompactActiveShaderModule", SwLighting::LIGHTING_CLUSTERS_COMPACT_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
+        "ClustersCompactActiveShaderModule", SwLighting::CLUSTERS_COMPACT_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
     );
     mResources.mClustersCompactActivePipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersCompactActivePipeline", {clustersCompactActiveShader.getHandle(), mResources.mClustersCompactActivePipelineLayout.getHandle()}
@@ -176,7 +176,7 @@ void SwLighting::System::initializeResources() {
 
     mResources.mLightsCullPipelineLayout = SwPipelineFactory::createPipelineLayout("LightsCullPipelineLayout", nullptr, SwLighting::LightsCullPC::getRange());
     SwShader lightsCullShader =
-        SwShaderFactory::createShader("LightsCullShaderModule", SwLighting::LIGHTING_LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwShaderFactory::createShader("LightsCullShaderModule", SwLighting::LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mLightsCullPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "LightsCullPipeline", {lightsCullShader.getHandle(), mResources.mLightsCullPipelineLayout.getHandle()}
     );
@@ -184,7 +184,7 @@ void SwLighting::System::initializeResources() {
     mResources.mClustersLightSelectPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ClustersLightSelectPipelineLayout", nullptr, SwLighting::ClustersLightSelectPC::getRange());
     SwShader clustersLightSelectShader = SwShaderFactory::createShader(
-        "ClustersLightSelectShaderModule", SwLighting::LIGHTING_CLUSTERS_LIGHT_SELECT_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
+        "ClustersLightSelectShaderModule", SwLighting::CLUSTERS_LIGHT_SELECT_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
     );
     mResources.mClustersLightSelectPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersLightSelectPipeline", {clustersLightSelectShader.getHandle(), mResources.mClustersLightSelectPipelineLayout.getHandle()}
@@ -193,14 +193,14 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowsCullPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ShadowsCullPipelineLayout", nullptr, SwLighting::ShadowsCullPC::getRange());
     SwShader shadowsCullShader =
-        SwShaderFactory::createShader("ShadowsCullShaderModule", SwLighting::LIGHTING_SHADOWS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwShaderFactory::createShader("ShadowsCullShaderModule", SwLighting::SHADOWS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowsCullPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ShadowsCullPipeline", {shadowsCullShader.getHandle(), mResources.mShadowsCullPipelineLayout.getHandle()}
     );
 
     mResources.mShadowsDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsDrawPipelineLayout", nullptr, SwLighting::ShadowDrawPC::getRange());
     SwShader drawVertexShader =
-        SwShaderFactory::createShader("ShadowsDrawVertexShaderModule", SwLighting::LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+        SwShaderFactory::createShader("ShadowsDrawVertexShaderModule", SwLighting::SHADOWS_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.blendEnable = VK_FALSE;
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
@@ -214,13 +214,13 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mMultisamplingEnabled = false;
     drawPipelineOptions.mSampleShadingEnabled = false;
     drawPipelineOptions.mColorAttachments = {};
-    drawPipelineOptions.mDepthFormat = LIGHTING_SHADOWS_MAP_FORMAT;
+    drawPipelineOptions.mDepthFormat = SHADOWS_MAP_FORMAT;
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    drawPipelineOptions.mVertexEntryPoint = LIGHTING_SHADOWS_DRAW_OPAQUE_ENTRY_POINT;
+    drawPipelineOptions.mVertexEntryPoint = SHADOWS_DRAW_OPAQUE_ENTRY_POINT;
     mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
-    drawPipelineOptions.mVertexEntryPoint = LIGHTING_SHADOWS_DRAW_MASKED_ENTRY_POINT;
+    drawPipelineOptions.mVertexEntryPoint = SHADOWS_DRAW_MASKED_ENTRY_POINT;
     mResources.mShadowsDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
 }
 
@@ -246,9 +246,9 @@ void SwLighting::System::initializePasses() {
             clustersBuildPipeline.getLayoutHandle(), SwLighting::ClustersBuildPC::sStages, 0, mResources.mClustersBuildPc
         );
         cmd.dispatch(
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.x, SwRenderer::MAX_3D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(LIGHTING_CLUSTERS_DIMENSIONS.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
+            SwHelper::fastDivCeil(CLUSTERS_DIMENSIONS.x, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(CLUSTERS_DIMENSIONS.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(CLUSTERS_DIMENSIONS.z, SwRenderer::MAX_3D_WORKGROUP_THREADS)
         );
     });
 
@@ -273,7 +273,7 @@ void SwLighting::System::initializePasses() {
         cmd.pushConstants<SwLighting::ClustersCompactActivePC>(
             clustersCompactActivePipeline.getLayoutHandle(), SwLighting::ClustersCompactActivePC::sStages, 0, mResources.mClustersCompactActivePc
         );
-        cmd.dispatch(SwHelper::fastDivCeil(LIGHTING_NUM_CLUSTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        cmd.dispatch(SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
     // Lights Cull

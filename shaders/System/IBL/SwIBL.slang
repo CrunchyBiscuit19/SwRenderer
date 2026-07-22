@@ -6,8 +6,8 @@ __exported import Data.SwConstants;
 import System.BRDF.SwBRDF;
 
 namespace SwIBL {
-    public static const uint IBL_DIFFUSE = 1u;
-    public static const uint IBL_SPECULAR = 2u;
+    public static const uint DIFFUSE = 1u;
+    public static const uint SPECULAR = 2u;
 
     public static const uint MAX_PREFILTER_MIP_LEVELS = 1 << 4;
 
@@ -48,14 +48,14 @@ namespace SwIBL {
         float3 F0 = lerp(float3(0.04f), albedo, metallic);
 
         float3 ambient = float3(0.f);
-        if ((components & IBL_DIFFUSE) != 0u) {
+        if ((components & DIFFUSE) != 0u) {
             // Weight by the normal-incidence Fresnel F0 (not the view-dependent F) so the diffuse fill
             // stays camera-invariant while keeping a sensible diffuse/specular energy split.
             float3 kD = (1.f - F0) * (1.f - metallic);
             float3 irradiance = irradianceMap.SampleLevel(irradianceSampler, SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
             ambient += kD * irradiance * albedo;
         }
-        if ((components & IBL_SPECULAR) != 0u) {
+        if ((components & SPECULAR) != 0u) {
             float3 R = reflect(-view, normal);
             float prefilterLod = roughness * maxPrefilterMip;
             float3 prefiltered = prefilterMap.SampleLevel(prefilterSampler, SwBRDF::dirToEquirectUv(R), prefilterLod).rgb;

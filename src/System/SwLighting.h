@@ -21,37 +21,37 @@
 class SwInstance;
 
 namespace SwLighting {
-static const std::filesystem::path LIGHTING_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "Lighting"};
-static const std::filesystem::path LIGHTING_CLUSTERS_BUILD_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersBuild.comp.spv"};
-static const std::filesystem::path LIGHTING_CLUSTERS_MARK_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersMarkActive.comp.spv"};
-static const std::filesystem::path LIGHTING_CLUSTERS_COMPACT_ACTIVE_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersCompactActive.comp.spv"};
-static const std::filesystem::path LIGHTING_LIGHTS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingLightsCull.comp.spv"};
-static const std::filesystem::path LIGHTING_CLUSTERS_LIGHT_SELECT_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingClustersLightSelect.comp.spv"};
-static const std::filesystem::path LIGHTING_RESET_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingReset.comp.spv"};
-static const std::filesystem::path LIGHTING_SHADOWS_CULL_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsCull.comp.spv"};
-static const std::filesystem::path LIGHTING_SHADOWS_DRAW_VERTEX_SHADER_PATH{LIGHTING_SHADERS_DIR / "SwLightingShadowsDraw.vert.spv"};
-static constexpr std::string_view LIGHTING_SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
-static constexpr std::string_view LIGHTING_SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
+static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/Lighting"};
+static const std::filesystem::path CLUSTERS_BUILD_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersBuild.comp.spv"};
+static const std::filesystem::path CLUSTERS_MARK_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersMarkActive.comp.spv"};
+static const std::filesystem::path CLUSTERS_COMPACT_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersCompactActive.comp.spv"};
+static const std::filesystem::path LIGHTS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "LightsCull.comp.spv"};
+static const std::filesystem::path CLUSTERS_LIGHT_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightSelect.comp.spv"};
+static const std::filesystem::path RESET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Reset.comp.spv"};
+static const std::filesystem::path SHADOWS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsCull.comp.spv"};
+static const std::filesystem::path SHADOWS_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsDraw.vert.spv"};
+static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
+static constexpr std::string_view SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
-static constexpr std::uint64_t LIGHTING_INITIAL_SHADOWS_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
-static constexpr std::uint64_t LIGHTING_INITIAL_SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE{(1 << 12) * sizeof(std::uint32_t)};
-static constexpr std::uint32_t LIGHTING_SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
-static constexpr std::uint32_t LIGHTING_SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
-static constexpr vk::Format LIGHTING_SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
-static constexpr std::uint64_t LIGHTING_INITIAL_LIT_INDICES_BUFFER_SIZE{(1 + 1 << 5) * sizeof(std::uint32_t)};
-static constexpr std::uint64_t LIGHTING_INITIAL_SHADOW_CAST_INDICES_BUFFER_SIZE{(1 + MAX_NUM_SHADOW_CASTERS) * sizeof(std::uint32_t)};
+static constexpr std::uint64_t SHADOWS_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
+static constexpr std::uint64_t SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE{(1 << 12) * sizeof(std::uint32_t)};
+static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
+static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
+static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
+static constexpr std::uint64_t LIT_INDICES_BUFFER_SIZE{(1 + 1 << 5) * sizeof(std::uint32_t)};
+static constexpr std::uint64_t SHADOW_CAST_INDICES_BUFFER_SIZE{(1 + MAX_NUM_SHADOW_CASTERS) * sizeof(std::uint32_t)};
 
 struct Cluster {
     glm::vec3 mMin{0};
     glm::vec3 mMax{0};
 };
 
-static constexpr glm::uvec3 LIGHTING_CLUSTERS_DIMENSIONS{16, 9, 24};
-static constexpr std::uint32_t LIGHTING_NUM_CLUSTERS{LIGHTING_CLUSTERS_DIMENSIONS.x * LIGHTING_CLUSTERS_DIMENSIONS.y * LIGHTING_CLUSTERS_DIMENSIONS.z};
-static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(Cluster)};
-static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(bool)};
-static constexpr std::uint64_t LIGHTING_INITIAL_CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{LIGHTING_NUM_CLUSTERS * sizeof(std::uint32_t)};
+static constexpr glm::uvec3 CLUSTERS_DIMENSIONS{16, 9, 24};
+static constexpr std::uint32_t NUM_CLUSTERS{CLUSTERS_DIMENSIONS.x * CLUSTERS_DIMENSIONS.y * CLUSTERS_DIMENSIONS.z};
+static constexpr std::uint64_t CLUSTERS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(Cluster)};
+static constexpr std::uint64_t CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(bool)};
+static constexpr std::uint64_t CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 
 
 struct ResetPC : SwPC<ResetPC> {

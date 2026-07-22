@@ -9,12 +9,13 @@
 
 #include <filesystem>
 #include <glm/glm.hpp>
+#include <string_view>
 #include <vulkan/vulkan.hpp>
 
 namespace SwPostProcess {
-static const std::filesystem::path POST_PROCESS_SHADERS_DIR{std::filesystem::path(SHADERS_DIR) / "PostProcess"};
-static const std::filesystem::path TONEMAP_COMPUTE_SHADER_PATH{POST_PROCESS_SHADERS_DIR / "SwTonemap.comp.spv"};
-static const std::filesystem::path FXAA_COMPUTE_SHADER_PATH{POST_PROCESS_SHADERS_DIR / "SwFXAA.comp.spv"};
+static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/PostProcess"};
+static const std::filesystem::path TONEMAP_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Tonemap.comp.spv"};
+static const std::filesystem::path FXAA_COMPUTE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "FXAA.comp.spv"};
 
 struct TonemapPC : SwPC<TonemapPC> {
     float mExposure{1.f};

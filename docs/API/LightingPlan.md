@@ -5,7 +5,7 @@ The incremental path from a hardcoded sun to a data-driven PBR pipeline is **com
 - **Phase 1 — Data-driven directional light + emissive**: world-space normals/position, `Sunlight`
   in `PerFrameData`, GUI panel, and emissive term — done.
 - **Phase 2 — PBR material shading**: tangents + normal mapping, Cook-Torrance metallic-roughness
-  BRDF (`SwBRDF` module), and tone mapping (`SwTonemap.comp.slang`) — done.
+  BRDF (`SwBRDF` module), and tone mapping (`Tonemap.comp.slang`) — done.
 - **Phase 3 — Multiple punctual lights**: `Light` SSBO, `SwLight`/`SwLightNode`,
   `KHR_lights_punctual` parsing, and directional/point/spot accumulation — done.
 - **Phase 4 — Image-based lighting**: diffuse irradiance, specular prefilter, BRDF LUT (the
