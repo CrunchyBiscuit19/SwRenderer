@@ -11,8 +11,8 @@ void main(SwLighting::CSInput in) {
     bool clusterActive = clustersCompactActivePc.mClustersActiveBooleansBuffer[clusterBooleanIndex];
     if (!clusterActive) return;
 
-    uint clusterIndicesIndex; 
-    InterlockedAdd(*clustersCompactActivePc.mClustersActiveCount, 1, clusterIndicesIndex);
+    uint clusterIndicesIndex;
+    InterlockedAdd(clustersCompactActivePc.mClustersActiveIndicesBuffer[0], 1, clusterIndicesIndex);
 
-    clustersCompactActivePc.mClustersActiveIndicesBuffer[clusterIndicesIndex] = clusterBooleanIndex;
+    clustersCompactActivePc.mClustersActiveIndicesBuffer[1 + clusterIndicesIndex] = clusterBooleanIndex;
 }

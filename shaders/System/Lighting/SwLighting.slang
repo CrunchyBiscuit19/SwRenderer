@@ -42,7 +42,6 @@ namespace SwLighting {
     public struct ClustersCompactActivePC {
         public uint* mClustersActiveIndicesBuffer;
         public bool* mClustersActiveBooleansBuffer;
-        public uint* mClustersActiveCount;
     };
 
     public struct LightsCullPC {
@@ -60,7 +59,7 @@ namespace SwLighting {
         public SwLight::Data* mLightsBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
-        public uint* mClustersActiveIndicesBuffer;
+        public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
     };
 
     public struct ResetPC {

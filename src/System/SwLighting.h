@@ -51,7 +51,7 @@ static constexpr glm::uvec3 CLUSTERS_DIMENSIONS{16, 9, 24};
 static constexpr std::uint32_t NUM_CLUSTERS{CLUSTERS_DIMENSIONS.x * CLUSTERS_DIMENSIONS.y * CLUSTERS_DIMENSIONS.z};
 static constexpr std::uint64_t CLUSTERS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(Cluster)};
 static constexpr std::uint64_t CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(bool)};
-static constexpr std::uint64_t CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
+static constexpr std::uint64_t CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{(1 + NUM_CLUSTERS) * sizeof(std::uint32_t)};
 
 
 struct ResetPC : SwPC<ResetPC> {
@@ -81,7 +81,6 @@ struct ClustersMarkActivePC : SwPC<ClustersMarkActivePC> {
 struct ClustersCompactActivePC : SwPC<ClustersCompactActivePC> {
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
     vk::DeviceAddress mClustersActiveBooleansBuffer{0};
-    vk::DeviceAddress mClustersActiveCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -144,15 +143,14 @@ struct Resources {
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
-    SwAllocatedBuffer mLitIndicesBuffer;
+    SwAllocatedBuffer mLitIndicesBuffer; // 1st 4 bytes as count
     SwAllocatedBuffer mShadowCastsIndicesBuffer;
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
 
     SwAllocatedBuffer mClustersBuffer;
-    SwAllocatedBuffer mClustersActiveBooleansBuffer;
-    SwAllocatedBuffer mClustersActiveIndicesBuffer;
-    SwAllocatedBuffer mClustersActiveCount;
+    SwAllocatedBuffer mClustersActiveBooleansBuffer; 
+    SwAllocatedBuffer mClustersActiveIndicesBuffer; // 1st 4 bytes as count
 
     ResetPC mResetPc;
     SwPipelineLayout mResetPipelineLayout;

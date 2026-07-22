@@ -66,8 +66,6 @@ void SwLighting::System::initializeResources() {
     mResources.mClustersActiveIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "ClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true
     );
-    mResources.mClustersActiveCount =
-        SwBufferFactory::createAllocatedBuffer("ClustersActiveCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, sizeof(std::uint32_t), true);
 
     // Linear filtering gives hardware 2x2 PCF per SampleCmp tap.
     // Opaque-black border so 2D taps outside a frustum read as lit.
@@ -223,10 +221,10 @@ void SwLighting::System::initializePasses() {
         cmd.fillBuffer(mResources.mLitIndicesBuffer.getHandle(), 0, sizeof(std::uint32_t), 0);
         cmd.fillBuffer(mResources.mClustersActiveBooleansBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveIndicesBuffer.getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mResources.mClustersActiveCount.getHandle(), 0, vk::WholeSize, 0);
         auto& resetPipeline = mResources.mResetPipelineBundle;
         cmd.bindPipeline(resetPipeline.getBindPoint(), resetPipeline.getPipelineHandle());
         cmd.pushConstants<SwLighting::ResetPC>(resetPipeline.getLayoutHandle(), SwLighting::ResetPC::sStages, 0, mResources.mResetPc);
+        if (mResources.mResetPc.mShadowsRcsLimit == 0) return;
         cmd.dispatch(SwHelper::fastDivCeil(mResources.mResetPc.mShadowsRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
@@ -273,11 +271,24 @@ void SwLighting::System::initializePasses() {
         auto& lightsCullPipeline = mResources.mLightsCullPipelineBundle;
         cmd.bindPipeline(lightsCullPipeline.getBindPoint(), lightsCullPipeline.getPipelineHandle());
         cmd.pushConstants<SwLighting::LightsCullPC>(lightsCullPipeline.getLayoutHandle(), SwLighting::LightsCullPC::sStages, 0, mResources.mLightsCullPc);
-        cmd.dispatch(SwHelper::fastDivCeil(mScene.getLightIds().size(), SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        std::uint32_t numLights = mScene.getLightIds().size();
+        if (numLights == 0) return;
+        cmd.dispatch(SwHelper::fastDivCeil(numLights, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
     // Clusters Light Select
-    mScene.insertPass(SwPass::Type::LightingClustersLightSelect, [&](vk::CommandBuffer cmd) {});
+    mScene.insertPass(SwPass::Type::LightingClustersLightSelect, [&](vk::CommandBuffer cmd) {
+        auto& clustersLightSelectPipeline = mResources.mClustersLightSelectPipelineBundle;
+        cmd.bindPipeline(clustersLightSelectPipeline.getBindPoint(), clustersLightSelectPipeline.getPipelineHandle());
+        cmd.pushConstants<SwLighting::ClustersLightSelectPC>(
+            clustersLightSelectPipeline.getLayoutHandle(), SwLighting::ClustersLightSelectPC::sStages, 0, mResources.mClustersLightSelectPc
+        );
+        cmd.dispatch(
+            SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            1
+        );
+    });
 
     // Shadows Cull
     mScene.insertPass(SwPass::Type::LightingShadowsCull, [&](vk::CommandBuffer cmd) {});
@@ -305,7 +316,6 @@ void SwLighting::System::refreshDependencies() {
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveBooleansBuffer, SwDependency::BufferDepType::TransferWrite);
-        d.mWriteBuffers.emplace_back(&mResources.mClustersActiveCount, SwDependency::BufferDepType::TransferWrite);
     }
 
     // Clusters Build
@@ -332,9 +342,7 @@ void SwLighting::System::refreshDependencies() {
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersCompactActive].getDeps();
         d.clear();
         d.mReadBuffers.emplace_back(&mResources.mClustersActiveBooleansBuffer, SwDependency::BufferDepType::ComputeStorageRead);
-        d.mWriteBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
-        d.mReadBuffers.emplace_back(&mResources.mClustersActiveCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
-        d.mWriteBuffers.emplace_back(&mResources.mClustersActiveCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
     }
 
     // Lights Cull
@@ -411,7 +419,6 @@ void SwLighting::System::refreshPushConstants() {
 
     mResources.mClustersCompactActivePc.mClustersActiveBooleansBuffer = mResources.mClustersActiveBooleansBuffer.getDeviceAddress().value();
     mResources.mClustersCompactActivePc.mClustersActiveIndicesBuffer = mResources.mClustersActiveIndicesBuffer.getDeviceAddress().value();
-    mResources.mClustersCompactActivePc.mClustersActiveCount = mResources.mClustersActiveCount.getDeviceAddress().value();
 
     mResources.mLightsCullPc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mLightsCullPc.mLightsBuffer = SwRenderer::sRendererContext.mScene->getLightsBuffer().getDeviceAddress().value();
@@ -423,8 +430,7 @@ void SwLighting::System::refreshPushConstants() {
 
     mResources.mClustersLightSelectPc.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
     mResources.mClustersLightSelectPc.mLightsBuffer = SwRenderer::sRendererContext.mScene->getLightsBuffer().getDeviceAddress().value();
-    mResources.mClustersLightSelectPc.mNodeTransformsBuffer =
-        SwRenderer::sRendererContext.mScene->getNodeTransformsBuffer().getDeviceAddress().value();
+    mResources.mClustersLightSelectPc.mNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mClustersLightSelectPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer().getDeviceAddress().value();
 
     mResources.mShadowsCullPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer.getDeviceAddress().value();
