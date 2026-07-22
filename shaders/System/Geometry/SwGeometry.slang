@@ -19,15 +19,15 @@ namespace SwGeometry {
     public static const uint EMISSIVE_TEXTURE_OFFSET = 4;
 
     public struct DrawPC {
-        public SwVertex* mSceneVertexBuffer;
-        public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
-        public uint* mSceneRisIndicesBuffer;
-        public SwRenderCommand* mSceneRcsBuffer;
+        public SwVertex* mVertexBuffer;
+        public SwMaterial::Constant* mMaterialConstantsBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
+        public uint* mRisIndicesBuffer;
+        public SwRenderCommand* mRcsBuffer;
         public SwFrame::Data* mFrameBuffer;
-        public SwLight::Data* mSceneLightsBuffer;
-        public uint* mSceneLitIndicesBuffer;
+        public SwLight::Data* mLightsBuffer;
+        public uint* mLitIndicesBuffer;
         public float mMaxPrefilterMipLevel;
         public float mIblIntensity;
         public uint mIblComponents;

@@ -7,8 +7,8 @@ SwCull::ResetPC resetPc;
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     uint rcsIndex = in.mDispatchThreadID.x;
-    if (rcsIndex >= resetPc.mSceneRcsLimit)
+    if (rcsIndex >= resetPc.mRcsLimit)
         return;
 
-    resetPc.mSceneRcsBuffer[rcsIndex].mRiCount = 0;
+    resetPc.mRcsBuffer[rcsIndex].mRiCount = 0;
 }

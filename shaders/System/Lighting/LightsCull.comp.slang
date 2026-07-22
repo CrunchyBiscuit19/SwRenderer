@@ -23,12 +23,12 @@ void main(SwLighting::CSInput in) {
         return;
     }
 
-    SwLight::Data light = lightsCullPc.mSceneLightsBuffer[lightIndex];
+    SwLight::Data light = lightsCullPc.mLightsBuffer[lightIndex];
 
     bool visible = true;
     if (light.mType != SwLight::Type::Directional && light.mRange > 0.f) {
         float4x4 model = mul(
-            lightsCullPc.mSceneInstancesBuffer[light.mInstanceIndex].mTransformMatrix, lightsCullPc.mSceneNodeTransformsBuffer[light.mNodeTransformIndex]
+            lightsCullPc.mInstancesBuffer[light.mInstanceIndex].mTransformMatrix, lightsCullPc.mNodeTransformsBuffer[light.mNodeTransformIndex]
         );
         float3 center = mul(model, float4(light.mBasePosition, 1.f)).xyz;
         float3 forward = normalize(mul(model, float4(light.mBaseDirection, 0.f)).xyz);

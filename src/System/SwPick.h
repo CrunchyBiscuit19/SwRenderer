@@ -26,12 +26,12 @@ constexpr std::string_view DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 constexpr std::string_view DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 struct DrawPC : SwPC<DrawPC> {
-    vk::DeviceAddress mSceneVertexBuffer{0};
-    vk::DeviceAddress mSceneMaterialConstantsBuffer{0};
-    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
-    vk::DeviceAddress mSceneInstancesBuffer{0};
-    vk::DeviceAddress mSceneRisIndicesBuffer{0};
-    vk::DeviceAddress mSceneRcsBuffer{0};
+    vk::DeviceAddress mVertexBuffer{0};
+    vk::DeviceAddress mMaterialConstantsBuffer{0};
+    vk::DeviceAddress mNodeTransformsBuffer{0};
+    vk::DeviceAddress mInstancesBuffer{0};
+    vk::DeviceAddress mRisIndicesBuffer{0};
+    vk::DeviceAddress mRcsBuffer{0};
     vk::DeviceAddress mFrameBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;

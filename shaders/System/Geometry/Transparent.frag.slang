@@ -32,7 +32,7 @@ SwGeometry::DrawPC drawPc;
 SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     SwGeometry::FSOutputTransparent output;
 
-    SwMaterial::Constant mc = drawPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
+    SwMaterial::Constant mc = drawPc.mMaterialConstantsBuffer[in.mMaterialIndex];
     uint base = in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES;
 
     uint baseIdx = NonUniformResourceIndex(base + SwGeometry::BASE_TEXTURE_OFFSET);
@@ -54,8 +54,8 @@ SwGeometry::FSOutputTransparent main(SwGeometry::FSInput in) : SV_Target {
     float3 view = normalize(drawPc.mFrameBuffer->mCameraBuffer->mWorldPos - in.mWorldPos);
 
     float3 litColor = SwLighting::shadeLit(
-        baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, drawPc.mSceneLitIndicesBuffer, drawPc.mSceneLightsBuffer,
-        drawPc.mSceneInstancesBuffer, drawPc.mSceneNodeTransformsBuffer, iblIrradianceMap, iblIrradianceSampler, iblPrefilterMap, iblPrefilterSampler,
+        baseColor.rgb, metallic, roughness, ao, in.mWorldPos, normal, view, drawPc.mLitIndicesBuffer, drawPc.mLightsBuffer,
+        drawPc.mInstancesBuffer, drawPc.mNodeTransformsBuffer, iblIrradianceMap, iblIrradianceSampler, iblPrefilterMap, iblPrefilterSampler,
         iblBrdfLut, iblBrdfLutSampler, drawPc.mMaxPrefilterMipLevel, drawPc.mIblIntensity, drawPc.mIblComponents, shadows2DMaps, shadowsCubeMaps, shadowsSampler
     );
     uint emissiveIdx = NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET);

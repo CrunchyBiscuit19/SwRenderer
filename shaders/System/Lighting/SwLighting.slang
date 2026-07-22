@@ -36,20 +36,20 @@ namespace SwLighting {
     public struct ClustersMarkActivePC {
         public SwFrame::Data* mFrameBuffer;
         public Cluster* mClustersBuffer;
-        public uint8_t* mClustersActiveBooleansBuffer;
+        public bool* mClustersActiveBooleansBuffer;
     };
 
     public struct ClustersCompactActivePC {
         public uint* mClustersActiveIndicesBuffer;
-        public uint8_t* mClustersActiveBooleansBuffer;
+        public bool* mClustersActiveBooleansBuffer;
         public uint* mClustersActiveCount;
     };
 
     public struct LightsCullPC {
         public SwFrame::Data* mFrameBuffer;
-        public SwLight::Data* mSceneLightsBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
+        public SwLight::Data* mLightsBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
         public uint* mLitIndicesBuffer;
         public uint* mShadowCastsIndicesBuffer;
         public uint mLightsLimit;
@@ -57,9 +57,9 @@ namespace SwLighting {
 
     public struct ClustersLightSelectPC {
         public SwFrame::Data* mFrameBuffer;
-        public SwLight::Data* mSceneLightsBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
+        public SwLight::Data* mLightsBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
         public uint* mClustersActiveIndicesBuffer;
     };
 
@@ -72,21 +72,21 @@ namespace SwLighting {
         public SwRenderCommand* mShadowsRcsBuffer;
         public SwRenderItem* mShadowsRisBuffer;
         public uint* mShadowsRisIndicesBuffer;
-        public SwLight::Data* mSceneLightsBuffer;
-        public SwBounds* mSceneBoundsBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
+        public SwLight::Data* mLightsBuffer;
+        public SwBounds* mBoundsBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
         public uint mShadowsRisLimit;
     };
 
     public struct ShadowDrawPC {
         public SwRenderCommand* mShadowsRcsBuffer;
         public uint* mShadowsRisIndicesBuffer;
-        public SwLight::Data* mSceneLightsBuffer;
-        public SwVertex* mSceneVertexBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
-        public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
+        public SwLight::Data* mLightsBuffer;
+        public SwVertex* mVertexBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
+        public SwMaterial::Constant* mMaterialConstantsBuffer;
     };
 
     public struct VSInput {

@@ -84,26 +84,26 @@ private:
     SwLighting::System mLighting;
     SwGui::System mGui;
 
-    SwDescriptorSet mSceneMaterialSamplersDescriptorSet;
-    SwDescriptorSet mSceneMaterialTexturesDescriptorSet;
-    SwDescriptorLayout mSceneMaterialResourcesDescriptorLayout;
-    SwAllocatedBuffer mSceneVertexBuffer;
-    SwAllocatedBuffer mSceneIndexBuffer;
-    SwAllocatedBuffer mSceneMaterialConstantsBuffer;
-    SwAllocatedBuffer mSceneNodeTransformsBuffer;
-    SwAllocatedBuffer mSceneInstancesBuffer;
-    SwAllocatedBuffer mSceneBoundsBuffer;
-    std::array<SwAllocatedBuffer, 2> mSceneVisibilityRisBuffers;
-    std::uint32_t mSceneVisibilityRisBufferReadIndex{0};
-    SwAllocatedBuffer mSceneInitialRcsBuffer;
-    SwAllocatedBuffer mSceneEarlyRcsBuffer;
-    SwAllocatedBuffer mSceneEarlyRcsCount;
-    SwAllocatedBuffer mSceneLateRcsBuffer;
-    SwAllocatedBuffer mSceneLateRcsCount;
-    SwAllocatedBuffer mSceneRisBuffer;
-    SwAllocatedBuffer mSceneRisIndicesBuffer;
-    SwAllocatedBuffer mSceneBatchesBuffer;
-    SwAllocatedBuffer mSceneLightsBuffer;
+    SwDescriptorSet mMaterialSamplersDescriptorSet;
+    SwDescriptorSet mMaterialTexturesDescriptorSet;
+    SwDescriptorLayout mMaterialResourcesDescriptorLayout;
+    SwAllocatedBuffer mVertexBuffer;
+    SwAllocatedBuffer mIndexBuffer;
+    SwAllocatedBuffer mMaterialConstantsBuffer;
+    SwAllocatedBuffer mNodeTransformsBuffer;
+    SwAllocatedBuffer mInstancesBuffer;
+    SwAllocatedBuffer mBoundsBuffer;
+    std::array<SwAllocatedBuffer, 2> mVisibilityRisBuffers;
+    std::uint32_t mVisibilityRisBufferReadIndex{0};
+    SwAllocatedBuffer mInitialRcsBuffer;
+    SwAllocatedBuffer mEarlyRcsBuffer;
+    SwAllocatedBuffer mEarlyRcsCount;
+    SwAllocatedBuffer mLateRcsBuffer;
+    SwAllocatedBuffer mLateRcsCount;
+    SwAllocatedBuffer mRisBuffer;
+    SwAllocatedBuffer mRisIndicesBuffer;
+    SwAllocatedBuffer mBatchesBuffer;
+    SwAllocatedBuffer mLightsBuffer;
 
     SwRenderGraph mRenderGraph;
 
@@ -163,28 +163,28 @@ public:
     inline SwLight& getLight(const std::uint32_t lightId) { return mLights.at(lightId); }
     inline const std::vector<std::uint32_t>& getLightIds() const { return mLightIds; }
 
-    inline SwDescriptorSet& getSceneMaterialSamplersDescriptorSet() { return mSceneMaterialSamplersDescriptorSet; }
-    inline SwDescriptorSet& getSceneMaterialTexturesDescriptorSet() { return mSceneMaterialTexturesDescriptorSet; }
-    inline SwAllocatedBuffer& getSceneVertexBuffer() { return mSceneVertexBuffer; }
-    inline SwAllocatedBuffer& getSceneIndexBuffer() { return mSceneIndexBuffer; }
-    inline SwAllocatedBuffer& getSceneMaterialConstantsBuffer() { return mSceneMaterialConstantsBuffer; }
-    inline SwAllocatedBuffer& getSceneNodeTransformsBuffer() { return mSceneNodeTransformsBuffer; }
-    inline SwAllocatedBuffer& getSceneInstancesBuffer() { return mSceneInstancesBuffer; }
-    inline SwAllocatedBuffer& getSceneBoundsBuffer() { return mSceneBoundsBuffer; }
-    inline void toggleSceneVisibilityRisBuffer() { mSceneVisibilityRisBufferReadIndex = 1 - mSceneVisibilityRisBufferReadIndex; }
-    inline SwAllocatedBuffer& getSceneVisibilityRisReadBuffer() { return mSceneVisibilityRisBuffers[mSceneVisibilityRisBufferReadIndex]; }
-    inline SwAllocatedBuffer& getSceneVisibilityRisWriteBuffer() { return mSceneVisibilityRisBuffers[1 - mSceneVisibilityRisBufferReadIndex]; }
-    inline std::span<SwRenderCommand> getSceneRcs() { return mRcs; }
-    inline std::span<SwRenderItem> getSceneRis() { return mRis; }
-    inline SwAllocatedBuffer& getSceneRisIndicesBuffer() { return mSceneRisIndicesBuffer; }
-    inline SwAllocatedBuffer& getSceneInitialRcsBuffer() { return mSceneInitialRcsBuffer; }
-    inline SwAllocatedBuffer& getSceneEarlyRcsBuffer() { return mSceneEarlyRcsBuffer; }
-    inline SwAllocatedBuffer& getSceneEarlyRcsCount() { return mSceneEarlyRcsCount; }
-    inline SwAllocatedBuffer& getSceneLateRcsBuffer() { return mSceneLateRcsBuffer; }
-    inline SwAllocatedBuffer& getSceneLateRcsCount() { return mSceneLateRcsCount; }
-    inline SwAllocatedBuffer& getSceneRisBuffer() { return mSceneRisBuffer; }
-    inline SwAllocatedBuffer& getSceneBatchesBuffer() { return mSceneBatchesBuffer; }
-    inline SwAllocatedBuffer& getSceneLightsBuffer() { return mSceneLightsBuffer; }
+    inline SwDescriptorSet& getMaterialSamplersDescriptorSet() { return mMaterialSamplersDescriptorSet; }
+    inline SwDescriptorSet& getMaterialTexturesDescriptorSet() { return mMaterialTexturesDescriptorSet; }
+    inline SwAllocatedBuffer& getVertexBuffer() { return mVertexBuffer; }
+    inline SwAllocatedBuffer& getIndexBuffer() { return mIndexBuffer; }
+    inline SwAllocatedBuffer& getMaterialConstantsBuffer() { return mMaterialConstantsBuffer; }
+    inline SwAllocatedBuffer& getNodeTransformsBuffer() { return mNodeTransformsBuffer; }
+    inline SwAllocatedBuffer& getInstancesBuffer() { return mInstancesBuffer; }
+    inline SwAllocatedBuffer& getBoundsBuffer() { return mBoundsBuffer; }
+    inline void toggleVisibilityRisBuffer() { mVisibilityRisBufferReadIndex = 1 - mVisibilityRisBufferReadIndex; }
+    inline SwAllocatedBuffer& getVisibilityRisReadBuffer() { return mVisibilityRisBuffers[mVisibilityRisBufferReadIndex]; }
+    inline SwAllocatedBuffer& getVisibilityRisWriteBuffer() { return mVisibilityRisBuffers[1 - mVisibilityRisBufferReadIndex]; }
+    inline std::span<SwRenderCommand> getRcs() { return mRcs; }
+    inline std::span<SwRenderItem> getRis() { return mRis; }
+    inline SwAllocatedBuffer& getRisIndicesBuffer() { return mRisIndicesBuffer; }
+    inline SwAllocatedBuffer& getInitialRcsBuffer() { return mInitialRcsBuffer; }
+    inline SwAllocatedBuffer& getEarlyRcsBuffer() { return mEarlyRcsBuffer; }
+    inline SwAllocatedBuffer& getEarlyRcsCount() { return mEarlyRcsCount; }
+    inline SwAllocatedBuffer& getLateRcsBuffer() { return mLateRcsBuffer; }
+    inline SwAllocatedBuffer& getLateRcsCount() { return mLateRcsCount; }
+    inline SwAllocatedBuffer& getRisBuffer() { return mRisBuffer; }
+    inline SwAllocatedBuffer& getBatchesBuffer() { return mBatchesBuffer; }
+    inline SwAllocatedBuffer& getLightsBuffer() { return mLightsBuffer; }
 
     inline SwInput::System& getInputSystem() { return mInput; }
     inline SwCull::System& getCullSystem() { return mCull; }
@@ -210,8 +210,8 @@ public:
 
     void recordPendingDraw(SwMaterial& material, const SwRenderCommand& rc, std::uint32_t instanceCount);
     void regenerateRcsAndRis();
-    void reloadSceneRcsAndRisBuffers();
-    void reloadSceneBatchesBuffer();
+    void reloadRcsAndRisBuffers();
+    void reloadBatchesBuffer();
 
     void realignVertexIndexOffset();
     void realignMaterialOffset();
@@ -220,15 +220,15 @@ public:
     void realignInstancesOffset();
     void realignOffsets();
 
-    void reloadSceneVertexBuffer();
-    void reloadSceneIndexBuffer();
-    void reloadSceneMaterialConstantsBuffer();
-    void reloadSceneNodeTransformsBuffer();
-    void reloadSceneBoundsBuffer();
-    void reloadSceneInstancesBuffer();
-    void reloadSceneLightsBuffer();
-    void reloadSceneMaterialResourcesArray();
-    void reloadSceneBuffers();
+    void reloadVertexBuffer();
+    void reloadIndexBuffer();
+    void reloadMaterialConstantsBuffer();
+    void reloadNodeTransformsBuffer();
+    void reloadBoundsBuffer();
+    void reloadInstancesBuffer();
+    void reloadLightsBuffer();
+    void reloadMaterialResourcesArray();
+    void reloadBuffers();
 
     void resetFlags();
 

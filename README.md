@@ -207,7 +207,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 * **`AssetLight`** — a per-instance binding emitted by asset `SwLightNode`s during regen: a non-owning pointer to the asset-owned `SwLight`, its owning instance pointer and asset id, its node-transform and instance indices, and the cached world position and direction. The system references the light object rather than copying its `SwLight::Data`.
 * **`Resources`** — the scene's lights: a single global `SwSunlight` and the `AssetLight` references. All punctual lights belong to assets. Lights spawned from the GUI are loaded from `resources/lights/{point,spot,directional}.gltf` as standalone assets (`SwScene::spawnStandaloneLight`) that live in `mAssets` but are flagged `standalone` so they are hidden from the assets menu and transformable from the lighting panel.
-* **`System`** — flattens its `AssetLight` references into `SwLight::Data` via `collectLightData()`; the scene packs that into `mSceneLightsBuffer` (`reloadSceneLightsBuffer`).
+* **`System`** — flattens its `AssetLight` references into `SwLight::Data` via `collectLightData()`; the scene packs that into `mLightsBuffer` (`reloadLightsBuffer`).
 * **Shadow mapping (in progress)** — the system also owns the shadow-caster resources: per-caster arrays of `SwDepthImage2D` / `SwDepthImageCubemap` maps (`MAX_NUM_SHADOW_CASTERS`), their sampler and consume descriptor set (`sShadowsConsumeDescriptorLayout`, bound during the geometry passes), the per-caster shadow render-command/item buffers, and the reset/cull/draw compute and graphics pipelines. It registers the `LightingReset`, `LightingLightsCull`, `LightingShadowsCull`, and `LightingShadowsDraw` passes; reset and light-culling are live, while the shadow cull and draw callbacks are still stubs. The `LightingBuildClusters` / `LightingMarkActiveClusters` pass types are reserved for planned clustered lighting and are not yet registered.
 * **Relations** — feeds the light buffer that `SwGeometry`'s shaders consume, and the shadow-map descriptor set that its geometry pipeline layouts sample; the sunlight is uploaded per frame via the per-frame buffer.
 
@@ -314,7 +314,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Design principle: one big buffer per data type
 
 * The architecture deliberately favours packing each kind of scene data into a **single scene-wide buffer**. 
-* Every asset's vertices, indices, material constants, node transforms, instances, bounds, render commands, and render items are concatenated into the corresponding `mSceneXBuffer` on `SwScene`, and each asset is handed contiguous base offsets (`mFirstMaterialInScene`, `mFirstNodeTransformInScene`, `mFirstInstanceInScene`, `mFirstBoundInScene`)
+* Every asset's vertices, indices, material constants, node transforms, instances, bounds, render commands, and render items are concatenated into the corresponding `mXBuffer` on `SwScene`, and each asset is handed contiguous base offsets (`mFirstMaterialInScene`, `mFirstNodeTransformInScene`, `mFirstInstanceInScene`, `mFirstBoundInScene`)
 * Cross-references between the data types are then plain integer indices into these flat arrays (see [Buffer Referencing via Indices](#buffer-referencing-via-indices)) rather than pointers or per-asset bindings.
 
 * Compute or draw stage can launch **a GPU thread per element** over the whole scene at once. 
@@ -372,18 +372,18 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ```
 ri  = mRisBuffer[threadId]
 rc  = mRcsBuffer[ri.mRcIndex]
-bounds        = mSceneBoundsBuffer[rc.mBoundsIndex]
-nodeTransform = mSceneNodeTransformsBuffer[rc.mNodeTransformIndex]
-instance      = mSceneInstancesBuffer[ri.mInstanceIndex]
+bounds        = mBoundsBuffer[rc.mBoundsIndex]
+nodeTransform = mNodeTransformsBuffer[rc.mNodeTransformIndex]
+instance      = mInstancesBuffer[ri.mInstanceIndex]
 ```
 
 * Transforms the bounds AABB by `instance * nodeTransform`, runs the culling tests. 
-* If the RI is visible it `InterlockedAdd`s into `rc.mRiCount` to claim a compacted slot and writes the surviving `mInstanceIndex` into `mSceneDrawRisIndicesBuffer[rc.mFirstRi + offset]`.
+* If the RI is visible it `InterlockedAdd`s into `rc.mRiCount` to claim a compacted slot and writes the surviving `mInstanceIndex` into `mDrawRisIndicesBuffer[rc.mFirstRi + offset]`.
 * At draw time the vertex shader reads back the visible instance.
 
 ```
-sceneInstanceIndex = mSceneDrawRisIndicesBuffer[in.mInstanceIndex]   // SV_VulkanInstanceID
-transform          = mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix
+sceneInstanceIndex = mDrawRisIndicesBuffer[in.mInstanceIndex]   // SV_VulkanInstanceID
+transform          = mInstancesBuffer[sceneInstanceIndex].mTransformMatrix
 ```
 
 ---

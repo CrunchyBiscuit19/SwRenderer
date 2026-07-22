@@ -30,7 +30,7 @@ public uniform SamplerComparisonState shadowsSampler;
 SwGeometry::DrawPC drawPc;
 
 float4 shade(SwGeometry::FSInput in, bool masked) {
-    SwMaterial::Constant mc = drawPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
+    SwMaterial::Constant mc = drawPc.mMaterialConstantsBuffer[in.mMaterialIndex];
     uint base = in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES;
 
     uint baseIdx = NonUniformResourceIndex(base + SwGeometry::BASE_TEXTURE_OFFSET);
@@ -64,10 +64,10 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
         in.mWorldPos,
         normal,
         view,
-        drawPc.mSceneLitIndicesBuffer,
-        drawPc.mSceneLightsBuffer,
-        drawPc.mSceneInstancesBuffer,
-        drawPc.mSceneNodeTransformsBuffer,
+        drawPc.mLitIndicesBuffer,
+        drawPc.mLightsBuffer,
+        drawPc.mInstancesBuffer,
+        drawPc.mNodeTransformsBuffer,
         iblIrradianceMap,
         iblIrradianceSampler,
         iblPrefilterMap,
@@ -107,7 +107,7 @@ SwGeometry::FSOutputOpaque mainMasked(SwGeometry::FSInput in) : SV_Target {
 // Depth pre-pass masked geometry: alpha-cutout discard only, no color output.
 [shader("fragment")]
 void mainZPassMasked(SwGeometry::FSInput in) {
-    SwMaterial::Constant mc = drawPc.mSceneMaterialConstantsBuffer[in.mMaterialIndex];
+    SwMaterial::Constant mc = drawPc.mMaterialConstantsBuffer[in.mMaterialIndex];
     uint base = in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES;
     uint baseIdx = NonUniformResourceIndex(base + SwGeometry::BASE_TEXTURE_OFFSET);
     float4 diffuseColor = materialTextures[baseIdx].Sample(materialSamplers[baseIdx], in.mUv);

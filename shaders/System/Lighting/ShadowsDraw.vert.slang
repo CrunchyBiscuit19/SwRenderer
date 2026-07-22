@@ -6,19 +6,19 @@ SwLighting::ShadowDrawPC shadowsDrawPc;
 SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     SwLighting::VSOutput out;
 
-    SwVertex v = shadowsDrawPc.mSceneVertexBuffer[in.mVertexIndex];
+    SwVertex v = shadowsDrawPc.mVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
     SwRenderCommand rc = shadowsDrawPc.mShadowsRcsBuffer[in.mDrawIndex];
 
-    uint mSceneInstanceIndex = shadowsDrawPc.mShadowsRisIndicesBuffer[in.mRenderItemIndex];
-    float4x4 instanceTransformMatrix = shadowsDrawPc.mSceneInstancesBuffer[mSceneInstanceIndex].mTransformMatrix;
+    uint mInstanceIndex = shadowsDrawPc.mShadowsRisIndicesBuffer[in.mRenderItemIndex];
+    float4x4 instanceTransformMatrix = shadowsDrawPc.mInstancesBuffer[mInstanceIndex].mTransformMatrix;
 
-    uint mSceneNodeTransformIndex = rc.mNodeTransformIndex;
-    float4x4 nodeTransformMatrix = shadowsDrawPc.mSceneNodeTransformsBuffer[mSceneNodeTransformIndex];
+    uint mNodeTransformIndex = rc.mNodeTransformIndex;
+    float4x4 nodeTransformMatrix = shadowsDrawPc.mNodeTransformsBuffer[mNodeTransformIndex];
 
     uint sceneMaterialIndex = rc.mMaterialIndex;
-    SwMaterial::Constant materialConstant = shadowsDrawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
+    SwMaterial::Constant materialConstant = shadowsDrawPc.mMaterialConstantsBuffer[sceneMaterialIndex];
 
     float4x4 activeLightViewProj = float4x4(1.f);  // TODO: source the rebuilt per-light view-projection (this pass is currently a no-op)
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
@@ -28,7 +28,7 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     out.mAlphaCutoff = materialConstant.mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
     out.mAssetIndex = rc.mAssetIndex;
-    out.mInstanceIndex = mSceneInstanceIndex;
+    out.mInstanceIndex = mInstanceIndex;
 
     return out;
 }

@@ -88,9 +88,9 @@ struct ClustersCompactActivePC : SwPC<ClustersCompactActivePC> {
 
 struct LightsCullPC : SwPC<LightsCullPC> {
     vk::DeviceAddress mFrameBuffer;
-    vk::DeviceAddress mSceneLightsBuffer{0};
-    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
-    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mLightsBuffer{0};
+    vk::DeviceAddress mNodeTransformsBuffer{0};
+    vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mLitIndicesBuffer{0};
     vk::DeviceAddress mShadowCastsIndicesBuffer{0};
     std::uint32_t mLightsCount{0};
@@ -100,9 +100,9 @@ struct LightsCullPC : SwPC<LightsCullPC> {
 
 struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mFrameBuffer{0};
-    vk::DeviceAddress mSceneLightsBuffer{0};
-    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
-    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mLightsBuffer{0};
+    vk::DeviceAddress mNodeTransformsBuffer{0};
+    vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -112,10 +112,10 @@ struct ShadowsCullPC : SwPC<ShadowsCullPC> {
     vk::DeviceAddress mShadowsRcsBuffer{0};
     vk::DeviceAddress mShadowsRisBuffer{0};
     vk::DeviceAddress mShadowsRisIndicesBuffer{0};
-    vk::DeviceAddress mSceneLightsBuffer{0};
-    vk::DeviceAddress mSceneBoundsBuffer{0};
-    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
-    vk::DeviceAddress mSceneInstancesBuffer{0};
+    vk::DeviceAddress mLightsBuffer{0};
+    vk::DeviceAddress mBoundsBuffer{0};
+    vk::DeviceAddress mNodeTransformsBuffer{0};
+    vk::DeviceAddress mInstancesBuffer{0};
     std::uint32_t mShadowsRisLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -124,11 +124,11 @@ struct ShadowsCullPC : SwPC<ShadowsCullPC> {
 struct ShadowDrawPC : SwPC<ShadowDrawPC> {  // MRTs then select the light's shadow map
     vk::DeviceAddress mShadowsRcsBuffer{0};
     vk::DeviceAddress mShadowsRisIndicesBuffer{0};
-    vk::DeviceAddress mSceneLightsBuffer{0};
-    vk::DeviceAddress mSceneVertexBuffer{0};
-    vk::DeviceAddress mSceneNodeTransformsBuffer{0};
-    vk::DeviceAddress mSceneInstancesBuffer{0};
-    vk::DeviceAddress mSceneMaterialConstantsBuffer{0};
+    vk::DeviceAddress mLightsBuffer{0};
+    vk::DeviceAddress mVertexBuffer{0};
+    vk::DeviceAddress mNodeTransformsBuffer{0};
+    vk::DeviceAddress mInstancesBuffer{0};
+    vk::DeviceAddress mMaterialConstantsBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };

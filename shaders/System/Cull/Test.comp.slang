@@ -114,14 +114,14 @@ void markRiIndex(SwRenderCommand* rc, SwRenderItem* ri, uint* sceneRisIndicesBuf
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwCull::CSInput in) {
     uint risIndex = in.mDispatchThreadID.x;
-    if (risIndex >= testPc.mSceneRisLimit)
+    if (risIndex >= testPc.mRisLimit)
         return;
-    SwRenderItem* ri = &testPc.mSceneRisBuffer[risIndex];
-    SwRenderCommand* rc = &testPc.mSceneRcsBuffer[ri->mRcIndex];
+    SwRenderItem* ri = &testPc.mRisBuffer[risIndex];
+    SwRenderCommand* rc = &testPc.mRcsBuffer[ri->mRcIndex];
 
-    SwBounds* bounds = &testPc.mSceneBoundsBuffer[rc->mBoundsIndex];
-    SwNode::Transform* nodeTransform = &testPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    SwInstance::Data* instance = &testPc.mSceneInstancesBuffer[ri->mInstanceIndex];
+    SwBounds* bounds = &testPc.mBoundsBuffer[rc->mBoundsIndex];
+    SwNode::Transform* nodeTransform = &testPc.mNodeTransformsBuffer[rc->mNodeTransformIndex];
+    SwInstance::Data* instance = &testPc.mInstancesBuffer[ri->mInstanceIndex];
     SwFrustum* frustum = &testPc.mFrameBuffer->mCameraBuffer->mFrustum;
     SwCamera::Perspective* perspective = &testPc.mFrameBuffer->mCameraBuffer->mPerspective;
     float4[SwMesh::NUM_AABB_CORNERS] aabbCorners = {
@@ -142,28 +142,28 @@ void main(SwCull::CSInput in) {
     bool draw = false;
     if (testPc.mPhase == SwCull::Phase::Early) {
         // Draw whatever opaque was visible last frame (frustum only). Do not modify visibility.
-        if (testPc.mSceneBatchesBuffer[rc->mBatchIndex].mMaterialType == SwMaterial::Type::Opaque) {
-            bool prevVisible = testPc.mSceneRisVisibilityReadBuffer[riVisIndex];
+        if (testPc.mBatchesBuffer[rc->mBatchIndex].mMaterialType == SwMaterial::Type::Opaque) {
+            bool prevVisible = testPc.mRisVisibilityReadBuffer[riVisIndex];
             if (prevVisible)
                 prevVisible = !SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners);
             if (prevVisible) {
-                markRiIndex(rc, ri, testPc.mSceneRisIndicesBuffer);
+                markRiIndex(rc, ri, testPc.mRisIndicesBuffer);
                 draw = true;
             }
         }
     } else {
         bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&
                            (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage));
-        testPc.mSceneRisVisibilityWriteBuffer[riVisIndex] = currVisible;
+        testPc.mRisVisibilityWriteBuffer[riVisIndex] = currVisible;
         // Opaque render commands are the only ones drawn by the early geometry pass, so only they emit just the newly-visible delta.
-        bool hasEarlyDraw = testPc.mSceneBatchesBuffer[rc->mBatchIndex].mMaterialType == SwMaterial::Type::Opaque;
-        bool drawnEarly = hasEarlyDraw && testPc.mSceneRisVisibilityReadBuffer[riVisIndex];
+        bool hasEarlyDraw = testPc.mBatchesBuffer[rc->mBatchIndex].mMaterialType == SwMaterial::Type::Opaque;
+        bool drawnEarly = hasEarlyDraw && testPc.mRisVisibilityReadBuffer[riVisIndex];
         if (currVisible && !drawnEarly) {
-            markRiIndex(rc, ri, testPc.mSceneRisIndicesBuffer);
+            markRiIndex(rc, ri, testPc.mRisIndicesBuffer);
             draw = true;
         }
     }
     uint _;
     if (draw)
-        InterlockedAdd(*testPc.mSceneRisCount, 1, _);
+        InterlockedAdd(*testPc.mRisCount, 1, _);
 }

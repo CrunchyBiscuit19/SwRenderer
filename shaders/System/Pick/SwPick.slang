@@ -10,12 +10,12 @@ __exported import Data.SwNode;
 
 namespace SwPick {
     public struct DrawPC {
-        public SwVertex* mSceneVertexBuffer;
-        public SwMaterial::Constant* mSceneMaterialConstantsBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
-        public uint* mSceneRisIndicesBuffer;
-        public SwRenderCommand *mSceneRcsBuffer;
+        public SwVertex* mVertexBuffer;
+        public SwMaterial::Constant* mMaterialConstantsBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
+        public uint* mRisIndicesBuffer;
+        public SwRenderCommand *mRcsBuffer;
         public SwFrame::Data *mFrameBuffer;
     };
 

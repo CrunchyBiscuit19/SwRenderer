@@ -18,8 +18,8 @@ public:
         float mRange{-1.f};
         float mInnerCos{1.f};
         float mOuterCos{-1.f};
-        std::uint32_t mNodeTransformIndex{0};  // into mSceneNodeTransformsBuffer
-        std::uint32_t mInstanceIndex{0};       // into mSceneInstancesBuffer
+        std::uint32_t mNodeTransformIndex{0};  // into mNodeTransformsBuffer
+        std::uint32_t mInstanceIndex{0};       // into mInstancesBuffer
         glm::vec3 mBasePosition{0.f};
         glm::vec3 mBaseDirection{0.f, 0.f, -1.f};  // light forward (glTF local -Z convention) in node-local space
     };
@@ -45,8 +45,8 @@ private:
     std::uint32_t mRelativeNodeIndex{0};
 
     // Scene-wide indices resolved from the asset offsets, refreshed whenever offsets realign.
-    std::uint32_t mNodeTransformIndex{0};  // into mSceneNodeTransformsBuffer
-    std::uint32_t mInstanceIndex{0};       // into mSceneInstancesBuffer
+    std::uint32_t mNodeTransformIndex{0};  // into mNodeTransformsBuffer
+    std::uint32_t mInstanceIndex{0};       // into mInstancesBuffer
 
     // The light's own offset/orientation in node-local space. The node transform and instance transform
     // place it in the world as instance * nodeTransform * base.

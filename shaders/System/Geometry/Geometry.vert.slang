@@ -6,19 +6,19 @@ SwGeometry::DrawPC drawPc;
 SwGeometry::VSOutput main(SwGeometry::VSInput in) {
     SwGeometry::VSOutput out;
 
-    SwVertex v = drawPc.mSceneVertexBuffer[in.mVertexIndex];
+    SwVertex v = drawPc.mVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwRenderCommand rc = drawPc.mSceneRcsBuffer[in.mDrawIndex];
+    SwRenderCommand rc = drawPc.mRcsBuffer[in.mDrawIndex];
 
-    uint sceneInstanceIndex = drawPc.mSceneRisIndicesBuffer[in.mRenderItemIndex];
-    float4x4 instanceTransformMatrix = drawPc.mSceneInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
+    uint sceneInstanceIndex = drawPc.mRisIndicesBuffer[in.mRenderItemIndex];
+    float4x4 instanceTransformMatrix = drawPc.mInstancesBuffer[sceneInstanceIndex].mTransformMatrix;
 
     uint sceneNodeTransformIndex = rc.mNodeTransformIndex;
-    float4x4 nodeTransformMatrix = drawPc.mSceneNodeTransformsBuffer[sceneNodeTransformIndex];
+    float4x4 nodeTransformMatrix = drawPc.mNodeTransformsBuffer[sceneNodeTransformIndex];
 
     uint sceneMaterialIndex = rc.mMaterialIndex;
-    SwMaterial::Constant materialConstant = drawPc.mSceneMaterialConstantsBuffer[sceneMaterialIndex];
+    SwMaterial::Constant materialConstant = drawPc.mMaterialConstantsBuffer[sceneMaterialIndex];
 
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
     float4 worldPosition = mul(modelMatrix, position);

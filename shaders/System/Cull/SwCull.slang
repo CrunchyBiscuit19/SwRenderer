@@ -13,30 +13,30 @@ namespace SwCull {
     public static const bool ENABLE_OCCLUSION_CULL = true;
 
     public struct ResetPC {
-        public SwRenderCommand* mSceneRcsBuffer;
-        public uint mSceneRcsLimit;
+        public SwRenderCommand* mRcsBuffer;
+        public uint mRcsLimit;
     };
 
     public enum Phase { Early, Late };
 
     public struct TestPC {
-        public SwRenderCommand* mSceneRcsBuffer;
-        public SwRenderItem* mSceneRisBuffer;
-        public SwBatch::Data* mSceneBatchesBuffer;
-        public uint* mSceneRisCount;
+        public SwRenderCommand* mRcsBuffer;
+        public SwRenderItem* mRisBuffer;
+        public SwBatch::Data* mBatchesBuffer;
+        public uint* mRisCount;
         public SwFrame::Data* mFrameBuffer;
-        public SwBounds* mSceneBoundsBuffer;
-        public SwNode::Transform* mSceneNodeTransformsBuffer;
-        public SwInstance::Data* mSceneInstancesBuffer;
-        public uint* mSceneRisIndicesBuffer;
-        public bool* mSceneRisVisibilityReadBuffer;
-        public bool* mSceneRisVisibilityWriteBuffer;
-        public uint mSceneRisLimit;
+        public SwBounds* mBoundsBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
+        public uint* mRisIndicesBuffer;
+        public bool* mRisVisibilityReadBuffer;
+        public bool* mRisVisibilityWriteBuffer;
+        public uint mRisLimit;
         public Phase mPhase;
     };
 
     public struct CompactPC {
-        public SwBatch::Data* mSceneBatchesBuffer;
+        public SwBatch::Data* mBatchesBuffer;
         public SwRenderCommand* mPreRcsBuffer;
         public SwRenderCommand* mPostRcsBuffer;
         public uint* mPostRcsCount;

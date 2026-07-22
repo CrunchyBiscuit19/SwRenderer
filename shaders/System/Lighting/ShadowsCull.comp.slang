@@ -71,16 +71,16 @@ void main(SwLighting::CSInput in) {
     SwRenderItem* ri = &shadowsCullPc.mShadowsRisBuffer[risIndex];
     SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[ri->mRcIndex];
 
-    SwBounds* riBounds = &shadowsCullPc.mSceneBoundsBuffer[rc->mBoundsIndex];
-    float4x4 riNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[rc->mNodeTransformIndex];
-    float4x4 riInstanceTransform = shadowsCullPc.mSceneInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
+    SwBounds* riBounds = &shadowsCullPc.mBoundsBuffer[rc->mBoundsIndex];
+    float4x4 riNodeTransform = shadowsCullPc.mNodeTransformsBuffer[rc->mNodeTransformIndex];
+    float4x4 riInstanceTransform = shadowsCullPc.mInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
     uint activeLightIndex = 0;  // TODO: source the per-dispatch shadow-caster index once the cull dispatch is rebuilt
     uint sceneLightsIndex = activeLightIndex;  // TODO: map the shadow-caster slot to its scene light index
-    SwLight::Data* light = &shadowsCullPc.mSceneLightsBuffer[sceneLightsIndex];
-    float4x4 lightNodeTransform = shadowsCullPc.mSceneNodeTransformsBuffer[light->mNodeTransformIndex]; 
-    float4x4 lightInstanceTransform = shadowsCullPc.mSceneInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
+    SwLight::Data* light = &shadowsCullPc.mLightsBuffer[sceneLightsIndex];
+    float4x4 lightNodeTransform = shadowsCullPc.mNodeTransformsBuffer[light->mNodeTransformIndex]; 
+    float4x4 lightInstanceTransform = shadowsCullPc.mInstancesBuffer[light->mInstanceIndex].mTransformMatrix; 
     float4x4 lightModelMatrix = mul(lightInstanceTransform, lightNodeTransform);
     float3 lightApex = mul(lightModelMatrix, float4(light->mBasePosition, 1.f)).xyz;
 

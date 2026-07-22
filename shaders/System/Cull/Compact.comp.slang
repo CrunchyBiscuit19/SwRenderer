@@ -17,7 +17,7 @@ void main(SwCull::CSInput in) {
         return;
 
     // Current batch's first rcs slot in the scene wide pre-rcs buffer
-    uint currentBatchStartRcsIndex = compactPc.mSceneBatchesBuffer[rc->mBatchIndex].mRcsIndex;
+    uint currentBatchStartRcsIndex = compactPc.mBatchesBuffer[rc->mBatchIndex].mRcsIndex;
     
     // Current batch's rcs count, incremented for next thread. 
     uint currentBatchCurrentRcsCount;

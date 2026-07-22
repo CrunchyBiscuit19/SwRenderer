@@ -8,7 +8,7 @@ SwLighting::ClustersCompactActivePC clustersCompactActivePc;
 void main(SwLighting::CSInput in) {
     uint clusterBooleanIndex = in.mDispatchThreadID.x;
 
-    bool clusterActive = (bool)clustersCompactActivePc.mClustersActiveBooleansBuffer[clusterBooleanIndex];
+    bool clusterActive = clustersCompactActivePc.mClustersActiveBooleansBuffer[clusterBooleanIndex];
     if (!clusterActive) return;
 
     uint clusterIndicesIndex; 

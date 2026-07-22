@@ -6,7 +6,7 @@ buffer, and why it is preferred over dense global compaction. It is a design ref
 
 ## What compaction does and why
 
-After the cull work pass, every render command in `mSceneInitialRcsBuffer` has had its `mRiCount` (which
+After the cull work pass, every render command in `mInitialRcsBuffer` has had its `mRiCount` (which
 doubles as the indirect draw's `instanceCount`) set to the number of visible instances for that draw. A
 fully-culled RC ends up with `mRiCount == 0`.
 
@@ -104,7 +104,7 @@ segment base and count slot. With per-batch dispatch that lookup is just a push 
 
 Only two small things versus the current setup.
 
-1. A per-batch count slot. `mSceneEarlyRcsCount` / `mSceneLateRcsCount` need `numBatches` uints (one per
+1. A per-batch count slot. `mEarlyRcsCount` / `mLateRcsCount` need `numBatches` uints (one per
    batch) instead of the old per-batch single-count buffers. Reset them to 0 before the work pass.
 2. A batch ordinal. Each `SwBatch` needs its index into that count array. Assign a running counter during the
    flatten loop in `regenerateRcsAndRis` (0, 1, 2, ... in the same order you emit batches) and store it next
@@ -122,7 +122,7 @@ bit of unused buffer space for draw offsets you can compute on the CPU, which is
 
 The whole scheme reduces to two pieces of data per batch.
 
-1. An offset into the buffer. This is just the batch's `rcsOffset`, its index into the `mSceneRcs` vector,
+1. An offset into the buffer. This is just the batch's `rcsOffset`, its index into the `mRcs` vector,
    turned into a byte offset with `rcsOffset * sizeof(SwRenderCommand)`. Because the post-cull buffer reuses
    the initial layout, the same offset addresses the batch in both the initial and the compacted buffer, and
    it is stable across frames.
