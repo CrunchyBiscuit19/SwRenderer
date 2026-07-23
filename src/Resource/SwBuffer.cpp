@@ -241,6 +241,8 @@ void SwBufferFactory::tick(std::uint64_t currentFrame) {
     sDeletionQueue.erase(it, sDeletionQueue.end());
 }
 
+void SwBufferFactory::cleanup() { sDeletionQueue.clear(); }
+
 SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
     std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size, bool addressable, bool resizable
 ) {

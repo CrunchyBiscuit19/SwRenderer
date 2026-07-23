@@ -277,6 +277,7 @@ SwRenderer::~SwRenderer() {
     SwLighting::Resources::cleanup();
     SwMaterialResources::cleanup();
     SwImageFactory::cleanup();
+    SwBufferFactory::cleanup();
     SwMaterial::cleanup();
     SwAsset::cleanup();
     SwSamplerFactory::cleanup();

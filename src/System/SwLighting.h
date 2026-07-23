@@ -39,12 +39,9 @@ static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
-static constexpr vk::DeviceSize SHADOWS_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
-static constexpr vk::DeviceSize SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE{(1 << 12) * sizeof(std::uint32_t)};
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
-static constexpr vk::DeviceSize LIT_INDICES_BUFFER_SIZE{(1 + 1 << 5) * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize SHADOW_CAST_INDICES_BUFFER_SIZE{(1 + MAX_NUM_SHADOW_CASTERS) * sizeof(std::uint32_t)};
 
 static constexpr glm::uvec3 CLUSTERS_DIMENSIONS{16, 9, 24};

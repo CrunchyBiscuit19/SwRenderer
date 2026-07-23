@@ -41,38 +41,40 @@ void SwScene::initializeMiscPasses() {
 }
 
 void SwScene::initializeResources() {
-    mVertexBuffer = SwBufferFactory::createAllocatedBuffer("VertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, VERTEX_BUFFER_SIZE, true);
-    mIndexBuffer = SwBufferFactory::createAllocatedBuffer("IndexBuffer", vk::BufferUsageFlagBits::eIndexBuffer, 0, INDEX_BUFFER_SIZE);
+    mVertexBuffer = SwBufferFactory::createAllocatedBuffer("VertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mIndexBuffer = SwBufferFactory::createAllocatedBuffer("IndexBuffer", vk::BufferUsageFlagBits::eIndexBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE);
     mMaterialConstantsBuffer =
         SwBufferFactory::createAllocatedBuffer("MaterialConstantsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, MATERIAL_CONSTANTS_BUFFER_SIZE, true);
     mNodeTransformsBuffer =
-        SwBufferFactory::createAllocatedBuffer("NodeTransformsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, NODE_TRANSFORMS_BUFFER_SIZE, true);
-    mInstancesBuffer = SwBufferFactory::createAllocatedBuffer("InstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, INSTANCES_BUFFER_SIZE, true);
-    mBoundsBuffer = SwBufferFactory::createAllocatedBuffer("BoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, BOUNDS_BUFFER_SIZE, true);
+        SwBufferFactory::createAllocatedBuffer("NodeTransformsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mInstancesBuffer =
+        SwBufferFactory::createAllocatedBuffer("InstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mBoundsBuffer = SwBufferFactory::createAllocatedBuffer("BoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mRisIndicesBuffer =
-        SwBufferFactory::createAllocatedBuffer("RisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, RENDER_ITEMS_INDICES_BUFFER_SIZE, true);
+        SwBufferFactory::createAllocatedBuffer("RisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     for (std::uint32_t i = 0; i < mVisibilityRisBuffers.size(); i++) {
         mVisibilityRisBuffers[i] = SwBufferFactory::createAllocatedBuffer(
-            std::format("VisibilityRisBuffer{}", i), vk::BufferUsageFlagBits::eStorageBuffer, 0, RENDER_ITEMS_INDICES_BUFFER_SIZE, true
+            std::format("VisibilityRisBuffer{}", i), vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
         );
     }
     mInitialRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "InitialRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, RENDER_COMMANDS_BUFFER_SIZE, true
+        "InitialRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
     mEarlyRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "EarlyRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, RENDER_COMMANDS_BUFFER_SIZE, true
+        "EarlyRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
     mEarlyRcsCount = SwBufferFactory::createAllocatedBuffer(
-        "EarlyRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, BATCHES_COUNT_BUFFER_SIZE, true
+        "EarlyRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
     mLateRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "LateRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, RENDER_COMMANDS_BUFFER_SIZE, true
+        "LateRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
     mLateRcsCount = SwBufferFactory::createAllocatedBuffer(
-        "LateRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, BATCHES_COUNT_BUFFER_SIZE, true
+        "LateRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
-    mRisBuffer = SwBufferFactory::createAllocatedBuffer("RisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, RENDER_ITEMS_BUFFER_SIZE, true);
-    mBatchesBuffer = SwBufferFactory::createAllocatedBuffer("BatchesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, BATCHES_BUFFER_SIZE, true);
+    mRisBuffer = SwBufferFactory::createAllocatedBuffer("RisBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mBatchesBuffer =
+        SwBufferFactory::createAllocatedBuffer("BatchesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
 
     mMaterialSamplersDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "MaterialSamplersDescriptorSet", SwMaterialResources::sMaterialSamplersDescriptorLayout, NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
@@ -80,7 +82,7 @@ void SwScene::initializeResources() {
     mMaterialTexturesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "MaterialTexturesDescriptorSet", SwMaterialResources::sMaterialTexturesDescriptorLayout, NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
-    mLightsBuffer = SwBufferFactory::createAllocatedBuffer("LightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTS_BUFFER_SIZE, true);
+    mLightsBuffer = SwBufferFactory::createAllocatedBuffer("LightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
 
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {

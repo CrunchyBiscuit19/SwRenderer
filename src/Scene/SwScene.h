@@ -117,23 +117,8 @@ private:
     void finalPresentTransition(SwCommandBuffer& commandBuffer);
 
 public:
-    static constexpr vk::DeviceSize VERTEX_BUFFER_SIZE{1ull << 28};
-    static constexpr vk::DeviceSize INDEX_BUFFER_SIZE{1ull << 28};
     static constexpr std::size_t NUM_MATERIALS{1 << 8};
     static constexpr vk::DeviceSize MATERIAL_CONSTANTS_BUFFER_SIZE{NUM_MATERIALS * sizeof(SwMaterial::Constant)};
-    static constexpr vk::DeviceSize NODE_TRANSFORMS_BUFFER_SIZE{(1 << 12) * sizeof(glm::mat4)};
-    static constexpr vk::DeviceSize INSTANCES_BUFFER_SIZE{(1 << 8) * sizeof(SwInstance::Data)};
-    static constexpr vk::DeviceSize BOUNDS_BUFFER_SIZE{(1 << 12) * sizeof(SwBounds)};
-    static constexpr std::size_t NUM_RENDER_ITEMS{1 << 12};
-    static constexpr std::size_t NUM_RENDER_COMMANDS{1 << 10};
-    static constexpr vk::DeviceSize RENDER_COMMANDS_BUFFER_SIZE{NUM_RENDER_COMMANDS * sizeof(SwRenderCommand)};
-    static constexpr vk::DeviceSize RENDER_COMMANDS_COUNT_BUFFER_SIZE{NUM_RENDER_COMMANDS * sizeof(std::uint32_t)};
-    static constexpr vk::DeviceSize RENDER_ITEMS_BUFFER_SIZE{NUM_RENDER_ITEMS * sizeof(SwRenderItem)};
-    static constexpr vk::DeviceSize RENDER_ITEMS_INDICES_BUFFER_SIZE{NUM_RENDER_ITEMS * sizeof(std::uint32_t)};
-    static constexpr std::size_t NUM_BATCHES{1 << 8};
-    static constexpr vk::DeviceSize BATCHES_COUNT_BUFFER_SIZE{NUM_BATCHES * sizeof(std::uint32_t)};
-    static constexpr vk::DeviceSize BATCHES_BUFFER_SIZE{NUM_BATCHES * sizeof(SwBatch::Data)};
-    static constexpr vk::DeviceSize LIGHTS_BUFFER_SIZE{(1 << 6) * sizeof(SwLight::Data)};
 
     Flags mFlags;
 

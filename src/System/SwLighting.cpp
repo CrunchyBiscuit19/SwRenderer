@@ -49,13 +49,13 @@ void SwLighting::System::regenerateShadowsRcs() {
 
 void SwLighting::System::initializeResources() {
     mResources.mLitIndicesBuffer =
-        SwBufferFactory::createAllocatedBuffer("LitIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIT_INDICES_BUFFER_SIZE, true);
+        SwBufferFactory::createAllocatedBuffer("LitIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mResources.mShadowCastsIndicesBuffer =
         SwBufferFactory::createAllocatedBuffer("ShadowCastsIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOW_CAST_INDICES_BUFFER_SIZE, true);
     mResources.mShadowsRcsBuffer =
-        SwBufferFactory::createAllocatedBuffer("ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_RENDER_COMMANDS_BUFFER_SIZE, true);
+        SwBufferFactory::createAllocatedBuffer("ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE, true
+        "ShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
 
     mResources.mClustersBuffer =

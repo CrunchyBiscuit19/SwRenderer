@@ -125,7 +125,11 @@ private:
     static std::vector<DeferredBuffer> sDeletionQueue;
 
 public:
+    // Arbitrary starting capacity for resizable buffers
+    static constexpr vk::DeviceSize INITIAL_BUFFER_SIZE{1 << 20};
+
     static void init();
+    static void cleanup();
 
     static SwAllocatedBuffer createAllocatedBuffer(
         std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size, bool addressable = false, bool resizable = true
