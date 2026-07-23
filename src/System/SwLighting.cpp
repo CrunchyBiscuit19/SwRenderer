@@ -66,6 +66,11 @@ void SwLighting::System::initializeResources() {
     mResources.mClustersActiveIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "ClustersActiveIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE, true
     );
+    mResources.mClustersLightIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ClustersLightIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
+    );
+    mResources.mClustersLightCounts = SwBufferFactory::createAllocatedBuffer("ClustersLightCounts", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_LIGHT_COUNTS_SIZE, true
+    );
 
     // Linear filtering gives hardware 2x2 PCF per SampleCmp tap.
     // Opaque-black border so 2D taps outside a frustum read as lit.
@@ -292,6 +297,9 @@ void SwLighting::System::initializePasses() {
         );
     });
 
+    // Shadows Select
+    mScene.insertPass(SwPass::Type::LightingShadowsSelect, [&](vk::CommandBuffer cmd) {});
+
     // Shadows Cull
     mScene.insertPass(SwPass::Type::LightingShadowsCull, [&](vk::CommandBuffer cmd) {});
 
@@ -434,6 +442,9 @@ void SwLighting::System::refreshPushConstants() {
     mResources.mClustersLightSelectPc.mLightsBuffer = SwRenderer::sRendererContext.mScene->getLightsBuffer().getDeviceAddress().value();
     mResources.mClustersLightSelectPc.mNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getNodeTransformsBuffer().getDeviceAddress().value();
     mResources.mClustersLightSelectPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer().getDeviceAddress().value();
+    mResources.mClustersLightSelectPc.mClustersActiveIndicesBuffer = mResources.mClustersActiveIndicesBuffer.getDeviceAddress().value();
+    mResources.mClustersLightSelectPc.mClustersLightIndicesBuffer = mResources.mClustersLightIndicesBuffer.getDeviceAddress().value();
+    mResources.mClustersLightSelectPc.mClustersLightCounts = mResources.mClustersLightCounts.getDeviceAddress().value();
 
     mResources.mShadowsCullPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer.getDeviceAddress().value();
     mResources.mShadowsCullPc.mShadowsRisIndicesBuffer = mResources.mShadowsRisIndicesBuffer.getDeviceAddress().value();

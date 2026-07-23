@@ -49,6 +49,7 @@ static constexpr std::uint32_t NUM_CLUSTERS{CLUSTERS_DIMENSIONS.x * CLUSTERS_DIM
 static constexpr vk::DeviceSize CLUSTERS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(Cluster)};
 static constexpr vk::DeviceSize CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(bool)};
 static constexpr vk::DeviceSize CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{(1 + NUM_CLUSTERS) * sizeof(std::uint32_t)};
+static constexpr vk::DeviceSize CLUSTERS_LIGHT_COUNTS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 
 
 struct ResetPC : SwPC<ResetPC> {
@@ -100,6 +101,8 @@ struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
+    vk::DeviceAddress mClustersLightIndicesBuffer{0};
+    vk::DeviceAddress mClustersLightCounts{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -148,6 +151,8 @@ struct Resources {
     SwAllocatedBuffer mClustersBuffer;
     SwAllocatedBuffer mClustersActiveBooleansBuffer; 
     SwAllocatedBuffer mClustersActiveIndicesBuffer; // 1st 4 bytes as count
+    SwAllocatedBuffer mClustersLightIndicesBuffer;
+    SwAllocatedBuffer mClustersLightCounts;
 
     ResetPC mResetPc;
     SwPipelineLayout mResetPipelineLayout;

@@ -31,6 +31,7 @@ public:
         LightingClustersLightSelect,
         LightingShadowsCull,
         LightingShadowsDraw,
+        LightingShadowsSelect,
         GeometryLateOpaque,
         GeometryMasked,
         GeometryTransparent,
