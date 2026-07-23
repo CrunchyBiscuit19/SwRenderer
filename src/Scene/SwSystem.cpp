@@ -9,16 +9,10 @@ SwSystem::SwSystem(SwScene& scene) : mScene(scene) {}
 
 void SwSystem::initialize() {
     initializeResources();
-    refreshPushConstants();
     initializePasses();
-    refreshDependencies();
+    refreshDataUsage();
 }
 
-void SwSystem::refresh() {
-    refreshPushConstants();
-    refreshDependencies();
-}
+void SwSystem::refresh() { refreshDataUsage(); }
 
-void SwSystem::refreshDependencies() {}
-
-void SwSystem::refreshPushConstants() {}
+void SwSystem::refreshDataUsage() {}

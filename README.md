@@ -33,7 +33,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 * Manages both the `VkBuffer` and its VMA allocation.
 * Split into general purpose `SwAllocatedBuffer` and specialized `SwStagingBuffer` (CPU-visible, persistently mapped).
-* Supports bindless buffer access via `VkBufferDeviceAddress` and `SwBuffer::getDeviceAddress()`.
+* Supports bindless buffer access via `VkBufferDeviceAddress` and `SwBuffer`'s implicit `vk::DeviceAddress` conversion operator (which throws if the buffer was not created addressable).
 * Tracks the flags, usage, size, pipeline stage, and access bits.
 * Convenience methods for barrier insertion.
 * Copy methods handle resize and synchronization automatically.
@@ -165,7 +165,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### System `SwSystem`
 
-* **`SwSystem`** — the base class every system's `System` derives from. Holds a reference to the owning `SwScene` and defines the lifecycle hooks: `initializeResources()` / `initializePasses()`, plus per-frame `refreshDependencies()` / `refreshPushConstants()` / `refresh()`.
+* **`SwSystem`** — the base class every system's `System` derives from. Holds a reference to the owning `SwScene` and defines the lifecycle hooks: `initializeResources()` / `initializePasses()`, plus per-frame `refreshData()` / `refresh()`.
 * **`SwSystem::Resizable`** — mix-in for systems whose resources depend on the swapchain size; provides `resize()` driving a `reInitializeOnResize()` override.
 
 ### Scene `SwScene`

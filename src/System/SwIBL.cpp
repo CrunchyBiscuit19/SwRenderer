@@ -263,15 +263,20 @@ void SwIBL::System::initializePasses() {
     });
 }
 
-void SwIBL::System::refreshDependencies() {
+void SwIBL::System::refreshDataUsage() {
     // Skybox
-    SwDependency& d = mScene.mPasses[SwPass::Type::IBLSkybox].getDeps();
-    d.clear();
-    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
-    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    d.mReadImages.emplace_back(&mResources.mSkyboxImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    d.mReadBuffers.emplace_back(&mResources.mSkyboxVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    {
+        mResources.mSkyboxPushConstants.mSkyboxVertexBuffer = mResources.mSkyboxVertexBuffer;
+        mResources.mSkyboxPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer();
+
+        SwDependency& d = mScene.mPasses[SwPass::Type::IBLSkybox].getDeps();
+        d.clear();
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        d.mReadImages.emplace_back(&mResources.mSkyboxImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        d.mReadBuffers.emplace_back(&mResources.mSkyboxVertexBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+    }
 }
 
 void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler environmentSampler) {
@@ -422,9 +427,4 @@ void SwIBL::System::reinitializeOnUpdate(std::optional<std::filesystem::path> ne
     // Bake with the equirect sampler (full LOD range) so the prefilter can read the environment's mip
     // chain for PDF-based mip selection; mDrawSampler clamps maxLod to 0 and would defeat that.
     bakeFromEnvironment(mResources.mSkyboxImage, mResources.mEnvSampler.getHandle());
-}
-
-void SwIBL::System::refreshPushConstants() {
-    mResources.mSkyboxPushConstants.mSkyboxVertexBuffer = mResources.mSkyboxVertexBuffer.getDeviceAddress().value();
-    mResources.mSkyboxPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }

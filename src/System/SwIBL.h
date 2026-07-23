@@ -149,8 +149,7 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;  // skybox draw pass; the bakes run as one-shot immediate submits
-    void refreshDependencies() override;
-    void refreshPushConstants() override;
+    void refreshDataUsage() override;
 
     // Reconvolve the irradiance + specular-prefilter maps from a freshly-loaded environment equirect.
     // Called whenever the environment changes.

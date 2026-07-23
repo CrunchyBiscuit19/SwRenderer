@@ -28,7 +28,7 @@ void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::opti
         if (batch.getRcsSize() == 0) continue;
 
         // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
-        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer.getDeviceAddress().value() + batch.getRcsIndex() * sizeof(SwRenderCommand);
+        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
 
         auto& pipeline = batch.getGraphicsPipelineBundle();
 
@@ -73,7 +73,7 @@ void SwGeometry::System::initializeResources() {
     zPassOptions.mLayout = SwMaterial::getOpaquePipelineLayoutHandle();
     zPassOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     zPassOptions.mPolygonMode = vk::PolygonMode::eFill;
-    zPassOptions.mCullMode = vk::CullModeFlagBits::eBack; // Not technically correct but close enough for most assets
+    zPassOptions.mCullMode = vk::CullModeFlagBits::eBack;  // Not technically correct but close enough for most assets
     zPassOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
     zPassOptions.mMultisamplingEnabled = false;
     zPassOptions.mSampleShadingEnabled = false;
@@ -99,7 +99,7 @@ void SwGeometry::System::drawZBatches(vk::CommandBuffer cmd, SwGraphicsPipelineB
         if (batch.getRcsSize() == 0) continue;
 
         // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
-        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer.getDeviceAddress().value() + batch.getRcsIndex() * sizeof(SwRenderCommand);
+        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
 
         cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
@@ -168,20 +168,46 @@ void SwGeometry::System::initializePasses() {
     });
 }
 
-void SwGeometry::System::refreshDependencies() {
-    // Dependencies shared by every geometry pass: depth (read/write), IBL / shadow maps, the per-frame
-    // buffer, and the scene buffers read in the vertex/fragment stages.
-    auto addCommonDeps = [&](SwDependency& d) {
+void SwGeometry::System::refreshDataUsage() {
+    mResources.mDrawPushConstants.mVertexBuffer = mScene.getVertexBuffer();
+    mResources.mDrawPushConstants.mMaterialConstantsBuffer = mScene.getMaterialConstantsBuffer();
+    mResources.mDrawPushConstants.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
+    mResources.mDrawPushConstants.mInstancesBuffer = mScene.getInstancesBuffer();
+    mResources.mDrawPushConstants.mRisIndicesBuffer = mScene.getRisIndicesBuffer();
+    mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer();
+    mResources.mDrawPushConstants.mLightsBuffer = mScene.getLightsBuffer();
+    mResources.mDrawPushConstants.mLitIndicesBuffer = mScene.getLightingSystem().getResources().mLitIndicesBuffer;
+    mResources.mDrawPushConstants.mMaxPrefilterMipLevel = mScene.getIBLSystem().getMaxPrefilterMip();
+    mResources.mDrawPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
+    mResources.mDrawPushConstants.mIblComponents = static_cast<std::uint32_t>(mScene.getIBLSystem().getIblComponents());
+
+    auto build = [&](SwPass::Type type, bool early, bool transparent, bool depthOnly) {
+        SwDependency& d = mScene.mPasses[type].getDeps();
+        d.clear();
+
+        if (!depthOnly) {
+            if (transparent) {
+                d.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+                d.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
+            } else {
+                d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+            }
+        }
+        auto& rcsBuffer = early ? mScene.getEarlyRcsBuffer() : mScene.getLateRcsBuffer();
+        auto& rcsCount = early ? mScene.getEarlyRcsCount() : mScene.getLateRcsCount();
+        d.mReadBuffers.emplace_back(&rcsBuffer, SwDependency::BufferDepType::IndirectRead);
+        d.mReadBuffers.emplace_back(&rcsCount, SwDependency::BufferDepType::IndirectRead);
+
         d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-        d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadows2DMaps) {
-            d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        if (!depthOnly) {
+            d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+            d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+            for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadows2DMaps)
+                d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+            for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowsCubeMaps)
+                d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+            d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         }
-        for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowsCubeMaps) {
-            d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
-        }
-        d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         d.mReadBuffers.emplace_back(&mScene.getVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
@@ -190,61 +216,18 @@ void SwGeometry::System::refreshDependencies() {
         d.mReadBuffers.emplace_back(
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
         );
-        d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-        d.mReadBuffers.emplace_back(
-            &mScene.getLightingSystem().getResources().mLitIndicesBuffer, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
-        );
+        if (!depthOnly) {
+            d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
+            d.mReadBuffers.emplace_back(
+                &mScene.getLightingSystem().getResources().mLitIndicesBuffer, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+            );
+        }
         d.mReadBuffers.emplace_back(&mScene.getIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     };
 
-    // Each geometry pass adds its color target then its batches' indirect draw list + count.
-    auto build = [&](SwPass::Type type, SwMaterial::Type materialType, bool early, bool transparent) {
-        SwDependency& d = mScene.mPasses[type].getDeps();
-        d.clear();
-        if (transparent) {
-            d.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mAccumImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-            d.mWriteImages.emplace_back(&mScene.mWBOIT.getResources().mRvlImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
-        } else {
-            d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
-        }
-        addCommonDeps(d);
-        auto& rcsBuffer = early ? mScene.getEarlyRcsBuffer() : mScene.getLateRcsBuffer();
-        auto& rcsCount = early ? mScene.getEarlyRcsCount() : mScene.getLateRcsCount();
-        d.mReadBuffers.emplace_back(&rcsBuffer, SwDependency::BufferDepType::IndirectRead);
-        d.mReadBuffers.emplace_back(&rcsCount, SwDependency::BufferDepType::IndirectRead);
-    };
-
-    build(SwPass::Type::GeometryEarlyOpaque, SwMaterial::Type::Opaque, true, false);
-    build(SwPass::Type::GeometryLateOpaque, SwMaterial::Type::Opaque, false, false);
-    build(SwPass::Type::GeometryMasked, SwMaterial::Type::Mask, false, false);
-    build(SwPass::Type::GeometryTransparent, SwMaterial::Type::Transparent, false, true);
-
-    SwDependency& d = mScene.mPasses[SwPass::Type::GeometryZPass].getDeps();
-    d.clear();
-    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
-    d.mReadBuffers.emplace_back(&mScene.getVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    d.mReadBuffers.emplace_back(&mScene.getMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-    d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-    d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
-    d.mReadBuffers.emplace_back(&mScene.getRisIndicesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-    d.mReadBuffers.emplace_back(
-        &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
-    );
-    d.mReadBuffers.emplace_back(&mScene.getIndexBuffer(), SwDependency::BufferDepType::IndexRead);
-    d.mReadBuffers.emplace_back(&mScene.getLateRcsBuffer(), SwDependency::BufferDepType::IndirectRead);
-    d.mReadBuffers.emplace_back(&mScene.getLateRcsCount(), SwDependency::BufferDepType::IndirectRead);
-}
-
-void SwGeometry::System::refreshPushConstants() {
-    mResources.mDrawPushConstants.mVertexBuffer = mScene.getVertexBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mMaterialConstantsBuffer = mScene.getMaterialConstantsBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mInstancesBuffer = mScene.getInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mRisIndicesBuffer = mScene.getRisIndicesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mLightsBuffer = mScene.getLightsBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mLitIndicesBuffer = mScene.getLightingSystem().getResources().mLitIndicesBuffer.getDeviceAddress().value();
-    mResources.mDrawPushConstants.mMaxPrefilterMipLevel = mScene.getIBLSystem().getMaxPrefilterMip();
-    mResources.mDrawPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
-    mResources.mDrawPushConstants.mIblComponents = static_cast<std::uint32_t>(mScene.getIBLSystem().getIblComponents());
+    build(SwPass::Type::GeometryEarlyOpaque, true, false, false);
+    build(SwPass::Type::GeometryLateOpaque, false, false, false);
+    build(SwPass::Type::GeometryMasked, false, false, false);
+    build(SwPass::Type::GeometryTransparent, false, true, false);
+    build(SwPass::Type::GeometryZPass, false, false, true);
 }

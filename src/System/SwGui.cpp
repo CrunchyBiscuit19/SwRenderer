@@ -352,7 +352,7 @@ void SwGui::System::refresh() {
     SwSystem::refresh();
 }
 
-void SwGui::System::refreshDependencies() {
+void SwGui::System::refreshDataUsage() {
     // Gui
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::Gui].getDeps();

@@ -22,7 +22,7 @@ void SwPick::System::drawBatches(
         if (batch.getRcsSize() == 0) continue;
 
         // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
-        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer.getDeviceAddress().value() + batch.getRcsIndex() * sizeof(SwRenderCommand);
+        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
         cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
         cmd.drawIndexedIndirectCount(
@@ -200,9 +200,16 @@ void SwPick::System::reInitializeOnResize() {
     mResources.mReadbackDescriptorSet.pushWrites();
 }
 
-void SwPick::System::refreshDependencies() {
+void SwPick::System::refreshDataUsage() {
     // Pick Draw
     {
+        mResources.mDrawPushConstants.mVertexBuffer = mScene.getVertexBuffer();
+        mResources.mDrawPushConstants.mMaterialConstantsBuffer = mScene.getMaterialConstantsBuffer();
+        mResources.mDrawPushConstants.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
+        mResources.mDrawPushConstants.mInstancesBuffer = mScene.getInstancesBuffer();
+        mResources.mDrawPushConstants.mRisIndicesBuffer = mScene.getRisIndicesBuffer();
+        mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer();
+
         SwDependency& d = mScene.mPasses[SwPass::Type::PickDraw].getDeps();
         d.clear();
         d.mWriteImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::ColorAttachmentReadWrite);
@@ -225,6 +232,8 @@ void SwPick::System::refreshDependencies() {
 
     // Pick Readback
     {
+        mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer;
+
         SwDependency& d = mScene.mPasses[SwPass::Type::PickReadback].getDeps();
         d.clear();
         d.mReadImages.emplace_back(&mResources.mReadbackImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
@@ -237,17 +246,6 @@ void SwPick::System::refreshDependencies() {
         d.clear();
         d.mReadBuffers.emplace_back(&mResources.mReadbackBuffer, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostRead);
     }
-}
-
-void SwPick::System::refreshPushConstants() {
-    mResources.mReadbackPushConstants.mReadbackBuffer = mResources.mReadbackBuffer.getDeviceAddress().value();
-
-    mResources.mDrawPushConstants.mVertexBuffer = mScene.getVertexBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mMaterialConstantsBuffer = mScene.getMaterialConstantsBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mInstancesBuffer = mScene.getInstancesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mRisIndicesBuffer = mScene.getRisIndicesBuffer().getDeviceAddress().value();
-    mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer().getDeviceAddress().value();
 }
 
 void SwPick::System::refresh() {

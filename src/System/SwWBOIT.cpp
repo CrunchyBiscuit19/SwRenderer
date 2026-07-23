@@ -77,13 +77,15 @@ void SwWBOIT::System::initializePasses() {
     });
 }
 
-void SwWBOIT::System::refreshDependencies() {
+void SwWBOIT::System::refreshDataUsage() {
     // WBOIT Composite
-    SwDependency& d = mScene.mPasses[SwPass::Type::WBOITComposite].getDeps();
-    d.clear();
-    d.mReadImages.emplace_back(&mResources.mAccumImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    d.mReadImages.emplace_back(&mResources.mRvlImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-    d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+    {
+        SwDependency& d = mScene.mPasses[SwPass::Type::WBOITComposite].getDeps();
+        d.clear();
+        d.mReadImages.emplace_back(&mResources.mAccumImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        d.mReadImages.emplace_back(&mResources.mRvlImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
+        d.mWriteImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDrawImage(), SwDependency::ImageDepType::ColorAttachmentReadWrite);
+    }
 }
 
 void SwWBOIT::System::reInitializeOnResize() {

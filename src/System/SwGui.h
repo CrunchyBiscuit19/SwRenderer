@@ -38,7 +38,7 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
-    void refreshDependencies() override;
+    void refreshDataUsage() override;
 
 public:
     System(SwScene& scene);

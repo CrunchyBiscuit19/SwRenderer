@@ -20,8 +20,7 @@ protected:
     virtual void initializeResources() = 0;
     virtual void initializePasses() = 0;
 
-    virtual void refreshDependencies();
-    virtual void refreshPushConstants();
+    virtual void refreshDataUsage();
 
 public:
     SwSystem(SwScene& scene);

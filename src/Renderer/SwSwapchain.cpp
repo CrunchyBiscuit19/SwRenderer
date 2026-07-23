@@ -32,7 +32,7 @@ void SwFrame::initialize(std::uint32_t frameIndex) {
 void SwFrame::update() {
     SwScene& scene = *SwRenderer::sRendererContext.mScene;
     Data data{
-        .mCameraBuffer = scene.getCamera().getCameraBuffer().getDeviceAddress().value(),
+        .mCameraBuffer = scene.getCamera().getCameraBuffer(),
     };
     mDataBuffer.copyFromUnchecked(&data, sizeof(Data));
 }

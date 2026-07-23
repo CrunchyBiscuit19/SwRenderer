@@ -85,6 +85,13 @@ void* SwBuffer::getMappedPtr() {
     return mInfo.pMappedData;
 }
 
+SwBuffer::operator vk::DeviceAddress() const {
+    if (!mAddress.has_value()) {
+        throw std::runtime_error(std::format("Buffer '{}' has no device address", mName));
+    }
+    return mAddress.value();
+}
+
 void SwBuffer::destroy() {
     if (mAllocation == nullptr) {
         return;

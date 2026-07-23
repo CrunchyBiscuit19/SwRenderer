@@ -32,7 +32,7 @@ private:
 
     void initializeResources() override;
     void initializePasses() override;
-    void refreshDependencies() override;
+    void refreshDataUsage() override;
 
     void reInitializeOnResize() override;
 

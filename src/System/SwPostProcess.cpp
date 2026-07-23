@@ -99,7 +99,7 @@ void SwPostProcess::System::initializePasses() {
     });
 }
 
-void SwPostProcess::System::refreshDependencies() {
+void SwPostProcess::System::refreshDataUsage() {
     // Tonemap
     {
         SwDependency& d = mScene.mPasses[SwPass::Type::Tonemap].getDeps();
