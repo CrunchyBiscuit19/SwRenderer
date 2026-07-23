@@ -283,9 +283,11 @@ void SwLighting::System::initializePasses() {
         cmd.pushConstants<SwLighting::ClustersLightSelectPC>(
             clustersLightSelectPipeline.getLayoutHandle(), SwLighting::ClustersLightSelectPC::sStages, 0, mResources.mClustersLightSelectPc
         );
+        std::uint32_t numLights = mScene.getLightIds().size();
+        if (numLights == 0) return;
         cmd.dispatch(
             SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(numLights, SwRenderer::MAX_2D_WORKGROUP_THREADS),
             1
         );
     });

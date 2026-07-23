@@ -98,23 +98,6 @@ void SwAsset::loadRawAsset(std::filesystem::path& assetPath) {
     mRawAsset = std::move(gltf);
 }
 
-void SwAsset::constructBuffers() {
-    mMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
-        std::format("{}MaterialConstantsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, ASSET_MATERIALS_BUFFER_SIZE
-    );
-    mBoundsBuffer =
-        SwBufferFactory::createAllocatedBuffer(std::format("{}BoundsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, ASSET_BOUNDS_BUFFER_SIZE);
-    mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
-        std::format("{}NodeTransformsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, ASSET_NODE_TRANSFORMS_BUFFER_SIZE
-    );
-    mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
-        std::format("{}InstancesBuffer", mName),
-        vk::BufferUsageFlagBits::eStorageBuffer,
-        VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
-        ASSET_INSTANCES_BUFFER_SIZE
-    );
-};
-
 void SwAsset::constructSamplerAndSamplerOptions() {
     const float maxAnisotropy = SwSamplerFactory::getMaxSamplerAnisotropy();
     vk::SamplerCreateInfo defaultSamplerCreateInfo;
@@ -294,6 +277,12 @@ void SwAsset::constructMaterials() {
 
         mMaterials.emplace_back(name, i, pipelineOptions, constants, std::move(resources));
     }
+
+    if (mMaterials.empty()) return;
+
+    mMaterialConstantsBuffer = SwBufferFactory::createAllocatedBuffer(
+        std::format("{}MaterialConstantsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, mMaterials.size() * sizeof(SwMaterial::Constant)
+    );
 }
 
 void SwAsset::constructMeshes() {
@@ -389,7 +378,7 @@ void SwAsset::constructMeshes() {
 
         mVertices.insert(mVertices.end(), mesh.getVertices().begin(), mesh.getVertices().end());
         mIndices.insert(mIndices.end(), mesh.getIndices().begin(), mesh.getIndices().end());
-    
+
         mesh.getVertices().clear();
         mesh.getIndices().clear();
     }
@@ -402,6 +391,11 @@ void SwAsset::constructMeshes() {
     if (mNumIndices > 0) {
         mIndexBuffer = SwBufferFactory::createAllocatedBuffer(
             std::format("{}IndexBuffer", mName), vk::BufferUsageFlagBits::eIndexBuffer, 0, mIndices.size() * sizeof(std::uint32_t)
+        );
+    }
+    if (!mMeshes.empty()) {
+        mBoundsBuffer = SwBufferFactory::createAllocatedBuffer(
+            std::format("{}BoundsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, mMeshes.size() * sizeof(SwBounds)
         );
     }
 }
@@ -474,11 +468,16 @@ void SwAsset::constructNodes() {
             node->refreshTransform(glm::mat4{1.f});
         }
     }
+
+    if (mNodes.empty()) return;
+
+    mNodeTransformsBuffer = SwBufferFactory::createAllocatedBuffer(
+        std::format("{}NodeTransformsBuffer", mName), vk::BufferUsageFlagBits::eStorageBuffer, 0, mNodes.size() * sizeof(glm::mat4)
+    );
 }
 
 SwAsset::SwAsset(std::filesystem::path& assetPath) : mId(sLatestAssetId++) {
     loadRawAsset(assetPath);
-    constructBuffers();
     constructSamplerAndSamplerOptions();
     constructImages();
     constructMaterials();
@@ -509,6 +508,15 @@ void SwAsset::reloadInstances() {
     if (mInstanceIds.empty()) {
         mReloadInstancesFlag = false;
         return;
+    }
+
+    if (mInstancesBuffer.getSize() == 0) {
+        mInstancesBuffer = SwBufferFactory::createAllocatedBuffer(
+            std::format("{}InstancesBuffer", mName),
+            vk::BufferUsageFlagBits::eStorageBuffer,
+            VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT,
+            mInstanceIds.size() * sizeof(SwInstance::Data)
+        );
     }
 
     SwScene* scene = SwRenderer::sRendererContext.mScene;

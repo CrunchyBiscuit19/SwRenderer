@@ -24,7 +24,7 @@ public:
     };
 
 private:
-    static constexpr std::uint32_t DATA_BUFFER_SIZE{sizeof(Data)};
+    static constexpr vk::DeviceSize DATA_BUFFER_SIZE{sizeof(Data)};
 
     SwCommandPool mGraphicsCommandPool;
     SwCommandBuffer mGraphicsCommandBuffer;

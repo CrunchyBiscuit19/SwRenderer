@@ -21,6 +21,11 @@
 class SwInstance;
 
 namespace SwLighting {
+struct Cluster {
+    glm::vec3 mMin{0};
+    glm::vec3 mMax{0};
+};
+
 static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/Lighting"};
 static const std::filesystem::path CLUSTERS_BUILD_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersBuild.comp.spv"};
 static const std::filesystem::path CLUSTERS_MARK_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersMarkActive.comp.spv"};
@@ -34,24 +39,19 @@ static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
-static constexpr std::uint64_t SHADOWS_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
-static constexpr std::uint64_t SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE{(1 << 12) * sizeof(std::uint32_t)};
+static constexpr vk::DeviceSize SHADOWS_RENDER_COMMANDS_BUFFER_SIZE{(1 << 10) * sizeof(SwRenderCommand)};
+static constexpr vk::DeviceSize SHADOWS_RENDER_ITEMS_INDICES_BUFFER_SIZE{(1 << 12) * sizeof(std::uint32_t)};
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
-static constexpr std::uint64_t LIT_INDICES_BUFFER_SIZE{(1 + 1 << 5) * sizeof(std::uint32_t)};
-static constexpr std::uint64_t SHADOW_CAST_INDICES_BUFFER_SIZE{(1 + MAX_NUM_SHADOW_CASTERS) * sizeof(std::uint32_t)};
-
-struct Cluster {
-    glm::vec3 mMin{0};
-    glm::vec3 mMax{0};
-};
+static constexpr vk::DeviceSize LIT_INDICES_BUFFER_SIZE{(1 + 1 << 5) * sizeof(std::uint32_t)};
+static constexpr vk::DeviceSize SHADOW_CAST_INDICES_BUFFER_SIZE{(1 + MAX_NUM_SHADOW_CASTERS) * sizeof(std::uint32_t)};
 
 static constexpr glm::uvec3 CLUSTERS_DIMENSIONS{16, 9, 24};
 static constexpr std::uint32_t NUM_CLUSTERS{CLUSTERS_DIMENSIONS.x * CLUSTERS_DIMENSIONS.y * CLUSTERS_DIMENSIONS.z};
-static constexpr std::uint64_t CLUSTERS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(Cluster)};
-static constexpr std::uint64_t CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(bool)};
-static constexpr std::uint64_t CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{(1 + NUM_CLUSTERS) * sizeof(std::uint32_t)};
+static constexpr vk::DeviceSize CLUSTERS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(Cluster)};
+static constexpr vk::DeviceSize CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(bool)};
+static constexpr vk::DeviceSize CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{(1 + NUM_CLUSTERS) * sizeof(std::uint32_t)};
 
 
 struct ResetPC : SwPC<ResetPC> {

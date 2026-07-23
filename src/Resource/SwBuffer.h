@@ -17,7 +17,7 @@ protected:
     VmaAllocationInfo mInfo{};
     VmaAllocationCreateFlags mFlags{0};
     vk::BufferUsageFlags mUsage;
-    std::uint64_t mSize{0};
+    vk::DeviceSize mSize{0};
     std::uint32_t mGeneration{0};
     vk::PipelineStageFlags2 mCurrentStage;
     vk::AccessFlags2 mCurrentAccess;
@@ -29,24 +29,24 @@ protected:
 
     SwBuffer(
         std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size
     );
 
     // Allocates new bigger buffer, copies old content, restores pipeline stage/access on the new buffer
     // Defers destruction of the old VkBuffer until no longer in-flight.
     // Descriptor sets referencing this buffer must be rewritten wheb getGeneration() changes.
-    virtual void resize(vk::CommandBuffer cmd, std::uint64_t newSize) = 0;
+    virtual void resize(vk::CommandBuffer cmd, vk::DeviceSize newSize) = 0;
 
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess);
     void emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bufferDepType);
 
-    void ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize);
+    void ensureCapacity(vk::CommandBuffer cmd, vk::DeviceSize requiredSize);
 
     void copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies);
-    virtual void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) = 0;
+    virtual void copyFrom(vk::CommandBuffer cmd, const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset = 0) = 0;
 
-    virtual void copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) = 0;
+    virtual void copyFromUnchecked(const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset = 0) = 0;
 
     void* getMappedPtr();
     inline const std::string& getName() const { return mName; }
@@ -54,7 +54,7 @@ public:
     std::optional<vk::DeviceAddress> getDeviceAddress() { return mAddress; }
     inline vk::PipelineStageFlags2 getCurrentStage() { return mCurrentStage; }
     inline vk::AccessFlags2 getCurrentAccess() { return mCurrentAccess; }
-    inline std::uint64_t getSize() const { return mSize; }
+    inline vk::DeviceSize getSize() const { return mSize; }
     inline std::uint32_t getGeneration() const { return mGeneration; }
 
     void destroy();
@@ -70,20 +70,20 @@ public:
 
 class SwAllocatedBuffer : public SwBuffer {
 private:
-    void resize(vk::CommandBuffer cmd, std::uint64_t newSize) override;
+    void resize(vk::CommandBuffer cmd, vk::DeviceSize newSize) override;
 
 public:
     SwAllocatedBuffer();
 
     SwAllocatedBuffer(
         std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+        VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size
     );
 
     using SwBuffer::copyFrom;
-    void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
+    void copyFrom(vk::CommandBuffer cmd, const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset = 0) override;
 
-    virtual void copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
+    virtual void copyFromUnchecked(const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset = 0) override;
 
     SwAllocatedBuffer(SwAllocatedBuffer&&) noexcept = default;
     SwAllocatedBuffer& operator=(SwAllocatedBuffer&&) noexcept = default;
@@ -94,17 +94,17 @@ public:
 
 class SwStagingBuffer : public SwBuffer {
 private:
-    void resize(vk::CommandBuffer cmd, std::uint64_t newSize) override;
+    void resize(vk::CommandBuffer cmd, vk::DeviceSize newSize) override;
 
 public:
     SwStagingBuffer();
 
-    SwStagingBuffer(std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size);
+    SwStagingBuffer(std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, vk::DeviceSize size);
 
     using SwBuffer::copyFrom;
-    void copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
+    void copyFrom(vk::CommandBuffer cmd, const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset = 0) override;
 
-    virtual void copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset = 0) override;
+    virtual void copyFromUnchecked(const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset = 0) override;
 
     SwStagingBuffer(SwStagingBuffer&&) noexcept = default;
     SwStagingBuffer& operator=(SwStagingBuffer&&) noexcept = default;
@@ -128,10 +128,10 @@ public:
     static void init();
 
     static SwAllocatedBuffer createAllocatedBuffer(
-        std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable = false, bool resizable = true
+        std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size, bool addressable = false, bool resizable = true
     );
 
-    static SwStagingBuffer createStagingBuffer(std::string name, std::uint64_t size, bool resizable = true);
+    static SwStagingBuffer createStagingBuffer(std::string name, vk::DeviceSize size, bool resizable = true);
 
     // Queues a buffer for destruction after NUM_FRAME_OVERLAP frames have passed.
     // Call this instead of letting resize destroy the old handle immediately.

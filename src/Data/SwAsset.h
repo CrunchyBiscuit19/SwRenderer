@@ -10,11 +10,6 @@
 
 class SwAsset {
 private:
-    static constexpr std::uint64_t ASSET_INSTANCES_BUFFER_SIZE{(1 << 6) * sizeof(SwInstance::Data)};
-    static constexpr std::uint64_t ASSET_MATERIALS_BUFFER_SIZE{(1 << 6) * sizeof(SwMaterial::Constant)};
-    static constexpr std::uint64_t ASSET_NODE_TRANSFORMS_BUFFER_SIZE{(1 << 10) * sizeof(glm::mat4)};
-    static constexpr std::uint64_t ASSET_BOUNDS_BUFFER_SIZE{(1 << 10) * sizeof(SwBounds)};
-
     static std::uint32_t sLatestAssetId;
 
     std::string mName;
@@ -67,7 +62,6 @@ private:
     static SwLight::Type mapLightType(fastgltf::LightType type);
 
     void loadRawAsset(std::filesystem::path& assetPath);
-    void constructBuffers();
     void constructSamplerAndSamplerOptions();
     DecodedImage decodeImage(std::uint32_t imageIndex);
     void constructImages();

@@ -18,7 +18,7 @@ SwBuffer::SwBuffer()
 
 SwBuffer::SwBuffer(
     std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size
 )
     : mName(std::move(name)),
       mBuffer(std::move(buffer)),
@@ -61,14 +61,14 @@ void SwBuffer::emitBarrier(vk::CommandBuffer cmd, SwDependency::BufferDepType bu
     emitBarrier(cmd, SwDependency::BufferDepDesc::get(bufferDepType).mStage, SwDependency::BufferDepDesc::get(bufferDepType).mAccess);
 }
 
-void SwBuffer::ensureCapacity(vk::CommandBuffer cmd, std::uint64_t requiredSize) {
+void SwBuffer::ensureCapacity(vk::CommandBuffer cmd, vk::DeviceSize requiredSize) {
     if (requiredSize > mSize) {
         resize(cmd, std::max(requiredSize, mSize * 2));
     }
 }
 
 void SwBuffer::copyFrom(vk::CommandBuffer cmd, SwBuffer& src, vk::ArrayProxy<vk::BufferCopy> bufferCopies) {
-    std::uint64_t biggestSize = 0;
+    vk::DeviceSize biggestSize = 0;
     for (const auto& copy : bufferCopies) {
         biggestSize = std::max(biggestSize, copy.dstOffset + copy.size);
     }
@@ -141,11 +141,11 @@ SwAllocatedBuffer::SwAllocatedBuffer() : SwBuffer() {}
 
 SwAllocatedBuffer::SwAllocatedBuffer(
     std::string name, vk::raii::Buffer buffer, std::optional<vk::DeviceAddress> address, VmaAllocator allocator, VmaAllocation allocation,
-    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size
+    VmaAllocationInfo info, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size
 )
     : SwBuffer(std::move(name), std::move(buffer), address, allocator, allocation, info, usage, flags, size) {}
 
-void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
+void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, vk::DeviceSize newSize) {
     vk::PipelineStageFlags2 prevStage = mCurrentStage;
     vk::AccessFlags2 prevAccess = mCurrentAccess;
     std::uint32_t prevGeneration = mGeneration;
@@ -167,7 +167,7 @@ void SwAllocatedBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     static_cast<SwBuffer&>(*this) = std::move(newBuffer);
 }
 
-void SwAllocatedBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+void SwAllocatedBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset) {
     if (!(mFlags & (VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT))) {
         throw std::runtime_error("copyFrom(ptr) requires host-accessible allocation");
     }
@@ -176,7 +176,7 @@ void SwAllocatedBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::ui
     emitBarrier(cmd, vk::PipelineStageFlagBits2::eHost, vk::AccessFlagBits2::eHostWrite);
 }
 
-void SwAllocatedBuffer::copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+void SwAllocatedBuffer::copyFromUnchecked(const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset) {
     if (!(mFlags & (VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT))) {
         throw std::runtime_error("copyFromUnchecked requires host-accessible allocation");
     }
@@ -187,15 +187,15 @@ void SwAllocatedBuffer::copyFromUnchecked(const void* src, std::uint64_t size, s
 
 SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
 
-SwStagingBuffer::SwStagingBuffer(std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, std::uint64_t size)
+SwStagingBuffer::SwStagingBuffer(std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, vk::DeviceSize size)
     : SwBuffer(
           std::move(name), std::move(buffer), std::nullopt, allocator, allocation, info, vk::BufferUsageFlagBits::eTransferSrc,
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size
       ) {}
 
-void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
+void SwStagingBuffer::resize(vk::CommandBuffer cmd, vk::DeviceSize newSize) {
     void* oldMapped = mInfo.pMappedData;
-    std::uint64_t copySize = std::min(mSize, newSize);
+    vk::DeviceSize copySize = std::min(mSize, newSize);
     vk::PipelineStageFlags2 prevStage = mCurrentStage;
     vk::AccessFlags2 prevAccess = mCurrentAccess;
     std::uint32_t prevGeneration = mGeneration;
@@ -216,12 +216,12 @@ void SwStagingBuffer::resize(vk::CommandBuffer cmd, std::uint64_t newSize) {
     static_cast<SwBuffer&>(*this) = std::move(newBuffer);
 }
 
-void SwStagingBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+void SwStagingBuffer::copyFrom(vk::CommandBuffer cmd, const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset) {
     ensureCapacity(cmd, internalOffset + size);
     std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
 }
 
-void SwStagingBuffer::copyFromUnchecked(const void* src, std::uint64_t size, std::uint64_t internalOffset) {
+void SwStagingBuffer::copyFromUnchecked(const void* src, vk::DeviceSize size, vk::DeviceSize internalOffset) {
     std::memcpy(static_cast<char*>(mInfo.pMappedData) + internalOffset, src, size);
     mCurrentStage = vk::PipelineStageFlagBits2::eHost;
     mCurrentAccess = vk::AccessFlagBits2::eHostWrite;
@@ -242,7 +242,7 @@ void SwBufferFactory::tick(std::uint64_t currentFrame) {
 }
 
 SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
-    std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, std::uint64_t size, bool addressable, bool resizable
+    std::string name, vk::BufferUsageFlags usage, VmaAllocationCreateFlags flags, vk::DeviceSize size, bool addressable, bool resizable
 ) {
     if (addressable) usage |= vk::BufferUsageFlagBits::eShaderDeviceAddress;
     if (resizable) usage |= vk::BufferUsageFlagBits::eTransferSrc | vk::BufferUsageFlagBits::eTransferDst;
@@ -286,7 +286,7 @@ SwAllocatedBuffer SwBufferFactory::createAllocatedBuffer(
     return buffer;
 }
 
-SwStagingBuffer SwBufferFactory::createStagingBuffer(std::string name, std::uint64_t size, bool resizable) {
+SwStagingBuffer SwBufferFactory::createStagingBuffer(std::string name, vk::DeviceSize size, bool resizable) {
     vk::BufferCreateInfo bufferInfo = {};
     bufferInfo.pNext = nullptr;
     bufferInfo.size = size;
