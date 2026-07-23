@@ -50,6 +50,7 @@ void SwGui::System::initializeResources() {
 
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_NavEnableKeyboard;
+    io.ConfigNavCaptureKeyboard = false;
 
     // Hack solution of applying a gamma correction factor to reduce brightness
     ImGuiStyle& style = ImGui::GetStyle();
@@ -323,6 +324,11 @@ void SwGui::System::initializePasses() {
 
 void SwGui::System::refresh() {
     SwInput::System& input = mScene.getInputSystem();
+
+    ImGui_ImplVulkan_NewFrame();
+    ImGui_ImplSDL3_NewFrame();
+    ImGui::NewFrame();
+
     if (!ImGui::GetIO().WantCaptureKeyboard) {
         if (input.wasTriggered(SwInput::TOGGLE_GUI)) mCollapsed = !mCollapsed;
         if (input.wasTriggered(SwInput::CYCLE_TRANSFORM)) mScene.getPickSystem().changePickOperation();
@@ -331,10 +337,6 @@ void SwGui::System::refresh() {
             mScene.getCamera().setRelativeMode(false);
         }
     }
-
-    ImGui_ImplVulkan_NewFrame();
-    ImGui_ImplSDL3_NewFrame();
-    ImGui::NewFrame();
 
     createDockSpace();
     createOptionsWindow();
