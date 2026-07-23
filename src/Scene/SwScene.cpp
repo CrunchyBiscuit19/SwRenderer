@@ -691,7 +691,7 @@ void SwScene::resetFlags() {
 
 void SwScene::startNextFrame() {
     SwFrame& currentFrame = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame();
-    auto _ = SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, 1e9);
+    while (SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, UINT64_MAX) == vk::Result::eTimeout) {}
     SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getHandle());
     SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
     SwImageFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
@@ -757,18 +757,6 @@ void SwScene::perFrameUpdate() {
     // Assets uploaded this frame become next frame's free set once the frame's draw has consumed their CPU data.
     mAssetsIdsToFree = std::move(mAssetsIdsToFill);
     mAssetsIdsToFill.clear();
-
-    // Ping-pong the visibility buffers once per frame before the cull reads last frame's and writes this frame's.
-    toggleVisibilityRisBuffer();
-
-    mCull.refresh();
-    mLighting.refresh();
-    mPick.refresh();
-    mIBL.refresh();
-    mWBOIT.refresh();
-    mGeometry.refresh();
-    mPostProcess.refresh();
-    refresh();
 }
 
 void SwScene::draw() {
@@ -793,6 +781,17 @@ void SwScene::draw() {
     graphicsCommandBuffer.reset();
     graphicsCommandBuffer.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
     SwRenderer::sRendererContext.mImmSubmit->flushInto(SwQueueType::Graphics, graphicsCommandBuffer.getHandle());
+
+    // Write push constants and deps after flushing as callbacks may cause some buffers to resize.
+    toggleVisibilityRisBuffer();
+    mCull.refresh();
+    mLighting.refresh();
+    mPick.refresh();
+    mIBL.refresh();
+    mWBOIT.refresh();
+    mGeometry.refresh();
+    mPostProcess.refresh();
+    refresh();
 
     mRenderGraph.addPass(&mPasses[SwPass::Type::ClearImages]);
     if (mIBL.isActive() && mIBL.isFileSelected()) {
