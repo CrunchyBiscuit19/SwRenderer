@@ -331,7 +331,7 @@ void SwLighting::System::initializePasses() {
         cmd.pushConstants<SwLighting::ClustersLightPrefixSumOffsetPC>(
             clustersLightPrefixSumOffsetPipeline.getLayoutHandle(), SwLighting::ClustersLightPrefixSumOffsetPC::sStages, 0, mResources.mClustersLightPrefixSumOffsetPc
         );
-        cmd.dispatch(SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1, 1);
+        cmd.dispatch(1, 1, 1); 
     });
 
     // Clusters Light Select
@@ -491,11 +491,13 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mClustersLightSelectPc.mLightsBuffer = SwRenderer::sRendererContext.mScene->getLightsBuffer();
         mResources.mClustersLightSelectPc.mNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getNodeTransformsBuffer();
         mResources.mClustersLightSelectPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer();
+        mResources.mClustersLightSelectPc.mClustersBuffer = mResources.mClustersBuffer;
         mResources.mClustersLightSelectPc.mClustersActiveIndicesBuffer = mResources.mClustersActiveIndicesBuffer;
         mResources.mClustersLightSelectPc.mClustersLightIndicesBuffer = mResources.mClustersLightIndicesBuffer;
         mResources.mClustersLightSelectPc.mClustersLightCounts = mResources.mClustersLightCounts;
         mResources.mClustersLightSelectPc.mClustersLightOffsetsBuffer = mResources.mClustersLightOffsetsBuffer;
         mResources.mClustersLightSelectPc.mClustersLightWriteCursorsBuffer = mResources.mClustersLightWriteCursorsBuffer;
+        mResources.mClustersLightSelectPc.mLightsCount = SwRenderer::sRendererContext.mScene->getLightIds().size();
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersLightSelect].getDeps();
         d.clear();
@@ -505,6 +507,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mClustersBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersLightOffsetsBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mResources.mClustersLightWriteCursorsBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);

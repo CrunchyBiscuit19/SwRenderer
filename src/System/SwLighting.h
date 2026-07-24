@@ -27,6 +27,7 @@ struct Cluster {
 };
 
 static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/Lighting"};
+static const std::filesystem::path RESET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Reset.comp.spv"};
 static const std::filesystem::path CLUSTERS_BUILD_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersBuild.comp.spv"};
 static const std::filesystem::path CLUSTERS_MARK_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersMarkActive.comp.spv"};
 static const std::filesystem::path CLUSTERS_COMPACT_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersCompactActive.comp.spv"};
@@ -34,7 +35,6 @@ static const std::filesystem::path LIGHTS_CULL_SHADER_PATH{std::filesystem::path
 static const std::filesystem::path CLUSTERS_LIGHT_CALC_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightCalcOffset.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightPrefixSumOffset.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightSelect.comp.spv"};
-static const std::filesystem::path RESET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Reset.comp.spv"};
 static const std::filesystem::path SHADOWS_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsSelect.comp.spv"};
 static const std::filesystem::path SHADOWS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsCull.comp.spv"};
 static const std::filesystem::path SHADOWS_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsDraw.vert.spv"};
@@ -125,11 +125,13 @@ struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mLightsBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
+    vk::DeviceAddress mClustersBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
     vk::DeviceAddress mClustersLightIndicesBuffer{0};
     vk::DeviceAddress mClustersLightCounts{0};
     vk::DeviceAddress mClustersLightOffsetsBuffer{0};
     vk::DeviceAddress mClustersLightWriteCursorsBuffer{0};
+    std::uint32_t mLightsCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };

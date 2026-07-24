@@ -80,11 +80,13 @@ namespace SwLighting {
         public SwLight::Data* mLightsBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
+        public Cluster* mClustersBuffer;
         public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
         public uint* mClustersLightIndicesBuffer;
         public uint* mClustersLightCounts;
         public uint* mClustersLightOffsetsBuffer;
         public uint* mClustersLightWriteCursorsBuffer;
+        public uint mLightsCount;
     };
 
     public struct ShadowsCullPC {
@@ -162,11 +164,22 @@ namespace SwLighting {
         return true;
     }
 
-    // Both the count pass and the scatter pass must run this exact test so their tallies agree.
     public bool sphereIntersectsAABB(float3 center, float radius, float3 boxMin, float3 boxMax) {
         float3 closest = clamp(center, boxMin, boxMax);
         float3 delta = center - closest;
         return dot(delta, delta) <= radius * radius;
+    }
+
+    public bool lightTouchesCluster(
+        SwLight::Data light, Cluster cluster, float4x4 view, SwInstance::Data* instances, SwNode::Transform* nodeTransforms
+    ) {
+        float3 worldCenter;
+        float radius;
+        if (!lightBoundingSphere(light, instances, nodeTransforms, worldCenter, radius)) {
+            return true;
+        }
+        float3 viewCenter = mul(view, float4(worldCenter, 1.f)).xyz;
+        return sphereIntersectsAABB(viewCenter, radius, cluster.mMin, cluster.mMax);
     }
 
     // Resolve punctual light's world-space transform and return Cook-Torrance contribution
