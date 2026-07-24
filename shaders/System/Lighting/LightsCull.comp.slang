@@ -25,27 +25,10 @@ void main(SwLighting::CSInput in) {
 
     SwLight::Data light = lightsCullPc.mLightsBuffer[lightIndex];
 
+    float3 center;
+    float radius;
     bool visible = true;
-    if (light.mType != SwLight::Type::Directional && light.mRange > 0.f) {
-        float4x4 model = mul(
-            lightsCullPc.mInstancesBuffer[light.mInstanceIndex].mTransformMatrix, lightsCullPc.mNodeTransformsBuffer[light.mNodeTransformIndex]
-        );
-        float3 center = mul(model, float4(light.mBasePosition, 1.f)).xyz;
-        float3 forward = normalize(mul(model, float4(light.mBaseDirection, 0.f)).xyz);
-        float radius = light.mRange;
-
-        if (light.mType == SwLight::Type::Spot) {
-            float cosHalf = light.mOuterCos;
-            if (cosHalf * cosHalf >= 0.5f) {  
-                radius = light.mRange / (2.f * cosHalf * cosHalf);
-                center += forward * radius;
-            } else {  
-                float sinHalf = sqrt(1.f - cosHalf * cosHalf);
-                radius = light.mRange * sinHalf / cosHalf;
-                center += forward * light.mRange;
-            }
-        }
-
+    if (SwLighting::lightBoundingSphere(light, lightsCullPc.mInstancesBuffer, lightsCullPc.mNodeTransformsBuffer, center, radius)) {
         SwFrustum frustum = lightsCullPc.mFrameBuffer->mCameraBuffer->mFrustum;
         visible = sphereInFrustum(frustum, center, radius);
     }

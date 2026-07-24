@@ -31,8 +31,11 @@ static const std::filesystem::path CLUSTERS_BUILD_SHADER_PATH{std::filesystem::p
 static const std::filesystem::path CLUSTERS_MARK_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersMarkActive.comp.spv"};
 static const std::filesystem::path CLUSTERS_COMPACT_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersCompactActive.comp.spv"};
 static const std::filesystem::path LIGHTS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "LightsCull.comp.spv"};
+static const std::filesystem::path CLUSTERS_LIGHT_CALC_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightCalcOffset.comp.spv"};
+static const std::filesystem::path CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightPrefixSumOffset.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightSelect.comp.spv"};
 static const std::filesystem::path RESET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Reset.comp.spv"};
+static const std::filesystem::path SHADOWS_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsSelect.comp.spv"};
 static const std::filesystem::path SHADOWS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsCull.comp.spv"};
 static const std::filesystem::path SHADOWS_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsDraw.vert.spv"};
 static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
@@ -50,6 +53,8 @@ static constexpr vk::DeviceSize CLUSTERS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(Clust
 static constexpr vk::DeviceSize CLUSTERS_ACTIVE_BOOLEANS_BUFFER_SIZE{NUM_CLUSTERS * sizeof(bool)};
 static constexpr vk::DeviceSize CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{(1 + NUM_CLUSTERS) * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_COUNTS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
+static constexpr vk::DeviceSize CLUSTERS_LIGHT_OFFSETS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
+static constexpr vk::DeviceSize CLUSTERS_LIGHT_WRITE_CURSORS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 
 
 struct ResetPC : SwPC<ResetPC> {
@@ -95,6 +100,26 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
+struct ClustersLightCalcOffsetPC : SwPC<ClustersLightCalcOffsetPC> {
+    vk::DeviceAddress mFrameBuffer{0};
+    vk::DeviceAddress mLightsBuffer{0};
+    vk::DeviceAddress mNodeTransformsBuffer{0};
+    vk::DeviceAddress mInstancesBuffer{0};
+    vk::DeviceAddress mClustersBuffer{0};
+    vk::DeviceAddress mClustersActiveIndicesBuffer{0};
+    vk::DeviceAddress mClustersLightCounts{0};
+    std::uint32_t mLightsCount{0};
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct ClustersLightPrefixSumOffsetPC : SwPC<ClustersLightPrefixSumOffsetPC> {
+    vk::DeviceAddress mClustersLightCounts{0};
+    vk::DeviceAddress mClustersLightOffsetsBuffer{0};
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
 struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mLightsBuffer{0};
@@ -103,6 +128,8 @@ struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
     vk::DeviceAddress mClustersLightIndicesBuffer{0};
     vk::DeviceAddress mClustersLightCounts{0};
+    vk::DeviceAddress mClustersLightOffsetsBuffer{0};
+    vk::DeviceAddress mClustersLightWriteCursorsBuffer{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -153,6 +180,8 @@ struct Resources {
     SwAllocatedBuffer mClustersActiveIndicesBuffer; // 1st 4 bytes as count
     SwAllocatedBuffer mClustersLightIndicesBuffer;
     SwAllocatedBuffer mClustersLightCounts;
+    SwAllocatedBuffer mClustersLightOffsetsBuffer;
+    SwAllocatedBuffer mClustersLightWriteCursorsBuffer;
 
     ResetPC mResetPc;
     SwPipelineLayout mResetPipelineLayout;
@@ -175,6 +204,14 @@ struct Resources {
     LightsCullPC mLightsCullPc;
     SwPipelineLayout mLightsCullPipelineLayout;
     SwComputePipelineBundle mLightsCullPipelineBundle;
+
+    ClustersLightCalcOffsetPC mClustersLightCalcOffsetPc;
+    SwPipelineLayout mClustersLightCalcOffsetPipelineLayout;
+    SwComputePipelineBundle mClustersLightCalcOffsetPipelineBundle;
+
+    ClustersLightPrefixSumOffsetPC mClustersLightPrefixSumOffsetPc;
+    SwPipelineLayout mClustersLightPrefixSumOffsetPipelineLayout;
+    SwComputePipelineBundle mClustersLightPrefixSumOffsetPipelineBundle;
 
     ClustersLightSelectPC mClustersLightSelectPc;
     SwPipelineLayout mClustersLightSelectPipelineLayout;

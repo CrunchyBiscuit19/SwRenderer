@@ -26,6 +26,11 @@ namespace SwLighting {
         public float3 mMax;
     };
 
+    public struct ResetPC {
+        public SwRenderCommand* mShadowsRcsBuffer;
+        public uint mShadowsRcsLimit;
+    };
+
     public struct ClustersBuildPC {
         public SwFrame::Data* mFrameBuffer;
         public Cluster* mClustersBuffer;
@@ -54,17 +59,32 @@ namespace SwLighting {
         public uint mLightsLimit;
     };
 
+    public struct ClustersLightCalcOffsetPC {
+        public SwFrame::Data* mFrameBuffer;
+        public SwLight::Data* mLightsBuffer;
+        public SwNode::Transform* mNodeTransformsBuffer;
+        public SwInstance::Data* mInstancesBuffer;
+        public Cluster* mClustersBuffer;
+        public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
+        public uint* mClustersLightCounts;
+        public uint mLightsCount;
+    };
+
+    public struct ClustersLightPrefixSumOffsetPC {
+        public uint* mClustersLightCounts;
+        public uint* mClustersLightOffsetsBuffer;
+    };
+
     public struct ClustersLightSelectPC {
         public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mLightsBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
-    };
-
-    public struct ResetPC {
-        public SwRenderCommand* mShadowsRcsBuffer;
-        public uint mShadowsRcsLimit;
+        public uint* mClustersLightIndicesBuffer;
+        public uint* mClustersLightCounts;
+        public uint* mClustersLightOffsetsBuffer;
+        public uint* mClustersLightWriteCursorsBuffer;
     };
 
     public struct ShadowsCullPC {
@@ -114,7 +134,42 @@ namespace SwLighting {
         public uint3 mDispatchThreadID : SV_DispatchThreadID;
     };
 
-    // Resolve punctual light's world-space transform and return Cook-Torrance contribution 
+    public bool lightBoundingSphere(
+        SwLight::Data light, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, out float3 center, out float radius
+    ) {
+        center = float3(0.f);
+        radius = 0.f;
+        if (light.mType == SwLight::Type::Directional || light.mRange <= 0.f) {
+            return false;
+        }
+
+        float4x4 model = mul(instances[light.mInstanceIndex].mTransformMatrix, nodeTransforms[light.mNodeTransformIndex]);
+        center = mul(model, float4(light.mBasePosition, 1.f)).xyz;
+        float3 forward = normalize(mul(model, float4(light.mBaseDirection, 0.f)).xyz);
+        radius = light.mRange;
+
+        if (light.mType == SwLight::Type::Spot) {
+            float cosHalf = light.mOuterCos;
+            if (cosHalf * cosHalf >= 0.5f) {
+                radius = light.mRange / (2.f * cosHalf * cosHalf);
+                center += forward * radius;
+            } else {
+                float sinHalf = sqrt(1.f - cosHalf * cosHalf);
+                radius = light.mRange * sinHalf / cosHalf;
+                center += forward * light.mRange;
+            }
+        }
+        return true;
+    }
+
+    // Both the count pass and the scatter pass must run this exact test so their tallies agree.
+    public bool sphereIntersectsAABB(float3 center, float radius, float3 boxMin, float3 boxMax) {
+        float3 closest = clamp(center, boxMin, boxMax);
+        float3 delta = center - closest;
+        return dot(delta, delta) <= radius * radius;
+    }
+
+    // Resolve punctual light's world-space transform and return Cook-Torrance contribution
     // Point: Inverse-square + range falloff, Spot: Cone falloff.
     public float3 accumulatePunctualLight(
         SwLight::Data light, float3 worldPos, float3 normal, float3 view, float3 albedo, float metallic, float roughness, SwInstance::Data* instances,

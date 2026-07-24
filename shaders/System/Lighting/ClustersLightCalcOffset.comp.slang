@@ -1,0 +1,36 @@
+import System.Lighting.SwLighting;
+import Data.SwConstants;
+
+[[vk::push_constant]]
+SwLighting::ClustersLightCalcOffsetPC clustersLightCalcOffsetPc;
+
+[numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
+void main(SwLighting::CSInput in) {
+    const uint activeSlot = in.mDispatchThreadID.x;
+    const uint lightIndex = in.mDispatchThreadID.y;
+    const uint activeCount = clustersLightCalcOffsetPc.mClustersActiveIndicesBuffer[0];
+    if (activeSlot >= activeCount || lightIndex >= clustersLightCalcOffsetPc.mLightsCount) {
+        return;
+    }
+
+    const uint clusterIndex = clustersLightCalcOffsetPc.mClustersActiveIndicesBuffer[1 + activeSlot];
+
+    SwLight::Data light = clustersLightCalcOffsetPc.mLightsBuffer[lightIndex];
+
+    float3 worldCenter;
+    float radius;
+    bool bounded = SwLighting::lightBoundingSphere(
+        light, clustersLightCalcOffsetPc.mInstancesBuffer, clustersLightCalcOffsetPc.mNodeTransformsBuffer, worldCenter, radius
+    );
+
+    if (bounded) {
+        float4x4 view = clustersLightCalcOffsetPc.mFrameBuffer->mCameraBuffer->mPerspective.mView;
+        float3 viewCenter = mul(view, float4(worldCenter, 1.f)).xyz;
+        SwLighting::Cluster cluster = clustersLightCalcOffsetPc.mClustersBuffer[clusterIndex];
+        if (!SwLighting::sphereIntersectsAABB(viewCenter, radius, cluster.mMin, cluster.mMax)) {
+            return;
+        }
+    }
+
+    InterlockedAdd(clustersLightCalcOffsetPc.mClustersLightCounts[clusterIndex], 1);
+}

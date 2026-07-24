@@ -28,6 +28,8 @@ public:
         LightingClustersMarkActive,
         LightingClustersCompactActive,
         LightingLightsCull,
+        LightingClustersLightCalcOffset,
+        LightingClustersLightPrefixSumOffset,
         LightingClustersLightSelect,
         LightingShadowsCull,
         LightingShadowsDraw,
