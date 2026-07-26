@@ -18,9 +18,10 @@ void SwLighting::Resources::init() {
     sShadowsConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "ShadowsConsumeDescriptorLayout",
         {
-            {0, vk::DescriptorType::eSampledImage, MAX_NUM_SHADOW_CASTERS},
-            {1, vk::DescriptorType::eSampledImage, MAX_NUM_SHADOW_CASTERS},
-            {2, vk::DescriptorType::eSampler, 1},
+            {0, vk::DescriptorType::eSampledImage, MAX_DIRECTIONAL_SHADOW_MAPS},
+            {1, vk::DescriptorType::eSampledImage, MAX_SPOT_SHADOW_MAPS},
+            {2, vk::DescriptorType::eSampledImage, MAX_POINT_SHADOW_MAPS},
+            {3, vk::DescriptorType::eSampler, 1},
         },
         vk::ShaderStageFlagBits::eFragment
     );
@@ -98,18 +99,27 @@ void SwLighting::System::initializeResources() {
         return SwSamplerFactory::createSampler(name, info);
     };
 
-    for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-        mResources.mShadows2DMaps[i] = SwImageFactory::createDepthImage2D(
-            std::format("Shadow2DMap{}", i),
+    for (std::uint32_t i = 0; i < MAX_DIRECTIONAL_SHADOW_MAPS; i++) {
+        mResources.mDirectionalShadowMaps[i] = SwImageFactory::createDepthImage2D(
+            std::format("DirectionalShadowMap{}", i),
             SHADOWS_MAP_FORMAT,
             vk::Extent3D{SHADOWS_2D_MAP_WIDTH_HEIGHT, SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             true
         );
     }
-    for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-        mResources.mShadowsCubeMaps[i] = SwImageFactory::createDepthImageCubemap(
-            std::format("ShadowCubeMap{}", i),
+    for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++) {
+        mResources.mSpotShadowMaps[i] = SwImageFactory::createDepthImage2D(
+            std::format("SpotShadowMap{}", i),
+            SHADOWS_MAP_FORMAT,
+            vk::Extent3D{SHADOWS_2D_MAP_WIDTH_HEIGHT, SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
+            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
+            true
+        );
+    }
+    for (std::uint32_t i = 0; i < MAX_POINT_SHADOW_MAPS; i++) {
+        mResources.mPointShadowMaps[i] = SwImageFactory::createDepthImageCubemap(
+            std::format("PointShadowMap{}", i),
             SHADOWS_MAP_FORMAT,
             vk::Extent3D{SHADOWS_CUBEMAP_WIDTH_HEIGHT, SHADOWS_CUBEMAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
@@ -120,23 +130,30 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowsMapsSampler = makeComparisonSampler("ShadowsMapsSampler", vk::SamplerAddressMode::eClampToBorder);
     mResources.mShadowsMapsDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("ShadowsMapsDescriptorSet", Resources::sShadowsConsumeDescriptorLayout);
-    for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
+    for (std::uint32_t i = 0; i < MAX_DIRECTIONAL_SHADOW_MAPS; i++) {
         mResources.mShadowsMapsDescriptorSet.writeImage(
-            0, mResources.mShadows2DMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+            0, mResources.mDirectionalShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
         );
     }
-    for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
+    for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++) {
         mResources.mShadowsMapsDescriptorSet.writeImage(
-            1, mResources.mShadowsCubeMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+            1, mResources.mSpotShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
         );
     }
-    mResources.mShadowsMapsDescriptorSet.writeSampler(2, mResources.mShadowsMapsSampler.getHandle());
+    for (std::uint32_t i = 0; i < MAX_POINT_SHADOW_MAPS; i++) {
+        mResources.mShadowsMapsDescriptorSet.writeImage(
+            2, mResources.mPointShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+        );
+    }
+    mResources.mShadowsMapsDescriptorSet.writeSampler(3, mResources.mShadowsMapsSampler.getHandle());
     mResources.mShadowsMapsDescriptorSet.pushWrites();
     SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
-        for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            mResources.mShadows2DMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
-            mResources.mShadowsCubeMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
-        }
+        for (std::uint32_t i = 0; i < MAX_DIRECTIONAL_SHADOW_MAPS; i++)
+            mResources.mDirectionalShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+        for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++)
+            mResources.mSpotShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+        for (std::uint32_t i = 0; i < MAX_POINT_SHADOW_MAPS; i++)
+            mResources.mPointShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
     });
 
     mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("ResetPipelineLayout", nullptr, SwLighting::ResetPC::getRange());
@@ -350,9 +367,6 @@ void SwLighting::System::initializePasses() {
         );
     });
 
-    // Shadows Select
-    mScene.insertPass(SwPass::Type::LightingShadowsSelect, [&](vk::CommandBuffer cmd) {});
-
     // Shadows Cull
     mScene.insertPass(SwPass::Type::LightingShadowsCull, [&](vk::CommandBuffer cmd) {});
 
@@ -551,9 +565,10 @@ void SwLighting::System::refreshDataUsage() {
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowsDraw].getDeps();
         d.clear();
-        for (std::size_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
-            d.mWriteImages.emplace_back(&mResources.mShadows2DMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
-        }
+        for (std::size_t i = 0; i < MAX_DIRECTIONAL_SHADOW_MAPS; i++)
+            d.mWriteImages.emplace_back(&mResources.mDirectionalShadowMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        for (std::size_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++)
+            d.mWriteImages.emplace_back(&mResources.mSpotShadowMaps[i], SwDependency::ImageDepType::DepthAttachmentReadWrite);
         d.mReadBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::IndirectRead);
         d.mReadBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);

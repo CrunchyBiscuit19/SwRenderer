@@ -18,7 +18,7 @@ void main(SwLighting::CSInput in) {
     SwLight::Data light = clustersLightCalcOffsetPc.mLightsBuffer[lightIndex];
     SwLighting::Cluster cluster = clustersLightCalcOffsetPc.mClustersBuffer[clusterIndex];
     float4x4 view = clustersLightCalcOffsetPc.mFrameBuffer->mCameraBuffer->mPerspective.mView;
-    if (!SwLighting::lightTouchesCluster(
+    if (!SwLighting::Collision::lightTouchesCluster(
             light, cluster, view, clustersLightCalcOffsetPc.mInstancesBuffer, clustersLightCalcOffsetPc.mNodeTransformsBuffer
         )) {
         return;

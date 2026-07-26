@@ -28,7 +28,7 @@ void main(SwLighting::CSInput in) {
     float3 center;
     float radius;
     bool visible = true;
-    if (SwLighting::lightBoundingSphere(light, lightsCullPc.mInstancesBuffer, lightsCullPc.mNodeTransformsBuffer, center, radius)) {
+    if (SwLighting::Collision::lightBoundingSphere(light, lightsCullPc.mInstancesBuffer, lightsCullPc.mNodeTransformsBuffer, center, radius)) {
         SwFrustum frustum = lightsCullPc.mFrameBuffer->mCameraBuffer->mFrustum;
         visible = sphereInFrustum(frustum, center, radius);
     }

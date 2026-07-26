@@ -35,13 +35,15 @@ static const std::filesystem::path LIGHTS_CULL_SHADER_PATH{std::filesystem::path
 static const std::filesystem::path CLUSTERS_LIGHT_CALC_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightCalcOffset.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightPrefixSumOffset.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightSelect.comp.spv"};
-static const std::filesystem::path SHADOWS_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsSelect.comp.spv"};
 static const std::filesystem::path SHADOWS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsCull.comp.spv"};
 static const std::filesystem::path SHADOWS_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsDraw.vert.spv"};
 static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
-static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{16};
+static constexpr std::uint32_t MAX_DIRECTIONAL_SHADOW_MAPS{4};
+static constexpr std::uint32_t MAX_SPOT_SHADOW_MAPS{16};
+static constexpr std::uint32_t MAX_POINT_SHADOW_MAPS{4};
+static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{MAX_DIRECTIONAL_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS};
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
@@ -55,7 +57,6 @@ static constexpr vk::DeviceSize CLUSTERS_ACTIVE_INDICES_BUFFER_SIZE{(1 + NUM_CLU
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_COUNTS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_OFFSETS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_WRITE_CURSORS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
-
 
 struct ResetPC : SwPC<ResetPC> {
     vk::DeviceAddress mShadowsRcsBuffer{0};
@@ -167,8 +168,9 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    std::array<SwDepthImage2D, MAX_NUM_SHADOW_CASTERS> mShadows2DMaps;
-    std::array<SwDepthImageCubemap, MAX_NUM_SHADOW_CASTERS> mShadowsCubeMaps;
+    std::array<SwDepthImage2D, MAX_DIRECTIONAL_SHADOW_MAPS> mDirectionalShadowMaps;
+    std::array<SwDepthImage2D, MAX_SPOT_SHADOW_MAPS> mSpotShadowMaps;
+    std::array<SwDepthImageCubemap, MAX_POINT_SHADOW_MAPS> mPointShadowMaps;
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 

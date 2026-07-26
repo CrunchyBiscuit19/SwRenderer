@@ -14,10 +14,6 @@ import System.BRDF.SwBRDF;
 import System.IBL.SwIBL;
 
 namespace SwLighting {
-    public static const uint SHADOWS_MAP_SIZE = 1024;
-    public static const uint MAX_NUM_SHADOW_CASTERS = 16;
-    public static const float SHADOWS_SPOT_NEAR = 0.05f;
-    public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
     public static const uint3 CLUSTERS_DIMENSIONS = uint3(16,9,24);
     public static const uint NUM_CLUSTERS = CLUSTERS_DIMENSIONS.x * CLUSTERS_DIMENSIONS.y * CLUSTERS_DIMENSIONS.z;
 
@@ -135,7 +131,9 @@ namespace SwLighting {
     public struct CSInput {
         public uint3 mDispatchThreadID : SV_DispatchThreadID;
     };
+}
 
+namespace SwLighting::Collision {
     public bool lightBoundingSphere(
         SwLight::Data light, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, out float3 center, out float radius
     ) {
@@ -181,23 +179,30 @@ namespace SwLighting {
         float3 viewCenter = mul(view, float4(worldCenter, 1.f)).xyz;
         return sphereIntersectsAABB(viewCenter, radius, cluster.mMin, cluster.mMax);
     }
+}
 
-    // Resolve punctual light's world-space transform and return Cook-Torrance contribution
-    // Point: Inverse-square + range falloff, Spot: Cone falloff.
-    public float3 accumulatePunctualLight(
-        SwLight::Data light, float3 worldPos, float3 normal, float3 view, float3 albedo, float metallic, float roughness, SwInstance::Data* instances,
-        SwNode::Transform* nodeTransforms
-    ) {
+namespace SwLighting::Calculation {
+    public struct SurfacePoint {
+        public float3 mAlbedo;
+        public float mMetallic;
+        public float mRoughness;
+        public float mAo;
+        public float3 mWorldPos;
+        public float3 mNormal;
+        public float3 mView;
+    };
+
+    public float3 accumulatePunctualLight(SwLight::Data light, SurfacePoint surface, SwInstance::Data* instances, SwNode::Transform* nodeTransforms) {
         float4x4 model = mul(instances[light.mInstanceIndex].mTransformMatrix, nodeTransforms[light.mNodeTransformIndex]);
         float3 lightWorldPos = mul(model, float4(light.mBasePosition, 1.f)).xyz;
-        float3 lightForward = normalize(mul(model, float4(light.mBaseDirection, 0.f)).xyz);  // glTF: light shines down local -Z
+        float3 lightForward = normalize(mul(model, float4(light.mBaseDirection, 0.f)).xyz);
 
-        float3 toLightDir;  // unit vector from the surface toward the light
+        float3 toLightDir;
         float attenuation = 1.f;
         if (light.mType == SwLight::Type::Directional) {
             toLightDir = -lightForward;
         } else {
-            float3 toLight = lightWorldPos - worldPos;
+            float3 toLight = lightWorldPos - surface.mWorldPos;
             float dist = length(toLight);
             toLightDir = toLight / max(dist, 1e-4f);
             attenuation = 1.f / max(dist * dist, 1e-4f);
@@ -212,38 +217,52 @@ namespace SwLighting {
         }
 
         float3 radiance = light.mColor * light.mIntensity * attenuation;
-        return SwBRDF::cookTorrance(normal, view, toLightDir, albedo, metallic, roughness, radiance);
+        return SwBRDF::cookTorrance(surface.mNormal, surface.mView, toLightDir, surface.mAlbedo, surface.mMetallic, surface.mRoughness, radiance);
     }
 
-    // Full PBR shading: Image-based ambient (AO-modulated) plus the per-frame selected punctual lights.
     public float3 shadeLit(
-        float3 albedo, float metallic, float roughness, float ao, float3 worldPos, float3 normal, float3 view, uint* litIndices,
-        SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms, Texture2D irradianceMap, SamplerState irradianceSampler,
-        Texture2D prefilterMap, SamplerState prefilterSampler, Texture2D brdfLut, SamplerState brdfLutSampler, float maxPrefilterMip, float iblIntensity,
-        uint iblComponents, Texture2D shadows2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS], TextureCube shadowsCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS],
-        SamplerComparisonState shadowsSampler
+        SurfacePoint surface, uint* litIndices, SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms,
+        SwIBL::Params ibl, SwLighting::Shadow::Params shadows
     ) {
-        float3 color = iblIntensity * SwIBL::ambientIBL(
-                                          albedo, metallic, roughness, ao, normal, view, irradianceMap, irradianceSampler, prefilterMap, prefilterSampler,
-                                          brdfLut, brdfLutSampler, maxPrefilterMip, iblComponents
-                                      );
-        uint litCount = litIndices[0];  // the first slot holds the surviving light count, indices follow
+        float3 color = ibl.mIntensity * SwIBL::ambientIBL(
+            surface.mAlbedo, surface.mMetallic, surface.mRoughness, surface.mAo, surface.mNormal, surface.mView, ibl
+        );
+        uint litCount = litIndices[0];
         for (uint i = 0; i < litCount; i++) {
             SwLight::Data light = lights[litIndices[1 + i]];
-            float3 contribution = accumulatePunctualLight(light, worldPos, normal, view, albedo, metallic, roughness, instances, nodeTransforms);
+            float3 contribution = accumulatePunctualLight(light, surface, instances, nodeTransforms);
             switch (light.mType) {
-                case SwLight::Type::Spot:
                 case SwLight::Type::Directional:
-                    contribution *= shadowsFactor2D(i, worldPos, shadows2DMaps, shadowsSampler);
+                    contribution *= SwLighting::Shadow::shadowsFactor2D(i, surface.mWorldPos, shadows.mDirectionalMaps, shadows.mSampler);
+                    break;
+                case SwLight::Type::Spot:
+                    contribution *= SwLighting::Shadow::shadowsFactor2D(i, surface.mWorldPos, shadows.mSpotMaps, shadows.mSampler);
                     break;
                 case SwLight::Type::Point:
-                    contribution *= shadowsFactorCube(i, light, worldPos, shadowsCubeMaps, shadowsSampler);
+                    contribution *= SwLighting::Shadow::shadowsFactorCube(i, light, surface.mWorldPos, shadows.mPointMaps, shadows.mSampler);
                     break;
             }
             color += contribution;
         }
         return color;
     }
+}
+
+namespace SwLighting::Shadow {
+    public static const uint SHADOWS_MAP_SIZE = 1024;
+    public static const uint MAX_DIRECTIONAL_SHADOW_MAPS = 4;
+    public static const uint MAX_SPOT_SHADOW_MAPS = 16;
+    public static const uint MAX_POINT_SHADOW_MAPS = 4;
+    public static const uint MAX_NUM_SHADOW_CASTERS = MAX_DIRECTIONAL_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS;
+    public static const float SHADOWS_SPOT_NEAR = 0.05f;
+    public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
+
+    public struct Params {
+        public Texture2D mDirectionalMaps[MAX_DIRECTIONAL_SHADOW_MAPS];
+        public Texture2D mSpotMaps[MAX_SPOT_SHADOW_MAPS];
+        public TextureCube mPointMaps[MAX_POINT_SHADOW_MAPS];
+        public SamplerComparisonState mSampler;
+    };
 
     public static const uint POISSON_COUNT = 16;
     public static const int BLUR_RANGE = 1;
@@ -270,8 +289,8 @@ namespace SwLighting {
         return projCoords.xy + POISSON_DISK[index] / radius;
     }
 
-    public float shadowsFactor2D(
-        uint slot, float3 worldPos, Texture2D shadows2DMaps[SwLighting::MAX_NUM_SHADOW_CASTERS], SamplerComparisonState shadowsSampler
+    public float shadowsFactor2D<let N : int>(
+        uint slot, float3 worldPos, Texture2D shadowMaps[N], SamplerComparisonState shadowsSampler
     ) {
         const bool shadows2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
         if (!shadows2DEnabled) {
@@ -291,24 +310,25 @@ namespace SwLighting {
 
         const float bias = 0.0015f;
         const float radius = ndc.z + bias;  // reversed-Z, so bias is added to push receivers toward lit
-        const float2 texel = 1.f / float2(SwLighting::SHADOWS_MAP_SIZE, SwLighting::SHADOWS_MAP_SIZE);
+        const float2 texel = 1.f / float2(SHADOWS_MAP_SIZE, SHADOWS_MAP_SIZE);
         float lit = 0.f;
         int count = 0;
         for (int y = -BLUR_RANGE; y <= BLUR_RANGE; y++) {
             for (int x = -BLUR_RANGE; x <= BLUR_RANGE; x++) {
                 float2 off = float2(texel.x * x, texel.y * y);
                 float2 coord = GetPoissonDiskCoord(uv + off, count, POISSON_RADIUS);
-                lit += shadows2DMaps[slot].SampleCmpLevelZero(shadowsSampler, coord, radius).r;
+                lit += shadowMaps[slot].SampleCmpLevelZero(shadowsSampler, coord, radius).r;
                 count++;
             }
         }
         float shadow = lit / count;  // 0 = fully occluded, 1 = fully lit
-        return lerp(SwLighting::SHADOWS_AMBIENT, 1.0, shadow);
+        return lerp(SHADOWS_AMBIENT, 1.0, shadow);
     }
 
-    public float shadowsFactorCube(
-        uint slot, SwLight::Data light, float3 worldPos, TextureCube shadowsCubeMaps[SwLighting::MAX_NUM_SHADOW_CASTERS], SamplerComparisonState shadowsSampler
+    public float shadowsFactorCube<let N : int>(
+        uint slot, SwLight::Data light, float3 worldPos, TextureCube shadowMaps[N], SamplerComparisonState shadowsSampler
     ) {
         return 1.f; // TODO actually implement it
     }
 }
+

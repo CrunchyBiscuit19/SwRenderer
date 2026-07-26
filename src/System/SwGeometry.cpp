@@ -202,9 +202,11 @@ void SwGeometry::System::refreshDataUsage() {
         if (!depthOnly) {
             d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
             d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-            for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadows2DMaps)
+            for (auto& shadowMap : mScene.getLightingSystem().getResources().mDirectionalShadowMaps)
                 d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
-            for (auto& shadowMap : mScene.getLightingSystem().getResources().mShadowsCubeMaps)
+            for (auto& shadowMap : mScene.getLightingSystem().getResources().mSpotShadowMaps)
+                d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+            for (auto& shadowMap : mScene.getLightingSystem().getResources().mPointShadowMaps)
                 d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
             d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         }

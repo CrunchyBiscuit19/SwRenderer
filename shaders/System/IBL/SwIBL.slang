@@ -38,28 +38,33 @@ namespace SwIBL {
         return normalize(tangent * h.x + bitangent * h.y + N * h.z);
     }
     
-    // Image-based ambient: split-sum diffuse irradiance + specular prefilter, modulated by AO.
-    // Replaces the flat constant ambient now that the skybox drives a real environment.
-    public float3 ambientIBL(
-        float3 albedo, float metallic, float roughness, float ao, float3 normal, float3 view, Texture2D irradianceMap, SamplerState irradianceSampler,
-        Texture2D prefilterMap, SamplerState prefilterSampler, Texture2D brdfLut, SamplerState brdfLutSampler, float maxPrefilterMip, uint components
-    ) {
+    public struct Params {
+        public Texture2D mIrradianceMap;
+        public SamplerState mIrradianceSampler;
+        public Texture2D mPrefilterMap;
+        public SamplerState mPrefilterSampler;
+        public Texture2D mBrdfLut;
+        public SamplerState mBrdfLutSampler;
+        public float mMaxPrefilterMip;
+        public float mIntensity;
+        public uint mComponents;
+    };
+
+    public float3 ambientIBL(float3 albedo, float metallic, float roughness, float ao, float3 normal, float3 view, Params params) {
         float NdotV = max(dot(normal, view), 1e-4f);
         float3 F0 = lerp(float3(0.04f), albedo, metallic);
 
         float3 ambient = float3(0.f);
-        if ((components & DIFFUSE) != 0u) {
-            // Weight by the normal-incidence Fresnel F0 (not the view-dependent F) so the diffuse fill
-            // stays camera-invariant while keeping a sensible diffuse/specular energy split.
+        if ((params.mComponents & DIFFUSE) != 0u) {
             float3 kD = (1.f - F0) * (1.f - metallic);
-            float3 irradiance = irradianceMap.SampleLevel(irradianceSampler, SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
+            float3 irradiance = params.mIrradianceMap.SampleLevel(params.mIrradianceSampler, SwBRDF::dirToEquirectUv(normal), 0.f).rgb;
             ambient += kD * irradiance * albedo;
         }
-        if ((components & SPECULAR) != 0u) {
+        if ((params.mComponents & SPECULAR) != 0u) {
             float3 R = reflect(-view, normal);
-            float prefilterLod = roughness * maxPrefilterMip;
-            float3 prefiltered = prefilterMap.SampleLevel(prefilterSampler, SwBRDF::dirToEquirectUv(R), prefilterLod).rgb;
-            float2 envBrdf = brdfLut.SampleLevel(brdfLutSampler, float2(NdotV, roughness), 0.f).rg;
+            float prefilterLod = roughness * params.mMaxPrefilterMip;
+            float3 prefiltered = params.mPrefilterMap.SampleLevel(params.mPrefilterSampler, SwBRDF::dirToEquirectUv(R), prefilterLod).rgb;
+            float2 envBrdf = params.mBrdfLut.SampleLevel(params.mBrdfLutSampler, float2(NdotV, roughness), 0.f).rg;
             ambient += prefiltered * (F0 * envBrdf.x + envBrdf.y);
         }
 
