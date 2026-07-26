@@ -51,8 +51,6 @@ void SwLighting::System::regenerateShadowsRcs() {
 void SwLighting::System::initializeResources() {
     mResources.mLitIndicesBuffer =
         SwBufferFactory::createAllocatedBuffer("LitIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
-    mResources.mShadowCastsIndicesBuffer =
-        SwBufferFactory::createAllocatedBuffer("ShadowCastsIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOW_CAST_INDICES_BUFFER_SIZE, true);
     mResources.mShadowsRcsBuffer =
         SwBufferFactory::createAllocatedBuffer("ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -447,7 +445,6 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mLightsCullPc.mNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getNodeTransformsBuffer();
         mResources.mLightsCullPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer();
         mResources.mLightsCullPc.mLitIndicesBuffer = mResources.mLitIndicesBuffer;
-        mResources.mLightsCullPc.mShadowCastsIndicesBuffer = mResources.mShadowCastsIndicesBuffer;
         mResources.mLightsCullPc.mLightsCount = SwRenderer::sRendererContext.mScene->getLightIds().size();
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingLightsCull].getDeps();
@@ -459,9 +456,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
-        d.mReadBuffers.emplace_back(&mResources.mShadowCastsIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
-        d.mWriteBuffers.emplace_back(&mResources.mShadowCastsIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
     }
 
     // Clusters Light Calc Offset
@@ -472,8 +467,8 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mClustersLightCalcOffsetPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer();
         mResources.mClustersLightCalcOffsetPc.mClustersBuffer = mResources.mClustersBuffer;
         mResources.mClustersLightCalcOffsetPc.mClustersActiveIndicesBuffer = mResources.mClustersActiveIndicesBuffer;
+        mResources.mClustersLightCalcOffsetPc.mLitIndicesBuffer = mResources.mLitIndicesBuffer;
         mResources.mClustersLightCalcOffsetPc.mClustersLightCounts = mResources.mClustersLightCounts;
-        mResources.mClustersLightCalcOffsetPc.mLightsCount = SwRenderer::sRendererContext.mScene->getLightIds().size();
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersLightCalcOffset].getDeps();
         d.clear();
@@ -485,6 +480,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mResources.mClustersLightCounts, SwDependency::BufferDepType::ComputeStorageReadWrite);
     }
 
@@ -507,11 +503,11 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mClustersLightSelectPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer();
         mResources.mClustersLightSelectPc.mClustersBuffer = mResources.mClustersBuffer;
         mResources.mClustersLightSelectPc.mClustersActiveIndicesBuffer = mResources.mClustersActiveIndicesBuffer;
+        mResources.mClustersLightSelectPc.mLitIndicesBuffer = mResources.mLitIndicesBuffer;
         mResources.mClustersLightSelectPc.mClustersLightIndicesBuffer = mResources.mClustersLightIndicesBuffer;
         mResources.mClustersLightSelectPc.mClustersLightCounts = mResources.mClustersLightCounts;
         mResources.mClustersLightSelectPc.mClustersLightOffsetsBuffer = mResources.mClustersLightOffsetsBuffer;
         mResources.mClustersLightSelectPc.mClustersLightWriteCursorsBuffer = mResources.mClustersLightWriteCursorsBuffer;
-        mResources.mClustersLightSelectPc.mLightsCount = SwRenderer::sRendererContext.mScene->getLightIds().size();
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingClustersLightSelect].getDeps();
         d.clear();
@@ -523,13 +519,10 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mClustersLightOffsetsBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mResources.mClustersLightWriteCursorsBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersLightIndicesBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
-    }
-
-    // Shadows Select
-    {
     }
 
     // Shadows Cull

@@ -27,7 +27,10 @@ namespace SwGeometry {
         public SwRenderCommand* mRcsBuffer;
         public SwFrame::Data* mFrameBuffer;
         public SwLight::Data* mLightsBuffer;
-        public uint* mLitIndicesBuffer;
+        public uint* mClustersLightIndicesBuffer;
+        public uint* mClustersLightCounts;
+        public uint* mClustersLightOffsetsBuffer;
+        public uint2 mTargetSize;
         public float mMaxPrefilterMipLevel;
         public float mIblIntensity;
         public uint mIblComponents;

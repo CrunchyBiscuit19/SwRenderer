@@ -47,7 +47,6 @@ static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{MAX_DIRECTIONAL_SHADOW_MAP
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
-static constexpr vk::DeviceSize SHADOW_CAST_INDICES_BUFFER_SIZE{(1 + MAX_NUM_SHADOW_CASTERS) * sizeof(std::uint32_t)};
 
 static constexpr glm::uvec3 CLUSTERS_DIMENSIONS{16, 9, 24};
 static constexpr std::uint32_t NUM_CLUSTERS{CLUSTERS_DIMENSIONS.x * CLUSTERS_DIMENSIONS.y * CLUSTERS_DIMENSIONS.z};
@@ -95,7 +94,6 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mLitIndicesBuffer{0};
-    vk::DeviceAddress mShadowCastsIndicesBuffer{0};
     std::uint32_t mLightsCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -108,8 +106,8 @@ struct ClustersLightCalcOffsetPC : SwPC<ClustersLightCalcOffsetPC> {
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mClustersBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
+    vk::DeviceAddress mLitIndicesBuffer{0};
     vk::DeviceAddress mClustersLightCounts{0};
-    std::uint32_t mLightsCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -128,11 +126,11 @@ struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mClustersBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
+    vk::DeviceAddress mLitIndicesBuffer{0};
     vk::DeviceAddress mClustersLightIndicesBuffer{0};
     vk::DeviceAddress mClustersLightCounts{0};
     vk::DeviceAddress mClustersLightOffsetsBuffer{0};
     vk::DeviceAddress mClustersLightWriteCursorsBuffer{0};
-    std::uint32_t mLightsCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -175,7 +173,6 @@ struct Resources {
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
     SwAllocatedBuffer mLitIndicesBuffer; // 1st 4 bytes as count
-    SwAllocatedBuffer mShadowCastsIndicesBuffer;
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
 

@@ -176,7 +176,11 @@ void SwGeometry::System::refreshDataUsage() {
     mResources.mDrawPushConstants.mRisIndicesBuffer = mScene.getRisIndicesBuffer();
     mResources.mDrawPushConstants.mFrameBuffer = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer();
     mResources.mDrawPushConstants.mLightsBuffer = mScene.getLightsBuffer();
-    mResources.mDrawPushConstants.mLitIndicesBuffer = mScene.getLightingSystem().getResources().mLitIndicesBuffer;
+    mResources.mDrawPushConstants.mClustersLightIndicesBuffer = mScene.getLightingSystem().getResources().mClustersLightIndicesBuffer;
+    mResources.mDrawPushConstants.mClustersLightCounts = mScene.getLightingSystem().getResources().mClustersLightCounts;
+    mResources.mDrawPushConstants.mClustersLightOffsetsBuffer = mScene.getLightingSystem().getResources().mClustersLightOffsetsBuffer;
+    mResources.mDrawPushConstants.mTargetSize =
+        glm::uvec2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().width, SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().height);
     mResources.mDrawPushConstants.mMaxPrefilterMipLevel = mScene.getIBLSystem().getMaxPrefilterMip();
     mResources.mDrawPushConstants.mIblIntensity = mScene.getIBLSystem().getIblIntensity() / mScene.getIBLSystem().getEnvAvgLuminance();
     mResources.mDrawPushConstants.mIblComponents = static_cast<std::uint32_t>(mScene.getIBLSystem().getIblComponents());
@@ -221,7 +225,13 @@ void SwGeometry::System::refreshDataUsage() {
         if (!depthOnly) {
             d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
             d.mReadBuffers.emplace_back(
-                &mScene.getLightingSystem().getResources().mLitIndicesBuffer, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+                &mScene.getLightingSystem().getResources().mClustersLightIndicesBuffer, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+            );
+            d.mReadBuffers.emplace_back(
+                &mScene.getLightingSystem().getResources().mClustersLightCounts, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+            );
+            d.mReadBuffers.emplace_back(
+                &mScene.getLightingSystem().getResources().mClustersLightOffsetsBuffer, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
             );
         }
         d.mReadBuffers.emplace_back(&mScene.getIndexBuffer(), SwDependency::BufferDepType::IndexRead);

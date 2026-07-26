@@ -51,7 +51,6 @@ namespace SwLighting {
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public uint* mLitIndicesBuffer;
-        public uint* mShadowCastsIndicesBuffer;
         public uint mLightsLimit;
     };
 
@@ -62,8 +61,8 @@ namespace SwLighting {
         public SwInstance::Data* mInstancesBuffer;
         public Cluster* mClustersBuffer;
         public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
+        public uint* mLitIndicesBuffer; // 1st 4 bytes hold the lit light count
         public uint* mClustersLightCounts;
-        public uint mLightsCount;
     };
 
     public struct ClustersLightPrefixSumOffsetPC {
@@ -78,11 +77,11 @@ namespace SwLighting {
         public SwInstance::Data* mInstancesBuffer;
         public Cluster* mClustersBuffer;
         public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
+        public uint* mLitIndicesBuffer; // 1st 4 bytes hold the lit light count
         public uint* mClustersLightIndicesBuffer;
         public uint* mClustersLightCounts;
         public uint* mClustersLightOffsetsBuffer;
         public uint* mClustersLightWriteCursorsBuffer;
-        public uint mLightsCount;
     };
 
     public struct ShadowsCullPC {
@@ -131,6 +130,23 @@ namespace SwLighting {
     public struct CSInput {
         public uint3 mDispatchThreadID : SV_DispatchThreadID;
     };
+
+    public uint getDepthSlice(float ndcZ, float2 planes) {
+        const uint numSlices = CLUSTERS_DIMENSIONS.z;
+        const float viewZ = planes.y * planes.x / (planes.x + ndcZ * (planes.y - planes.x));
+        const float numerator = numSlices * (log(viewZ) - log(planes.x));
+        const float denominator = log(planes.y / planes.x);
+
+        return min(uint(floor(numerator / denominator)), numSlices - 1);
+    }
+
+    public uint getClusterIndex(float2 screenPixel, float ndcZ, uint2 targetSize, float2 planes) {
+        const uint tileSize = targetSize.x / CLUSTERS_DIMENSIONS.x;
+        const uint2 tile = min(uint2(screenPixel / tileSize), CLUSTERS_DIMENSIONS.xy - 1);
+        const uint3 cluster = uint3(tile, getDepthSlice(ndcZ, planes));
+
+        return cluster.x + CLUSTERS_DIMENSIONS.x * cluster.y + (CLUSTERS_DIMENSIONS.x * CLUSTERS_DIMENSIONS.y) * cluster.z;
+    }
 }
 
 namespace SwLighting::Collision {
@@ -221,15 +237,14 @@ namespace SwLighting::Calculation {
     }
 
     public float3 shadeLit(
-        SurfacePoint surface, uint* litIndices, SwLight::Data* lights, SwInstance::Data* instances, SwNode::Transform* nodeTransforms,
-        SwIBL::Params ibl, SwLighting::Shadow::Params shadows
+        SurfacePoint surface, uint* clustersLightIndices, uint clusterLightCount, uint clusterLightOffset, SwLight::Data* lights,
+        SwInstance::Data* instances, SwNode::Transform* nodeTransforms, SwIBL::Params ibl, SwLighting::Shadow::Params shadows
     ) {
         float3 color = ibl.mIntensity * SwIBL::ambientIBL(
             surface.mAlbedo, surface.mMetallic, surface.mRoughness, surface.mAo, surface.mNormal, surface.mView, ibl
         );
-        uint litCount = litIndices[0];
-        for (uint i = 0; i < litCount; i++) {
-            SwLight::Data light = lights[litIndices[1 + i]];
+        for (uint i = 0; i < clusterLightCount; i++) {
+            SwLight::Data light = lights[clustersLightIndices[clusterLightOffset + i]];
             float3 contribution = accumulatePunctualLight(light, surface, instances, nodeTransforms);
             switch (light.mType) {
                 case SwLight::Type::Directional:

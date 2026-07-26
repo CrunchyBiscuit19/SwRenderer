@@ -85,8 +85,13 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     shadows.mPointMaps = pointShadowMaps;
     shadows.mSampler = shadowsSampler;
 
+    uint clusterIndex = SwLighting::getClusterIndex(
+        in.mPosition.xy, in.mPosition.z, drawPc.mTargetSize, drawPc.mFrameBuffer->mCameraBuffer->mPlanes
+    );
+
     float3 lit = SwLighting::Calculation::shadeLit(
-        surface, drawPc.mLitIndicesBuffer, drawPc.mLightsBuffer, drawPc.mInstancesBuffer, drawPc.mNodeTransformsBuffer, ibl, shadows
+        surface, drawPc.mClustersLightIndicesBuffer, drawPc.mClustersLightCounts[clusterIndex], drawPc.mClustersLightOffsetsBuffer[clusterIndex],
+        drawPc.mLightsBuffer, drawPc.mInstancesBuffer, drawPc.mNodeTransformsBuffer, ibl, shadows
     );
     uint emissiveIdx = NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET);
     lit += materialTextures[emissiveIdx].Sample(materialSamplers[emissiveIdx], in.mUv).rgb * mc.mEmissiveFactor.rgb;

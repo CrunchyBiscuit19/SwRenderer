@@ -18,7 +18,10 @@ struct DrawPC : SwPC<DrawPC> {
     vk::DeviceAddress mRcsBuffer{0};
     vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mLightsBuffer{0};
-    vk::DeviceAddress mLitIndicesBuffer{0};
+    vk::DeviceAddress mClustersLightIndicesBuffer{0};
+    vk::DeviceAddress mClustersLightCounts{0};
+    vk::DeviceAddress mClustersLightOffsetsBuffer{0};
+    glm::uvec2 mTargetSize{0};
     float mMaxPrefilterMipLevel{0.f};
     float mIblIntensity{0.f};
     std::uint32_t mIblComponents{0};
