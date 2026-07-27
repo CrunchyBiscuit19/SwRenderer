@@ -209,6 +209,12 @@ namespace SwLighting::Calculation {
         public float3 mView;
     };
 
+    public struct ClusterLights {
+        public uint* mIndicesBuffer;
+        public uint mCount;
+        public uint mOffset;
+    };
+
     public float3 accumulatePunctualLight(SwLight::Data light, SurfacePoint surface, SwInstance::Data* instances, SwNode::Transform* nodeTransforms) {
         float4x4 model = mul(instances[light.mInstanceIndex].mTransformMatrix, nodeTransforms[light.mNodeTransformIndex]);
         float3 lightWorldPos = mul(model, float4(light.mBasePosition, 1.f)).xyz;
@@ -238,14 +244,14 @@ namespace SwLighting::Calculation {
     }
 
     public float3 shadeLit(
-        SurfacePoint surface, uint* clustersLightIndices, uint clusterLightCount, uint clusterLightOffset, SwLight::Data* lights,
+        SurfacePoint surface, ClusterLights clusterLights, SwLight::Data* lights,
         SwInstance::Data* instances, SwNode::Transform* nodeTransforms, SwIBL::Params ibl, SwLighting::Shadow::Params shadows
     ) {
         float3 color = ibl.mIntensity * SwIBL::ambientIBL(
             surface.mAlbedo, surface.mMetallic, surface.mRoughness, surface.mAo, surface.mNormal, surface.mView, ibl
         );
-        for (uint i = 0; i < clusterLightCount; i++) {
-            SwLight::Data light = lights[clustersLightIndices[clusterLightOffset + i]];
+        for (uint i = 0; i < clusterLights.mCount; i++) {
+            SwLight::Data light = lights[clusterLights.mIndicesBuffer[clusterLights.mOffset + i]];
             float3 contribution = accumulatePunctualLight(light, surface, instances, nodeTransforms);
             switch (light.mType) {
                 case SwLight::Type::Directional:

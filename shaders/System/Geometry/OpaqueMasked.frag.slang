@@ -89,9 +89,13 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
         in.mPosition.xy, in.mPosition.z, drawPc.mTargetSize, drawPc.mFrameBuffer->mCameraBuffer->mPlanes
     );
 
+    SwLighting::Calculation::ClusterLights clusterLights;
+    clusterLights.mIndicesBuffer = drawPc.mClustersLightIndicesBuffer;
+    clusterLights.mCount = drawPc.mClustersLightCounts[clusterIndex];
+    clusterLights.mOffset = drawPc.mClustersLightOffsetsBuffer[clusterIndex];
+
     float3 lit = SwLighting::Calculation::shadeLit(
-        surface, drawPc.mClustersLightIndicesBuffer, drawPc.mClustersLightCounts[clusterIndex], drawPc.mClustersLightOffsetsBuffer[clusterIndex],
-        drawPc.mLightsBuffer, drawPc.mInstancesBuffer, drawPc.mNodeTransformsBuffer, ibl, shadows
+        surface, clusterLights, drawPc.mLightsBuffer, drawPc.mInstancesBuffer, drawPc.mNodeTransformsBuffer, ibl, shadows
     );
     uint emissiveIdx = NonUniformResourceIndex(base + SwGeometry::EMISSIVE_TEXTURE_OFFSET);
     lit += materialTextures[emissiveIdx].Sample(materialSamplers[emissiveIdx], in.mUv).rgb * mc.mEmissiveFactor.rgb;

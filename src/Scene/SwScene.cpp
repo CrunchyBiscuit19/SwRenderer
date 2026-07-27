@@ -149,6 +149,7 @@ void SwScene::initialize() {
 
 void SwScene::resize() {
     mCull.resize();
+    mLighting.resize();
     mPick.resize();
     mWBOIT.resize();
     mPostProcess.resize();
@@ -815,11 +816,11 @@ void SwScene::draw() {
         mRenderGraph.addPass(&mPasses[SwPass::Type::CullPublishCount]);
     }
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryZPass]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingReset]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCompactActive]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightSelect]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingReset]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCompactActive]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightSelect]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);

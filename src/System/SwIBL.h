@@ -136,9 +136,7 @@ private:
     std::uint32_t mPrefilterMipLevels{0};
     float mIblIntensity{1.f};
     Component mIblComponents{Component::Diffuse | Component::Specular};  // which ambient terms to apply (GUI-controlled)
-    // Cosine-weighted average luminance of the loaded environment. The IBL ambient is divided by this so a
-    // bright HDR does not flood surfaces: IBL Intensity then scales a unit-mean fill, independent of the
-    // environment's absolute radiance. Defaults to 1 (no normalization) until an environment is loaded.
+    // Cosine-weighted average luminance of the loaded environment. The IBL ambient is divided by this so a bright HDR does not flood surfaces. 
     float mEnvAvgLuminance{1.f};
     std::optional<std::filesystem::path> mLoadFromFile{std::nullopt};
     bool mActive{true};
@@ -148,7 +146,6 @@ private:
     void refreshDataUsage() override;
 
     // Reconvolve the irradiance + specular-prefilter maps from a freshly-loaded environment equirect.
-    // Called whenever the environment changes.
     void bakeFromEnvironment(SwImage& environment, vk::Sampler environmentSampler);
 
 public:

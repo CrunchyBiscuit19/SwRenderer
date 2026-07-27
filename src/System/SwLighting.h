@@ -231,7 +231,7 @@ struct Resources {
     SwGraphicsPipelineBundle mShadowsDrawMaskedPipelineBundle;
 };
 
-class System : public SwSystem {
+class System : public SwSystem, public SwSystem::Resizable {
 private:
     Resources mResources;
 
@@ -239,10 +239,10 @@ private:
     void initializePasses() override;
     void refreshDataUsage() override;
 
+    void reInitializeOnResize() override;
+
 public:
     System(SwScene& scene);
-
-    void refresh() override;
 
     void regenerateShadowsRcs();
 

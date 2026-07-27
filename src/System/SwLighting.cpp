@@ -173,10 +173,6 @@ void SwLighting::System::initializeResources() {
     mResources.mClustersMarkActiveDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "ClustersMarkActiveDescriptorSet", mResources.mClustersMarkActiveDescriptorLayout
     );
-    mResources.mClustersMarkActiveDescriptorSet.writeImage(
-        0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
-    );
-    mResources.mClustersMarkActiveDescriptorSet.pushWrites();
     mResources.mClustersMarkActivePipelineLayout = SwPipelineFactory::createPipelineLayout(
         "ClustersMarkActivePipelineLayout", mResources.mClustersMarkActiveDescriptorLayout.getHandle(), ClustersMarkActivePC::getRange()
     );
@@ -255,6 +251,8 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
     drawPipelineOptions.mVertexEntryPoint = SHADOWS_DRAW_MASKED_ENTRY_POINT;
     mResources.mShadowsDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
+
+    reInitializeOnResize();
 }
 
 void SwLighting::System::initializePasses() {
@@ -290,6 +288,13 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingClustersMarkActive, [&](vk::CommandBuffer cmd) {
         auto& clustersMarkActivePipeline = mResources.mClustersMarkActivePipelineBundle;
         cmd.bindPipeline(clustersMarkActivePipeline.getBindPoint(), clustersMarkActivePipeline.getPipelineHandle());
+        cmd.bindDescriptorSets(
+            clustersMarkActivePipeline.getBindPoint(),
+            clustersMarkActivePipeline.getLayoutHandle(),
+            0,
+            mResources.mClustersMarkActiveDescriptorSet.getHandle(),
+            {}
+        );
         cmd.pushConstants<ClustersMarkActivePC>(
             clustersMarkActivePipeline.getLayoutHandle(), ClustersMarkActivePC::sStages, 0, mResources.mClustersMarkActivePc
         );
@@ -365,13 +370,11 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {});
 }
 
-void SwLighting::System::refresh() {
+void SwLighting::System::reInitializeOnResize() {
     mResources.mClustersMarkActiveDescriptorSet.writeImage(
         0, SwRenderer::sRendererContext.mSwapchain->getDepthImage().getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal
     );
     mResources.mClustersMarkActiveDescriptorSet.pushWrites();
-
-    SwSystem::refresh();
 }
 
 void SwLighting::System::refreshDataUsage() {
