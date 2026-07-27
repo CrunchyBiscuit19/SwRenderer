@@ -18,5 +18,6 @@ namespace SwLight {
         public uint mInstanceIndex;        // into the scene instance buffer
         public float3 mBasePosition;       // light position in node-local space
         public float3 mBaseDirection;      // light forward in node-local space (glTF local -Z)
+        public uint2 mShadowMapSlot;
     };
 }

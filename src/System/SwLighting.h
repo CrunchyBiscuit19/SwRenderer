@@ -46,6 +46,7 @@ static constexpr std::uint32_t MAX_POINT_SHADOW_MAPS{4};
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{MAX_DIRECTIONAL_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS};
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
+static constexpr vk::DeviceSize SHADOW_MAP_SLOTS_COUNT_SIZE{SwLight::NUM_TYPES * sizeof(std::uint32_t)};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
 
 static constexpr glm::uvec3 CLUSTERS_DIMENSIONS{16, 9, 24};
@@ -89,11 +90,12 @@ struct ClustersCompactActivePC : SwPC<ClustersCompactActivePC> {
 };
 
 struct LightsCullPC : SwPC<LightsCullPC> {
-    vk::DeviceAddress mFrameBuffer;
+    vk::DeviceAddress mFrameBuffer{0};
     vk::DeviceAddress mLightsBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mLitIndicesBuffer{0};
+    vk::DeviceAddress mShadowMapSlotsCount{0};
     std::uint32_t mLightsCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -172,13 +174,14 @@ struct Resources {
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
-    SwAllocatedBuffer mLitIndicesBuffer; // 1st 4 bytes as count
+    SwAllocatedBuffer mLitIndicesBuffer;  // 1st 4 bytes as count
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
+    SwAllocatedBuffer mShadowMapSlotsCount;
 
     SwAllocatedBuffer mClustersBuffer;
-    SwAllocatedBuffer mClustersActiveBooleansBuffer; 
-    SwAllocatedBuffer mClustersActiveIndicesBuffer; // 1st 4 bytes as count
+    SwAllocatedBuffer mClustersActiveBooleansBuffer;
+    SwAllocatedBuffer mClustersActiveIndicesBuffer;  // 1st 4 bytes as count
     SwAllocatedBuffer mClustersLightIndicesBuffer;
     SwAllocatedBuffer mClustersLightCounts;
     SwAllocatedBuffer mClustersLightOffsetsBuffer;

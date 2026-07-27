@@ -51,6 +51,7 @@ namespace SwLighting {
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public uint* mLitIndicesBuffer;
+        public uint* mShadowMapSlotsCount;
         public uint mLightsLimit;
     };
 

@@ -36,6 +36,11 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(lightsCullPc.mLitIndicesBuffer[0], 1, offset);  
-        lightsCullPc.mLitIndicesBuffer[1 + offset] = lightIndex;       
+        lightsCullPc.mLitIndicesBuffer[1 + offset] = lightIndex;
+
+        uint shadowIndex;
+        InterlockedAdd(lightsCullPc.mShadowMapSlotsCount[(uint)light.mType], 1, shadowIndex);
+        lightsCullPc.mLightsBuffer[lightIndex].mShadowMapSlot = uint2((uint)light.mType, shadowIndex);
+        // If shadowIndex overflows the descriptor array of shadow maps, ignore it during geometry draws.
     }
 }

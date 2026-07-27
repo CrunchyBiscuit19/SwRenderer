@@ -10,6 +10,7 @@
 class SwLight {
 public:
     enum class Type : std::uint32_t { Directional = 0, Point = 1, Spot = 2 };
+    static constexpr std::uint32_t NUM_TYPES{3};
 
     struct Data {
         glm::vec3 mColor{1.f};
@@ -22,6 +23,7 @@ public:
         std::uint32_t mInstanceIndex{0};       // into mInstancesBuffer
         glm::vec3 mBasePosition{0.f};
         glm::vec3 mBaseDirection{0.f, 0.f, -1.f};  // light forward (glTF local -Z convention) in node-local space
+        glm::uvec2 mShadowMapSlot{0};
     };
 
     struct Params {

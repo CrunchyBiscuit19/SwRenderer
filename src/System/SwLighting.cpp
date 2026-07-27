@@ -56,6 +56,8 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "ShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
+    mResources.mShadowMapSlotsCount =
+        SwBufferFactory::createAllocatedBuffer("ShadowMapSlotsCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOW_MAP_SLOTS_COUNT_SIZE, true);
 
     mResources.mClustersBuffer =
         SwBufferFactory::createAllocatedBuffer("ClustersBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_BUFFER_SIZE, true, false);
@@ -68,12 +70,10 @@ void SwLighting::System::initializeResources() {
     mResources.mClustersLightIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "ClustersLightIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
-    mResources.mClustersLightCounts = SwBufferFactory::createAllocatedBuffer(
-        "ClustersLightCounts", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_LIGHT_COUNTS_SIZE, true
-    );
-    mResources.mClustersLightOffsetsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ClustersLightOffsetsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_LIGHT_OFFSETS_SIZE, true
-    );
+    mResources.mClustersLightCounts =
+        SwBufferFactory::createAllocatedBuffer("ClustersLightCounts", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_LIGHT_COUNTS_SIZE, true);
+    mResources.mClustersLightOffsetsBuffer =
+        SwBufferFactory::createAllocatedBuffer("ClustersLightOffsetsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_LIGHT_OFFSETS_SIZE, true);
     mResources.mClustersLightWriteCursorsBuffer = SwBufferFactory::createAllocatedBuffer(
         "ClustersLightWriteCursorsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, CLUSTERS_LIGHT_WRITE_CURSORS_SIZE, true
     );
@@ -147,7 +147,9 @@ void SwLighting::System::initializeResources() {
     mResources.mShadowsMapsDescriptorSet.pushWrites();
     SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {
         for (std::uint32_t i = 0; i < MAX_DIRECTIONAL_SHADOW_MAPS; i++)
-            mResources.mDirectionalShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+            mResources.mDirectionalShadowMaps[i].emitTransition(
+                cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral
+            );
         for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++)
             mResources.mSpotShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
         for (std::uint32_t i = 0; i < MAX_POINT_SHADOW_MAPS; i++)
@@ -214,7 +216,8 @@ void SwLighting::System::initializeResources() {
         "ClustersLightPrefixSumOffsetShaderModule", SwLighting::CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
     );
     mResources.mClustersLightPrefixSumOffsetPipelineBundle = SwComputePipelineFactory::createComputePipeline(
-        "ClustersLightPrefixSumOffsetPipeline", {clustersLightPrefixSumOffsetShader.getHandle(), mResources.mClustersLightPrefixSumOffsetPipelineLayout.getHandle()}
+        "ClustersLightPrefixSumOffsetPipeline",
+        {clustersLightPrefixSumOffsetShader.getHandle(), mResources.mClustersLightPrefixSumOffsetPipelineLayout.getHandle()}
     );
 
     mResources.mClustersLightSelectPipelineLayout =
@@ -262,8 +265,9 @@ void SwLighting::System::initializeResources() {
 void SwLighting::System::initializePasses() {
     // Reset
     mScene.insertPass(SwPass::Type::LightingReset, [&](vk::CommandBuffer cmd) {
+        cmd.fillBuffer(mResources.mLitIndicesBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mShadowsRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mResources.mLitIndicesBuffer.getHandle(), 0, sizeof(std::uint32_t), 0);
+        cmd.fillBuffer(mResources.mShadowMapSlotsCount.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveBooleansBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveIndicesBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersLightCounts.getHandle(), 0, vk::WholeSize, 0);
@@ -333,9 +337,7 @@ void SwLighting::System::initializePasses() {
         std::uint32_t numLights = mScene.getLightIds().size();
         if (numLights == 0) return;
         cmd.dispatch(
-            SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(numLights, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            1
+            SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(numLights, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1
         );
     });
 
@@ -344,9 +346,12 @@ void SwLighting::System::initializePasses() {
         auto& clustersLightPrefixSumOffsetPipeline = mResources.mClustersLightPrefixSumOffsetPipelineBundle;
         cmd.bindPipeline(clustersLightPrefixSumOffsetPipeline.getBindPoint(), clustersLightPrefixSumOffsetPipeline.getPipelineHandle());
         cmd.pushConstants<SwLighting::ClustersLightPrefixSumOffsetPC>(
-            clustersLightPrefixSumOffsetPipeline.getLayoutHandle(), SwLighting::ClustersLightPrefixSumOffsetPC::sStages, 0, mResources.mClustersLightPrefixSumOffsetPc
+            clustersLightPrefixSumOffsetPipeline.getLayoutHandle(),
+            SwLighting::ClustersLightPrefixSumOffsetPC::sStages,
+            0,
+            mResources.mClustersLightPrefixSumOffsetPc
         );
-        cmd.dispatch(1, 1, 1); 
+        cmd.dispatch(1, 1, 1);
     });
 
     // Clusters Light Select
@@ -359,9 +364,7 @@ void SwLighting::System::initializePasses() {
         std::uint32_t numLights = mScene.getLightIds().size();
         if (numLights == 0) return;
         cmd.dispatch(
-            SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            SwHelper::fastDivCeil(numLights, SwRenderer::MAX_2D_WORKGROUP_THREADS),
-            1
+            SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_2D_WORKGROUP_THREADS), SwHelper::fastDivCeil(numLights, SwRenderer::MAX_2D_WORKGROUP_THREADS), 1
         );
     });
 
@@ -389,8 +392,9 @@ void SwLighting::System::refreshDataUsage() {
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingReset].getDeps();
         d.clear();
-        d.mWriteBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::TransferWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mClustersActiveBooleansBuffer, SwDependency::BufferDepType::TransferWrite);
@@ -445,6 +449,7 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mLightsCullPc.mNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getNodeTransformsBuffer();
         mResources.mLightsCullPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer();
         mResources.mLightsCullPc.mLitIndicesBuffer = mResources.mLitIndicesBuffer;
+        mResources.mLightsCullPc.mShadowMapSlotsCount = mResources.mShadowMapSlotsCount;
         mResources.mLightsCullPc.mLightsCount = SwRenderer::sRendererContext.mScene->getLightIds().size();
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingLightsCull].getDeps();
@@ -452,11 +457,14 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(
             &SwRenderer::sRendererContext.mSwapchain->getCurrentFrame().getDataBuffer(), SwDependency::BufferDepType::ComputeStorageRead
         );
-        d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mLitIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mReadBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
     }
 
     // Clusters Light Calc Offset
