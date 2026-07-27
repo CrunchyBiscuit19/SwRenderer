@@ -37,8 +37,8 @@ void main(SwLighting::CSInput in) {
     float3 minPointView = screenToView(clustersBuildPc.mInvProj, minPointScreen, 1.f, clustersBuildPc.mTargetSize);
 
     // Near and far values of the cluster in view space
-    float zNear     = clustersBuildPc.mFrameBuffer.mCameraBuffer.mPlanes.x;
-    float zFar      = clustersBuildPc.mFrameBuffer.mCameraBuffer.mPlanes.y;
+    float zNear     = clustersBuildPc.mFrameBuffer->mCameraBuffer->mPlanes.x;
+    float zFar      = clustersBuildPc.mFrameBuffer->mCameraBuffer->mPlanes.y;
     float tileNear  = -zNear * pow(zFar/ zNear, in.mDispatchThreadID.z / float(SwLighting::CLUSTERS_DIMENSIONS.z));
     float tileFar   = -zNear * pow(zFar/ zNear, (in.mDispatchThreadID.z + 1) /float(SwLighting::CLUSTERS_DIMENSIONS.z));
 

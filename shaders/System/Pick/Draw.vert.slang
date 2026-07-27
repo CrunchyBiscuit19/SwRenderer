@@ -9,26 +9,26 @@ SwPick::VSOutput computeVertex(SwPick::VSInput in) {
     SwVertex v = pickDrawPc.mVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    SwRenderCommand rc = pickDrawPc.mRcsBuffer[in.mDrawIndex];
+    SwRenderCommand* rc = &pickDrawPc.mRcsBuffer[in.mDrawIndex];
 
     uint mInstanceIndex = pickDrawPc.mRisIndicesBuffer[in.mRenderItemIndex];
     float4x4 instanceTransformMatrix = pickDrawPc.mInstancesBuffer[mInstanceIndex].mTransformMatrix;
 
-    uint mNodeTransformIndex = rc.mNodeTransformIndex;
+    uint mNodeTransformIndex = rc->mNodeTransformIndex;
     float4x4 nodeTransformMatrix = pickDrawPc.mNodeTransformsBuffer[mNodeTransformIndex];
 
-    uint sceneMaterialIndex = rc.mMaterialIndex;
-    SwMaterial::Constant materialConstant = pickDrawPc.mMaterialConstantsBuffer[sceneMaterialIndex];
+    uint sceneMaterialIndex = rc->mMaterialIndex;
+    SwMaterial::Constant* materialConstant = &pickDrawPc.mMaterialConstantsBuffer[sceneMaterialIndex];
 
     out.mPosition =
         mul(mul(mul(mul(pickDrawPc.mFrameBuffer->mCameraBuffer->mPerspective.mProj, pickDrawPc.mFrameBuffer->mCameraBuffer->mPerspective.mView), instanceTransformMatrix),
                 nodeTransformMatrix),
             position);
     out.mUv = v.mUv;
-    out.mColor = v.mColor * materialConstant.mBaseFactor;
-    out.mAlphaCutoff = materialConstant.mAlphaCutoff;
+    out.mColor = v.mColor * materialConstant->mBaseFactor;
+    out.mAlphaCutoff = materialConstant->mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
-    out.mAssetIndex = rc.mAssetIndex;
+    out.mAssetIndex = rc->mAssetIndex;
     out.mInstanceIndex = mInstanceIndex;
 
     return out;

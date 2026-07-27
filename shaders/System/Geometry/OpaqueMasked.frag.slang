@@ -119,10 +119,10 @@ SwGeometry::FSOutputOpaque mainMasked(SwGeometry::FSInput in) : SV_Target {
 // Depth pre-pass masked geometry: alpha-cutout discard only, no color output.
 [shader("fragment")]
 void mainZPassMasked(SwGeometry::FSInput in) {
-    SwMaterial::Constant mc = drawPc.mMaterialConstantsBuffer[in.mMaterialIndex];
+    SwMaterial::Constant* mc = &drawPc.mMaterialConstantsBuffer[in.mMaterialIndex];
     uint base = in.mMaterialIndex * SwMaterial::NUM_PBR_IMAGES;
     uint baseIdx = NonUniformResourceIndex(base + SwGeometry::BASE_TEXTURE_OFFSET);
     float4 diffuseColor = materialTextures[baseIdx].Sample(materialSamplers[baseIdx], in.mUv);
-    if (in.mColor.a * diffuseColor.a < mc.mAlphaCutoff)
+    if (in.mColor.a * diffuseColor.a < mc->mAlphaCutoff)
         discard;
 }

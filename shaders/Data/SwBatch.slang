@@ -17,17 +17,17 @@ public struct SwRenderCommand {
 
     [mutating]
     public void copyFrom(SwRenderCommand* src) {
-        this.mIndexCount = src.mIndexCount;
-        this.mRiCount = src.mRiCount;
-        this.mFirstIndex = src.mFirstIndex;
-        this.mVertexOffset = src.mVertexOffset;
-        this.mFirstRi = src.mFirstRi;
-        this.mMaterialIndex = src.mMaterialIndex;
-        this.mNodeTransformIndex = src.mNodeTransformIndex;
-        this.mAssetIndex = src.mAssetIndex;
-        this.mFirstInstance = src.mFirstInstance;
-        this.mBoundsIndex = src.mBoundsIndex;
-        this.mBatchIndex = src.mBatchIndex;
+        this.mIndexCount = src->mIndexCount;
+        this.mRiCount = src->mRiCount;
+        this.mFirstIndex = src->mFirstIndex;
+        this.mVertexOffset = src->mVertexOffset;
+        this.mFirstRi = src->mFirstRi;
+        this.mMaterialIndex = src->mMaterialIndex;
+        this.mNodeTransformIndex = src->mNodeTransformIndex;
+        this.mAssetIndex = src->mAssetIndex;
+        this.mFirstInstance = src->mFirstInstance;
+        this.mBoundsIndex = src->mBoundsIndex;
+        this.mBatchIndex = src->mBatchIndex;
     }
 };
 
@@ -37,8 +37,8 @@ public struct SwRenderItem {
 
     [mutating]
     public void copyFrom(SwRenderItem* src) {
-        this.mRcIndex = src.mRcIndex;
-        this.mInstanceIndex = src.mInstanceIndex;
+        this.mRcIndex = src->mRcIndex;
+        this.mInstanceIndex = src->mInstanceIndex;
     }
 }
 

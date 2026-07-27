@@ -17,40 +17,6 @@ void transformCornersToWorld(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners,
     }
 }
 
-bool frustumTest(SwFrustum* frustum, float4[SwMesh::NUM_AABB_CORNERS] aabbCorners) {
-    bool visible = true;
-
-    // Get the min and max corners of the (already world-space) AABB
-    float4 aabbMin = aabbCorners[0];
-    float4 aabbMax = aabbCorners[0];
-    for (uint j = 1; j < SwMesh::NUM_AABB_CORNERS; j++) {
-        aabbMin = min(aabbMin, aabbCorners[j]);
-        aabbMax = max(aabbMax, aabbCorners[j]);
-    }
-
-    // For each plane build the corner which will produce max result in point-normal plane equation
-    // Point-normal plane equation is positive if it's on the side of the plane the normal is pointing
-    // Frustum plane normals point inward => non-negative result means at least 1 corner is on correct side of the plane
-    // At least 1 corner on correct side of all 6 planes means render item is within frustum and therefore visible
-    const SwPlane* planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
-        &frustum->mNear, &frustum->mFar, &frustum->mLeft, &frustum->mRight, &frustum->mTop, &frustum->mBottom
-    };
-    for (uint i = 0; i < SwFrustum::NUM_FRUSTUM_PLANES; i++) {
-        SwPlane* p = planes[i];
-        float4 chosen;
-        chosen.x = (p->mNormal.x >= 0) ? aabbMax.x : aabbMin.x;
-        chosen.y = (p->mNormal.y >= 0) ? aabbMax.y : aabbMin.y;
-        chosen.z = (p->mNormal.z >= 0) ? aabbMax.z : aabbMin.z;
-        chosen.w = 1.0;
-        float result = dot(p->mNormal, chosen.xyz) - p->mDistance;
-        if (result < 0) {
-            visible = false;
-            break;
-        }
-    }
-    return visible;
-}
-
 bool occlusionCull(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwCamera::Perspective* perspective, Texture2D<float> depthPyramidImage) {
     float4 aabbMinNdc = float4(1.f, 1.f, 1.f, 0.f);
     float4 aabbMaxNdc = float4(-1.f, -1.f, 0.f, 0.f);
@@ -119,23 +85,28 @@ void main(SwCull::CSInput in) {
     SwRenderItem* ri = &testPc.mRisBuffer[risIndex];
     SwRenderCommand* rc = &testPc.mRcsBuffer[ri->mRcIndex];
 
-    SwBounds* bounds = &testPc.mBoundsBuffer[rc->mBoundsIndex];
+    SwBounds bounds = testPc.mBoundsBuffer[rc->mBoundsIndex];
     SwNode::Transform* nodeTransform = &testPc.mNodeTransformsBuffer[rc->mNodeTransformIndex];
     SwInstance::Data* instance = &testPc.mInstancesBuffer[ri->mInstanceIndex];
-    SwFrustum* frustum = &testPc.mFrameBuffer->mCameraBuffer->mFrustum;
+    SwFrustum frustum = testPc.mFrameBuffer->mCameraBuffer->mFrustum;
     SwCamera::Perspective* perspective = &testPc.mFrameBuffer->mCameraBuffer->mPerspective;
     float4[SwMesh::NUM_AABB_CORNERS] aabbCorners = {
-        float4(bounds->mMin.x, bounds->mMin.y, bounds->mMin.z, 1.f),
-        float4(bounds->mMin.x, bounds->mMin.y, bounds->mMax.z, 1.f),
-        float4(bounds->mMin.x, bounds->mMax.y, bounds->mMin.z, 1.f),
-        float4(bounds->mMin.x, bounds->mMax.y, bounds->mMax.z, 1.f),
-        float4(bounds->mMax.x, bounds->mMin.y, bounds->mMin.z, 1.f),
-        float4(bounds->mMax.x, bounds->mMin.y, bounds->mMax.z, 1.f),
-        float4(bounds->mMax.x, bounds->mMax.y, bounds->mMin.z, 1.f),
-        float4(bounds->mMax.x, bounds->mMax.y, bounds->mMax.z, 1.f),
+        float4(bounds.mMin.x, bounds.mMin.y, bounds.mMin.z, 1.f),
+        float4(bounds.mMin.x, bounds.mMin.y, bounds.mMax.z, 1.f),
+        float4(bounds.mMin.x, bounds.mMax.y, bounds.mMin.z, 1.f),
+        float4(bounds.mMin.x, bounds.mMax.y, bounds.mMax.z, 1.f),
+        float4(bounds.mMax.x, bounds.mMin.y, bounds.mMin.z, 1.f),
+        float4(bounds.mMax.x, bounds.mMin.y, bounds.mMax.z, 1.f),
+        float4(bounds.mMax.x, bounds.mMax.y, bounds.mMin.z, 1.f),
+        float4(bounds.mMax.x, bounds.mMax.y, bounds.mMax.z, 1.f),
     };
 
     transformCornersToWorld(aabbCorners, instance, nodeTransform);
+
+    // Captured before occlusionCull rewrites the corners into NDC space.
+    float3 worldAabbMin;
+    float3 worldAabbMax;
+    SwBounds::fromCorners(aabbCorners, worldAabbMin, worldAabbMax);
 
     uint riVisIndex = rc->mFirstRi + (ri->mInstanceIndex - rc->mFirstInstance);
 
@@ -145,14 +116,14 @@ void main(SwCull::CSInput in) {
         if (testPc.mBatchesBuffer[rc->mBatchIndex].mMaterialType == SwMaterial::Type::Opaque) {
             bool prevVisible = testPc.mRisVisibilityReadBuffer[riVisIndex];
             if (prevVisible)
-                prevVisible = !SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners);
+                prevVisible = !SwCull::ENABLE_FRUSTUM_CULL || SwFrustum::aabbInFrustum(frustum, worldAabbMin, worldAabbMax);
             if (prevVisible) {
                 markRiIndex(rc, ri, testPc.mRisIndicesBuffer);
                 draw = true;
             }
         }
     } else {
-        bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || frustumTest(frustum, aabbCorners)) &&
+        bool currVisible = (!SwCull::ENABLE_FRUSTUM_CULL || SwFrustum::aabbInFrustum(frustum, worldAabbMin, worldAabbMax)) &&
                            (!SwCull::ENABLE_OCCLUSION_CULL || occlusionCull(aabbCorners, perspective, depthPyramidImage));
         testPc.mRisVisibilityWriteBuffer[riVisIndex] = currVisible;
         // Opaque render commands are the only ones drawn by the early geometry pass, so only they emit just the newly-visible delta.

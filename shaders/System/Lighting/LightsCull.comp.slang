@@ -4,18 +4,6 @@ import Data.SwConstants;
 [[vk::push_constant]]
 SwLighting::LightsCullPC lightsCullPc;
 
-bool sphereInFrustum(SwFrustum frustum, float3 center, float radius) {
-    SwPlane planes[SwFrustum::NUM_FRUSTUM_PLANES] = {
-        frustum.mNear, frustum.mFar, frustum.mLeft, frustum.mRight, frustum.mTop, frustum.mBottom
-    };
-    for (uint i = 0; i < SwFrustum::NUM_FRUSTUM_PLANES; i++) {
-        if (dot(planes[i].mNormal, center) - planes[i].mDistance < -radius) {
-            return false;
-        }
-    }
-    return true;
-}
-
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
     uint lightIndex = in.mDispatchThreadID.x;
@@ -30,7 +18,7 @@ void main(SwLighting::CSInput in) {
     bool visible = true;
     if (SwLighting::Collision::lightBoundingSphere(light, lightsCullPc.mInstancesBuffer, lightsCullPc.mNodeTransformsBuffer, center, radius)) {
         SwFrustum frustum = lightsCullPc.mFrameBuffer->mCameraBuffer->mFrustum;
-        visible = sphereInFrustum(frustum, center, radius);
+        visible = SwFrustum::sphereInFrustum(frustum, center, radius);
     }
 
     if (visible) {
