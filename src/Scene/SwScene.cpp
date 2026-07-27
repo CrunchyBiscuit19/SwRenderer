@@ -41,7 +41,8 @@ void SwScene::initializeMiscPasses() {
 }
 
 void SwScene::initializeResources() {
-    mVertexBuffer = SwBufferFactory::createAllocatedBuffer("VertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mVertexBuffer =
+        SwBufferFactory::createAllocatedBuffer("VertexBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mIndexBuffer = SwBufferFactory::createAllocatedBuffer("IndexBuffer", vk::BufferUsageFlagBits::eIndexBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE);
     mMaterialConstantsBuffer =
         SwBufferFactory::createAllocatedBuffer("MaterialConstantsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, MATERIAL_CONSTANTS_BUFFER_SIZE, true);
@@ -49,7 +50,8 @@ void SwScene::initializeResources() {
         SwBufferFactory::createAllocatedBuffer("NodeTransformsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mInstancesBuffer =
         SwBufferFactory::createAllocatedBuffer("InstancesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
-    mBoundsBuffer = SwBufferFactory::createAllocatedBuffer("BoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mBoundsBuffer =
+        SwBufferFactory::createAllocatedBuffer("BoundsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mRisIndicesBuffer =
         SwBufferFactory::createAllocatedBuffer("RisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     for (std::uint32_t i = 0; i < mVisibilityRisBuffers.size(); i++) {
@@ -82,7 +84,8 @@ void SwScene::initializeResources() {
     mMaterialTexturesDescriptorSet = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet(
         "MaterialTexturesDescriptorSet", SwMaterialResources::sMaterialTexturesDescriptorLayout, NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES
     );
-    mLightsBuffer = SwBufferFactory::createAllocatedBuffer("LightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mLightsBuffer =
+        SwBufferFactory::createAllocatedBuffer("LightsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
 
     constexpr std::uint32_t normalSlot = static_cast<std::uint32_t>(SwMaterialTexture::Type::Normal);
     for (std::uint32_t i = 0; i < NUM_MATERIALS * SwMaterial::NUM_PBR_IMAGES; i++) {
@@ -691,7 +694,8 @@ void SwScene::resetFlags() {
 
 void SwScene::startNextFrame() {
     SwFrame& currentFrame = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame();
-    while (SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, UINT64_MAX) == vk::Result::eTimeout) {}
+    while (SwRenderer::sRendererContext.mDevice->waitForFences(currentFrame.getRenderFence().getHandle(), true, UINT64_MAX) == vk::Result::eTimeout) {
+    }
     SwRenderer::sRendererContext.mDevice->resetFences(currentFrame.getRenderFence().getHandle());
     SwBufferFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());
     SwImageFactory::tick(SwRenderer::sRendererContext.mSwapchain->getFrameNumber());

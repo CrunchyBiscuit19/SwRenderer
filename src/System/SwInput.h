@@ -1,8 +1,8 @@
 #pragma once
 
-#include <Scene/SwSystem.h>
 #include <SDL3/SDL_events.h>
 #include <SDL3/SDL_mouse.h>
+#include <Scene/SwSystem.h>
 
 #include <filesystem>
 #include <glm/glm.hpp>

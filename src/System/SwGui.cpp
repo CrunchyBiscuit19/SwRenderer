@@ -4,11 +4,11 @@
 #include <Scene/SwScene.h>
 #include <System/SwGui.h>
 #include <System/SwInput.h>
-#include <format>
 #include <imgui_impl_sdl3.h>
 #include <imgui_impl_vulkan.h>
 #include <imgui_internal.h>
 
+#include <format>
 #include <glm/gtc/type_ptr.hpp>
 #include <magic_enum.hpp>
 #include <numeric>

@@ -8,7 +8,7 @@
 std::array<vk::DescriptorSetLayout, 4> SwGeometry::Resources::sGeometrySetLayouts{};
 
 void SwGeometry::Resources::init() {
-    SwGeometry::Resources::sGeometrySetLayouts = {
+    sGeometrySetLayouts = {
         SwMaterialResources::sMaterialSamplersDescriptorLayout.getHandle(),
         SwMaterialResources::sMaterialTexturesDescriptorLayout.getHandle(),
         SwIBL::Resources::sConsumeDescriptorLayout.getHandle(),
@@ -48,7 +48,7 @@ void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::opti
             nullptr
         );
 
-        cmd.pushConstants<SwGeometry::DrawPC>(pipeline.getLayoutHandle(), SwGeometry::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.pushConstants<DrawPC>(pipeline.getLayoutHandle(), DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
         cmd.drawIndexedIndirectCount(
             rcsBuffer.getHandle(),
@@ -87,7 +87,7 @@ void SwGeometry::System::initializeResources() {
     mResources.mZPassOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("GeometryZPassOpaquePipeline", zPassOptions);
 
     zPassOptions.mFragmentShader = SwMaterial::getOpaqueMaskedFragmentShaderModule();
-    zPassOptions.mFragmentEntryPoint = std::string(SwGeometry::Resources::ZPASS_MASKED_ENTRY_POINT);
+    zPassOptions.mFragmentEntryPoint = std::string(Resources::ZPASS_MASKED_ENTRY_POINT);
     mResources.mZPassMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("GeometryZPassMaskedPipeline", zPassOptions);
 }
 
@@ -116,7 +116,7 @@ void SwGeometry::System::drawZBatches(vk::CommandBuffer cmd, SwGraphicsPipelineB
             );
         }
 
-        cmd.pushConstants<SwGeometry::DrawPC>(pipeline.getLayoutHandle(), SwGeometry::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.pushConstants<DrawPC>(pipeline.getLayoutHandle(), DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
         cmd.drawIndexedIndirectCount(
             rcsBuffer.getHandle(),

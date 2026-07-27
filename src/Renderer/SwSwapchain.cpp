@@ -2,19 +2,29 @@
 #include <Renderer/SwRenderer.h>
 #include <Renderer/SwSwapchain.h>
 #include <VkBootstrap.h>
+
 #include <format>
 
 SwFrame::SwFrame()
-    : mGraphicsCommandPool(nullptr), mGraphicsCommandBuffer(nullptr), mTransferCommandPool(nullptr), mTransferCommandBuffer(nullptr), mRenderFence(nullptr),
-      mAvailableSemaphore(nullptr), mTransferSemaphore(nullptr) {}
+    : mGraphicsCommandPool(nullptr),
+      mGraphicsCommandBuffer(nullptr),
+      mTransferCommandPool(nullptr),
+      mTransferCommandBuffer(nullptr),
+      mRenderFence(nullptr),
+      mAvailableSemaphore(nullptr),
+      mTransferSemaphore(nullptr) {}
 
 void SwFrame::initialize(std::uint32_t frameIndex) {
     mGraphicsCommandPool = SwCommandPoolFactory::createCommandPool(
-        std::format("Frame{}GraphicsCommandPool", frameIndex), vk::CommandPoolCreateFlagBits::eResetCommandBuffer, SwRenderer::sRendererContext.mGraphicsQueueFamily
+        std::format("Frame{}GraphicsCommandPool", frameIndex),
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        SwRenderer::sRendererContext.mGraphicsQueueFamily
     );
     mGraphicsCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}GraphicsCommandBuffer", frameIndex), mGraphicsCommandPool);
     mTransferCommandPool = SwCommandPoolFactory::createCommandPool(
-        std::format("Frame{}TransferCommandPool", frameIndex), vk::CommandPoolCreateFlagBits::eResetCommandBuffer, SwRenderer::sRendererContext.mTransferQueueFamily
+        std::format("Frame{}TransferCommandPool", frameIndex),
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        SwRenderer::sRendererContext.mTransferQueueFamily
     );
     mTransferCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}TransferCommandBuffer", frameIndex), mTransferCommandPool);
     mRenderFence = SwFenceFactory::createFence(std::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);

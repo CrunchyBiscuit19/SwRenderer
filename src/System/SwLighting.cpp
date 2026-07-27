@@ -156,15 +156,13 @@ void SwLighting::System::initializeResources() {
             mResources.mPointShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
     });
 
-    mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("ResetPipelineLayout", nullptr, SwLighting::ResetPC::getRange());
-    SwShader resetShader = SwShaderFactory::createShader("ResetShaderModule", SwLighting::RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("ResetPipelineLayout", nullptr, ResetPC::getRange());
+    SwShader resetShader = SwShaderFactory::createShader("ResetShaderModule", RESET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mResetPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("ResetPipeline", {resetShader.getHandle(), mResources.mResetPipelineLayout.getHandle()});
 
-    mResources.mClustersBuildPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ClustersBuildPipelineLayout", nullptr, SwLighting::ClustersBuildPC::getRange());
-    SwShader clustersBuildShader =
-        SwShaderFactory::createShader("ClustersBuildShaderModule", SwLighting::CLUSTERS_BUILD_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mClustersBuildPipelineLayout = SwPipelineFactory::createPipelineLayout("ClustersBuildPipelineLayout", nullptr, ClustersBuildPC::getRange());
+    SwShader clustersBuildShader = SwShaderFactory::createShader("ClustersBuildShaderModule", CLUSTERS_BUILD_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mClustersBuildPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersBuildPipeline", {clustersBuildShader.getHandle(), mResources.mClustersBuildPipelineLayout.getHandle()}
     );
@@ -180,40 +178,39 @@ void SwLighting::System::initializeResources() {
     );
     mResources.mClustersMarkActiveDescriptorSet.pushWrites();
     mResources.mClustersMarkActivePipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "ClustersMarkActivePipelineLayout", mResources.mClustersMarkActiveDescriptorLayout.getHandle(), SwLighting::ClustersMarkActivePC::getRange()
+        "ClustersMarkActivePipelineLayout", mResources.mClustersMarkActiveDescriptorLayout.getHandle(), ClustersMarkActivePC::getRange()
     );
     SwShader clustersMarkActiveShader =
-        SwShaderFactory::createShader("ClustersMarkActiveShaderModule", SwLighting::CLUSTERS_MARK_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwShaderFactory::createShader("ClustersMarkActiveShaderModule", CLUSTERS_MARK_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mClustersMarkActivePipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersMarkActivePipeline", {clustersMarkActiveShader.getHandle(), mResources.mClustersMarkActivePipelineLayout.getHandle()}
     );
 
     mResources.mClustersCompactActivePipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ClustersCompactActivePipelineLayout", nullptr, SwLighting::ClustersCompactActivePC::getRange());
+        SwPipelineFactory::createPipelineLayout("ClustersCompactActivePipelineLayout", nullptr, ClustersCompactActivePC::getRange());
     SwShader clustersCompactActiveShader =
-        SwShaderFactory::createShader("ClustersCompactActiveShaderModule", SwLighting::CLUSTERS_COMPACT_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwShaderFactory::createShader("ClustersCompactActiveShaderModule", CLUSTERS_COMPACT_ACTIVE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mClustersCompactActivePipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersCompactActivePipeline", {clustersCompactActiveShader.getHandle(), mResources.mClustersCompactActivePipelineLayout.getHandle()}
     );
 
-    mResources.mLightsCullPipelineLayout = SwPipelineFactory::createPipelineLayout("LightsCullPipelineLayout", nullptr, SwLighting::LightsCullPC::getRange());
-    SwShader lightsCullShader = SwShaderFactory::createShader("LightsCullShaderModule", SwLighting::LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mLightsCullPipelineLayout = SwPipelineFactory::createPipelineLayout("LightsCullPipelineLayout", nullptr, LightsCullPC::getRange());
+    SwShader lightsCullShader = SwShaderFactory::createShader("LightsCullShaderModule", LIGHTS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mLightsCullPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("LightsCullPipeline", {lightsCullShader.getHandle(), mResources.mLightsCullPipelineLayout.getHandle()});
 
     mResources.mClustersLightCalcOffsetPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ClustersLightCalcOffsetPipelineLayout", nullptr, SwLighting::ClustersLightCalcOffsetPC::getRange());
-    SwShader clustersLightCalcOffsetShader = SwShaderFactory::createShader(
-        "ClustersLightCalcOffsetShaderModule", SwLighting::CLUSTERS_LIGHT_CALC_OFFSET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
-    );
+        SwPipelineFactory::createPipelineLayout("ClustersLightCalcOffsetPipelineLayout", nullptr, ClustersLightCalcOffsetPC::getRange());
+    SwShader clustersLightCalcOffsetShader =
+        SwShaderFactory::createShader("ClustersLightCalcOffsetShaderModule", CLUSTERS_LIGHT_CALC_OFFSET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mClustersLightCalcOffsetPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersLightCalcOffsetPipeline", {clustersLightCalcOffsetShader.getHandle(), mResources.mClustersLightCalcOffsetPipelineLayout.getHandle()}
     );
 
     mResources.mClustersLightPrefixSumOffsetPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ClustersLightPrefixSumOffsetPipelineLayout", nullptr, SwLighting::ClustersLightPrefixSumOffsetPC::getRange());
+        SwPipelineFactory::createPipelineLayout("ClustersLightPrefixSumOffsetPipelineLayout", nullptr, ClustersLightPrefixSumOffsetPC::getRange());
     SwShader clustersLightPrefixSumOffsetShader = SwShaderFactory::createShader(
-        "ClustersLightPrefixSumOffsetShaderModule", SwLighting::CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
+        "ClustersLightPrefixSumOffsetShaderModule", CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH, vk::ShaderStageFlagBits::eCompute
     );
     mResources.mClustersLightPrefixSumOffsetPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersLightPrefixSumOffsetPipeline",
@@ -221,24 +218,22 @@ void SwLighting::System::initializeResources() {
     );
 
     mResources.mClustersLightSelectPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ClustersLightSelectPipelineLayout", nullptr, SwLighting::ClustersLightSelectPC::getRange());
+        SwPipelineFactory::createPipelineLayout("ClustersLightSelectPipelineLayout", nullptr, ClustersLightSelectPC::getRange());
     SwShader clustersLightSelectShader =
-        SwShaderFactory::createShader("ClustersLightSelectShaderModule", SwLighting::CLUSTERS_LIGHT_SELECT_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+        SwShaderFactory::createShader("ClustersLightSelectShaderModule", CLUSTERS_LIGHT_SELECT_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mClustersLightSelectPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ClustersLightSelectPipeline", {clustersLightSelectShader.getHandle(), mResources.mClustersLightSelectPipelineLayout.getHandle()}
     );
 
-    mResources.mShadowsCullPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ShadowsCullPipelineLayout", nullptr, SwLighting::ShadowsCullPC::getRange());
-    SwShader shadowsCullShader =
-        SwShaderFactory::createShader("ShadowsCullShaderModule", SwLighting::SHADOWS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mShadowsCullPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsCullPipelineLayout", nullptr, ShadowsCullPC::getRange());
+    SwShader shadowsCullShader = SwShaderFactory::createShader("ShadowsCullShaderModule", SHADOWS_CULL_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowsCullPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ShadowsCullPipeline", {shadowsCullShader.getHandle(), mResources.mShadowsCullPipelineLayout.getHandle()}
     );
 
-    mResources.mShadowsDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsDrawPipelineLayout", nullptr, SwLighting::ShadowDrawPC::getRange());
+    mResources.mShadowsDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsDrawPipelineLayout", nullptr, ShadowDrawPC::getRange());
     SwShader drawVertexShader =
-        SwShaderFactory::createShader("ShadowsDrawVertexShaderModule", SwLighting::SHADOWS_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
+        SwShaderFactory::createShader("ShadowsDrawVertexShaderModule", SHADOWS_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.blendEnable = VK_FALSE;
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
@@ -274,18 +269,16 @@ void SwLighting::System::initializePasses() {
         cmd.fillBuffer(mResources.mClustersLightWriteCursorsBuffer.getHandle(), 0, vk::WholeSize, 0);
         auto& resetPipeline = mResources.mResetPipelineBundle;
         cmd.bindPipeline(resetPipeline.getBindPoint(), resetPipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ResetPC>(resetPipeline.getLayoutHandle(), SwLighting::ResetPC::sStages, 0, mResources.mResetPc);
+        cmd.pushConstants<ResetPC>(resetPipeline.getLayoutHandle(), ResetPC::sStages, 0, mResources.mResetPc);
         if (mResources.mResetPc.mShadowsRcsLimit == 0) return;
         cmd.dispatch(SwHelper::fastDivCeil(mResources.mResetPc.mShadowsRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
-    // Clusters Build
+    // Clusters BuildSw
     mScene.insertPass(SwPass::Type::LightingClustersBuild, [&](vk::CommandBuffer cmd) {
         auto& clustersBuildPipeline = mResources.mClustersBuildPipelineBundle;
         cmd.bindPipeline(clustersBuildPipeline.getBindPoint(), clustersBuildPipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ClustersBuildPC>(
-            clustersBuildPipeline.getLayoutHandle(), SwLighting::ClustersBuildPC::sStages, 0, mResources.mClustersBuildPc
-        );
+        cmd.pushConstants<ClustersBuildPC>(clustersBuildPipeline.getLayoutHandle(), ClustersBuildPC::sStages, 0, mResources.mClustersBuildPc);
         cmd.dispatch(
             SwHelper::fastDivCeil(CLUSTERS_DIMENSIONS.x, SwRenderer::MAX_3D_WORKGROUP_THREADS),
             SwHelper::fastDivCeil(CLUSTERS_DIMENSIONS.y, SwRenderer::MAX_3D_WORKGROUP_THREADS),
@@ -297,8 +290,8 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingClustersMarkActive, [&](vk::CommandBuffer cmd) {
         auto& clustersMarkActivePipeline = mResources.mClustersMarkActivePipelineBundle;
         cmd.bindPipeline(clustersMarkActivePipeline.getBindPoint(), clustersMarkActivePipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ClustersMarkActivePC>(
-            clustersMarkActivePipeline.getLayoutHandle(), SwLighting::ClustersMarkActivePC::sStages, 0, mResources.mClustersMarkActivePc
+        cmd.pushConstants<ClustersMarkActivePC>(
+            clustersMarkActivePipeline.getLayoutHandle(), ClustersMarkActivePC::sStages, 0, mResources.mClustersMarkActivePc
         );
         cmd.dispatch(
             SwHelper::fastDivCeil(SwRenderer::sRendererContext.mSwapchain->getDepthImage().getExtent().width, SwRenderer::MAX_2D_WORKGROUP_THREADS),
@@ -311,8 +304,8 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingClustersCompactActive, [&](vk::CommandBuffer cmd) {
         auto& clustersCompactActivePipeline = mResources.mClustersCompactActivePipelineBundle;
         cmd.bindPipeline(clustersCompactActivePipeline.getBindPoint(), clustersCompactActivePipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ClustersCompactActivePC>(
-            clustersCompactActivePipeline.getLayoutHandle(), SwLighting::ClustersCompactActivePC::sStages, 0, mResources.mClustersCompactActivePc
+        cmd.pushConstants<ClustersCompactActivePC>(
+            clustersCompactActivePipeline.getLayoutHandle(), ClustersCompactActivePC::sStages, 0, mResources.mClustersCompactActivePc
         );
         cmd.dispatch(SwHelper::fastDivCeil(NUM_CLUSTERS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
@@ -321,7 +314,7 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingLightsCull, [&](vk::CommandBuffer cmd) {
         auto& lightsCullPipeline = mResources.mLightsCullPipelineBundle;
         cmd.bindPipeline(lightsCullPipeline.getBindPoint(), lightsCullPipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::LightsCullPC>(lightsCullPipeline.getLayoutHandle(), SwLighting::LightsCullPC::sStages, 0, mResources.mLightsCullPc);
+        cmd.pushConstants<LightsCullPC>(lightsCullPipeline.getLayoutHandle(), LightsCullPC::sStages, 0, mResources.mLightsCullPc);
         std::uint32_t numLights = mScene.getLightIds().size();
         if (numLights == 0) return;
         cmd.dispatch(SwHelper::fastDivCeil(numLights, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
@@ -331,8 +324,8 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingClustersLightCalcOffset, [&](vk::CommandBuffer cmd) {
         auto& clustersLightCalcOffsetPipeline = mResources.mClustersLightCalcOffsetPipelineBundle;
         cmd.bindPipeline(clustersLightCalcOffsetPipeline.getBindPoint(), clustersLightCalcOffsetPipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ClustersLightCalcOffsetPC>(
-            clustersLightCalcOffsetPipeline.getLayoutHandle(), SwLighting::ClustersLightCalcOffsetPC::sStages, 0, mResources.mClustersLightCalcOffsetPc
+        cmd.pushConstants<ClustersLightCalcOffsetPC>(
+            clustersLightCalcOffsetPipeline.getLayoutHandle(), ClustersLightCalcOffsetPC::sStages, 0, mResources.mClustersLightCalcOffsetPc
         );
         std::uint32_t numLights = mScene.getLightIds().size();
         if (numLights == 0) return;
@@ -345,11 +338,8 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingClustersLightPrefixSumOffset, [&](vk::CommandBuffer cmd) {
         auto& clustersLightPrefixSumOffsetPipeline = mResources.mClustersLightPrefixSumOffsetPipelineBundle;
         cmd.bindPipeline(clustersLightPrefixSumOffsetPipeline.getBindPoint(), clustersLightPrefixSumOffsetPipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ClustersLightPrefixSumOffsetPC>(
-            clustersLightPrefixSumOffsetPipeline.getLayoutHandle(),
-            SwLighting::ClustersLightPrefixSumOffsetPC::sStages,
-            0,
-            mResources.mClustersLightPrefixSumOffsetPc
+        cmd.pushConstants<ClustersLightPrefixSumOffsetPC>(
+            clustersLightPrefixSumOffsetPipeline.getLayoutHandle(), ClustersLightPrefixSumOffsetPC::sStages, 0, mResources.mClustersLightPrefixSumOffsetPc
         );
         cmd.dispatch(1, 1, 1);
     });
@@ -358,8 +348,8 @@ void SwLighting::System::initializePasses() {
     mScene.insertPass(SwPass::Type::LightingClustersLightSelect, [&](vk::CommandBuffer cmd) {
         auto& clustersLightSelectPipeline = mResources.mClustersLightSelectPipelineBundle;
         cmd.bindPipeline(clustersLightSelectPipeline.getBindPoint(), clustersLightSelectPipeline.getPipelineHandle());
-        cmd.pushConstants<SwLighting::ClustersLightSelectPC>(
-            clustersLightSelectPipeline.getLayoutHandle(), SwLighting::ClustersLightSelectPC::sStages, 0, mResources.mClustersLightSelectPc
+        cmd.pushConstants<ClustersLightSelectPC>(
+            clustersLightSelectPipeline.getLayoutHandle(), ClustersLightSelectPC::sStages, 0, mResources.mClustersLightSelectPc
         );
         std::uint32_t numLights = mScene.getLightIds().size();
         if (numLights == 0) return;

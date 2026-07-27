@@ -18,7 +18,7 @@ void SwPostProcess::System::initializeResources() {
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("TonemapDescriptorSet", mResources.mTonemapDescriptorLayout);
 
     mResources.mTonemapPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("TonemapPipelineLayout", mResources.mTonemapDescriptorLayout.getHandle(), SwPostProcess::TonemapPC::getRange());
+        SwPipelineFactory::createPipelineLayout("TonemapPipelineLayout", mResources.mTonemapDescriptorLayout.getHandle(), TonemapPC::getRange());
     SwShader tonemapShader = SwShaderFactory::createShader("TonemapShaderModule", TONEMAP_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mTonemapPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("TonemapPipeline", {tonemapShader.getHandle(), mResources.mTonemapPipelineLayout.getHandle()});
@@ -43,7 +43,7 @@ void SwPostProcess::System::initializeResources() {
     mResources.mFXAADescriptorSet.writeSampler(1, mResources.mFXAASampler.getHandle());
 
     mResources.mFXAAPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("FXAAPipelineLayout", mResources.mFXAADescriptorLayout.getHandle(), SwPostProcess::FXAAPC::getRange());
+        SwPipelineFactory::createPipelineLayout("FXAAPipelineLayout", mResources.mFXAADescriptorLayout.getHandle(), FXAAPC::getRange());
     SwShader fxaaShader = SwShaderFactory::createShader("FXAAShaderModule", FXAA_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mFXAAPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("FXAAPipeline", {fxaaShader.getHandle(), mResources.mFXAAPipelineLayout.getHandle()});
@@ -63,9 +63,7 @@ void SwPostProcess::System::initializePasses() {
             nullptr
         );
 
-        cmd.pushConstants<SwPostProcess::TonemapPC>(
-            mResources.mTonemapPipelineBundle.getLayoutHandle(), SwPostProcess::TonemapPC::sStages, 0, mResources.mTonemapPushConstants
-        );
+        cmd.pushConstants<TonemapPC>(mResources.mTonemapPipelineBundle.getLayoutHandle(), TonemapPC::sStages, 0, mResources.mTonemapPushConstants);
 
         vk::Extent3D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
         cmd.dispatch(
@@ -86,9 +84,7 @@ void SwPostProcess::System::initializePasses() {
             nullptr
         );
 
-        cmd.pushConstants<SwPostProcess::FXAAPC>(
-            mResources.mFXAAPipelineBundle.getLayoutHandle(), SwPostProcess::FXAAPC::sStages, 0, mResources.mFXAAPushConstants
-        );
+        cmd.pushConstants<FXAAPC>(mResources.mFXAAPipelineBundle.getLayoutHandle(), FXAAPC::sStages, 0, mResources.mFXAAPushConstants);
 
         vk::Extent3D drawExtent = SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D();
         cmd.dispatch(

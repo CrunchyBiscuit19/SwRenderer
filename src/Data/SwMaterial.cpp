@@ -10,9 +10,10 @@
 #include <System/SwGeometry.h>
 #include <System/SwIBL.h>
 #include <System/SwLighting.h>
+#include <quill/LogMacros.h>
+
 #include <format>
 #include <magic_enum.hpp>
-#include <quill/LogMacros.h>
 
 SwMaterialTexture SwMaterialTexture::sDefaultWhiteTexture{nullptr, nullptr};
 SwMaterialTexture SwMaterialTexture::sDefaultErrorTexture{nullptr, nullptr};
@@ -88,7 +89,6 @@ SwMaterial::SwMaterial(
       mMaterialPipelineOptions(materialPipelineOptions),
       mMaterialConstants(materialConstants),
       mMaterialResources(std::move(materialResources)) {
-
     if (auto it = sMaterialPipelinesCreated.find(materialPipelineOptions); it != sMaterialPipelinesCreated.end()) {
         mPipelineId = it->second;
         return;
@@ -107,9 +107,8 @@ void SwMaterial::init() {
     );
 
     sVertexShader = SwShaderFactory::createShader("GeometryVertexShaderModule", VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    sOpaqueMaskedFragmentShader = SwShaderFactory::createShader(
-        "GeometryOpaqueMaskedFragmentShaderModule", OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment
-    );
+    sOpaqueMaskedFragmentShader =
+        SwShaderFactory::createShader("GeometryOpaqueMaskedFragmentShaderModule", OPAQUE_MASKED_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
     sTransparentFragmentShader =
         SwShaderFactory::createShader("GeometryTransparentFragmentShaderModule", TRANSPARENT_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 }
@@ -164,9 +163,8 @@ std::uint32_t SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions ma
             // entry point adds the alpha-cutout discard (and drops early depth-stencil) while the
             // opaque entry point keeps [earlydepthstencil].
             graphicsPipelineOptions.mFragmentShader = sOpaqueMaskedFragmentShader.getHandle();
-            graphicsPipelineOptions.mFragmentEntryPoint = materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask
-                                                              ? std::string(MASKED_ENTRY_POINT)
-                                                              : std::string(OPAQUE_ENTRY_POINT);
+            graphicsPipelineOptions.mFragmentEntryPoint =
+                materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask ? std::string(MASKED_ENTRY_POINT) : std::string(OPAQUE_ENTRY_POINT);
             graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getHandle();
             graphicsPipelineOptions.mColorAttachments =
                 std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};

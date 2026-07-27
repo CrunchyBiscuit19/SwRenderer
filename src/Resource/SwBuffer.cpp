@@ -194,7 +194,9 @@ void SwAllocatedBuffer::copyFromUnchecked(const void* src, vk::DeviceSize size, 
 
 SwStagingBuffer::SwStagingBuffer() : SwBuffer() {}
 
-SwStagingBuffer::SwStagingBuffer(std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, vk::DeviceSize size)
+SwStagingBuffer::SwStagingBuffer(
+    std::string name, vk::raii::Buffer buffer, VmaAllocator allocator, VmaAllocation allocation, VmaAllocationInfo info, vk::DeviceSize size
+)
     : SwBuffer(
           std::move(name), std::move(buffer), std::nullopt, allocator, allocation, info, vk::BufferUsageFlagBits::eTransferSrc,
           VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT, size

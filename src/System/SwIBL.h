@@ -40,12 +40,8 @@ enum class Component : std::uint32_t {
     Diffuse = 1u << 0,
     Specular = 1u << 1,
 };
-constexpr Component operator|(Component a, Component b) {
-    return static_cast<Component>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b));
-}
-constexpr Component operator&(Component a, Component b) {
-    return static_cast<Component>(static_cast<std::uint32_t>(a) & static_cast<std::uint32_t>(b));
-}
+constexpr Component operator|(Component a, Component b) { return static_cast<Component>(static_cast<std::uint32_t>(a) | static_cast<std::uint32_t>(b)); }
+constexpr Component operator&(Component a, Component b) { return static_cast<Component>(static_cast<std::uint32_t>(a) & static_cast<std::uint32_t>(b)); }
 
 // Bindings consumed by the geometry/transparent fragment shaders. Samplers keep the original binding
 // slots, the sampled images follow directly after them.

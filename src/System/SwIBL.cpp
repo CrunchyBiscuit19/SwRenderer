@@ -17,7 +17,7 @@
 SwDescriptorLayout SwIBL::Resources::sConsumeDescriptorLayout{};
 
 void SwIBL::Resources::init() {
-    SwIBL::Resources::sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
+    sConsumeDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
         "IBLConsumeDescriptorSetLayout",
         {
             {CONSUME_IRRADIANCE_SAMPLER_BINDING, vk::DescriptorType::eSampler, 1},
@@ -31,7 +31,7 @@ void SwIBL::Resources::init() {
     );
 }
 
-void SwIBL::Resources::cleanup() { SwIBL::Resources::sConsumeDescriptorLayout.destroy(); }
+void SwIBL::Resources::cleanup() { sConsumeDescriptorLayout.destroy(); }
 
 SwIBL::System::System(SwScene& scene) : SwSystem(scene) {}
 
@@ -70,7 +70,7 @@ void SwIBL::System::initializeResources() {
     mResources.mLutSampler = SwSamplerFactory::createSampler("IBLLutSampler", lutSamplerInfo);
 
     mResources.mConsumeDescriptorSet =
-        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLConsumeDescriptorSet", SwIBL::Resources::sConsumeDescriptorLayout);
+        SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("IBLConsumeDescriptorSet", Resources::sConsumeDescriptorLayout);
 
     const vk::ImageUsageFlags iblUsage = vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled;
     mResources.mIrradianceImage = SwImageFactory::createColorImage2D("IBLIrradianceImage", FORMAT, IRRADIANCE_EXTENT, iblUsage, false);
@@ -100,9 +100,8 @@ void SwIBL::System::initializeResources() {
 
     mResources.mIrradiancePipelineLayout =
         SwPipelineFactory::createPipelineLayout("IBLIrradiancePipelineLayout", mResources.mIrradianceDescriptorLayout.getHandle(), {});
-    mResources.mPrefilterPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "IBLPrefilterPipelineLayout", mResources.mPrefilterDescriptorLayout.getHandle(), SwIBL::PrefilterPC::getRange()
-    );
+    mResources.mPrefilterPipelineLayout =
+        SwPipelineFactory::createPipelineLayout("IBLPrefilterPipelineLayout", mResources.mPrefilterDescriptorLayout.getHandle(), PrefilterPC::getRange());
     mResources.mBrdfLutPipelineLayout =
         SwPipelineFactory::createPipelineLayout("IBLBrdfLutPipelineLayout", mResources.mBrdfLutDescriptorLayout.getHandle(), {});
 
@@ -184,15 +183,13 @@ void SwIBL::System::initializeResources() {
     mResources.mSkyboxSampler = SwSamplerFactory::createSampler("SkyboxDrawSampler", vk::SamplerCreateInfo());
 
     mResources.mSkyboxDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
-        "SkyboxDrawDescriptorSetLayout",
-        {{0, vk::DescriptorType::eSampler, 1}, {1, vk::DescriptorType::eSampledImage, 1}},
-        vk::ShaderStageFlagBits::eFragment
+        "SkyboxDrawDescriptorSetLayout", {{0, vk::DescriptorType::eSampler, 1}, {1, vk::DescriptorType::eSampledImage, 1}}, vk::ShaderStageFlagBits::eFragment
     );
     mResources.mSkyboxDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("SkyboxDrawDescriptorSet", mResources.mSkyboxDescriptorLayout);
 
     mResources.mSkyboxPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("SkyboxDrawPipelineLayout", mResources.mSkyboxDescriptorLayout.getHandle(), SwIBL::SkyboxPC::getRange());
+        SwPipelineFactory::createPipelineLayout("SkyboxDrawPipelineLayout", mResources.mSkyboxDescriptorLayout.getHandle(), SkyboxPC::getRange());
 
     SwShader skyboxVertexShader = SwShaderFactory::createShader("SkyboxVertexShaderModule", SKYBOX_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader skyboxFragmentShader =
@@ -256,8 +253,8 @@ void SwIBL::System::initializePasses() {
             nullptr
         );
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
-        cmd.pushConstants<SwIBL::SkyboxPC>(mResources.mSkyboxPipelineBundle.getLayoutHandle(), SwIBL::SkyboxPC::sStages, 0, mResources.mSkyboxPushConstants);
-        cmd.draw(SwIBL::NUM_SKYBOX_VERTICES, 1, 0, 0);
+        cmd.pushConstants<SkyboxPC>(mResources.mSkyboxPipelineBundle.getLayoutHandle(), SkyboxPC::sStages, 0, mResources.mSkyboxPushConstants);
+        cmd.draw(NUM_SKYBOX_VERTICES, 1, 0, 0);
 
         cmd.endRendering();
     });
@@ -325,9 +322,7 @@ void SwIBL::System::bakeFromEnvironment(SwImage& environment, vk::Sampler enviro
         );
         mResources.mPrefilterPushConstants.mTotalMipLevels = mPrefilterMipLevels;
         mResources.mPrefilterPushConstants.mBaseExtent = {PREFILTER_EXTENT.width, PREFILTER_EXTENT.height};
-        cmd.pushConstants<SwIBL::PrefilterPC>(
-            mResources.mPrefilterPipelineBundle.getLayoutHandle(), SwIBL::PrefilterPC::sStages, 0, mResources.mPrefilterPushConstants
-        );
+        cmd.pushConstants<PrefilterPC>(mResources.mPrefilterPipelineBundle.getLayoutHandle(), PrefilterPC::sStages, 0, mResources.mPrefilterPushConstants);
         cmd.dispatch(
             SwHelper::fastDivCeil(PREFILTER_EXTENT.width, SwRenderer::MAX_3D_WORKGROUP_THREADS),
             SwHelper::fastDivCeil(PREFILTER_EXTENT.height, SwRenderer::MAX_3D_WORKGROUP_THREADS),

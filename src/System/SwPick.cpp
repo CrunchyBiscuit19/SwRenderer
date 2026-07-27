@@ -23,7 +23,7 @@ void SwPick::System::drawBatches(
 
         // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
         mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
-        cmd.pushConstants<SwPick::DrawPC>(mResources.mDrawPipelineLayout.getHandle(), SwPick::DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.pushConstants<DrawPC>(mResources.mDrawPipelineLayout.getHandle(), DrawPC::sStages, 0, mResources.mDrawPushConstants);
 
         cmd.drawIndexedIndirectCount(
             rcsBuffer.getHandle(),
@@ -38,7 +38,7 @@ void SwPick::System::drawBatches(
 
 void SwPick::System::initializeResources() {
     mResources.mReadbackBuffer = SwBufferFactory::createAllocatedBuffer(
-        "PickReadbackBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(SwPick::ReadbackData), true
+        "PickReadbackBuffer", vk::BufferUsageFlagBits::eStorageBuffer, VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT, sizeof(ReadbackData), true
     );
 
     mResources.mReadbackDescriptorLayout = SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorLayout(
@@ -50,12 +50,11 @@ void SwPick::System::initializeResources() {
     mResources.mDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(
         "PickDrawPipelineLayout",
         {SwMaterialResources::sMaterialSamplersDescriptorLayout.getHandle(), SwMaterialResources::sMaterialTexturesDescriptorLayout.getHandle()},
-        SwPick::DrawPC::getRange()
+        DrawPC::getRange()
     );
 
     SwShader drawVertexShader = SwShaderFactory::createShader("PickDrawVertexShaderModule", DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    SwShader drawFragmentShader =
-        SwShaderFactory::createShader("PickDrawFragmentShaderModule", DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    SwShader drawFragmentShader = SwShaderFactory::createShader("PickDrawFragmentShaderModule", DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
 
     vk::PipelineColorBlendAttachmentState noBlendState{};
     noBlendState.colorWriteMask =
@@ -78,17 +77,17 @@ void SwPick::System::initializeResources() {
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
 
-    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::DRAW_OPAQUE_ENTRY_POINT);
-    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::DRAW_OPAQUE_ENTRY_POINT);
+    drawPipelineOptions.mVertexEntryPoint = std::string(DRAW_OPAQUE_ENTRY_POINT);
+    drawPipelineOptions.mFragmentEntryPoint = std::string(DRAW_OPAQUE_ENTRY_POINT);
     mResources.mDrawOpaqueTransparentPipelineBundle =
         SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawOpaqueTransparentPipeline", drawPipelineOptions);
 
-    drawPipelineOptions.mVertexEntryPoint = std::string(SwPick::DRAW_MASKED_ENTRY_POINT);
-    drawPipelineOptions.mFragmentEntryPoint = std::string(SwPick::DRAW_MASKED_ENTRY_POINT);
+    drawPipelineOptions.mVertexEntryPoint = std::string(DRAW_MASKED_ENTRY_POINT);
+    drawPipelineOptions.mFragmentEntryPoint = std::string(DRAW_MASKED_ENTRY_POINT);
     mResources.mDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("PickDrawMaskedPipeline", drawPipelineOptions);
 
     mResources.mReadbackPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("PickReadbackPipelineLayout", mResources.mReadbackDescriptorLayout.getHandle(), SwPick::ReadbackPC::getRange());
+        SwPipelineFactory::createPipelineLayout("PickReadbackPipelineLayout", mResources.mReadbackDescriptorLayout.getHandle(), ReadbackPC::getRange());
 
     SwShader readbackShader = SwShaderFactory::createShader("PickReadbackShaderModule", READBACK_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mReadbackPipelineBundle =
@@ -132,7 +131,7 @@ void SwPick::System::initializePasses() {
             glm::vec2 mousePosF;
             SDL_GetMouseState(&mousePosF.x, &mousePosF.y);
             glm::ivec2 mousePos = glm::ivec2(mousePosF);
-            mResources.mReadbackBuffer.copyFromUnchecked(glm::value_ptr(mousePos), sizeof(SwPick::ReadbackData::mCoords));
+            mResources.mReadbackBuffer.copyFromUnchecked(glm::value_ptr(mousePos), sizeof(ReadbackData::mCoords));
 
             cmd.bindPipeline(mResources.mReadbackPipelineBundle.getBindPoint(), mResources.mReadbackPipelineBundle.getPipelineHandle());
 
@@ -144,9 +143,7 @@ void SwPick::System::initializePasses() {
                 nullptr
             );
 
-            cmd.pushConstants<SwPick::ReadbackPC>(
-                mResources.mReadbackPipelineBundle.getLayoutHandle(), SwPick::ReadbackPC::sStages, 0, mResources.mReadbackPushConstants
-            );
+            cmd.pushConstants<ReadbackPC>(mResources.mReadbackPipelineBundle.getLayoutHandle(), ReadbackPC::sStages, 0, mResources.mReadbackPushConstants);
 
             cmd.dispatch(1, 1, 1);
         },
@@ -159,9 +156,7 @@ void SwPick::System::initializePasses() {
         [&](vk::CommandBuffer cmd) {
             glm::uvec2 read(0);
             std::memcpy(
-                glm::value_ptr(read),
-                static_cast<char*>(mResources.mReadbackBuffer.getMappedPtr()) + sizeof(SwPick::ReadbackData::mCoords),
-                sizeof(SwPick::ReadbackData::mRead)
+                glm::value_ptr(read), static_cast<char*>(mResources.mReadbackBuffer.getMappedPtr()) + sizeof(ReadbackData::mCoords), sizeof(ReadbackData::mRead)
             );
 
             if (read.x == 0 || read.y == 0) {
@@ -279,7 +274,7 @@ void SwPick::System::generatePickFrame() {
 
     ImGuizmo::BeginFrame();
     ImGuizmo::SetOrthographic(false);
-    ImGuizmo::SetGizmoSizeClipSpace(SwPick::IMGUIZMO_SIZE);
+    ImGuizmo::SetGizmoSizeClipSpace(IMGUIZMO_SIZE);
 
     ImGuizmo::SetRect(
         0,

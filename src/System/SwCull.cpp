@@ -25,8 +25,8 @@ void SwCull::System::initializeOtherPasses() {
         );
 
         mResources.mPrepOcclusionPushConstants.mLevel = -1;
-        cmd.pushConstants<SwCull::PrepOcclusionPC>(
-            mResources.mPrepOcclusionPipelineBundle.getLayoutHandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+        cmd.pushConstants<PrepOcclusionPC>(
+            mResources.mPrepOcclusionPipelineBundle.getLayoutHandle(), PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
         );
 
         cmd.dispatch(
@@ -41,8 +41,8 @@ void SwCull::System::initializeOtherPasses() {
 
         for (std::uint32_t i = 0; i < mResources.mDepthPyramidLevels - 1; i++) {
             mResources.mPrepOcclusionPushConstants.mLevel = i;
-            cmd.pushConstants<SwCull::PrepOcclusionPC>(
-                mResources.mPrepOcclusionPipelineBundle.getLayoutHandle(), SwCull::PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
+            cmd.pushConstants<PrepOcclusionPC>(
+                mResources.mPrepOcclusionPipelineBundle.getLayoutHandle(), PrepOcclusionPC::sStages, 0, mResources.mPrepOcclusionPushConstants
             );
 
             const std::uint32_t dstW = std::max(1u, mResources.mDepthPyramidImage.getExtent().width >> (i + 1));
@@ -81,7 +81,7 @@ void SwCull::System::initializeEarlyPasses() {
         cmd.fillBuffer(mScene.getLateRcsBuffer().getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mScene.getLateRcsCount().getHandle(), 0, vk::WholeSize, 0);
 
-        cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+        cmd.pushConstants<ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), ResetPC::sStages, 0, mResources.mResetPushConstants);
 
         std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mResetPushConstants.mRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
@@ -100,8 +100,8 @@ void SwCull::System::initializeEarlyPasses() {
             nullptr
         );
 
-        mResources.mTestPushConstants.mPhase = SwCull::Phase::Early;
-        cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
+        mResources.mTestPushConstants.mPhase = Phase::Early;
+        cmd.pushConstants<TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), TestPC::sStages, 0, mResources.mTestPushConstants);
 
         std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mTestPushConstants.mRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
@@ -114,9 +114,7 @@ void SwCull::System::initializeEarlyPasses() {
 
         mResources.mCompactPushConstants.mPostRcsBuffer = mScene.getEarlyRcsBuffer();
         mResources.mCompactPushConstants.mPostRcsCount = mScene.getEarlyRcsCount();
-        cmd.pushConstants<SwCull::CompactPC>(
-            mResources.mCompactPipelineBundle.getLayoutHandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
-        );
+        cmd.pushConstants<CompactPC>(mResources.mCompactPipelineBundle.getLayoutHandle(), CompactPC::sStages, 0, mResources.mCompactPushConstants);
 
         std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
@@ -130,7 +128,7 @@ void SwCull::System::initializeLatePasses() {
     mScene.insertPass(SwPass::Type::CullLateReset, [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mResetPipelineBundle.getBindPoint(), mResources.mResetPipelineBundle.getPipelineHandle());
 
-        cmd.pushConstants<SwCull::ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), SwCull::ResetPC::sStages, 0, mResources.mResetPushConstants);
+        cmd.pushConstants<ResetPC>(mResources.mResetPipelineBundle.getLayoutHandle(), ResetPC::sStages, 0, mResources.mResetPushConstants);
 
         std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mResetPushConstants.mRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
@@ -149,8 +147,8 @@ void SwCull::System::initializeLatePasses() {
             nullptr
         );
 
-        mResources.mTestPushConstants.mPhase = SwCull::Phase::Late;
-        cmd.pushConstants<SwCull::TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), SwCull::TestPC::sStages, 0, mResources.mTestPushConstants);
+        mResources.mTestPushConstants.mPhase = Phase::Late;
+        cmd.pushConstants<TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), TestPC::sStages, 0, mResources.mTestPushConstants);
 
         std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mTestPushConstants.mRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
@@ -163,9 +161,7 @@ void SwCull::System::initializeLatePasses() {
 
         mResources.mCompactPushConstants.mPostRcsBuffer = mScene.getLateRcsBuffer();
         mResources.mCompactPushConstants.mPostRcsCount = mScene.getLateRcsCount();
-        cmd.pushConstants<SwCull::CompactPC>(
-            mResources.mCompactPipelineBundle.getLayoutHandle(), SwCull::CompactPC::sStages, 0, mResources.mCompactPushConstants
-        );
+        cmd.pushConstants<CompactPC>(mResources.mCompactPipelineBundle.getLayoutHandle(), CompactPC::sStages, 0, mResources.mCompactPushConstants);
 
         std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
@@ -175,13 +171,13 @@ void SwCull::System::initializeLatePasses() {
 
 void SwCull::System::initializeResources() {
     // Reset*
-    mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("CullResetPipelineLayout", nullptr, SwCull::ResetPC::getRange());
+    mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("CullResetPipelineLayout", nullptr, ResetPC::getRange());
     SwShader resetShader = SwShaderFactory::createShader("CullResetShaderModule", RESET_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mResetPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("CullResetPipeline", {resetShader.getHandle(), mResources.mResetPipelineLayout.getHandle()});
 
     // Compact*
-    mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout("CullCompactPipelineLayout", nullptr, SwCull::CompactPC::getRange());
+    mResources.mCompactPipelineLayout = SwPipelineFactory::createPipelineLayout("CullCompactPipelineLayout", nullptr, CompactPC::getRange());
     SwShader compactShader = SwShaderFactory::createShader("CullCompactShaderModule", COMPACT_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mCompactPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("CullCompactPipeline", {compactShader.getHandle(), mResources.mCompactPipelineLayout.getHandle()});
@@ -212,7 +208,7 @@ void SwCull::System::initializeResources() {
     mResources.mPrepOcclusionDescriptorSet.writeSampler(3, mResources.mDepthPyramidMinSampler.getHandle());
 
     mResources.mPrepOcclusionPipelineLayout = SwPipelineFactory::createPipelineLayout(
-        "CullPrepOcclusionPipelineLayout", mResources.mPrepOcclusionDescriptorLayout.getHandle(), SwCull::PrepOcclusionPC::getRange()
+        "CullPrepOcclusionPipelineLayout", mResources.mPrepOcclusionDescriptorLayout.getHandle(), PrepOcclusionPC::getRange()
     );
     SwShader depthPyramidShader =
         SwShaderFactory::createShader("CullPrepOcclusionShaderModule", PREP_OCCLUSION_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
@@ -241,7 +237,7 @@ void SwCull::System::initializeResources() {
     mResources.mTestDescriptorSet.writeSampler(1, mResources.mTestDepthPyramidSampler.getHandle());
 
     mResources.mTestPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("CullTestPipelineLayout", mResources.mTestDescriptorLayout.getHandle(), SwCull::TestPC::getRange());
+        SwPipelineFactory::createPipelineLayout("CullTestPipelineLayout", mResources.mTestDescriptorLayout.getHandle(), TestPC::getRange());
     SwShader testShader = SwShaderFactory::createShader("CullTestShaderModule", TEST_COMPUTE_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mTestPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("CullTestPipeline", {testShader.getHandle(), mResources.mTestPipelineLayout.getHandle()});

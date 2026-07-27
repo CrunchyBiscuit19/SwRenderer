@@ -1,12 +1,11 @@
-#include <System/SwInput.h>
-
 #include <Renderer/SwRenderer.h>
 #include <SDL3/SDL_keyboard.h>
-#include <nlohmann/json.hpp>
+#include <System/SwInput.h>
 #include <quill/LogMacros.h>
 
 #include <array>
 #include <fstream>
+#include <nlohmann/json.hpp>
 
 namespace {
 std::optional<SDL_Scancode> scancodeFromName(const std::string& name) {
@@ -158,8 +157,10 @@ void SwInput::System::onEvent(const SDL_Event& e) {
     for (const auto& [name, binding] : mActions) {
         if (!binding.mEdge) continue;
         if (!modsSatisfied(binding.mMods)) continue;
-        if (keyDown && binding.mKey.has_value() && e.key.scancode == *binding.mKey) mTriggered.insert(name);
-        else if (mouseDown && binding.mMouseButton.has_value() && e.button.button == *binding.mMouseButton) mTriggered.insert(name);
+        if (keyDown && binding.mKey.has_value() && e.key.scancode == *binding.mKey)
+            mTriggered.insert(name);
+        else if (mouseDown && binding.mMouseButton.has_value() && e.button.button == *binding.mMouseButton)
+            mTriggered.insert(name);
     }
 }
 

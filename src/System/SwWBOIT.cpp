@@ -16,7 +16,8 @@ void SwWBOIT::System::initializeResources() {
     mResources.mCompositeDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("WBOITCompositeDescriptorSet", mResources.mCompositeDescriptorLayout);
 
-    mResources.mCompositePipelineLayout = SwPipelineFactory::createPipelineLayout("WBOITCompositePipelineLayout", mResources.mCompositeDescriptorLayout.getHandle(), nullptr);
+    mResources.mCompositePipelineLayout =
+        SwPipelineFactory::createPipelineLayout("WBOITCompositePipelineLayout", mResources.mCompositeDescriptorLayout.getHandle(), nullptr);
 
     SwShader wboitVertexShader = SwShaderFactory::createShader("WBOITVertexShaderModule", VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
     SwShader wboitFragmentShader = SwShaderFactory::createShader("WBOITFragmentShaderModule", FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -98,11 +99,11 @@ void SwWBOIT::System::reInitializeOnResize() {
     );
     mResources.mRvlImage = SwImageFactory::createColorImage2D(
         "WBOITRvlImage",
-        SwWBOIT::RVL_FORMAT,
+        RVL_FORMAT,
         SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D(),
         vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled,
         false,
-        SwWBOIT::RVL_CLEAR_VALUE
+        RVL_CLEAR_VALUE
     );
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this](vk::CommandBuffer cmd) {

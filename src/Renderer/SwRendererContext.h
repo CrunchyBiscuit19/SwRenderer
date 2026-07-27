@@ -89,8 +89,8 @@ struct SwRendererContext {
     SwRendererContext(
         vk::raii::Instance* instance, vk::raii::PhysicalDevice* chosenGPU, vk::raii::Device* device, VmaAllocator allocator, vk::raii::Queue* graphicsQueue,
         vk::raii::Queue* computeQueue, vk::raii::Queue* transferQueue, std::uint32_t graphicsQueueFamily, std::uint32_t computeQueueFamily,
-        std::uint32_t transferQueueFamily, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit, SwStagingRing* stagingRing,
-        SwEvents* events, SwScene* scene, SwStats* stats, SwLogger* logger
+        std::uint32_t transferQueueFamily, SwDescriptorAllocator* descriptorAllocator, SwSwapchain* swapchain, SwImmSubmit* immSubmit,
+        SwStagingRing* stagingRing, SwEvents* events, SwScene* scene, SwStats* stats, SwLogger* logger
     );
 
     template <typename T>
