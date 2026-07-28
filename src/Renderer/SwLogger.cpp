@@ -7,6 +7,7 @@
 
 #include <cctype>
 #include <format>
+#include <fstream>
 #include <string>
 #include <string_view>
 
@@ -254,6 +255,8 @@ static std::string translateVkNames(const std::string& msg) {
 // SwLogger
 // ---------------------------------------------------------------------------
 
+const std::filesystem::path SwLogger::RECORDED_MESSAGES_PATH{std::filesystem::path(LOGS_PATH) / "LatestRecorded.log"};
+
 SwLogger::SwLogger() {
     quill::Backend::start();
 
@@ -303,8 +306,8 @@ SwLogger::SwLogger() {
 
     mLogger->set_log_level(LOG_LEVEL);
 
-    mBlockedMessages.insert("BestPractices-vkBindBufferMemory-small-dedicated-allocation");
-    mBlockedMessages.insert("BestPractices-vkBindImageMemory-small-dedicated-allocation");
+    //mBlockedMessages.insert("BestPractices-vkBindBufferMemory-small-dedicated-allocation");
+    //mBlockedMessages.insert("BestPractices-vkBindImageMemory-small-dedicated-allocation");
 
     mBreakMessages.insert("VUID-VkBufferCopy-size-01988");
     mBreakMessages.insert("VUID-vkCmdCopyBuffer-size-00115");
@@ -313,7 +316,7 @@ SwLogger::SwLogger() {
 }
 
 VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
-    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT /*messageTypes*/,
+    VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageTypes,
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData
 ) {
     auto* swLogger = static_cast<SwLogger*>(pUserData);
@@ -391,5 +394,49 @@ VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
             break;
     }
 
+    quill::LogLevel recordLevel;
+    switch (messageSeverity) {
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+            recordLevel = quill::LogLevel::Error;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+            recordLevel = quill::LogLevel::Warning;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+            recordLevel = quill::LogLevel::Info;
+            break;
+        case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+        default:
+            recordLevel = quill::LogLevel::Debug;
+            break;
+    }
+
+    if (recordLevel >= LOG_LEVEL) {
+        std::string recordedMessage = std::format(
+            "\n{} <{}>\n{}\nQueue Labels: {}\nCommandBuffer Labels: {}\n{}",
+            severity,
+            pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : "",
+            pCallbackData->pMessage,
+            queueLabels,
+            cmdBufLabels,
+            resources
+        );
+        swLogger->mMessageRecords[recordedMessage].insert(swLogger->getFrameNumber());
+    }
+
     return vk::False;
+}
+
+void SwLogger::writeRecordedMessages() {
+    std::ofstream out{RECORDED_MESSAGES_PATH, std::ios::trunc};
+    if (!out) return;
+
+    for (const auto& [message, frames] : mMessageRecords) {
+        out << message;
+        out << '[';
+        for (auto& frame : frames) {
+            out << frame << ',';
+        }
+        out << "]\n";
+    }
 }

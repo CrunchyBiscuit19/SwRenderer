@@ -268,6 +268,8 @@ void SwRenderer::run() {
         auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(end - start);
         mStats.mFrameTime = static_cast<float>(elapsed.count()) / ONE_SECOND_IN_MS;
     }
+
+    mLogger.writeRecordedMessages();
 }
 
 SwRenderer::~SwRenderer() {

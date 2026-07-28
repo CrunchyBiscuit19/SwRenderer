@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <unordered_set>
+#include <unordered_map>
 #include <vulkan/vulkan.hpp>
 
 #if defined(_MSC_VER)
@@ -17,9 +18,11 @@
 
 class SwLogger {
 public:
+    static const std::filesystem::path RECORDED_MESSAGES_PATH;
+
     enum class LogLocation { Console, File, Both };
     static constexpr LogLocation LOG_LOCATION{LogLocation::Both};
-    static constexpr quill::LogLevel LOG_LEVEL{quill::LogLevel::Debug};
+    static constexpr quill::LogLevel LOG_LEVEL{quill::LogLevel::Warning};
 
     SwLogger();
 
@@ -32,9 +35,12 @@ public:
         const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData
     );
 
+    void writeRecordedMessages();
+
 private:
     quill::Logger* mLogger{nullptr};
     const std::uint64_t* mFrameNumber{nullptr};
     std::unordered_set<std::string> mBlockedMessages;
     std::unordered_set<std::string> mBreakMessages;
+    std::unordered_map<std::string, std::unordered_set<std::uint64_t>> mMessageRecords;
 };
