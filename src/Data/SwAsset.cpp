@@ -19,6 +19,18 @@
 std::uint32_t SwAsset::sLatestAssetId{0};
 std::unordered_map<SwSamplerOptions, SwSampler> SwAsset::sSamplers{};
 
+static SwMaterialAlphaMode toMaterialAlphaMode(fastgltf::AlphaMode alphaMode) {
+    switch (alphaMode) {
+        case fastgltf::AlphaMode::Opaque:
+            return SwMaterialAlphaMode::Opaque;
+        case fastgltf::AlphaMode::Mask:
+            return SwMaterialAlphaMode::Mask;
+        case fastgltf::AlphaMode::Blend:
+            return SwMaterialAlphaMode::Blend;
+    }
+    std::unreachable();
+}
+
 vk::Filter SwAsset::extractFilter(fastgltf::Filter filter) {
     switch (filter) {
         case fastgltf::Filter::Nearest:
@@ -238,7 +250,7 @@ void SwAsset::constructMaterials() {
         }
         name = std::format("{}_mat{}", mName, name);
 
-        SwMaterialPipelineOptions pipelineOptions(material.doubleSided, material.alphaMode);
+        SwMaterialPipelineOptions pipelineOptions(material.doubleSided, toMaterialAlphaMode(material.alphaMode));
 
         SwMaterial::Constant constants;
         constants.mBaseFactor = glm::vec4(

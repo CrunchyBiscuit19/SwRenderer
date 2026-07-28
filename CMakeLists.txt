@@ -280,13 +280,20 @@ add_dependencies(SwRenderer Shaders)
 # Precompiled headers and compile definitions
 # ---------------------------------------------------------------------------
 target_precompile_headers(SwRenderer PUBLIC
-    <optional>
-    <vector>
+    <array>
+    <cstdint>
+    <filesystem>
+    <functional>
     <memory>
+    <optional>
     <string>
+    <string_view>
     <unordered_map>
+    <vector>
+    <glm/glm.hpp>
     <glm/mat4x4.hpp>
     <glm/vec4.hpp>
+    <vk_mem_alloc.h>
     <vulkan/vulkan.hpp>
     <vulkan/vulkan_raii.hpp>
 )
@@ -308,6 +315,13 @@ target_compile_definitions(SwRenderer PRIVATE $<$<CONFIG:Release>:RELEASE>)
 target_compile_definitions(SwRenderer PRIVATE
     $<${SW_ENABLE_DEBUG}:SW_ENABLE_DEBUG=1>
 )
+
+# ---------------------------------------------------------------------------
+# Build throughput
+# ---------------------------------------------------------------------------
+# MSVC compiles a project's translation units serially unless /MP is set. This enables
+# per-file parallelism across all configs on top of the precompiled header above.
+target_compile_options(SwRenderer PRIVATE $<$<CXX_COMPILER_ID:MSVC>:/MP>)
 
 # ---------------------------------------------------------------------------
 # Release optimization

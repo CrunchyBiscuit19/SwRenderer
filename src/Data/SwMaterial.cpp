@@ -157,22 +157,20 @@ std::uint32_t SwMaterial::constructMaterialPipeline(SwMaterialPipelineOptions ma
     graphicsPipelineOptions.mDepthFormat = SwSwapchain::DEPTH_FORMAT;
     graphicsPipelineOptions.mDepthTestEnabled = true;
     switch (materialPipelineOptions.alphaMode) {
-        case fastgltf::AlphaMode::Opaque:
-        case fastgltf::AlphaMode::Mask:
-            // Write depth normally with Reverse-Z test. Both share one fragment module; the masked
-            // entry point adds the alpha-cutout discard (and drops early depth-stencil) while the
-            // opaque entry point keeps [earlydepthstencil].
+        case AlphaMode::Opaque:
+        case AlphaMode::Mask:
+            // Masked entry point adds the alpha-cutout discard while the opaque entry point keeps [earlydepthstencil].
             graphicsPipelineOptions.mFragmentShader = sOpaqueMaskedFragmentShader.getHandle();
             graphicsPipelineOptions.mFragmentEntryPoint =
-                materialPipelineOptions.alphaMode == fastgltf::AlphaMode::Mask ? std::string(MASKED_ENTRY_POINT) : std::string(OPAQUE_ENTRY_POINT);
+                materialPipelineOptions.alphaMode == AlphaMode::Mask ? std::string(MASKED_ENTRY_POINT) : std::string(OPAQUE_ENTRY_POINT);
             graphicsPipelineOptions.mLayout = sOpaquePipelineLayout.getHandle();
             graphicsPipelineOptions.mColorAttachments =
                 std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{{SwSwapchain::DRAW_FORMAT, noBlendState}};
             graphicsPipelineOptions.mDepthWriteEnabled = true;
             graphicsPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
             break;
-        case fastgltf::AlphaMode::Blend:
-            // Tests against pre-pass depth for occlusion; never writes depth.
+        case AlphaMode::Blend:
+            // Tests against pre-pass depth for occlusion, never writes depth.
             graphicsPipelineOptions.mFragmentShader = sTransparentFragmentShader.getHandle();
             graphicsPipelineOptions.mLayout = sTransparentPipelineLayout.getHandle();
             graphicsPipelineOptions.mColorAttachments = std::vector<std::pair<vk::Format, vk::PipelineColorBlendAttachmentState>>{
@@ -203,15 +201,15 @@ void SwMaterial::cleanup() {
     sMaterialPipelineBundles.clear();
 }
 
-SwMaterial::Type SwMaterial::getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode) {
+SwMaterial::Type SwMaterial::getMaterialTypeFromAlphaMode(AlphaMode alphaMode) {
     switch (alphaMode) {
-        case fastgltf::AlphaMode::Opaque:
+        case AlphaMode::Opaque:
             return Type::Opaque;
             break;
-        case fastgltf::AlphaMode::Mask:
+        case AlphaMode::Mask:
             return Type::Mask;
             break;
-        case fastgltf::AlphaMode::Blend:
+        case AlphaMode::Blend:
             return Type::Transparent;
             break;
     }

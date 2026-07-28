@@ -6,7 +6,6 @@
 #include <Resource/SwPipeline.h>
 
 #include <cstdint>
-#include <fastgltf/types.hpp>
 #include <filesystem>
 #include <glm/glm.hpp>
 #include <optional>
@@ -69,9 +68,11 @@ public:
     static void cleanup();
 };
 
+enum class SwMaterialAlphaMode { Opaque, Mask, Blend };
+
 struct SwMaterialPipelineOptions {
     bool doubleSided{false};
-    fastgltf::AlphaMode alphaMode{fastgltf::AlphaMode::Opaque};
+    SwMaterialAlphaMode alphaMode{SwMaterialAlphaMode::Opaque};
     bool operator==(const SwMaterialPipelineOptions& other) const { return (doubleSided == other.doubleSided && alphaMode == other.alphaMode); }
 };
 
@@ -80,7 +81,7 @@ struct std::hash<SwMaterialPipelineOptions> {
     // Compute individual hash values for strings
     // Combine them using XOR and bit shifting
     std::size_t operator()(const SwMaterialPipelineOptions& k) const {
-        return ((std::hash<bool>()(k.doubleSided) ^ (std::hash<fastgltf::AlphaMode>()(k.alphaMode) << 1)) >> 1);
+        return ((std::hash<bool>()(k.doubleSided) ^ (std::hash<SwMaterialAlphaMode>()(k.alphaMode) << 1)) >> 1);
     }
 };
 
@@ -120,6 +121,7 @@ private:
     std::uint32_t constructMaterialPipeline(SwMaterialPipelineOptions materialPipelineOptions) const;
 
 public:
+    using AlphaMode = SwMaterialAlphaMode;
     enum class Type { Opaque, Mask, Transparent };
     static constexpr std::uint32_t NUM_TYPES{3};
     static constexpr std::uint32_t NUM_PBR_IMAGES{5};
@@ -134,7 +136,7 @@ public:
     static void init();
     static void cleanup();
 
-    static Type getMaterialTypeFromAlphaMode(fastgltf::AlphaMode alphaMode);
+    static Type getMaterialTypeFromAlphaMode(AlphaMode alphaMode);
 
     inline SwGraphicsPipelineBundle& getPipelineBundle() { return sMaterialPipelineBundles.at(mPipelineId); }
 
@@ -144,7 +146,7 @@ public:
     static vk::ShaderModule getOpaqueMaskedFragmentShaderModule();
     static vk::PipelineLayout getOpaquePipelineLayoutHandle() { return sOpaquePipelineLayout.getHandle(); }
 
-    inline fastgltf::AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
+    inline AlphaMode getAlphaMode() { return mMaterialPipelineOptions.alphaMode; }
     inline Type getType() { return getMaterialTypeFromAlphaMode(mMaterialPipelineOptions.alphaMode); }
 
     inline bool isDoubleSided() { return mMaterialPipelineOptions.doubleSided; }

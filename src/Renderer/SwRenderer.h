@@ -90,4 +90,4 @@ public:
     void draw();
 
     ~SwRenderer();
-};
+}; 

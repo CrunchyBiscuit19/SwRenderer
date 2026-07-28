@@ -1,13 +1,13 @@
 #pragma once
 
 #include <Data/SwBatch.h>
+#include <Data/SwLight.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwDescriptor.h>
 #include <Resource/SwImage.h>
 #include <Resource/SwPipeline.h>
 #include <Resource/SwPushConstant.h>
 #include <Resource/SwSampler.h>
-#include <Scene/SwScene.h>
 #include <Scene/SwSystem.h>
 
 #include <array>
@@ -16,7 +16,6 @@
 #include <string_view>
 #include <vector>
 #include <vulkan/vulkan.hpp>
-#include <vulkan/vulkan_enums.hpp>
 
 class SwInstance;
 
