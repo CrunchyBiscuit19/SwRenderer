@@ -114,8 +114,6 @@ private:
     void refreshDependencies();
     void refresh();
 
-    void finalPresentTransition(SwCommandBuffer& commandBuffer);
-
 public:
     static constexpr std::size_t NUM_MATERIALS{1 << 8};
     static constexpr vk::DeviceSize MATERIAL_CONSTANTS_BUFFER_SIZE{NUM_MATERIALS * sizeof(SwMaterial::Constant)};

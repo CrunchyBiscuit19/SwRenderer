@@ -347,6 +347,8 @@ void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
         pass->execute(commandBuffer.getHandle());
     }
 
+    SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getHandle(), SwDependency::ImageDepType::PresentSrc);
+
     if (mExportStream.has_value()) {
         exportRenderGraph();
         mExportStream->flush();
