@@ -28,7 +28,8 @@ void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::opti
         if (batch.getRcsSize() == 0) continue;
 
         // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
-        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
+        DrawPC drawPushConstants = mResources.mDrawPushConstants;
+        drawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
 
         auto& pipeline = batch.getGraphicsPipelineBundle();
 
@@ -48,7 +49,7 @@ void SwGeometry::System::drawBatches(vk::CommandBuffer cmd, std::array<std::opti
             nullptr
         );
 
-        cmd.pushConstants<DrawPC>(pipeline.getLayoutHandle(), DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.pushConstants<DrawPC>(pipeline.getLayoutHandle(), DrawPC::sStages, 0, drawPushConstants);
 
         cmd.drawIndexedIndirectCount(
             rcsBuffer.getHandle(),
@@ -99,7 +100,8 @@ void SwGeometry::System::drawZBatches(vk::CommandBuffer cmd, SwGraphicsPipelineB
         if (batch.getRcsSize() == 0) continue;
 
         // SV_DrawIndex is relative to each indirect call, so offset the pointer to the batch base to keep shader indexing aligned with the draw offset.
-        mResources.mDrawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
+        DrawPC drawPushConstants = mResources.mDrawPushConstants;
+        drawPushConstants.mRcsBuffer = rcsBuffer + batch.getRcsIndex() * sizeof(SwRenderCommand);
 
         cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
         SwPass::setViewportScissors(cmd, SwRenderer::sRendererContext.mSwapchain->getWindowExtent3D());
@@ -116,7 +118,7 @@ void SwGeometry::System::drawZBatches(vk::CommandBuffer cmd, SwGraphicsPipelineB
             );
         }
 
-        cmd.pushConstants<DrawPC>(pipeline.getLayoutHandle(), DrawPC::sStages, 0, mResources.mDrawPushConstants);
+        cmd.pushConstants<DrawPC>(pipeline.getLayoutHandle(), DrawPC::sStages, 0, drawPushConstants);
 
         cmd.drawIndexedIndirectCount(
             rcsBuffer.getHandle(),

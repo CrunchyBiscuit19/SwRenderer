@@ -289,8 +289,8 @@ void SwGui::System::initializeResources() {
             maxFps * 1.2f,
             ImVec2(0.f, 60.f)
         );
-        ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall);
-        ImGui::Text("Pre-Cull Render Items: %i", SwRenderer::sRendererContext.mStats->mNumInitialRis);
+        ImGui::Text("Draws: %i", SwRenderer::sRendererContext.mStats->mNumDrawCall.load());
+        ImGui::Text("Pre-Cull Render Items: %i", SwRenderer::sRendererContext.mStats->mNumInitialRis.load());
         ImGui::Text("Post-Cull Render Items: %i", *static_cast<std::uint32_t*>(SwRenderer::sRendererContext.mStats->mRisPublishedCount.getMappedPtr()));
         ImGui::Checkbox("Freeze Culling", mScene.getCullSystem().getFreezePtr());
         if (ImGui::Button("Create Render Graph")) {

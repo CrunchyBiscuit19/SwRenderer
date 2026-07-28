@@ -183,7 +183,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 ### Render Graph `SwRenderGraph`
 
-* **`SwRenderGraph`** — collects passes and output images, prunes passes that don't contribute to an output, topologically sorts the rest (`compile()`), and `execute()`s them on a command buffer — inserting the Vulkan barriers implied by each pass's `SwDependency`s.
+* **`SwRenderGraph`** — collects passes and output images, prunes passes that don't contribute to an output, topologically sorts the rest (`compile()`), and `execute()`s them on a command buffer — inserting the Vulkan barriers implied by each pass's `SwDependency`s. Each pass is recorded into its own secondary command buffer in parallel (one secondary command buffer and pool per pass on the frame), then the primary replays them in topological order with the resolved barriers inserted between the `executeCommands` calls.
 * Can export the compiled graph to Graphviz for inspection (`requestRenderGraph()` / `exportRenderGraph()`).
 * **Relations** — owned by the `SwScene`; operates on the `SwPass`es the systems register.
 
@@ -272,7 +272,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 ### Swapchain `SwSwapchain`
 
 * **`SwSwapchain`** — owns the SDL window + surface, the `VkSwapchainKHR` and its `SwSwapchainImage`s, the HDR draw image and depth image rendered into, and the frames-in-flight. Triple-buffered (3 swapchain images) with 2 frames of overlap. Handles image acquire / queue submit / present and window resize.
-* **`SwFrame`** — per-frame-in-flight state: its own graphics command pool + command buffer, a dedicated transfer command pool + command buffer, render fence, image-available semaphore, a transfer-done semaphore (signaled by the transfer submit, waited on by the graphics submit), and a per-frame data buffer.
+* **`SwFrame`** — per-frame-in-flight state: its own graphics command pool + primary command buffer, one secondary command pool + secondary command buffer per pass (so passes can be recorded in parallel), a dedicated transfer command pool + command buffer, render fence, image-available semaphore, a transfer-done semaphore (signaled by the transfer submit, waited on by the graphics submit), and a per-frame data buffer.
 * **`SwFrame::Data`** — the per-frame data payload: a table of `vk::DeviceAddress`es pointing at other GPU buffers (currently just the camera buffer). Each frame `update()` writes the current addresses into the data buffer, decoupling the pointed-to buffers from the frame's lifetime.
 * **Relations** — owns the draw/depth images the systems render into; `getCurrentFrame()` indexes by frame number; the data buffer's device address is fed into systems' push constants as `mFrameBuffer`, and shaders chase the addresses inside it (e.g. `mFrameBuffer->mCameraBuffer`). The camera buffer it points to (holding the `SwCamera::Perspective`, camera world position, and the six frustum planes) is owned and written by `SwCamera`, which keeps one per frame-in-flight and hands back the current frame's buffer.
 
@@ -402,7 +402,7 @@ transform          = mInstancesBuffer[sceneInstanceIndex].mTransformMatrix
 
 1. Wait on the current frame's render fence, reset it, `tick` the [buffer factory](#buffers-swbuffer) and [staging ring](#staging-ring-swstagingring) reclamation, and acquire the next swapchain image.
 2. Record the frame's buffer uploads into the transfer command buffer via `SwImmSubmit::flushTransferInto` and submit them on the dedicated **transfer queue**, signaling the frame's transfer semaphore. This submit happens every frame (even when empty) so the binary semaphore is always signaled. The scene buffers written here (vertex, index, material constants, node transforms, instances, bounds, lights, batches, initial RCS/RIS, and the early/late RCS buffers) are allocated with `CONCURRENT` sharing so no queue-family ownership transfer is needed.
-3. Begin the frame graphics command buffer and fold the accumulated graphics-channel uploads (image copies and shader-read transitions) into its front via `SwImmSubmit::flushInto`, then record the per-frame [render graph](#render-graph-swrendergraph): the passes below are added (some conditionally — skybox, pick, FXAA), the swapchain/draw/depth images are registered as outputs, then `compile()` prunes + topologically sorts them and `execute()` records them with auto-inserted barriers.
+3. Begin the frame graphics command buffer and fold the accumulated graphics-channel uploads (image copies and shader-read transitions) into its front via `SwImmSubmit::flushInto`, then record the per-frame [render graph](#render-graph-swrendergraph): the passes below are added (some conditionally — skybox, pick, FXAA), the swapchain/draw/depth images are registered as outputs, then `compile()` prunes + topologically sorts them and `execute()` records each pass into its own secondary command buffer in parallel before replaying them on the primary in order with auto-inserted barriers.
 4. Transition the swapchain image to present, submit on the graphics queue (waiting on both the image-available semaphore and the transfer semaphore, signalling the rendered semaphore + render fence), and present.
 
 The per-frame pass order — each pass is owned by the system of the same name (see [Scene and Systems](#scene-and-systems)):

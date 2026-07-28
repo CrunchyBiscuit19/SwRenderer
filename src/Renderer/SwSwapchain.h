@@ -28,11 +28,16 @@ private:
 
     SwCommandPool mGraphicsCommandPool;
     SwCommandBuffer mGraphicsCommandBuffer;
+    std::vector<SwCommandPool> mGraphicsSecondaryCommandPools;
+    std::vector<SwCommandBuffer> mGraphicsSecondaryCommandBuffers;
+
     SwCommandPool mTransferCommandPool;
     SwCommandBuffer mTransferCommandBuffer;
+
     SwFence mRenderFence;
     SwSemaphore mAvailableSemaphore;
     SwSemaphore mTransferSemaphore;
+    
     SwAllocatedBuffer mDataBuffer;
 
 public:
@@ -45,6 +50,7 @@ public:
     void update();
 
     inline SwCommandBuffer& getGraphicsCommandBuffer() { return mGraphicsCommandBuffer; };
+    inline SwCommandBuffer& getGraphicsSecondaryCommandBuffer(std::uint32_t index) { return mGraphicsSecondaryCommandBuffers[index]; };
     inline SwCommandBuffer& getTransferCommandBuffer() { return mTransferCommandBuffer; };
     inline SwFence& getRenderFence() { return mRenderFence; };
     inline SwSemaphore& getAvailableSemaphore() { return mAvailableSemaphore; };

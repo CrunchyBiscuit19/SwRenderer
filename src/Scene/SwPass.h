@@ -10,7 +10,7 @@
 
 class SwPass {
 public:
-    enum class Type {
+    enum class Type : std::uint32_t {
         ClearImages,
         IBLSkybox,
         CullEarlyReset,
@@ -43,8 +43,10 @@ public:
         Tonemap,
         FXAA,
         CopyToSwapchain,
-        Gui
+        Gui,
+        NUM_PASSES
     };
+    static constexpr std::uint32_t NUM_PASSES = static_cast<std::uint32_t>(Type::NUM_PASSES); 
 
 private:
     Type mPassType{Type::ClearImages};

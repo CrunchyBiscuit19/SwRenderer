@@ -4,6 +4,8 @@
 #include <Scene/SwRenderGraph.h>
 #include <quill/LogMacros.h>
 
+#include <algorithm>
+#include <execution>
 #include <format>
 #include <fstream>
 #include <magic_enum.hpp>
@@ -329,6 +331,17 @@ void SwRenderGraph::compile() {
 }
 
 void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
+    SwFrame& frame = SwRenderer::sRendererContext.mSwapchain->getCurrentFrame();
+
+    std::for_each(std::execution::par, mSortedPasses.begin(), mSortedPasses.end(), [&frame](SwPass* pass) {
+        SwCommandBuffer& secondary = frame.getGraphicsSecondaryCommandBuffer(static_cast<std::uint32_t>(pass->getPassType()));
+        secondary.reset();
+        secondary.begin(vk::CommandBufferUsageFlagBits::eOneTimeSubmit);
+        pass->execute(secondary.getHandle());
+        secondary.end();
+    });
+
+    // Replay the recorded secondaries on the primary in topological order, inserting the resolved barriers between them.
     for (SwPass* pass : mSortedPasses) {
         for (const SwDependency* deps : {&pass->getDeps()}) {
             for (auto& dep : deps->mReadImages) {
@@ -344,7 +357,7 @@ void SwRenderGraph::execute(SwCommandBuffer& commandBuffer) {
                 dep.mBuffer->emitBarrier(commandBuffer.getHandle(), dep.mDesc.mStage, dep.mDesc.mAccess);
             }
         }
-        pass->execute(commandBuffer.getHandle());
+        commandBuffer.getHandle().executeCommands(frame.getGraphicsSecondaryCommandBuffer(static_cast<std::uint32_t>(pass->getPassType())).getHandle());
     }
 
     SwRenderer::sRendererContext.mSwapchain->getCurrentSwapchainImage().emitTransition(commandBuffer.getHandle(), SwDependency::ImageDepType::PresentSrc);

@@ -8,6 +8,8 @@
 SwFrame::SwFrame()
     : mGraphicsCommandPool(nullptr),
       mGraphicsCommandBuffer(nullptr),
+      mGraphicsSecondaryCommandPools(SwPass::NUM_PASSES),
+      mGraphicsSecondaryCommandBuffers(SwPass::NUM_PASSES),
       mTransferCommandPool(nullptr),
       mTransferCommandBuffer(nullptr),
       mRenderFence(nullptr),
@@ -21,15 +23,28 @@ void SwFrame::initialize(std::uint32_t frameIndex) {
         SwRenderer::sRendererContext.mGraphicsQueueFamily
     );
     mGraphicsCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}GraphicsCommandBuffer", frameIndex), mGraphicsCommandPool);
+    for (std::size_t i = 0; i < mGraphicsSecondaryCommandBuffers.size(); i++) {
+        mGraphicsSecondaryCommandPools[i] = SwCommandPoolFactory::createCommandPool(
+            std::format("Frame{}GraphicsSecondaryCommandPool{}", frameIndex, i),
+            vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+            SwRenderer::sRendererContext.mGraphicsQueueFamily
+        );
+        mGraphicsSecondaryCommandBuffers[i] = SwCommandBufferFactory::createCommandBuffer(
+            std::format("Frame{}GraphicsSecondaryCommandBuffer{}", frameIndex, i), mGraphicsSecondaryCommandPools[i], vk::CommandBufferLevel::eSecondary
+        );
+    }
+
     mTransferCommandPool = SwCommandPoolFactory::createCommandPool(
         std::format("Frame{}TransferCommandPool", frameIndex),
         vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
         SwRenderer::sRendererContext.mTransferQueueFamily
     );
     mTransferCommandBuffer = SwCommandBufferFactory::createCommandBuffer(std::format("Frame{}TransferCommandBuffer", frameIndex), mTransferCommandPool);
+
     mRenderFence = SwFenceFactory::createFence(std::format("Frame{}RenderFence", frameIndex), vk::FenceCreateFlagBits::eSignaled);
     mAvailableSemaphore = SwSemaphoreFactory::createSemaphore(std::format("Frame{}AvailableSemaphore", frameIndex));
     mTransferSemaphore = SwSemaphoreFactory::createSemaphore(std::format("Frame{}TransferSemaphore", frameIndex));
+
     mDataBuffer = SwBufferFactory::createAllocatedBuffer(
         std::format("Frame{}DataBuffer", frameIndex),
         vk::BufferUsageFlagBits::eStorageBuffer,

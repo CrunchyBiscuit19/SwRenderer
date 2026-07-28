@@ -100,10 +100,11 @@ void SwCull::System::initializeEarlyPasses() {
             nullptr
         );
 
-        mResources.mTestPushConstants.mPhase = Phase::Early;
-        cmd.pushConstants<TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), TestPC::sStages, 0, mResources.mTestPushConstants);
+        TestPC testPushConstants = mResources.mTestPushConstants;
+        testPushConstants.mPhase = Phase::Early;
+        cmd.pushConstants<TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), TestPC::sStages, 0, testPushConstants);
 
-        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mTestPushConstants.mRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(testPushConstants.mRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
         cmd.dispatch(groupCountX, 1, 1);
     });
@@ -112,11 +113,12 @@ void SwCull::System::initializeEarlyPasses() {
     mScene.insertPass(SwPass::Type::CullEarlyCompact, [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getPipelineHandle());
 
-        mResources.mCompactPushConstants.mPostRcsBuffer = mScene.getEarlyRcsBuffer();
-        mResources.mCompactPushConstants.mPostRcsCount = mScene.getEarlyRcsCount();
-        cmd.pushConstants<CompactPC>(mResources.mCompactPipelineBundle.getLayoutHandle(), CompactPC::sStages, 0, mResources.mCompactPushConstants);
+        CompactPC compactPushConstants = mResources.mCompactPushConstants;
+        compactPushConstants.mPostRcsBuffer = mScene.getEarlyRcsBuffer();
+        compactPushConstants.mPostRcsCount = mScene.getEarlyRcsCount();
+        cmd.pushConstants<CompactPC>(mResources.mCompactPipelineBundle.getLayoutHandle(), CompactPC::sStages, 0, compactPushConstants);
 
-        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(compactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
         cmd.dispatch(groupCountX, 1, 1);
     });
@@ -147,10 +149,11 @@ void SwCull::System::initializeLatePasses() {
             nullptr
         );
 
-        mResources.mTestPushConstants.mPhase = Phase::Late;
-        cmd.pushConstants<TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), TestPC::sStages, 0, mResources.mTestPushConstants);
+        TestPC testPushConstants = mResources.mTestPushConstants;
+        testPushConstants.mPhase = Phase::Late;
+        cmd.pushConstants<TestPC>(mResources.mTestPipelineBundle.getLayoutHandle(), TestPC::sStages, 0, testPushConstants);
 
-        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mTestPushConstants.mRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(testPushConstants.mRisLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
         cmd.dispatch(groupCountX, 1, 1);
     });
@@ -159,11 +162,12 @@ void SwCull::System::initializeLatePasses() {
     mScene.insertPass(SwPass::Type::CullLateCompact, [&](vk::CommandBuffer cmd) {
         cmd.bindPipeline(mResources.mCompactPipelineBundle.getBindPoint(), mResources.mCompactPipelineBundle.getPipelineHandle());
 
-        mResources.mCompactPushConstants.mPostRcsBuffer = mScene.getLateRcsBuffer();
-        mResources.mCompactPushConstants.mPostRcsCount = mScene.getLateRcsCount();
-        cmd.pushConstants<CompactPC>(mResources.mCompactPipelineBundle.getLayoutHandle(), CompactPC::sStages, 0, mResources.mCompactPushConstants);
+        CompactPC compactPushConstants = mResources.mCompactPushConstants;
+        compactPushConstants.mPostRcsBuffer = mScene.getLateRcsBuffer();
+        compactPushConstants.mPostRcsCount = mScene.getLateRcsCount();
+        cmd.pushConstants<CompactPC>(mResources.mCompactPipelineBundle.getLayoutHandle(), CompactPC::sStages, 0, compactPushConstants);
 
-        std::uint32_t groupCountX = SwHelper::fastDivCeil(mResources.mCompactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
+        std::uint32_t groupCountX = SwHelper::fastDivCeil(compactPushConstants.mPreRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS);
         if (groupCountX == 0) return;
         cmd.dispatch(groupCountX, 1, 1);
     });
