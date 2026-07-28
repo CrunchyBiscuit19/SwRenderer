@@ -820,6 +820,9 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersBuild]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCompactActive]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingLightsCull]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightCalcOffset]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightPrefixSumOffset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightSelect]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
     // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);

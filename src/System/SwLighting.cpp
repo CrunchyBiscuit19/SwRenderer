@@ -272,7 +272,7 @@ void SwLighting::System::initializePasses() {
         cmd.dispatch(SwHelper::fastDivCeil(mResources.mResetPc.mShadowsRcsLimit, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
 
-    // Clusters BuildSw
+    // Clusters Build
     mScene.insertPass(SwPass::Type::LightingClustersBuild, [&](vk::CommandBuffer cmd) {
         auto& clustersBuildPipeline = mResources.mClustersBuildPipelineBundle;
         cmd.bindPipeline(clustersBuildPipeline.getBindPoint(), clustersBuildPipeline.getPipelineHandle());
