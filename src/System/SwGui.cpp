@@ -164,16 +164,16 @@ void SwGui::System::initializeResources() {
         if (ImGui::CollapsingHeader("Lights", ImGuiTreeNodeFlags_DefaultOpen)) {
             ImGui::TextUnformatted("Spawn Light:");
             ImGui::SameLine();
+            if (ImGui::Button("Directional")) {
+                mScene.spawnStandaloneLight(SwLight::Type::Directional);
+            }
+            ImGui::SameLine();
             if (ImGui::Button("Point")) {
                 mScene.spawnStandaloneLight(SwLight::Type::Point);
             }
             ImGui::SameLine();
             if (ImGui::Button("Spot")) {
                 mScene.spawnStandaloneLight(SwLight::Type::Spot);
-            }
-            ImGui::SameLine();
-            if (ImGui::Button("Directional")) {
-                mScene.spawnStandaloneLight(SwLight::Type::Directional);
             }
 
             // Every light in the scene, one entry per instance of its owning asset.
@@ -205,15 +205,15 @@ void SwGui::System::initializeResources() {
 
                         bool transformEdited = false;
                         switch (params.mType) {
-                            case SwLight::Type::Spot:
+                            case SwLight::Type::Directional:
                                 transformEdited |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 1.f);
-                                transformEdited |= ImGui::DragFloat3("Position", glm::value_ptr(translation), 0.1f);
                                 break;
                             case SwLight::Type::Point:
                                 transformEdited |= ImGui::DragFloat3("Position", glm::value_ptr(translation), 0.1f);
                                 break;
-                            case SwLight::Type::Directional:
+                            case SwLight::Type::Spot:
                                 transformEdited |= ImGui::DragFloat3("Rotation", glm::value_ptr(rotation), 1.f);
+                                transformEdited |= ImGui::DragFloat3("Position", glm::value_ptr(translation), 0.1f);
                                 break;
                         }
 

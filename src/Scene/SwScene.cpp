@@ -225,9 +225,9 @@ void SwScene::loadAssets(const std::vector<std::filesystem::path>& paths) {
 
 void SwScene::loadStandaloneLightAssets() {
     constexpr std::array<std::pair<SwLight::Type, const char*>, 3> lightAssetFiles{{
+        {SwLight::Type::Directional, "directional.gltf"},
         {SwLight::Type::Point, "point.gltf"},
         {SwLight::Type::Spot, "spot.gltf"},
-        {SwLight::Type::Directional, "directional.gltf"},
     }};
 
     for (const auto& [type, file] : lightAssetFiles) {

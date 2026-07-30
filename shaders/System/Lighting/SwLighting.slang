@@ -51,6 +51,7 @@ namespace SwLighting {
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public uint* mLightsVisibleIndicesBuffer;
+        public uint* mShadowsLightIndicesBuffer;
         public uint* mShadowMapSlotsCount;
         public uint mLightsLimit;
     };
@@ -257,11 +258,11 @@ namespace SwLighting::Calculation {
                 case SwLight::Type::Directional:
                     contribution *= SwLighting::Shadow::shadowsFactor2D(i, surface.mWorldPos, shadows.mDirectionalMaps, shadows.mSampler);
                     break;
-                case SwLight::Type::Spot:
-                    contribution *= SwLighting::Shadow::shadowsFactor2D(i, surface.mWorldPos, shadows.mSpotMaps, shadows.mSampler);
-                    break;
                 case SwLight::Type::Point:
                     contribution *= SwLighting::Shadow::shadowsFactorCube(i, light, surface.mWorldPos, shadows.mPointMaps, shadows.mSampler);
+                    break;
+                case SwLight::Type::Spot:
+                    contribution *= SwLighting::Shadow::shadowsFactor2D(i, surface.mWorldPos, shadows.mSpotMaps, shadows.mSampler);
                     break;
             }
             color += contribution;
@@ -273,16 +274,19 @@ namespace SwLighting::Calculation {
 namespace SwLighting::Shadow {
     public static const uint SHADOWS_MAP_SIZE = 1024;
     public static const uint MAX_DIRECTIONAL_SHADOW_MAPS = 4;
-    public static const uint MAX_SPOT_SHADOW_MAPS = 16;
     public static const uint MAX_POINT_SHADOW_MAPS = 4;
-    public static const uint MAX_NUM_SHADOW_CASTERS = MAX_DIRECTIONAL_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS;
+    public static const uint MAX_SPOT_SHADOW_MAPS = 16;
+    public static const uint MAX_NUM_SHADOW_CASTERS = MAX_DIRECTIONAL_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS;
+    public static const uint DIRECTIONAL_SHADOW_MAP_BASE = 0;
+    public static const uint POINT_SHADOW_MAP_BASE = MAX_DIRECTIONAL_SHADOW_MAPS;
+    public static const uint SPOT_SHADOW_MAP_BASE = MAX_DIRECTIONAL_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS;
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
 
     public struct Params {
         public Texture2D mDirectionalMaps[MAX_DIRECTIONAL_SHADOW_MAPS];
-        public Texture2D mSpotMaps[MAX_SPOT_SHADOW_MAPS];
         public TextureCube mPointMaps[MAX_POINT_SHADOW_MAPS];
+        public Texture2D mSpotMaps[MAX_SPOT_SHADOW_MAPS];
         public SamplerComparisonState mSampler;
     };
 

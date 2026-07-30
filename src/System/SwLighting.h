@@ -40,11 +40,12 @@ static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
 static constexpr std::string_view SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_DIRECTIONAL_SHADOW_MAPS{4};
-static constexpr std::uint32_t MAX_SPOT_SHADOW_MAPS{16};
 static constexpr std::uint32_t MAX_POINT_SHADOW_MAPS{4};
-static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{MAX_DIRECTIONAL_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS};
+static constexpr std::uint32_t MAX_SPOT_SHADOW_MAPS{16};
+static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{MAX_DIRECTIONAL_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS};
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
+static constexpr vk::DeviceSize SHADOWS_LIGHT_INDICES_BUFFER_SIZE{MAX_NUM_SHADOW_CASTERS * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize SHADOW_MAP_SLOTS_COUNT_SIZE{SwLight::NUM_TYPES * sizeof(std::uint32_t)};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
 
@@ -94,6 +95,7 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mLightsVisibleIndicesBuffer{0};
+    vk::DeviceAddress mShadowsLightIndicesBuffer{0};
     vk::DeviceAddress mShadowMapSlotsCount{0};
     std::uint32_t mLightsCount{0};
 
@@ -168,12 +170,13 @@ struct Resources {
     static void cleanup();
 
     std::array<SwDepthImage2D, MAX_DIRECTIONAL_SHADOW_MAPS> mDirectionalShadowMaps;
-    std::array<SwDepthImage2D, MAX_SPOT_SHADOW_MAPS> mSpotShadowMaps;
     std::array<SwDepthImageCubemap, MAX_POINT_SHADOW_MAPS> mPointShadowMaps;
+    std::array<SwDepthImage2D, MAX_SPOT_SHADOW_MAPS> mSpotShadowMaps;
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
     SwAllocatedBuffer mLightsVisibleIndicesBuffer;  // 1st 4 bytes as count
+    SwAllocatedBuffer mShadowsLightIndicesBuffer;
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
     SwAllocatedBuffer mShadowMapSlotsCount;

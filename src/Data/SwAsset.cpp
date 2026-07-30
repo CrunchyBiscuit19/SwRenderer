@@ -76,9 +76,10 @@ SwLight::Type SwAsset::mapLightType(fastgltf::LightType type) {
     switch (type) {
         case fastgltf::LightType::Directional:
             return SwLight::Type::Directional;
+        case fastgltf::LightType::Point:
+            return SwLight::Type::Point;
         case fastgltf::LightType::Spot:
             return SwLight::Type::Spot;
-        case fastgltf::LightType::Point:
         default:
             return SwLight::Type::Point;
     }

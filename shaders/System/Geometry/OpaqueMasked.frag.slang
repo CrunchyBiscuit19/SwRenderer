@@ -23,9 +23,9 @@ public uniform Texture2D iblBrdfLut;
 [[vk::binding(0, 3)]]
 public uniform Texture2D directionalShadowMaps[SwLighting::Shadow::MAX_DIRECTIONAL_SHADOW_MAPS];
 [[vk::binding(1, 3)]]
-public uniform Texture2D spotShadowMaps[SwLighting::Shadow::MAX_SPOT_SHADOW_MAPS];
-[[vk::binding(2, 3)]]
 public uniform TextureCube pointShadowMaps[SwLighting::Shadow::MAX_POINT_SHADOW_MAPS];
+[[vk::binding(2, 3)]]
+public uniform Texture2D spotShadowMaps[SwLighting::Shadow::MAX_SPOT_SHADOW_MAPS];
 [[vk::binding(3, 3)]]
 public uniform SamplerComparisonState shadowsSampler;
 
@@ -81,8 +81,8 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
 
     SwLighting::Shadow::Params shadows;
     shadows.mDirectionalMaps = directionalShadowMaps;
-    shadows.mSpotMaps = spotShadowMaps;
     shadows.mPointMaps = pointShadowMaps;
+    shadows.mSpotMaps = spotShadowMaps;
     shadows.mSampler = shadowsSampler;
 
     uint clusterIndex = SwLighting::getClusterIndex(

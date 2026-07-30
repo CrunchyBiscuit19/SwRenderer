@@ -19,8 +19,8 @@ void SwLighting::Resources::init() {
         "ShadowsConsumeDescriptorLayout",
         {
             {0, vk::DescriptorType::eSampledImage, MAX_DIRECTIONAL_SHADOW_MAPS},
-            {1, vk::DescriptorType::eSampledImage, MAX_SPOT_SHADOW_MAPS},
-            {2, vk::DescriptorType::eSampledImage, MAX_POINT_SHADOW_MAPS},
+            {1, vk::DescriptorType::eSampledImage, MAX_POINT_SHADOW_MAPS},
+            {2, vk::DescriptorType::eSampledImage, MAX_SPOT_SHADOW_MAPS},
             {3, vk::DescriptorType::eSampler, 1},
         },
         vk::ShaderStageFlagBits::eFragment
@@ -49,8 +49,12 @@ void SwLighting::System::regenerateShadowsRcs() {
 }
 
 void SwLighting::System::initializeResources() {
-    mResources.mLightsVisibleIndicesBuffer =
-        SwBufferFactory::createAllocatedBuffer("LightsVisibleIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mResources.mLightsVisibleIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        "LightsVisibleIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
+    );
+    mResources.mShadowsLightIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ShadowsLightIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_LIGHT_INDICES_BUFFER_SIZE, true
+    );
     mResources.mShadowsRcsBuffer =
         SwBufferFactory::createAllocatedBuffer("ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -106,15 +110,6 @@ void SwLighting::System::initializeResources() {
             true
         );
     }
-    for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++) {
-        mResources.mSpotShadowMaps[i] = SwImageFactory::createDepthImage2D(
-            std::format("SpotShadowMap{}", i),
-            SHADOWS_MAP_FORMAT,
-            vk::Extent3D{SHADOWS_2D_MAP_WIDTH_HEIGHT, SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
-            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
-            true
-        );
-    }
     for (std::uint32_t i = 0; i < MAX_POINT_SHADOW_MAPS; i++) {
         mResources.mPointShadowMaps[i] = SwImageFactory::createDepthImageCubemap(
             std::format("PointShadowMap{}", i),
@@ -122,6 +117,15 @@ void SwLighting::System::initializeResources() {
             vk::Extent3D{SHADOWS_CUBEMAP_WIDTH_HEIGHT, SHADOWS_CUBEMAP_WIDTH_HEIGHT, 1},
             vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
             false
+        );
+    }
+    for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++) {
+        mResources.mSpotShadowMaps[i] = SwImageFactory::createDepthImage2D(
+            std::format("SpotShadowMap{}", i),
+            SHADOWS_MAP_FORMAT,
+            vk::Extent3D{SHADOWS_2D_MAP_WIDTH_HEIGHT, SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
+            vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled,
+            true
         );
     }
 
@@ -133,14 +137,14 @@ void SwLighting::System::initializeResources() {
             0, mResources.mDirectionalShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
         );
     }
-    for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++) {
-        mResources.mShadowsMapsDescriptorSet.writeImage(
-            1, mResources.mSpotShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
-        );
-    }
     for (std::uint32_t i = 0; i < MAX_POINT_SHADOW_MAPS; i++) {
         mResources.mShadowsMapsDescriptorSet.writeImage(
-            2, mResources.mPointShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+            1, mResources.mPointShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
+        );
+    }
+    for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++) {
+        mResources.mShadowsMapsDescriptorSet.writeImage(
+            2, mResources.mSpotShadowMaps[i].getMainImageViewHandle(), nullptr, vk::ImageLayout::eShaderReadOnlyOptimal, i
         );
     }
     mResources.mShadowsMapsDescriptorSet.writeSampler(3, mResources.mShadowsMapsSampler.getHandle());
@@ -150,10 +154,10 @@ void SwLighting::System::initializeResources() {
             mResources.mDirectionalShadowMaps[i].emitTransition(
                 cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral
             );
-        for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++)
-            mResources.mSpotShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
         for (std::uint32_t i = 0; i < MAX_POINT_SHADOW_MAPS; i++)
             mResources.mPointShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
+        for (std::uint32_t i = 0; i < MAX_SPOT_SHADOW_MAPS; i++)
+            mResources.mSpotShadowMaps[i].emitTransition(cmd, vk::PipelineStageFlagBits2::eAllCommands, vk::AccessFlagBits2::eNone, vk::ImageLayout::eGeneral);
     });
 
     mResources.mResetPipelineLayout = SwPipelineFactory::createPipelineLayout("ResetPipelineLayout", nullptr, ResetPC::getRange());
@@ -259,6 +263,7 @@ void SwLighting::System::initializePasses() {
     // Reset
     mScene.insertPass(SwPass::Type::LightingReset, [&](vk::CommandBuffer cmd) {
         cmd.fillBuffer(mResources.mLightsVisibleIndicesBuffer.getHandle(), 0, vk::WholeSize, 0);
+        cmd.fillBuffer(mResources.mShadowsLightIndicesBuffer.getHandle(), 0, vk::WholeSize, UINT32_MAX);
         cmd.fillBuffer(mResources.mShadowsRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mShadowMapSlotsCount.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveBooleansBuffer.getHandle(), 0, vk::WholeSize, 0);
@@ -386,6 +391,7 @@ void SwLighting::System::refreshDataUsage() {
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingReset].getDeps();
         d.clear();
         d.mWriteBuffers.emplace_back(&mResources.mLightsVisibleIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowsLightIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
@@ -442,6 +448,7 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mLightsCullPc.mNodeTransformsBuffer = SwRenderer::sRendererContext.mScene->getNodeTransformsBuffer();
         mResources.mLightsCullPc.mInstancesBuffer = SwRenderer::sRendererContext.mScene->getInstancesBuffer();
         mResources.mLightsCullPc.mLightsVisibleIndicesBuffer = mResources.mLightsVisibleIndicesBuffer;
+        mResources.mLightsCullPc.mShadowsLightIndicesBuffer = mResources.mShadowsLightIndicesBuffer;
         mResources.mLightsCullPc.mShadowMapSlotsCount = mResources.mShadowMapSlotsCount;
         mResources.mLightsCullPc.mLightsCount = SwRenderer::sRendererContext.mScene->getLightIds().size();
 
@@ -458,6 +465,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mWriteBuffers.emplace_back(&mResources.mLightsVisibleIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mReadBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowsLightIndicesBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     }
 
     // Clusters Light Calc Offset
