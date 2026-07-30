@@ -298,7 +298,7 @@ void SwPick::System::generatePickFrame() {
 
 bool SwPick::System::isPicked() {
     return (
-        mScene.getInputSystem().isActive(SwInput::SELECT_OBJECT) && !SwRenderer::sRendererContext.mScene->getCamera().getRelativeMode() &&
+        mScene.getInputSystem().isActive(SwInput::SELECT_OBJECT) && !mScene.getCamera().getRelativeMode() &&
         !ImGui::GetIO().WantCaptureMouse
     );
 }

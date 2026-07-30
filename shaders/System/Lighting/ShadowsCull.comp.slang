@@ -19,7 +19,6 @@ void constructCorners(SwBounds riBounds, float4x4 riModelMatrix, out float4 corn
     }
 }
 
-// The closest point on the world-space AABB to the light is within range means the light can reach the caster.
 bool rangeTest(float3 aabbMin, float3 aabbMax, float3 center, float range) {
     if (range <= 0.f) {
         return true;
@@ -36,7 +35,7 @@ void main(SwLighting::CSInput in) {
         return;
     }
 
-    SwRenderItem* ri = &shadowsCullPc.mShadowsRisBuffer[risIndex];
+    SwRenderItem* ri = &shadowsCullPc.mRisBuffer[risIndex];
     SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[ri->mRcIndex];
 
     SwBounds riBounds = shadowsCullPc.mBoundsBuffer[rc->mBoundsIndex];

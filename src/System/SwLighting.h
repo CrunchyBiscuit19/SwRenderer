@@ -140,8 +140,9 @@ struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
 
 struct ShadowsCullPC : SwPC<ShadowsCullPC> {
     vk::DeviceAddress mShadowsRcsBuffer{0};
-    vk::DeviceAddress mShadowsRisBuffer{0};
+    vk::DeviceAddress mRisBuffer{0};
     vk::DeviceAddress mShadowsRisIndicesBuffer{0};
+    vk::DeviceAddress mShadowsLightIndicesBuffer{0};
     vk::DeviceAddress mLightsBuffer{0};
     vk::DeviceAddress mBoundsBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};

@@ -88,8 +88,9 @@ namespace SwLighting {
 
     public struct ShadowsCullPC {
         public SwRenderCommand* mShadowsRcsBuffer;
-        public SwRenderItem* mShadowsRisBuffer;
+        public SwRenderItem* mRisBuffer;
         public uint* mShadowsRisIndicesBuffer;
+        public uint* mShadowsLightIndicesBuffer;
         public SwLight::Data* mLightsBuffer;
         public SwBounds* mBoundsBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
