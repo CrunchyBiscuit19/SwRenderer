@@ -23,8 +23,8 @@ void main(SwLighting::CSInput in) {
 
     if (visible) {
         uint offset;
-        InterlockedAdd(lightsCullPc.mLitIndicesBuffer[0], 1, offset);  
-        lightsCullPc.mLitIndicesBuffer[1 + offset] = lightIndex;
+        InterlockedAdd(lightsCullPc.mLightsVisibleIndicesBuffer[0], 1, offset);  
+        lightsCullPc.mLightsVisibleIndicesBuffer[1 + offset] = lightIndex;
 
         uint shadowIndex;
         InterlockedAdd(lightsCullPc.mShadowMapSlotsCount[(uint)light.mType], 1, shadowIndex);

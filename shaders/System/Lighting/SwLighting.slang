@@ -50,7 +50,7 @@ namespace SwLighting {
         public SwLight::Data* mLightsBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
-        public uint* mLitIndicesBuffer;
+        public uint* mLightsVisibleIndicesBuffer;
         public uint* mShadowMapSlotsCount;
         public uint mLightsLimit;
     };
@@ -62,7 +62,7 @@ namespace SwLighting {
         public SwInstance::Data* mInstancesBuffer;
         public Cluster* mClustersBuffer;
         public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
-        public uint* mLitIndicesBuffer; // 1st 4 bytes hold the lit light count
+        public uint* mLightsVisibleIndicesBuffer; // 1st 4 bytes hold the lit light count
         public uint* mClustersLightCounts;
     };
 
@@ -78,7 +78,7 @@ namespace SwLighting {
         public SwInstance::Data* mInstancesBuffer;
         public Cluster* mClustersBuffer;
         public uint* mClustersActiveIndicesBuffer; // 1st 4 bytes hold the active cluster count
-        public uint* mLitIndicesBuffer; // 1st 4 bytes hold the lit light count
+        public uint* mLightsVisibleIndicesBuffer; // 1st 4 bytes hold the lit light count
         public uint* mClustersLightIndicesBuffer;
         public uint* mClustersLightCounts;
         public uint* mClustersLightOffsetsBuffer;

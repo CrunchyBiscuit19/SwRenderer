@@ -9,13 +9,13 @@ void main(SwLighting::CSInput in) {
     const uint activeSlot = in.mDispatchThreadID.x;
     const uint litSlot = in.mDispatchThreadID.y;
     const uint activeCount = clustersLightCalcOffsetPc.mClustersActiveIndicesBuffer[0];
-    const uint litCount = clustersLightCalcOffsetPc.mLitIndicesBuffer[0];
+    const uint litCount = clustersLightCalcOffsetPc.mLightsVisibleIndicesBuffer[0];
     if (activeSlot >= activeCount || litSlot >= litCount) {
         return;
     }
 
     const uint clusterIndex = clustersLightCalcOffsetPc.mClustersActiveIndicesBuffer[1 + activeSlot];
-    const uint lightIndex = clustersLightCalcOffsetPc.mLitIndicesBuffer[1 + litSlot];
+    const uint lightIndex = clustersLightCalcOffsetPc.mLightsVisibleIndicesBuffer[1 + litSlot];
 
     SwLight::Data light = clustersLightCalcOffsetPc.mLightsBuffer[lightIndex];
     SwLighting::Cluster cluster = clustersLightCalcOffsetPc.mClustersBuffer[clusterIndex];

@@ -93,7 +93,7 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     vk::DeviceAddress mLightsBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
-    vk::DeviceAddress mLitIndicesBuffer{0};
+    vk::DeviceAddress mLightsVisibleIndicesBuffer{0};
     vk::DeviceAddress mShadowMapSlotsCount{0};
     std::uint32_t mLightsCount{0};
 
@@ -107,7 +107,7 @@ struct ClustersLightCalcOffsetPC : SwPC<ClustersLightCalcOffsetPC> {
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mClustersBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
-    vk::DeviceAddress mLitIndicesBuffer{0};
+    vk::DeviceAddress mLightsVisibleIndicesBuffer{0};
     vk::DeviceAddress mClustersLightCounts{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -127,7 +127,7 @@ struct ClustersLightSelectPC : SwPC<ClustersLightSelectPC> {
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mClustersBuffer{0};
     vk::DeviceAddress mClustersActiveIndicesBuffer{0};
-    vk::DeviceAddress mLitIndicesBuffer{0};
+    vk::DeviceAddress mLightsVisibleIndicesBuffer{0};
     vk::DeviceAddress mClustersLightIndicesBuffer{0};
     vk::DeviceAddress mClustersLightCounts{0};
     vk::DeviceAddress mClustersLightOffsetsBuffer{0};
@@ -173,7 +173,7 @@ struct Resources {
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
-    SwAllocatedBuffer mLitIndicesBuffer;  // 1st 4 bytes as count
+    SwAllocatedBuffer mLightsVisibleIndicesBuffer;  // 1st 4 bytes as count
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
     SwAllocatedBuffer mShadowMapSlotsCount;
