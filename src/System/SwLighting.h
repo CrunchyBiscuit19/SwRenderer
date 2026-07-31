@@ -25,6 +25,11 @@ struct Cluster {
     glm::vec3 mMax{0};
 };
 
+struct ShadowView {
+    std::uint32_t mLightIndex{0};
+    std::uint32_t mFace{0};  // cube face for point lights, cascade for directional, unused (0) for spot
+};
+
 static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/Lighting"};
 static const std::filesystem::path RESET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "Reset.comp.spv"};
 static const std::filesystem::path CLUSTERS_BUILD_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersBuild.comp.spv"};
@@ -43,9 +48,17 @@ static constexpr std::uint32_t MAX_DIRECTIONAL_SHADOW_MAPS{4};
 static constexpr std::uint32_t MAX_POINT_SHADOW_MAPS{4};
 static constexpr std::uint32_t MAX_SPOT_SHADOW_MAPS{16};
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{MAX_DIRECTIONAL_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS};
+static constexpr std::uint32_t NUM_DIRECTIONAL_CASCADES{4};
+static constexpr std::uint32_t VIEWS_PER_DIRECTIONAL{NUM_DIRECTIONAL_CASCADES};
+static constexpr std::uint32_t VIEWS_PER_POINT{6};
+static constexpr std::uint32_t VIEWS_PER_SPOT{1};
+static constexpr std::uint32_t DIRECTIONAL_VIEW_BASE{0};
+static constexpr std::uint32_t POINT_VIEW_BASE{MAX_DIRECTIONAL_SHADOW_MAPS * VIEWS_PER_DIRECTIONAL};
+static constexpr std::uint32_t SPOT_VIEW_BASE{POINT_VIEW_BASE + MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT};
+static constexpr std::uint32_t MAX_NUM_SHADOW_VIEWS{SPOT_VIEW_BASE + MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT};
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
-static constexpr vk::DeviceSize SHADOWS_LIGHT_INDICES_BUFFER_SIZE{MAX_NUM_SHADOW_CASTERS * sizeof(std::uint32_t)};
+static constexpr vk::DeviceSize SHADOWS_VIEWS_BUFFER_SIZE{MAX_NUM_SHADOW_VIEWS * sizeof(ShadowView)};
 static constexpr vk::DeviceSize SHADOW_MAP_SLOTS_COUNT_SIZE{SwLight::NUM_TYPES * sizeof(std::uint32_t)};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
 
@@ -95,7 +108,7 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mLightsVisibleIndicesBuffer{0};
-    vk::DeviceAddress mShadowsLightIndicesBuffer{0};
+    vk::DeviceAddress mShadowsViewsBuffer{0};
     vk::DeviceAddress mShadowMapSlotsCount{0};
     std::uint32_t mLightsCount{0};
 
@@ -142,11 +155,13 @@ struct ShadowsCullPC : SwPC<ShadowsCullPC> {
     vk::DeviceAddress mShadowsRcsBuffer{0};
     vk::DeviceAddress mRisBuffer{0};
     vk::DeviceAddress mShadowsRisIndicesBuffer{0};
-    vk::DeviceAddress mShadowsLightIndicesBuffer{0};
+    vk::DeviceAddress mShadowsViewsBuffer{0};
     vk::DeviceAddress mLightsBuffer{0};
     vk::DeviceAddress mBoundsBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
+    std::uint32_t mNumRcsPerShadowView{0};
+    std::uint32_t mNumRisPerShadowView{0};
     std::uint32_t mShadowsRisLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -177,7 +192,7 @@ struct Resources {
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
     SwAllocatedBuffer mLightsVisibleIndicesBuffer;  // 1st 4 bytes as count
-    SwAllocatedBuffer mShadowsLightIndicesBuffer;
+    SwAllocatedBuffer mShadowsViewsBuffer;
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
     SwAllocatedBuffer mShadowMapSlotsCount;

@@ -51,7 +51,7 @@ namespace SwLighting {
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public uint* mLightsVisibleIndicesBuffer;
-        public uint* mShadowsLightIndicesBuffer;
+        public SwLighting::Shadow::View* mShadowsViewsBuffer;
         public uint* mShadowMapSlotsCount;
         public uint mLightsLimit;
     };
@@ -90,11 +90,13 @@ namespace SwLighting {
         public SwRenderCommand* mShadowsRcsBuffer;
         public SwRenderItem* mRisBuffer;
         public uint* mShadowsRisIndicesBuffer;
-        public uint* mShadowsLightIndicesBuffer;
+        public SwLighting::Shadow::View* mShadowsViewsBuffer;
         public SwLight::Data* mLightsBuffer;
         public SwBounds* mBoundsBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
+        public uint mNumRcsPerShadowView;
+        public uint mNumRisPerShadowView;
         public uint mShadowsRisLimit;
     };
 
@@ -278,11 +280,28 @@ namespace SwLighting::Shadow {
     public static const uint MAX_POINT_SHADOW_MAPS = 4;
     public static const uint MAX_SPOT_SHADOW_MAPS = 16;
     public static const uint MAX_NUM_SHADOW_CASTERS = MAX_DIRECTIONAL_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS;
+
     public static const uint DIRECTIONAL_SHADOW_MAP_BASE = 0;
     public static const uint POINT_SHADOW_MAP_BASE = MAX_DIRECTIONAL_SHADOW_MAPS;
     public static const uint SPOT_SHADOW_MAP_BASE = MAX_DIRECTIONAL_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS;
+
+    public static const uint NUM_DIRECTIONAL_CASCADES = 4;
+    public static const uint VIEWS_PER_DIRECTIONAL = NUM_DIRECTIONAL_CASCADES;
+    public static const uint VIEWS_PER_POINT = 6;
+    public static const uint VIEWS_PER_SPOT = 1;
+
+    public static const uint DIRECTIONAL_VIEW_BASE = 0;
+    public static const uint POINT_VIEW_BASE = MAX_DIRECTIONAL_SHADOW_MAPS * VIEWS_PER_DIRECTIONAL;
+    public static const uint SPOT_VIEW_BASE = POINT_VIEW_BASE + MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT;
+    public static const uint MAX_NUM_SHADOW_VIEWS = SPOT_VIEW_BASE + MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT;
+
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
+
+    public struct View {
+        public uint mLightIndex;
+        public uint mFace; // cube face for point lights, cascade for directional, 0 for spot
+    };
 
     public struct Params {
         public Texture2D mDirectionalMaps[MAX_DIRECTIONAL_SHADOW_MAPS];

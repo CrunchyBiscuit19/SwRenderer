@@ -34,16 +34,26 @@ void main(SwLighting::CSInput in) {
         switch (light.mType) {
             case SwLight::Type::Directional:
                 if (shadowIndex >= SwLighting::Shadow::MAX_DIRECTIONAL_SHADOW_MAPS) break;
-                lightsCullPc.mShadowsLightIndicesBuffer[SwLighting::Shadow::DIRECTIONAL_SHADOW_MAP_BASE + shadowIndex] = lightIndex;
+                for (uint cascade = 0; cascade < SwLighting::Shadow::VIEWS_PER_DIRECTIONAL; cascade++) {
+                    uint view = SwLighting::Shadow::DIRECTIONAL_VIEW_BASE + shadowIndex * SwLighting::Shadow::VIEWS_PER_DIRECTIONAL + cascade;
+                    SwLighting::Shadow::View entry = {lightIndex, cascade};
+                    lightsCullPc.mShadowsViewsBuffer[view] = entry;
+                }
                 break;
             case SwLight::Type::Point:
                 if (shadowIndex >= SwLighting::Shadow::MAX_POINT_SHADOW_MAPS) break;
-                lightsCullPc.mShadowsLightIndicesBuffer[SwLighting::Shadow::POINT_SHADOW_MAP_BASE + shadowIndex] = lightIndex;
+                for (uint face = 0; face < SwLighting::Shadow::VIEWS_PER_POINT; face++) {
+                    uint view = SwLighting::Shadow::POINT_VIEW_BASE + shadowIndex * SwLighting::Shadow::VIEWS_PER_POINT + face;
+                    SwLighting::Shadow::View entry = {lightIndex, face};
+                    lightsCullPc.mShadowsViewsBuffer[view] = entry;
+                }
                 break;
-            case SwLight::Type::Spot:
+            case SwLight::Type::Spot: {
                 if (shadowIndex >= SwLighting::Shadow::MAX_SPOT_SHADOW_MAPS) break;
-                lightsCullPc.mShadowsLightIndicesBuffer[SwLighting::Shadow::SPOT_SHADOW_MAP_BASE + shadowIndex] = lightIndex;
+                SwLighting::Shadow::View spotEntry = {lightIndex, 0};
+                lightsCullPc.mShadowsViewsBuffer[SwLighting::Shadow::SPOT_VIEW_BASE + shadowIndex] = spotEntry;
                 break;
+            }
         }
     }
 }

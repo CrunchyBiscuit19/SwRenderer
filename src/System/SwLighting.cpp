@@ -35,11 +35,11 @@ void SwLighting::System::regenerateShadowsRcs() {
     if (mScene.getRcs().empty()) return;
 
     const std::uint64_t rcsBytes = mScene.getRcs().size() * sizeof(SwRenderCommand);
-    const std::uint64_t shadowRisIndicesBytes = mScene.getRis().size() * sizeof(std::uint32_t) * MAX_NUM_SHADOW_CASTERS;
+    const std::uint64_t shadowRisIndicesBytes = mScene.getRis().size() * sizeof(std::uint32_t) * MAX_NUM_SHADOW_VIEWS;
 
     SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsBytes, shadowRisIndicesBytes](vk::CommandBuffer cmd) {
-        std::array<vk::BufferCopy, MAX_NUM_SHADOW_CASTERS> shadowRcsCopies;
-        for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_CASTERS; i++) {
+        std::array<vk::BufferCopy, MAX_NUM_SHADOW_VIEWS> shadowRcsCopies;
+        for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_VIEWS; i++) {
             shadowRcsCopies[i] = vk::BufferCopy{0, i * rcsBytes, rcsBytes};
         }
         mResources.mShadowsRcsBuffer.copyFrom(cmd, mScene.getInitialRcsBuffer(), shadowRcsCopies);
@@ -52,8 +52,8 @@ void SwLighting::System::initializeResources() {
     mResources.mLightsVisibleIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "LightsVisibleIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
-    mResources.mShadowsLightIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowsLightIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_LIGHT_INDICES_BUFFER_SIZE, true
+    mResources.mShadowsViewsBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ShadowsViewsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_VIEWS_BUFFER_SIZE, true
     );
     mResources.mShadowsRcsBuffer =
         SwBufferFactory::createAllocatedBuffer("ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
@@ -263,7 +263,7 @@ void SwLighting::System::initializePasses() {
     // Reset
     mScene.insertPass(SwPass::Type::LightingReset, [&](vk::CommandBuffer cmd) {
         cmd.fillBuffer(mResources.mLightsVisibleIndicesBuffer.getHandle(), 0, vk::WholeSize, 0);
-        cmd.fillBuffer(mResources.mShadowsLightIndicesBuffer.getHandle(), 0, vk::WholeSize, UINT32_MAX);
+        cmd.fillBuffer(mResources.mShadowsViewsBuffer.getHandle(), 0, vk::WholeSize, UINT32_MAX);
         cmd.fillBuffer(mResources.mShadowsRcsBuffer.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mShadowMapSlotsCount.getHandle(), 0, vk::WholeSize, 0);
         cmd.fillBuffer(mResources.mClustersActiveBooleansBuffer.getHandle(), 0, vk::WholeSize, 0);
@@ -373,10 +373,8 @@ void SwLighting::System::initializePasses() {
         auto& shadowsCullPipeline = mResources.mShadowsCullPipelineBundle;
         cmd.bindPipeline(shadowsCullPipeline.getBindPoint(), shadowsCullPipeline.getPipelineHandle());
         cmd.pushConstants<ShadowsCullPC>(shadowsCullPipeline.getLayoutHandle(), ShadowsCullPC::sStages, 0, mResources.mShadowsCullPc);
-        std::uint32_t numLights = mScene.getLightIds().size();
-        if (numLights == 0) return;
         cmd.dispatch(
-            SwHelper::fastDivCeil(numLights, SwRenderer::MAX_2D_WORKGROUP_THREADS),
+            SwHelper::fastDivCeil(MAX_NUM_SHADOW_VIEWS, SwRenderer::MAX_2D_WORKGROUP_THREADS),
             SwHelper::fastDivCeil(mScene.getRis().size(), SwRenderer::MAX_2D_WORKGROUP_THREADS),
             1
         );
@@ -397,12 +395,12 @@ void SwLighting::System::refreshDataUsage() {
     // Reset
     {
         mResources.mResetPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer;
-        mResources.mResetPc.mShadowsRcsLimit = mScene.getRcs().size() * MAX_NUM_SHADOW_CASTERS;
+        mResources.mResetPc.mShadowsRcsLimit = mScene.getRcs().size() * MAX_NUM_SHADOW_VIEWS;
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingReset].getDeps();
         d.clear();
         d.mWriteBuffers.emplace_back(&mResources.mLightsVisibleIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
-        d.mWriteBuffers.emplace_back(&mResources.mShadowsLightIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::TransferWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::TransferWrite);
@@ -459,7 +457,7 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mLightsCullPc.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
         mResources.mLightsCullPc.mInstancesBuffer = mScene.getInstancesBuffer();
         mResources.mLightsCullPc.mLightsVisibleIndicesBuffer = mResources.mLightsVisibleIndicesBuffer;
-        mResources.mLightsCullPc.mShadowsLightIndicesBuffer = mResources.mShadowsLightIndicesBuffer;
+        mResources.mLightsCullPc.mShadowsViewsBuffer = mResources.mShadowsViewsBuffer;
         mResources.mLightsCullPc.mShadowMapSlotsCount = mResources.mShadowMapSlotsCount;
         mResources.mLightsCullPc.mLightsCount = mScene.getLightIds().size();
 
@@ -476,7 +474,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mWriteBuffers.emplace_back(&mResources.mLightsVisibleIndicesBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mReadBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
-        d.mWriteBuffers.emplace_back(&mResources.mShadowsLightIndicesBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     }
 
     // Clusters Light Calc Offset
@@ -550,12 +548,14 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mShadowsCullPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer;
         mResources.mShadowsCullPc.mRisBuffer = mScene.getRisBuffer();
         mResources.mShadowsCullPc.mShadowsRisIndicesBuffer = mResources.mShadowsRisIndicesBuffer;
-        mResources.mShadowsCullPc.mShadowsLightIndicesBuffer = mResources.mShadowsLightIndicesBuffer;
+        mResources.mShadowsCullPc.mShadowsViewsBuffer = mResources.mShadowsViewsBuffer;
         mResources.mShadowsCullPc.mLightsBuffer = mScene.getLightsBuffer();
         mResources.mShadowsCullPc.mBoundsBuffer = mScene.getBoundsBuffer();
         mResources.mShadowsCullPc.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
         mResources.mShadowsCullPc.mInstancesBuffer = mScene.getInstancesBuffer();
-        mResources.mShadowsCullPc.mShadowsRisLimit = mScene.getRis().size() * MAX_NUM_SHADOW_CASTERS;
+        mResources.mShadowsCullPc.mNumRcsPerShadowView = mScene.getRcs().size();
+        mResources.mShadowsCullPc.mNumRisPerShadowView = mScene.getRis().size();
+        mResources.mShadowsCullPc.mShadowsRisLimit = mScene.getRis().size() * MAX_NUM_SHADOW_VIEWS;
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowsCull].getDeps();
         d.clear();
@@ -563,7 +563,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mReadBuffers.emplace_back(&mScene.getRisBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
-        d.mReadBuffers.emplace_back(&mResources.mShadowsLightIndicesBuffer, SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);

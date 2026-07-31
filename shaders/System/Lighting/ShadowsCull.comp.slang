@@ -30,22 +30,31 @@ bool rangeTest(float3 aabbMin, float3 aabbMax, float3 center, float range) {
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
 void main(SwLighting::CSInput in) {
-    uint risIndex = in.mDispatchThreadID.x;
+    uint viewIndex = in.mDispatchThreadID.x;
+    if (viewIndex >= SwLighting::Shadow::MAX_NUM_SHADOW_VIEWS) {
+        return;
+    }
+    SwLighting::Shadow::View view = shadowsCullPc.mShadowsViewsBuffer[viewIndex];
+    
+    uint lightIndex = view.mLightIndex;
+    if (lightIndex == 0xFFFFFFFFu) {
+        return;
+    }
+
+    uint risIndex = in.mDispatchThreadID.y;
     if (risIndex >= shadowsCullPc.mShadowsRisLimit) {
         return;
     }
 
     SwRenderItem* ri = &shadowsCullPc.mRisBuffer[risIndex];
-    SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[ri->mRcIndex];
+    SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[viewIndex * shadowsCullPc.mNumRcsPerShadowView + ri->mRcIndex];
 
     SwBounds riBounds = shadowsCullPc.mBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowsCullPc.mNodeTransformsBuffer[rc->mNodeTransformIndex];
     float4x4 riInstanceTransform = shadowsCullPc.mInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
-    uint activeLightIndex = 0;  // TODO: source the per-dispatch shadow-caster index once the cull dispatch is rebuilt
-    uint sceneLightsIndex = activeLightIndex;  // TODO: map the shadow-caster slot to its scene light index
-    SwLight::Data light = shadowsCullPc.mLightsBuffer[sceneLightsIndex];
+    SwLight::Data light = shadowsCullPc.mLightsBuffer[lightIndex];
     float4x4 lightNodeTransform = shadowsCullPc.mNodeTransformsBuffer[light.mNodeTransformIndex];
     float4x4 lightInstanceTransform = shadowsCullPc.mInstancesBuffer[light.mInstanceIndex].mTransformMatrix;
     float4x4 lightModelMatrix = mul(lightInstanceTransform, lightNodeTransform);
@@ -70,6 +79,6 @@ void main(SwLighting::CSInput in) {
     if (visible) {
         uint offset;
         InterlockedAdd(rc->mRiCount, 1, offset);
-        shadowsCullPc.mShadowsRisIndicesBuffer[rc->mFirstRi + offset] = ri->mInstanceIndex;
+        shadowsCullPc.mShadowsRisIndicesBuffer[viewIndex * shadowsCullPc.mNumRisPerShadowView + (rc->mFirstRi + offset)] = ri->mInstanceIndex;
     }
 }
