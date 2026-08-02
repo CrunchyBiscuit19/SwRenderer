@@ -744,14 +744,9 @@ void SwScene::perFrameUpdate() {
         refreshLightIndices();
         reloadLightsBuffer();
     } else if (mFlags.mReloadMainInstancesBuffer || mFlags.mLightEdited) {
-        if (mFlags.mReloadMainInstancesBuffer) {
-            reloadInstancesBuffer();
-        }
-        if (mFlags.mLightEdited) {
-            reloadLightsBuffer();  // light params changed; re-upload without touching indices
-        }
+        if (mFlags.mReloadMainInstancesBuffer) reloadInstancesBuffer();
+        if (mFlags.mLightEdited) reloadLightsBuffer();
     }
-    resetFlags();
 
     fillAssetImages();
 
@@ -817,6 +812,9 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersMarkActive]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersCompactActive]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingLightsCull]);
+    if (mFlags.mLightEdited) {
+        mRenderGraph.addPass(&mPasses[SwPass::Type::LightingLightsFrustum]);
+    }
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightCalcOffset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightPrefixSumOffset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightSelect]);

@@ -199,6 +199,12 @@ void SwLighting::System::initializeResources() {
     mResources.mLightsCullPipelineBundle =
         SwComputePipelineFactory::createComputePipeline("LightsCullPipeline", {lightsCullShader.getHandle(), mResources.mLightsCullPipelineLayout.getHandle()});
 
+    mResources.mLightsFrustumPipelineLayout = SwPipelineFactory::createPipelineLayout("LightsFrustumPipelineLayout", nullptr, LightsFrustumPC::getRange());
+    SwShader lightsFrustumShader = SwShaderFactory::createShader("LightsFrustumShaderModule", LIGHTS_FRUSTUM_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
+    mResources.mLightsFrustumPipelineBundle = SwComputePipelineFactory::createComputePipeline(
+        "LightsFrustumPipeline", {lightsFrustumShader.getHandle(), mResources.mLightsFrustumPipelineLayout.getHandle()}
+    );
+
     mResources.mClustersLightCalcOffsetPipelineLayout =
         SwPipelineFactory::createPipelineLayout("ClustersLightCalcOffsetPipelineLayout", nullptr, ClustersLightCalcOffsetPC::getRange());
     SwShader clustersLightCalcOffsetShader =
@@ -329,6 +335,20 @@ void SwLighting::System::initializePasses() {
         if (numLights == 0) return;
         cmd.dispatch(SwHelper::fastDivCeil(numLights, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
     });
+
+    // Lights Frustum
+    mScene.insertPass(
+        SwPass::Type::LightingLightsFrustum,
+        [&](vk::CommandBuffer cmd) {
+            auto& lightsFrustumPipeline = mResources.mLightsFrustumPipelineBundle;
+            cmd.bindPipeline(lightsFrustumPipeline.getBindPoint(), lightsFrustumPipeline.getPipelineHandle());
+            cmd.pushConstants<LightsFrustumPC>(lightsFrustumPipeline.getLayoutHandle(), LightsFrustumPC::sStages, 0, mResources.mLightsFrustumPc);
+            std::uint32_t numLights = mScene.getLightIds().size();
+            if (numLights == 0) return;
+            cmd.dispatch(SwHelper::fastDivCeil(numLights, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+        },
+        true
+    );
 
     // Clusters Light Calc Offset
     mScene.insertPass(SwPass::Type::LightingClustersLightCalcOffset, [&](vk::CommandBuffer cmd) {
@@ -475,6 +495,21 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowMapSlotsCount, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
+    }
+
+    // Lights Frustum
+    {
+        mResources.mLightsFrustumPc.mLightsBuffer = mScene.getLightsBuffer();
+        mResources.mLightsFrustumPc.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
+        mResources.mLightsFrustumPc.mInstancesBuffer = mScene.getInstancesBuffer();
+        mResources.mLightsFrustumPc.mLightsCount = mScene.getLightIds().size();
+
+        SwDependency& d = mScene.mPasses[SwPass::Type::LightingLightsFrustum].getDeps();
+        d.clear();
+        d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageReadWrite);
     }
 
     // Clusters Light Calc Offset

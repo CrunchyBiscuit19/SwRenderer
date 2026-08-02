@@ -54,7 +54,7 @@ void main(SwLighting::CSInput in) {
     float4x4 riInstanceTransform = shadowsCullPc.mInstancesBuffer[ri->mInstanceIndex].mTransformMatrix;
     float4x4 riModelMatrix = mul(riInstanceTransform, riNodeTransform);
 
-    SwLight::Data light = shadowsCullPc.mLightsBuffer[lightIndex];
+    SwLight::Data light = shadowsCullPc.mLightsBuffer[lightIndex]; 
     float4x4 lightNodeTransform = shadowsCullPc.mNodeTransformsBuffer[light.mNodeTransformIndex];
     float4x4 lightInstanceTransform = shadowsCullPc.mInstancesBuffer[light.mInstanceIndex].mTransformMatrix;
     float4x4 lightModelMatrix = mul(lightInstanceTransform, lightNodeTransform);
@@ -68,8 +68,9 @@ void main(SwLighting::CSInput in) {
     SwBounds::fromCorners(corners, aabbMin, aabbMax);
 
     bool visible = true;
-    if (light.mType == SwLight::Type::Spot) {
-        //SwFrustum frustumData = ...;  // TODO: source the rebuilt per-light frustum
+    if (light.mType == SwLight::Type::Spot || light.mType == SwLight::Type::Point) {
+        
+        //SwFrustum frustumData =  TODO: source the rebuilt per-light frustum
         //visible = SwFrustum::aabbInFrustum(frustumData, aabbMin, aabbMax);
     }
     if (visible && light.mType != SwLight::Type::Directional) {

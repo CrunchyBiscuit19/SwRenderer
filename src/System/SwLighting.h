@@ -36,6 +36,7 @@ static const std::filesystem::path CLUSTERS_BUILD_SHADER_PATH{std::filesystem::p
 static const std::filesystem::path CLUSTERS_MARK_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersMarkActive.comp.spv"};
 static const std::filesystem::path CLUSTERS_COMPACT_ACTIVE_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersCompactActive.comp.spv"};
 static const std::filesystem::path LIGHTS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "LightsCull.comp.spv"};
+static const std::filesystem::path LIGHTS_FRUSTUM_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "LightsFrustum.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_CALC_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightCalcOffset.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightPrefixSumOffset.comp.spv"};
 static const std::filesystem::path CLUSTERS_LIGHT_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightSelect.comp.spv"};
@@ -110,6 +111,15 @@ struct LightsCullPC : SwPC<LightsCullPC> {
     vk::DeviceAddress mLightsVisibleIndicesBuffer{0};
     vk::DeviceAddress mShadowsViewsBuffer{0};
     vk::DeviceAddress mShadowMapSlotsCount{0};
+    std::uint32_t mLightsCount{0};
+
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
+};
+
+struct LightsFrustumPC : SwPC<LightsFrustumPC> {
+    vk::DeviceAddress mLightsBuffer{0};
+    vk::DeviceAddress mNodeTransformsBuffer{0};
+    vk::DeviceAddress mInstancesBuffer{0};
     std::uint32_t mLightsCount{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
@@ -226,6 +236,10 @@ struct Resources {
     LightsCullPC mLightsCullPc;
     SwPipelineLayout mLightsCullPipelineLayout;
     SwComputePipelineBundle mLightsCullPipelineBundle;
+
+    LightsFrustumPC mLightsFrustumPc;
+    SwPipelineLayout mLightsFrustumPipelineLayout;
+    SwComputePipelineBundle mLightsFrustumPipelineBundle;
 
     ClustersLightCalcOffsetPC mClustersLightCalcOffsetPc;
     SwPipelineLayout mClustersLightCalcOffsetPipelineLayout;

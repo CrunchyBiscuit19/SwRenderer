@@ -262,6 +262,8 @@ void SwRenderer::run() {
 
         mScene.draw();
 
+        mScene.resetFlags();
+
         mSwapchain.incrementFrameNumber();
 
         auto end = std::chrono::system_clock::now();
