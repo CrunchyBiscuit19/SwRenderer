@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Data/SwBatch.h>
+#include <Data/SwFrustum.h>
 #include <Data/SwLight.h>
 #include <Resource/SwBuffer.h>
 #include <Resource/SwDescriptor.h>
@@ -60,6 +61,7 @@ static constexpr std::uint32_t MAX_NUM_SHADOW_VIEWS{SPOT_VIEW_BASE + MAX_SPOT_SH
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
 static constexpr vk::DeviceSize SHADOWS_VIEWS_BUFFER_SIZE{MAX_NUM_SHADOW_VIEWS * sizeof(ShadowView)};
+static constexpr vk::DeviceSize LIGHTS_FRUSTUMS_BUFFER_SIZE{MAX_NUM_SHADOW_VIEWS * sizeof(SwFrustum)};
 static constexpr vk::DeviceSize SHADOW_MAP_SLOTS_COUNT_SIZE{SwLight::NUM_TYPES * sizeof(std::uint32_t)};
 static constexpr vk::Format SHADOWS_MAP_FORMAT{vk::Format::eD32Sfloat};
 
@@ -120,7 +122,9 @@ struct LightsFrustumPC : SwPC<LightsFrustumPC> {
     vk::DeviceAddress mLightsBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
-    std::uint32_t mLightsCount{0};
+    vk::DeviceAddress mShadowsViewsBuffer{0};
+    vk::DeviceAddress mLightsFrustumsBuffer{0};
+    std::uint32_t mShadowViewsLimit{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
@@ -203,6 +207,7 @@ struct Resources {
 
     SwAllocatedBuffer mLightsVisibleIndicesBuffer;  // 1st 4 bytes as count
     SwAllocatedBuffer mShadowsViewsBuffer;
+    SwAllocatedBuffer mLightsFrustumsBuffer;
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
     SwAllocatedBuffer mShadowMapSlotsCount;

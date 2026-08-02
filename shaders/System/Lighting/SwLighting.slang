@@ -60,7 +60,9 @@ namespace SwLighting {
         public SwLight::Data* mLightsBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
-        public uint mLightsLimit;
+        public SwLighting::Shadow::View* mShadowsViewsBuffer;
+        public SwFrustum* mLightsFrustumsBuffer;
+        public uint mShadowViewsLimit;
     };
 
     public struct ClustersLightCalcOffsetPC {

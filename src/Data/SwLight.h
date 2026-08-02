@@ -24,7 +24,6 @@ public:
         glm::vec3 mBasePosition{0.f};
         glm::vec3 mBaseDirection{0.f, 0.f, -1.f};
         glm::uvec2 mShadowMapSlot{0};
-        SwFrustum mFrustum;
     };
 
     struct Params {

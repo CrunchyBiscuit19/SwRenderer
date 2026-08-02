@@ -411,7 +411,7 @@ The per-frame pass order — each pass is owned by the system of the same name (
 ClearImages → [IBLSkybox] → CullEarlyReset → CullEarlyTest → CullEarlyCompact
 → GeometryEarlyOpaque → CullPrepOcclusion → CullLateReset → CullLateTest
 → CullLateCompact → CullPublishCount → LightingReset → LightingLightsCull
-→ [LightingLightsFrustum] → [LightingShadowsCull → LightingShadowsDraw] → GeometryLateOpaque → GeometryMasked
+→ LightingLightsFrustum → [LightingShadowsCull → LightingShadowsDraw] → GeometryLateOpaque → GeometryMasked
 → GeometryTransparent → [PickDraw → PickReadback → PickSelect] → WBOITComposite
 → Tonemap → [FXAA] → CopyToSwapchain → Gui
 ```

@@ -1,7 +1,5 @@
 module SwLight;
 
-__exported import Data.SwFrustum;
-
 namespace SwLight {
     public enum Type : uint {
         Directional = 0,
@@ -21,6 +19,5 @@ namespace SwLight {
         public float3 mBasePosition;       // light position in node-local space
         public float3 mBaseDirection;      // light forward in node-local space (glTF local -Z)
         public uint2 mShadowMapSlot;
-        public SwFrustum mFrustum;         // world-space frustum, rebuilt by the LightsFrustum pass on edit
     };
 }
