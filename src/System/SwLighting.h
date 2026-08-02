@@ -174,6 +174,7 @@ struct ShadowsCullPC : SwPC<ShadowsCullPC> {
     vk::DeviceAddress mBoundsBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
+    vk::DeviceAddress mLightsFrustumsBuffer{0};
     std::uint32_t mNumRcsPerShadowView{0};
     std::uint32_t mNumRisPerShadowView{0};
     std::uint32_t mShadowsRisLimit{0};

@@ -69,9 +69,8 @@ void main(SwLighting::CSInput in) {
 
     bool visible = true;
     if (light.mType == SwLight::Type::Spot || light.mType == SwLight::Type::Point) {
-        
-        //SwFrustum frustumData =  TODO: source the rebuilt per-light frustum
-        //visible = SwFrustum::aabbInFrustum(frustumData, aabbMin, aabbMax);
+        SwFrustum frustumData = shadowsCullPc.mLightsFrustumsBuffer[viewIndex];
+        visible = SwFrustum::aabbInFrustum(frustumData, aabbMin, aabbMax);
     }
     if (visible && light.mType != SwLight::Type::Directional) {
         visible = rangeTest(aabbMin, aabbMax, lightApex, light.mRange);

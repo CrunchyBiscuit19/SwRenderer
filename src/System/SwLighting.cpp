@@ -52,12 +52,10 @@ void SwLighting::System::initializeResources() {
     mResources.mLightsVisibleIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "LightsVisibleIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
-    mResources.mShadowsViewsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowsViewsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_VIEWS_BUFFER_SIZE, true
-    );
-    mResources.mLightsFrustumsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "LightsFrustumsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTS_FRUSTUMS_BUFFER_SIZE, true
-    );
+    mResources.mShadowsViewsBuffer =
+        SwBufferFactory::createAllocatedBuffer("ShadowsViewsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_VIEWS_BUFFER_SIZE, true);
+    mResources.mLightsFrustumsBuffer =
+        SwBufferFactory::createAllocatedBuffer("LightsFrustumsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTS_FRUSTUMS_BUFFER_SIZE, true);
     mResources.mShadowsRcsBuffer =
         SwBufferFactory::createAllocatedBuffer("ShadowsRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -340,16 +338,13 @@ void SwLighting::System::initializePasses() {
     });
 
     // Lights Frustum
-    mScene.insertPass(
-        SwPass::Type::LightingLightsFrustum,
-        [&](vk::CommandBuffer cmd) {
-            auto& lightsFrustumPipeline = mResources.mLightsFrustumPipelineBundle;
-            cmd.bindPipeline(lightsFrustumPipeline.getBindPoint(), lightsFrustumPipeline.getPipelineHandle());
-            cmd.pushConstants<LightsFrustumPC>(lightsFrustumPipeline.getLayoutHandle(), LightsFrustumPC::sStages, 0, mResources.mLightsFrustumPc);
-            if (mScene.getLightIds().empty()) return;
-            cmd.dispatch(SwHelper::fastDivCeil(MAX_NUM_SHADOW_VIEWS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
-        }
-    );
+    mScene.insertPass(SwPass::Type::LightingLightsFrustum, [&](vk::CommandBuffer cmd) {
+        auto& lightsFrustumPipeline = mResources.mLightsFrustumPipelineBundle;
+        cmd.bindPipeline(lightsFrustumPipeline.getBindPoint(), lightsFrustumPipeline.getPipelineHandle());
+        cmd.pushConstants<LightsFrustumPC>(lightsFrustumPipeline.getLayoutHandle(), LightsFrustumPC::sStages, 0, mResources.mLightsFrustumPc);
+        if (mScene.getLightIds().empty()) return;
+        cmd.dispatch(SwHelper::fastDivCeil(MAX_NUM_SHADOW_VIEWS, SwRenderer::MAX_1D_WORKGROUP_THREADS), 1, 1);
+    });
 
     // Clusters Light Calc Offset
     mScene.insertPass(SwPass::Type::LightingClustersLightCalcOffset, [&](vk::CommandBuffer cmd) {
@@ -402,7 +397,8 @@ void SwLighting::System::initializePasses() {
     });
 
     // Shadows Draw
-    mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {});
+    mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {
+    });
 }
 
 void SwLighting::System::reInitializeOnResize() {
@@ -592,6 +588,7 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mShadowsCullPc.mBoundsBuffer = mScene.getBoundsBuffer();
         mResources.mShadowsCullPc.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
         mResources.mShadowsCullPc.mInstancesBuffer = mScene.getInstancesBuffer();
+        mResources.mShadowsCullPc.mLightsFrustumsBuffer = mResources.mLightsFrustumsBuffer;
         mResources.mShadowsCullPc.mNumRcsPerShadowView = mScene.getRcs().size();
         mResources.mShadowsCullPc.mNumRisPerShadowView = mScene.getRis().size();
         mResources.mShadowsCullPc.mShadowsRisLimit = mScene.getRis().size() * MAX_NUM_SHADOW_VIEWS;
@@ -607,6 +604,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mScene.getBoundsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mLightsFrustumsBuffer, SwDependency::BufferDepType::ComputeStorageRead);
     }
 
     // Shadows Draw
