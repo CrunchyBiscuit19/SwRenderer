@@ -267,15 +267,19 @@ namespace SwLighting::Calculation {
         for (uint i = 0; i < clusterLights.mCount; i++) {
             SwLight::Data light = lights[clusterLights.mIndicesBuffer[clusterLights.mOffset + i]];
             float3 contribution = accumulatePunctualLight(light, surface, instances, nodeTransforms);
+            uint shadowIndex = light.mShadowMapSlot.y;
             switch (light.mType) {
                 case SwLight::Type::Directional:
-                    contribution *= SwLighting::Shadow::shadowsFactor2D(i, surface.mWorldPos, shadows.mDirectionalMaps, shadows.mSampler);
+                    // TODO: select the cascade once the per-light view-projection is rebuilt; cascade 0 for now.
+                    contribution *= SwLighting::Shadow::shadowsFactor2D(
+                        shadowIndex * SwLighting::Shadow::VIEWS_PER_DIRECTIONAL, surface.mWorldPos, shadows.mDirectionalMaps, shadows.mSampler
+                    );
                     break;
                 case SwLight::Type::Point:
-                    contribution *= SwLighting::Shadow::shadowsFactorCube(i, light, surface.mWorldPos, shadows.mPointMaps, shadows.mSampler);
+                    contribution *= SwLighting::Shadow::shadowsFactorCube(shadowIndex, light, surface.mWorldPos, shadows.mPointMaps, shadows.mSampler);
                     break;
                 case SwLight::Type::Spot:
-                    contribution *= SwLighting::Shadow::shadowsFactor2D(i, surface.mWorldPos, shadows.mSpotMaps, shadows.mSampler);
+                    contribution *= SwLighting::Shadow::shadowsFactor2D(shadowIndex, surface.mWorldPos, shadows.mSpotMaps, shadows.mSampler);
                     break;
             }
             color += contribution;
@@ -314,9 +318,9 @@ namespace SwLighting::Shadow {
     };
 
     public struct Params {
-        public Texture2D mDirectionalMaps[MAX_DIRECTIONAL_SHADOW_MAPS];
-        public TextureCube mPointMaps[MAX_POINT_SHADOW_MAPS];
-        public Texture2D mSpotMaps[MAX_SPOT_SHADOW_MAPS];
+        public Texture2DArray mDirectionalMaps;
+        public TextureCubeArray mPointMaps;
+        public Texture2DArray mSpotMaps;
         public SamplerComparisonState mSampler;
     };
 
@@ -345,8 +349,8 @@ namespace SwLighting::Shadow {
         return projCoords.xy + POISSON_DISK[index] / radius;
     }
 
-    public float shadowsFactor2D<let N : int>(
-        uint slot, float3 worldPos, Texture2D shadowMaps[N], SamplerComparisonState shadowsSampler
+    public float shadowsFactor2D(
+        uint layer, float3 worldPos, Texture2DArray shadowMaps, SamplerComparisonState shadowsSampler
     ) {
         const bool shadows2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
         if (!shadows2DEnabled) {
@@ -373,7 +377,7 @@ namespace SwLighting::Shadow {
             for (int x = -BLUR_RANGE; x <= BLUR_RANGE; x++) {
                 float2 off = float2(texel.x * x, texel.y * y);
                 float2 coord = GetPoissonDiskCoord(uv + off, count, POISSON_RADIUS);
-                lit += shadowMaps[slot].SampleCmpLevelZero(shadowsSampler, coord, radius).r;
+                lit += shadowMaps.SampleCmpLevelZero(shadowsSampler, float3(coord, layer), radius).r;
                 count++;
             }
         }
@@ -381,8 +385,8 @@ namespace SwLighting::Shadow {
         return lerp(SHADOWS_AMBIENT, 1.0, shadow);
     }
 
-    public float shadowsFactorCube<let N : int>(
-        uint slot, SwLight::Data light, float3 worldPos, TextureCube shadowMaps[N], SamplerComparisonState shadowsSampler
+    public float shadowsFactorCube(
+        uint cubeIndex, SwLight::Data light, float3 worldPos, TextureCubeArray shadowMaps, SamplerComparisonState shadowsSampler
     ) {
         return 1.f; // TODO actually implement it
     }

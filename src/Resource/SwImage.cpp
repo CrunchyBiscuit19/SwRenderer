@@ -502,6 +502,36 @@ void SwDepthImageCubemap::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedIm
 
 std::uint32_t SwDepthImageCubemap::getFaceCount() const { return SwImageFactory::NUM_CUBEMAP_FACES; }
 
+SwDepthImage2DArray::SwDepthImage2DArray() {}
+
+SwDepthImage2DArray::SwDepthImage2DArray(
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::deque<vk::raii::ImageView> otherImageViews
+)
+    : SwDepthImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, allocator, allocation, mipmapped,
+          std::move(otherFormats), std::move(otherImageViews)
+      ) {}
+
+void SwDepthImage2DArray::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, 1); }
+
+SwDepthImageCubemapArray::SwDepthImageCubemapArray() {}
+
+SwDepthImageCubemapArray::SwDepthImageCubemapArray(
+    std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+    vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats,
+    std::deque<vk::raii::ImageView> otherImageViews
+)
+    : SwDepthImage(
+          std::move(name), std::move(image), mainFormat, extent, std::move(mainImageView), usage, clearValue, allocator, allocation, mipmapped,
+          std::move(otherFormats), std::move(otherImageViews)
+      ) {}
+
+void SwDepthImageCubemapArray::generateMipmaps(vk::CommandBuffer cmd) { SwAllocatedImage::generateMipmaps(cmd, SwImageFactory::NUM_CUBEMAP_FACES); }
+
+std::uint32_t SwDepthImageCubemapArray::getFaceCount() const { return SwImageFactory::NUM_CUBEMAP_FACES; }
+
 std::unordered_map<SwImageFactory::SwDefaultImageOption, SwColorImage2D> SwImageFactory::sDefaultImages;
 
 std::vector<SwImageFactory::DeferredImage> SwImageFactory::sDeletionQueue{};
@@ -543,7 +573,8 @@ std::uint32_t SwImageFactory::getFormatTexelSize(vk::Format format) {
 }
 
 SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstructionInfo(
-    SwImageType swImageType, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
+    SwImageType swImageType, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue,
+    std::uint32_t arrayLayers
 ) {
     vk::ImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.pNext = nullptr;
@@ -557,17 +588,28 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
     imageCreateInfo.usage = usage;
     switch (swImageType) {
         case SwImageType::SwColorImage2D:
+            imageCreateInfo.arrayLayers = 1;
             break;
         case SwImageType::SwDepthImage2D:
+            imageCreateInfo.arrayLayers = 1;
             assert(mainFormat == vk::Format::eD32Sfloat || mainFormat == vk::Format::eD24UnormS8Uint);
             break;
         case SwImageType::SwColorImageCubemap:
-            imageCreateInfo.arrayLayers = NUM_CUBEMAP_FACES;
+            imageCreateInfo.arrayLayers = 1 * NUM_CUBEMAP_FACES;
             imageCreateInfo.flags = vk::ImageCreateFlagBits::eCubeCompatible;
             break;
         case SwImageType::SwDepthImageCubemap:
             assert(mainFormat == vk::Format::eD32Sfloat || mainFormat == vk::Format::eD24UnormS8Uint);
-            imageCreateInfo.arrayLayers = NUM_CUBEMAP_FACES;
+            imageCreateInfo.arrayLayers = 1 * NUM_CUBEMAP_FACES;
+            imageCreateInfo.flags = vk::ImageCreateFlagBits::eCubeCompatible;
+            break;
+        case SwImageType::SwDepthImage2DArray:
+            assert(mainFormat == vk::Format::eD32Sfloat || mainFormat == vk::Format::eD24UnormS8Uint);
+            imageCreateInfo.arrayLayers = arrayLayers;
+            break;
+        case SwImageType::SwDepthImageCubemapArray:
+            assert(mainFormat == vk::Format::eD32Sfloat || mainFormat == vk::Format::eD24UnormS8Uint);
+            imageCreateInfo.arrayLayers = arrayLayers * NUM_CUBEMAP_FACES;
             imageCreateInfo.flags = vk::ImageCreateFlagBits::eCubeCompatible;
             break;
     };
@@ -604,6 +646,16 @@ SwImageFactory::SwImageConstructionInfo SwImageFactory::prepareImageConstruction
             imageViewCreateInfo.viewType = vk::ImageViewType::eCube;
             imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
             imageViewCreateInfo.subresourceRange.layerCount = NUM_CUBEMAP_FACES;
+            break;
+        case SwImageType::SwDepthImage2DArray:
+            imageViewCreateInfo.viewType = vk::ImageViewType::e2DArray;
+            imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+            imageViewCreateInfo.subresourceRange.layerCount = arrayLayers;
+            break;
+        case SwImageType::SwDepthImageCubemapArray:
+            imageViewCreateInfo.viewType = vk::ImageViewType::eCubeArray;
+            imageViewCreateInfo.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
+            imageViewCreateInfo.subresourceRange.layerCount = arrayLayers * NUM_CUBEMAP_FACES;
             break;
     }
 
@@ -747,6 +799,54 @@ SwDepthImageCubemap SwImageFactory::createDepthImageCubemap(
     SwImageConstructionInfo imageConstructionInfo =
         prepareImageConstructionInfo(SwImageType::SwDepthImageCubemap, format, extent, usage, mipmapped, clearValue);
     SwDepthImageCubemap newImage = SwDepthImageCubemap(
+        name,
+        std::move(imageConstructionInfo.mImage),
+        imageConstructionInfo.mMainFormat,
+        imageConstructionInfo.mExtent,
+        std::move(imageConstructionInfo.mMainImageView),
+        imageConstructionInfo.mUsage,
+        imageConstructionInfo.mClearValue,
+        imageConstructionInfo.mAllocator,
+        std::move(imageConstructionInfo.mAllocation),
+        imageConstructionInfo.mMipmapped
+    );
+
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getHandle(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getMainImageViewHandle(), (name.append("MainView")).c_str());
+
+    return newImage;
+}
+
+SwDepthImage2DArray SwImageFactory::createDepthImage2DArray(
+    std::string name, vk::Format format, vk::Extent3D extent, vk::ImageUsageFlags usage, std::uint32_t layerCount, bool mipmapped, vk::ClearValue clearValue
+) {
+    SwImageConstructionInfo imageConstructionInfo =
+        prepareImageConstructionInfo(SwImageType::SwDepthImage2DArray, format, extent, usage, mipmapped, clearValue, layerCount);
+    SwDepthImage2DArray newImage = SwDepthImage2DArray(
+        name,
+        std::move(imageConstructionInfo.mImage),
+        imageConstructionInfo.mMainFormat,
+        imageConstructionInfo.mExtent,
+        std::move(imageConstructionInfo.mMainImageView),
+        imageConstructionInfo.mUsage,
+        imageConstructionInfo.mClearValue,
+        imageConstructionInfo.mAllocator,
+        std::move(imageConstructionInfo.mAllocation),
+        imageConstructionInfo.mMipmapped
+    );
+
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getHandle(), name.c_str());
+    SwRenderer::sRendererContext.labelResourceDebug(newImage.getMainImageViewHandle(), (name.append("MainView")).c_str());
+
+    return newImage;
+}
+
+SwDepthImageCubemapArray SwImageFactory::createDepthImageCubemapArray(
+    std::string name, vk::Format format, vk::Extent3D extent, vk::ImageUsageFlags usage, std::uint32_t numCubes, bool mipmapped, vk::ClearValue clearValue
+) {
+    SwImageConstructionInfo imageConstructionInfo =
+        prepareImageConstructionInfo(SwImageType::SwDepthImageCubemapArray, format, extent, usage, mipmapped, clearValue, numCubes);
+    SwDepthImageCubemapArray newImage = SwDepthImageCubemapArray(
         name,
         std::move(imageConstructionInfo.mImage),
         imageConstructionInfo.mMainFormat,

@@ -206,12 +206,15 @@ void SwGeometry::System::refreshDataUsage() {
         if (!depthOnly) {
             d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mIrradianceImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
             d.mReadImages.emplace_back(&mScene.getIBLSystem().getResources().mPrefilterImage, SwDependency::ImageDepType::FragmentShaderSampledRead);
-            for (auto& shadowMap : mScene.getLightingSystem().getResources().mDirectionalShadowMaps)
-                d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
-            for (auto& shadowMap : mScene.getLightingSystem().getResources().mPointShadowMaps)
-                d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
-            for (auto& shadowMap : mScene.getLightingSystem().getResources().mSpotShadowMaps)
-                d.mReadImages.emplace_back(&shadowMap, SwDependency::ImageDepType::FragmentShaderSampledRead);
+            d.mReadImages.emplace_back(
+                &mScene.getLightingSystem().getResources().mDirectionalShadowMaps, SwDependency::ImageDepType::FragmentShaderSampledRead
+            );
+            d.mReadImages.emplace_back(
+                &mScene.getLightingSystem().getResources().mPointShadowMaps, SwDependency::ImageDepType::FragmentShaderSampledRead
+            );
+            d.mReadImages.emplace_back(
+                &mScene.getLightingSystem().getResources().mSpotShadowMaps, SwDependency::ImageDepType::FragmentShaderSampledRead
+            );
             d.mReadImages.emplace_back(&SwRenderer::sRendererContext.mSwapchain->getDepthImage(), SwDependency::ImageDepType::DepthAttachmentReadWrite);
         }
         d.mReadBuffers.emplace_back(&mScene.getVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);

@@ -200,9 +200,9 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    std::array<SwDepthImage2D, MAX_DIRECTIONAL_SHADOW_MAPS> mDirectionalShadowMaps;
-    std::array<SwDepthImageCubemap, MAX_POINT_SHADOW_MAPS> mPointShadowMaps;
-    std::array<SwDepthImage2D, MAX_SPOT_SHADOW_MAPS> mSpotShadowMaps;
+    SwDepthImage2DArray mDirectionalShadowMaps;
+    SwDepthImageCubemapArray mPointShadowMaps;
+    SwDepthImage2DArray mSpotShadowMaps;
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 

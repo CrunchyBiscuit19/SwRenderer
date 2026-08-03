@@ -21,11 +21,11 @@ public uniform Texture2D iblPrefilterMap;
 public uniform Texture2D iblBrdfLut;
 
 [[vk::binding(0, 3)]]
-public uniform Texture2D directionalShadowMaps[SwLighting::Shadow::MAX_DIRECTIONAL_SHADOW_MAPS];
+public uniform Texture2DArray directionalShadowMaps;
 [[vk::binding(1, 3)]]
-public uniform TextureCube pointShadowMaps[SwLighting::Shadow::MAX_POINT_SHADOW_MAPS];
+public uniform TextureCubeArray pointShadowMaps;
 [[vk::binding(2, 3)]]
-public uniform Texture2D spotShadowMaps[SwLighting::Shadow::MAX_SPOT_SHADOW_MAPS];
+public uniform Texture2DArray spotShadowMaps;
 [[vk::binding(3, 3)]]
 public uniform SamplerComparisonState shadowsSampler;
 

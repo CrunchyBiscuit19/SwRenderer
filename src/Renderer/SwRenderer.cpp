@@ -110,18 +110,21 @@ SwRenderer::SwRenderer()
     features12.vulkanMemoryModel = true;
     features12.vulkanMemoryModelDeviceScope = true;
     features12.storageBuffer8BitAccess = true;
+    features12.shaderOutputLayer = true;
     vk::PhysicalDeviceVulkan11Features features11{};
     features11.shaderDrawParameters = true;
     vk::PhysicalDeviceFeatures features10{};
     features10.independentBlend = true;
     features10.shaderStorageImageMultisample = true;
     features10.multiDrawIndirect = true;
+    features10.imageCubeArray = true;
     features10.samplerAnisotropy = true;
     features10.sampleRateShading = true;
     features10.drawIndirectFirstInstance = true;
     features10.fragmentStoresAndAtomics = true;
     features10.vertexPipelineStoresAndAtomics = true;
     features10.shaderInt64 = true;
+    features10.imageCubeArray = true;
 
     vk::PhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT unusedAttachmentsFeatures{};
     unusedAttachmentsFeatures.dynamicRenderingUnusedAttachments = vk::True;

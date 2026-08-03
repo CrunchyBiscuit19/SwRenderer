@@ -68,13 +68,18 @@ void main(SwLighting::CSInput in) {
     SwBounds::fromCorners(corners, aabbMin, aabbMax);
 
     bool visible = true;
-    if (light.mType == SwLight::Type::Spot || light.mType == SwLight::Type::Point) {
-        SwFrustum frustumData = shadowsCullPc.mLightsFrustumsBuffer[viewIndex];
-        visible = SwFrustum::aabbInFrustum(frustumData, aabbMin, aabbMax);
-    }
-    if (visible && light.mType != SwLight::Type::Directional) {
-        visible = rangeTest(aabbMin, aabbMax, lightApex, light.mRange);
-    }
+    switch (light.mType) {
+        case SwLight::Type::Directional:
+            visible = SwFrustum::aabbInFrustum(shadowsCullPc.mLightsFrustumsBuffer[viewIndex], aabbMin, aabbMax);
+            break;
+        case SwLight::Type::Point:
+        case SwLight::Type::Spot:
+            visible = SwFrustum::aabbInFrustum(shadowsCullPc.mLightsFrustumsBuffer[viewIndex], aabbMin, aabbMax);
+            visible = rangeTest(aabbMin, aabbMax, lightApex, light.mRange);
+            break;
+        default:
+            break;
+    } 
 
     if (visible) {
         uint offset;

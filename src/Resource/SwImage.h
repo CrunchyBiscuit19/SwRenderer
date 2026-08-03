@@ -283,9 +283,49 @@ public:
     SwDepthImageCubemap& operator=(const SwDepthImageCubemap&) = delete;
 };
 
+class SwDepthImage2DArray : public SwDepthImage {
+public:
+    SwDepthImage2DArray();
+
+    SwDepthImage2DArray(
+        std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
+    );
+
+    void generateMipmaps(vk::CommandBuffer cmd) override;
+
+    SwDepthImage2DArray(SwDepthImage2DArray&&) noexcept = default;
+    SwDepthImage2DArray& operator=(SwDepthImage2DArray&&) noexcept = default;
+
+    SwDepthImage2DArray(const SwDepthImage2DArray&) = delete;
+    SwDepthImage2DArray& operator=(const SwDepthImage2DArray&) = delete;
+};
+
+class SwDepthImageCubemapArray : public SwDepthImage {
+public:
+    SwDepthImageCubemapArray();
+
+    SwDepthImageCubemapArray(
+        std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
+        std::deque<vk::raii::ImageView> otherImageViews = {}
+    );
+
+    void generateMipmaps(vk::CommandBuffer cmd) override;
+
+    std::uint32_t getFaceCount() const override;
+
+    SwDepthImageCubemapArray(SwDepthImageCubemapArray&&) noexcept = default;
+    SwDepthImageCubemapArray& operator=(SwDepthImageCubemapArray&&) noexcept = default;
+
+    SwDepthImageCubemapArray(const SwDepthImageCubemapArray&) = delete;
+    SwDepthImageCubemapArray& operator=(const SwDepthImageCubemapArray&) = delete;
+};
+
 class SwImageFactory {
 private:
-    enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap, SwDepthImageCubemap };
+    enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap, SwDepthImageCubemap, SwDepthImage2DArray, SwDepthImageCubemapArray };
 
     struct DeferredImage {
         std::unique_ptr<SwImage> mImage;
@@ -307,7 +347,8 @@ private:
     };
 
     static SwImageConstructionInfo prepareImageConstructionInfo(
-        SwImageType swImageType, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue
+        SwImageType swImageType, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue,
+        std::uint32_t arrayLayers = 1
     );
 
 public:
@@ -343,6 +384,16 @@ public:
 
     static SwDepthImageCubemap createDepthImageCubemap(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
+        vk::ClearValue clearValue = vk::ClearValue()
+    );
+
+    static SwDepthImage2DArray createDepthImage2DArray(
+        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, std::uint32_t layerCount, bool mipmapped = false,
+        vk::ClearValue clearValue = vk::ClearValue()
+    );
+
+    static SwDepthImageCubemapArray createDepthImageCubemapArray(
+        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, std::uint32_t numCubes, bool mipmapped = false,
         vk::ClearValue clearValue = vk::ClearValue()
     );
 
