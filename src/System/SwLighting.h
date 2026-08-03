@@ -200,9 +200,9 @@ struct Resources {
     static void init();
     static void cleanup();
 
-    SwDepthImage2DArray mDirectionalShadowMaps;
-    SwDepthImageCubemapArray mPointShadowMaps;
-    SwDepthImage2DArray mSpotShadowMaps;
+    SwDepthImage2D mDirectionalShadowMaps;
+    SwDepthImageCubemap mPointShadowMaps;
+    SwDepthImage2D mSpotShadowMaps;
     SwSampler mShadowsMapsSampler;
     SwDescriptorSet mShadowsMapsDescriptorSet;
 

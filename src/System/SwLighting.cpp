@@ -104,29 +104,32 @@ void SwLighting::System::initializeResources() {
 
     const vk::ImageUsageFlags shadowMapUsage =
         vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled;
-    mResources.mDirectionalShadowMaps = SwImageFactory::createDepthImage2DArray(
+    mResources.mDirectionalShadowMaps = SwImageFactory::createDepthImage2D(
         "DirectionalShadowMaps",
         SHADOWS_MAP_FORMAT,
         vk::Extent3D{SHADOWS_2D_MAP_WIDTH_HEIGHT, SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
         shadowMapUsage,
-        MAX_DIRECTIONAL_SHADOW_MAPS * VIEWS_PER_DIRECTIONAL,
-        false
+        false,
+        vk::ClearValue(),
+        MAX_DIRECTIONAL_SHADOW_MAPS * VIEWS_PER_DIRECTIONAL
     );
-    mResources.mPointShadowMaps = SwImageFactory::createDepthImageCubemapArray(
+    mResources.mPointShadowMaps = SwImageFactory::createDepthImageCubemap(
         "PointShadowMaps",
         SHADOWS_MAP_FORMAT,
         vk::Extent3D{SHADOWS_CUBEMAP_WIDTH_HEIGHT, SHADOWS_CUBEMAP_WIDTH_HEIGHT, 1},
         shadowMapUsage,
-        MAX_POINT_SHADOW_MAPS,
-        false
+        false,
+        vk::ClearValue(),
+        MAX_POINT_SHADOW_MAPS
     );
-    mResources.mSpotShadowMaps = SwImageFactory::createDepthImage2DArray(
+    mResources.mSpotShadowMaps = SwImageFactory::createDepthImage2D(
         "SpotShadowMaps",
         SHADOWS_MAP_FORMAT,
         vk::Extent3D{SHADOWS_2D_MAP_WIDTH_HEIGHT, SHADOWS_2D_MAP_WIDTH_HEIGHT, 1},
         shadowMapUsage,
-        MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT,
-        false
+        false,
+        vk::ClearValue(),
+        MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT
     );
 
     mResources.mShadowsMapsSampler = makeComparisonSampler("ShadowsMapsSampler", vk::SamplerAddressMode::eClampToBorder);
@@ -381,8 +384,7 @@ void SwLighting::System::initializePasses() {
     });
 
     // Shadows Draw
-    mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {
-    });
+    mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {});
 }
 
 void SwLighting::System::reInitializeOnResize() {

@@ -116,18 +116,15 @@ protected:
     VmaAllocation mAllocation{nullptr};
     bool mMipmapped{false};
     std::uint32_t mMipLevels{0};
+    std::uint32_t mNumLayers{1};  // 6 per cube face, 1 for a plain image
 
     SwAllocatedImage();
 
     SwAllocatedImage(
         std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
         vk::ClearValue clearValue, vk::ImageAspectFlags aspect, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped,
-        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
+        std::uint32_t numLayers = 1, std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
-
-    void generateMipmaps(vk::CommandBuffer cmd, std::uint32_t numFaces);
-
-    virtual std::uint32_t getFaceCount() const { return 1; }
 
 public:
     void emitBarrier(vk::CommandBuffer cmd, vk::PipelineStageFlags2 nextStage, vk::AccessFlags2 nextAccess) override;
@@ -140,7 +137,7 @@ public:
     using SwImage::copyFrom;
     void copyFrom(vk::CommandBuffer cmd, vk::Image source, vk::Extent2D srcSize, vk::ImageAspectFlags srcAspect) override;
 
-    virtual void generateMipmaps(vk::CommandBuffer cmd) = 0;
+    void generateMipmaps(vk::CommandBuffer cmd);
 
     void fillImageData(const void* data, bool immediateSubmit = true);
 
@@ -149,6 +146,7 @@ public:
     inline vk::ImageView getOtherImageViewHandle(std::uint32_t i) override { return *mOtherImageViews[i]; }
     inline vk::ClearValue getClearValue() override { return mClearValue; };
     inline bool isMipmapped() const { return mMipmapped; }
+    inline std::uint32_t getNumLayers() const { return mNumLayers; }
     inline bool isReady() const { return mAllocation != nullptr; }
 
     void addImageView(
@@ -173,8 +171,8 @@ protected:
 
     SwColorImage(
         std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::uint32_t numLayers = 1,
+        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
 public:
@@ -191,8 +189,8 @@ protected:
 
     SwDepthImage(
         std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::uint32_t numLayers = 1,
+        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
 public:
@@ -209,11 +207,9 @@ public:
 
     SwColorImage2D(
         std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::uint32_t numLayers = 1,
+        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
-
-    void generateMipmaps(vk::CommandBuffer cmd) override;
 
     SwColorImage2D(SwColorImage2D&&) noexcept = default;
     SwColorImage2D& operator=(SwColorImage2D&&) noexcept = default;
@@ -228,11 +224,9 @@ public:
 
     SwDepthImage2D(
         std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::uint32_t numLayers = 1,
+        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
-
-    void generateMipmaps(vk::CommandBuffer cmd) override;
 
     SwDepthImage2D(SwDepthImage2D&&) noexcept = default;
     SwDepthImage2D& operator=(SwDepthImage2D&&) noexcept = default;
@@ -247,13 +241,9 @@ public:
 
     SwColorImageCubemap(
         std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::uint32_t numLayers = 1,
+        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
-
-    void generateMipmaps(vk::CommandBuffer cmd) override;
-
-    std::uint32_t getFaceCount() const override;
 
     SwColorImageCubemap(SwColorImageCubemap&&) noexcept = default;
     SwColorImageCubemap& operator=(SwColorImageCubemap&&) noexcept = default;
@@ -268,13 +258,9 @@ public:
 
     SwDepthImageCubemap(
         std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
+        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::uint32_t numLayers = 1,
+        std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
-
-    void generateMipmaps(vk::CommandBuffer cmd) override;
-
-    std::uint32_t getFaceCount() const override;
 
     SwDepthImageCubemap(SwDepthImageCubemap&&) noexcept = default;
     SwDepthImageCubemap& operator=(SwDepthImageCubemap&&) noexcept = default;
@@ -283,49 +269,9 @@ public:
     SwDepthImageCubemap& operator=(const SwDepthImageCubemap&) = delete;
 };
 
-class SwDepthImage2DArray : public SwDepthImage {
-public:
-    SwDepthImage2DArray();
-
-    SwDepthImage2DArray(
-        std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
-    );
-
-    void generateMipmaps(vk::CommandBuffer cmd) override;
-
-    SwDepthImage2DArray(SwDepthImage2DArray&&) noexcept = default;
-    SwDepthImage2DArray& operator=(SwDepthImage2DArray&&) noexcept = default;
-
-    SwDepthImage2DArray(const SwDepthImage2DArray&) = delete;
-    SwDepthImage2DArray& operator=(const SwDepthImage2DArray&) = delete;
-};
-
-class SwDepthImageCubemapArray : public SwDepthImage {
-public:
-    SwDepthImageCubemapArray();
-
-    SwDepthImageCubemapArray(
-        std::string name, vk::raii::Image image, vk::Format mainFormat, vk::Extent3D extent, vk::raii::ImageView mainImageView, vk::ImageUsageFlags usage,
-        vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::vector<vk::Format> otherFormats = {},
-        std::deque<vk::raii::ImageView> otherImageViews = {}
-    );
-
-    void generateMipmaps(vk::CommandBuffer cmd) override;
-
-    std::uint32_t getFaceCount() const override;
-
-    SwDepthImageCubemapArray(SwDepthImageCubemapArray&&) noexcept = default;
-    SwDepthImageCubemapArray& operator=(SwDepthImageCubemapArray&&) noexcept = default;
-
-    SwDepthImageCubemapArray(const SwDepthImageCubemapArray&) = delete;
-    SwDepthImageCubemapArray& operator=(const SwDepthImageCubemapArray&) = delete;
-};
-
 class SwImageFactory {
 private:
-    enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap, SwDepthImageCubemap, SwDepthImage2DArray, SwDepthImageCubemapArray };
+    enum class SwImageType { SwColorImage2D, SwDepthImage2D, SwColorImageCubemap, SwDepthImageCubemap };
 
     struct DeferredImage {
         std::unique_ptr<SwImage> mImage;
@@ -344,11 +290,12 @@ private:
         vk::ClearValue mClearValue;
         const VmaAllocator mAllocator;
         VmaAllocation mAllocation;
+        std::uint32_t mNumLayers;
     };
 
     static SwImageConstructionInfo prepareImageConstructionInfo(
         SwImageType swImageType, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue,
-        std::uint32_t arrayLayers = 1
+        std::uint32_t numLayers = 1
     );
 
 public:
@@ -369,32 +316,22 @@ public:
 
     static SwColorImage2D createColorImage2D(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
-        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f)
+        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f), std::uint32_t numLayers = 1
     );
 
     static SwDepthImage2D createDepthImage2D(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
-        vk::ClearValue clearValue = vk::ClearValue()
+        vk::ClearValue clearValue = vk::ClearValue(), std::uint32_t numLayers = 1
     );
 
     static SwColorImageCubemap createColorImageCubemap(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
-        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f)
+        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f), std::uint32_t numCubes = 1
     );
 
     static SwDepthImageCubemap createDepthImageCubemap(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
-        vk::ClearValue clearValue = vk::ClearValue()
-    );
-
-    static SwDepthImage2DArray createDepthImage2DArray(
-        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, std::uint32_t layerCount, bool mipmapped = false,
-        vk::ClearValue clearValue = vk::ClearValue()
-    );
-
-    static SwDepthImageCubemapArray createDepthImageCubemapArray(
-        std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, std::uint32_t numCubes, bool mipmapped = false,
-        vk::ClearValue clearValue = vk::ClearValue()
+        vk::ClearValue clearValue = vk::ClearValue(), std::uint32_t numCubes = 1
     );
 
     static void deferDestroy(std::unique_ptr<SwImage> image);
