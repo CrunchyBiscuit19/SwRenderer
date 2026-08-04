@@ -43,7 +43,7 @@ A Vulkan 1.4 renderer written in C++23, targeting GPU-driven rendering with a re
 
 * Abstract base `SwImage` over the concrete `SwSwapchainImage` (wraps a swapchain-owned `VkImage`) and `SwAllocatedImage` (owns a `VkImage` + VMA allocation).
 * `SwAllocatedImage` splits into the `SwColorImage` and `SwDepthImage` bases, which are specialized into the concrete `SwColorImage2D`, `SwDepthImage2D`, `SwColorImageCubemap`, and `SwDepthImageCubemap`.
-* `SwAllocatedImage` carries a layer count (`mNumLayers`, default 1). The factory create functions take an optional trailing layer count (`numLayers` for 2D, `numCubes` for cubemaps, where each cube expands to six array layers), so one image object backs a whole array (for example the layered shadow maps) with an array image view. Upload and mipmap generation iterate all layers.
+* `SwAllocatedImage` carries a layer count (`mNumLayers`, default 1). The factory create functions take an optional trailing element count (`numElements`, where each 2D element is one array layer and each cubemap element expands to six array layers), so one image object backs a whole array (for example the layered shadow maps) with an array image view. Upload and mipmap generation iterate all layers.
 * Tracks the current layout, pipeline stage, and access bits; convenience methods for barrier insertion and layout transitions (including via `SwDependency` types).
 * Holds a main image view plus optional additional views/formats; supports mipmap generation and resizing.
 * `SwImageFactory` creates images (uploading pixel data through a shared staging buffer), builds image views, and provides a set of default fallback textures (white, grey, black, blue, checkerboard).

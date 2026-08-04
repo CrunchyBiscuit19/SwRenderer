@@ -116,7 +116,7 @@ protected:
     VmaAllocation mAllocation{nullptr};
     bool mMipmapped{false};
     std::uint32_t mMipLevels{0};
-    std::uint32_t mNumLayers{1};  // 6 per cube face, 1 for a plain image
+    std::uint32_t mNumLayers{1};
 
     SwAllocatedImage();
 
@@ -139,14 +139,16 @@ public:
 
     void generateMipmaps(vk::CommandBuffer cmd);
 
-    void fillImageData(const void* data, bool immediateSubmit = true);
+    void fillImageData(const void* data, bool immediateSubmit = true, std::uint32_t element = 0);
 
     inline vk::Image getHandle() override { return *mImage; }
     inline vk::ImageView getMainImageViewHandle() override { return *mMainImageView; }
     inline vk::ImageView getOtherImageViewHandle(std::uint32_t i) override { return *mOtherImageViews[i]; }
     inline vk::ClearValue getClearValue() override { return mClearValue; };
-    inline bool isMipmapped() const { return mMipmapped; }
     inline std::uint32_t getNumLayers() const { return mNumLayers; }
+    inline virtual std::uint32_t getLayersPerElement() const { return 1; }
+    inline std::uint32_t getNumElements() const { return mNumLayers / getLayersPerElement(); }
+    inline bool isMipmapped() const { return mMipmapped; }
     inline bool isReady() const { return mAllocation != nullptr; }
 
     void addImageView(
@@ -202,6 +204,9 @@ public:
 };
 
 class SwColorImage2D : public SwColorImage {
+protected:
+    static constexpr std::uint32_t LAYERS_PER_ELEMENT = 1;
+
 public:
     SwColorImage2D();
 
@@ -219,6 +224,9 @@ public:
 };
 
 class SwDepthImage2D : public SwDepthImage {
+protected:
+    static constexpr std::uint32_t LAYERS_PER_ELEMENT = 1;
+
 public:
     SwDepthImage2D();
 
@@ -245,6 +253,8 @@ public:
         std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
 
+    inline std::uint32_t getLayersPerElement() const override { return 6; }
+
     SwColorImageCubemap(SwColorImageCubemap&&) noexcept = default;
     SwColorImageCubemap& operator=(SwColorImageCubemap&&) noexcept = default;
 
@@ -261,6 +271,8 @@ public:
         vk::ClearValue clearValue, const VmaAllocator allocator, VmaAllocation allocation, bool mipmapped, std::uint32_t numLayers = 1,
         std::vector<vk::Format> otherFormats = {}, std::deque<vk::raii::ImageView> otherImageViews = {}
     );
+
+    inline std::uint32_t getLayersPerElement() const override { return 6; }
 
     SwDepthImageCubemap(SwDepthImageCubemap&&) noexcept = default;
     SwDepthImageCubemap& operator=(SwDepthImageCubemap&&) noexcept = default;
@@ -295,7 +307,7 @@ private:
 
     static SwImageConstructionInfo prepareImageConstructionInfo(
         SwImageType swImageType, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped, vk::ClearValue clearValue,
-        std::uint32_t numLayers = 1
+        std::uint32_t numElements = 1
     );
 
 public:
@@ -316,22 +328,22 @@ public:
 
     static SwColorImage2D createColorImage2D(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
-        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f), std::uint32_t numLayers = 1
+        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f), std::uint32_t numElements = 1
     );
 
     static SwDepthImage2D createDepthImage2D(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
-        vk::ClearValue clearValue = vk::ClearValue(), std::uint32_t numLayers = 1
+        vk::ClearValue clearValue = vk::ClearValue(), std::uint32_t numElements = 1
     );
 
     static SwColorImageCubemap createColorImageCubemap(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped,
-        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f), std::uint32_t numCubes = 1
+        vk::ClearValue clearValue = vk::ClearColorValue(0.f, 0.f, 0.f, 0.f), std::uint32_t numElements = 1
     );
 
     static SwDepthImageCubemap createDepthImageCubemap(
         std::string name, vk::Format mainFormat, vk::Extent3D extent, vk::ImageUsageFlags usage, bool mipmapped = false,
-        vk::ClearValue clearValue = vk::ClearValue(), std::uint32_t numCubes = 1
+        vk::ClearValue clearValue = vk::ClearValue(), std::uint32_t numElements = 1
     );
 
     static void deferDestroy(std::unique_ptr<SwImage> image);
