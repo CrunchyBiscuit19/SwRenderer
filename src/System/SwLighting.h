@@ -29,6 +29,7 @@ struct Cluster {
 struct ShadowView {
     std::uint32_t mLightIndex{0};
     std::uint32_t mFace{0};  // cube face for point lights, cascade for directional, unused (0) for spot
+    glm::mat4 mViewProj{1.f};
 };
 
 static constexpr std::string_view SHADERS_PATH{SHADERS_DIR "/Lighting"};
@@ -44,7 +45,6 @@ static const std::filesystem::path CLUSTERS_LIGHT_SELECT_SHADER_PATH{std::filesy
 static const std::filesystem::path SHADOWS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsCull.comp.spv"};
 static const std::filesystem::path SHADOWS_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsDraw.vert.spv"};
 static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
-static constexpr std::string_view SHADOWS_DRAW_MASKED_ENTRY_POINT{"mainMasked"};
 
 static constexpr std::uint32_t MAX_DIRECTIONAL_SHADOW_MAPS{4};
 static constexpr std::uint32_t MAX_POINT_SHADOW_MAPS{4};
@@ -182,14 +182,18 @@ struct ShadowsCullPC : SwPC<ShadowsCullPC> {
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eCompute;
 };
 
-struct ShadowDrawPC : SwPC<ShadowDrawPC> {  // MRTs then select the light's shadow map
+struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mShadowsRcsBuffer{0};
     vk::DeviceAddress mShadowsRisIndicesBuffer{0};
+    vk::DeviceAddress mShadowsViewsBuffer{0};
     vk::DeviceAddress mLightsBuffer{0};
     vk::DeviceAddress mVertexBuffer{0};
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mMaterialConstantsBuffer{0};
+    std::uint32_t mNumRcsPerShadowView{0};
+    std::uint32_t mNumRisPerShadowView{0};
+    std::uint32_t mViewBase{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
 };
@@ -266,7 +270,6 @@ struct Resources {
     ShadowDrawPC mShadowsDrawPc;
     SwPipelineLayout mShadowsDrawPipelineLayout;
     SwGraphicsPipelineBundle mShadowsDrawOpaquePipelineBundle;
-    SwGraphicsPipelineBundle mShadowsDrawMaskedPipelineBundle;
 };
 
 class System : public SwSystem, public SwSystem::Resizable {

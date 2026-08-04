@@ -13,6 +13,7 @@ src/includes*
 /tools/*.exe
 *.hdr
 .claude/
+.reasonix/
 .conv/
 conv/
 thirdParty/fmt/support/.gradle/

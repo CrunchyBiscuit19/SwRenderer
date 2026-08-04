@@ -132,6 +132,15 @@ void SwLighting::System::initializeResources() {
         MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT
     );
 
+    mResources.mPointShadowMaps.addImageView(
+        "PointShadowMapsArray", SHADOWS_MAP_FORMAT, vk::ImageAspectFlagBits::eDepth, vk::ImageViewType::e2DArray, 0, 1, 0,
+        MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT
+    );
+    mResources.mSpotShadowMaps.addImageView(
+        "SpotShadowMapsArray", SHADOWS_MAP_FORMAT, vk::ImageAspectFlagBits::eDepth, vk::ImageViewType::e2DArray, 0, 1, 0,
+        MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT
+    );
+
     mResources.mShadowsMapsSampler = makeComparisonSampler("ShadowsMapsSampler", vk::SamplerAddressMode::eClampToBorder);
     mResources.mShadowsMapsDescriptorSet =
         SwRenderer::sRendererContext.mDescriptorAllocator->createDescriptorSet("ShadowsMapsDescriptorSet", Resources::sShadowsConsumeDescriptorLayout);
@@ -246,9 +255,7 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
     drawPipelineOptions.mVertexEntryPoint = SHADOWS_DRAW_OPAQUE_ENTRY_POINT;
-    mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
-    drawPipelineOptions.mVertexEntryPoint = SHADOWS_DRAW_MASKED_ENTRY_POINT;
-    mResources.mShadowsDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawPipeline", drawPipelineOptions);
+    mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawOpaquePipeline", drawPipelineOptions);
 
     reInitializeOnResize();
 }
@@ -384,7 +391,32 @@ void SwLighting::System::initializePasses() {
     });
 
     // Shadows Draw
-    mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {});
+    mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {
+        const std::uint32_t numRcsPerView = static_cast<std::uint32_t>(mScene.getRcs().size());
+        if (numRcsPerView == 0) return;
+
+        cmd.bindIndexBuffer(mScene.getIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
+
+        auto drawShadowImage = [&](SwImage& image, std::uint32_t viewBase, std::uint32_t numViews, std::uint32_t sideLength) {
+            vk::RenderingAttachmentInfo depth = image.generateRenderingAttachment(0, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore);
+            cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{sideLength, sideLength}, {}, depth, numViews));
+            SwPass::setViewportScissors(cmd, vk::Extent3D{sideLength, sideLength, 1});
+
+            mResources.mShadowsDrawPc.mViewBase = viewBase;
+            const std::uint32_t drawCount = numViews * numRcsPerView;
+            const vk::DeviceSize rcsOffset = static_cast<vk::DeviceSize>(viewBase) * numRcsPerView * sizeof(SwRenderCommand);
+
+            auto& opaque = mResources.mShadowsDrawOpaquePipelineBundle;
+            cmd.bindPipeline(opaque.getBindPoint(), opaque.getPipelineHandle());
+            cmd.pushConstants<ShadowDrawPC>(opaque.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
+            cmd.drawIndexedIndirect(mResources.mShadowsRcsBuffer.getHandle(), rcsOffset, drawCount, sizeof(SwRenderCommand));
+
+            cmd.endRendering();
+        };
+
+        drawShadowImage(mResources.mPointShadowMaps, POINT_VIEW_BASE, MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT, SHADOWS_CUBEMAP_WIDTH_HEIGHT);
+        drawShadowImage(mResources.mSpotShadowMaps, SPOT_VIEW_BASE, MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT, SHADOWS_2D_MAP_WIDTH_HEIGHT);
+    });
 }
 
 void SwLighting::System::reInitializeOnResize() {
@@ -494,7 +526,8 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getLightsBuffer(), SwDependency::BufferDepType::ComputeStorageRead);
-        d.mReadBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::ComputeStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
+        d.mWriteBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::ComputeStorageReadWrite);
         d.mWriteBuffers.emplace_back(&mResources.mLightsFrustumsBuffer, SwDependency::BufferDepType::ComputeStorageWrite);
     }
 
@@ -597,17 +630,20 @@ void SwLighting::System::refreshDataUsage() {
     {
         mResources.mShadowsDrawPc.mShadowsRcsBuffer = mResources.mShadowsRcsBuffer;
         mResources.mShadowsDrawPc.mShadowsRisIndicesBuffer = mResources.mShadowsRisIndicesBuffer;
+        mResources.mShadowsDrawPc.mShadowsViewsBuffer = mResources.mShadowsViewsBuffer;
         mResources.mShadowsDrawPc.mLightsBuffer = mScene.getLightsBuffer();
         mResources.mShadowsDrawPc.mVertexBuffer = mScene.getVertexBuffer();
         mResources.mShadowsDrawPc.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
         mResources.mShadowsDrawPc.mInstancesBuffer = mScene.getInstancesBuffer();
         mResources.mShadowsDrawPc.mMaterialConstantsBuffer = mScene.getMaterialConstantsBuffer();
+        mResources.mShadowsDrawPc.mNumRcsPerShadowView = static_cast<std::uint32_t>(mScene.getRcs().size());
+        mResources.mShadowsDrawPc.mNumRisPerShadowView = static_cast<std::uint32_t>(mScene.getRis().size());
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowsDraw].getDeps();
         d.clear();
-        d.mWriteImages.emplace_back(&mResources.mDirectionalShadowMaps, SwDependency::ImageDepType::DepthAttachmentReadWrite);
         d.mWriteImages.emplace_back(&mResources.mPointShadowMaps, SwDependency::ImageDepType::DepthAttachmentReadWrite);
         d.mWriteImages.emplace_back(&mResources.mSpotShadowMaps, SwDependency::ImageDepType::DepthAttachmentReadWrite);
+        d.mReadBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mResources.mShadowsRcsBuffer, SwDependency::BufferDepType::IndirectRead);
         d.mReadBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);

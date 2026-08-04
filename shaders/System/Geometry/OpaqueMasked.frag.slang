@@ -84,6 +84,7 @@ float4 shade(SwGeometry::FSInput in, bool masked) {
     shadows.mPointMaps = pointShadowMaps;
     shadows.mSpotMaps = spotShadowMaps;
     shadows.mSampler = shadowsSampler;
+    shadows.mViews = drawPc.mShadowsViewsBuffer;
 
     uint clusterIndex = SwLighting::getClusterIndex(
         in.mPosition.xy, in.mPosition.z, drawPc.mTargetSize, drawPc.mFrameBuffer->mCameraBuffer->mPlanes

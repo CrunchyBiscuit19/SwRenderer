@@ -30,6 +30,7 @@ namespace SwGeometry {
         public uint* mClustersLightIndicesBuffer;
         public uint* mClustersLightCounts;
         public uint* mClustersLightOffsetsBuffer;
+        public SwLighting::Shadow::View* mShadowsViewsBuffer;
         public uint2 mTargetSize;
         public float mMaxPrefilterMipLevel;
         public float mIblIntensity;

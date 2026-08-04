@@ -179,6 +179,7 @@ void SwGeometry::System::refreshDataUsage() {
     mResources.mDrawPushConstants.mClustersLightIndicesBuffer = mScene.getLightingSystem().getResources().mClustersLightIndicesBuffer;
     mResources.mDrawPushConstants.mClustersLightCounts = mScene.getLightingSystem().getResources().mClustersLightCounts;
     mResources.mDrawPushConstants.mClustersLightOffsetsBuffer = mScene.getLightingSystem().getResources().mClustersLightOffsetsBuffer;
+    mResources.mDrawPushConstants.mShadowsViewsBuffer = mScene.getLightingSystem().getResources().mShadowsViewsBuffer;
     mResources.mDrawPushConstants.mTargetSize =
         glm::uvec2(SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().width, SwRenderer::sRendererContext.mSwapchain->getWindowExtent2D().height);
     mResources.mDrawPushConstants.mMaxPrefilterMipLevel = mScene.getIBLSystem().getMaxPrefilterMip();
@@ -235,6 +236,9 @@ void SwGeometry::System::refreshDataUsage() {
             );
             d.mReadBuffers.emplace_back(
                 &mScene.getLightingSystem().getResources().mClustersLightOffsetsBuffer, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
+            );
+            d.mReadBuffers.emplace_back(
+                &mScene.getLightingSystem().getResources().mShadowsViewsBuffer, SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead
             );
         }
         d.mReadBuffers.emplace_back(&mScene.getIndexBuffer(), SwDependency::BufferDepType::IndexRead);

@@ -69,7 +69,8 @@ public:
     void execute(vk::CommandBuffer cmd);
 
     static vk::RenderingInfo generateRenderingInfo(
-        vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment
+        vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment,
+        std::uint32_t layerCount = 1
     );
     static void setViewportScissors(vk::CommandBuffer cmd, vk::Extent3D imageExtent);
 };

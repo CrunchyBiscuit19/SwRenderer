@@ -7,12 +7,13 @@ SwPass::SwPass(Type passType, std::function<void(vk::CommandBuffer)> callback, b
 void SwPass::execute(vk::CommandBuffer cmd) { mCallback(cmd); }
 
 vk::RenderingInfo SwPass::generateRenderingInfo(
-    vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment
+    vk::Extent2D renderExtent, vk::ArrayProxy<vk::RenderingAttachmentInfo> colorAttachments, vk::ArrayProxy<vk::RenderingAttachmentInfo> depthAttachment,
+    std::uint32_t layerCount
 ) {
     vk::RenderingInfo renderInfo{};
     renderInfo.pNext = nullptr;
     renderInfo.renderArea = vk::Rect2D{vk::Offset2D{0, 0}, renderExtent};
-    renderInfo.layerCount = 1;
+    renderInfo.layerCount = layerCount;
     renderInfo.colorAttachmentCount = colorAttachments.size();
     renderInfo.pColorAttachments = colorAttachments.data();
     renderInfo.pDepthAttachment = depthAttachment.data();

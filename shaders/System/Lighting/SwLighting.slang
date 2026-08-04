@@ -113,11 +113,15 @@ namespace SwLighting {
     public struct ShadowDrawPC {
         public SwRenderCommand* mShadowsRcsBuffer;
         public uint* mShadowsRisIndicesBuffer;
+        public SwLighting::Shadow::View* mShadowsViewsBuffer;
         public SwLight::Data* mLightsBuffer;
         public SwVertex* mVertexBuffer;
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public SwMaterial::Constant* mMaterialConstantsBuffer;
+        public uint mNumRcsPerShadowView;
+        public uint mNumRisPerShadowView;
+        public uint mViewBase;
     };
 
     public struct VSInput {
@@ -128,6 +132,7 @@ namespace SwLighting {
 
     public struct VSOutput {
         public float4 mPosition : SV_Position;
+        public uint mLayer : SV_RenderTargetArrayIndex;
         public float2 mUv : TEXCOORD0;
         public float4 mColor : COLOR0;
         public nointerpolation float mAlphaCutoff;
@@ -138,6 +143,7 @@ namespace SwLighting {
 
     public struct VSOutputOpaque {
         public float4 mPosition : SV_Position;
+        public uint mLayer : SV_RenderTargetArrayIndex;
         public nointerpolation uint mAssetIndex;
         public nointerpolation uint mInstanceIndex;
     };
@@ -270,16 +276,24 @@ namespace SwLighting::Calculation {
             uint shadowIndex = light.mShadowMapSlot.y;
             switch (light.mType) {
                 case SwLight::Type::Directional:
-                    // TODO: select the cascade once the per-light view-projection is rebuilt; cascade 0 for now.
-                    contribution *= SwLighting::Shadow::shadowsFactor2D(
-                        shadowIndex * SwLighting::Shadow::VIEWS_PER_DIRECTIONAL, surface.mWorldPos, shadows.mDirectionalMaps, shadows.mSampler
-                    );
+                    // TODO
                     break;
                 case SwLight::Type::Point:
-                    contribution *= SwLighting::Shadow::shadowsFactorCube(shadowIndex, light, surface.mWorldPos, shadows.mPointMaps, shadows.mSampler);
+                    if (shadowIndex < SwLighting::Shadow::MAX_POINT_SHADOW_MAPS) {
+                        float4x4 lightModel = mul(instances[light.mInstanceIndex].mTransformMatrix, nodeTransforms[light.mNodeTransformIndex]);
+                        float3 lightWorldPos = mul(lightModel, float4(light.mBasePosition, 1.f)).xyz;
+                        contribution *= SwLighting::Shadow::shadowsFactorCube(
+                            shadowIndex, lightWorldPos, surface.mWorldPos, shadows.mViews, shadows.mPointMaps, shadows.mSampler
+                        );
+                    }
                     break;
                 case SwLight::Type::Spot:
-                    contribution *= SwLighting::Shadow::shadowsFactor2D(shadowIndex, surface.mWorldPos, shadows.mSpotMaps, shadows.mSampler);
+                    if (shadowIndex < SwLighting::Shadow::MAX_SPOT_SHADOW_MAPS) {
+                        uint spotView = SwLighting::Shadow::SPOT_VIEW_BASE + shadowIndex;
+                        contribution *= SwLighting::Shadow::shadowsFactor2D(
+                            shadowIndex, shadows.mViews[spotView].mViewProj, surface.mWorldPos, shadows.mSpotMaps, shadows.mSampler
+                        );
+                    }
                     break;
             }
             color += contribution;
@@ -312,16 +326,45 @@ namespace SwLighting::Shadow {
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
 
+    public static const float SHADOWS_BIAS = 0.0015f;
+
     public struct View {
         public uint mLightIndex;
         public uint mFace; // cube face for point lights, cascade for directional, 0 for spot
+        public float4x4 mViewProj;
     };
+
+    float4x4 makeLookView(float3 eye, float3 forward, float3 up) {
+        float3 right = normalize(cross(forward, up));
+        float3 realUp = cross(right, forward);
+        return float4x4(
+            right.x, right.y, right.z, -dot(right, eye),
+            realUp.x, realUp.y, realUp.z, -dot(realUp, eye),
+            -forward.x, -forward.y, -forward.z, dot(forward, eye),
+            0.f, 0.f, 0.f, 1.f
+        );
+    }
+
+    float4x4 makePerspReverseZ(float tanHalfFov, float near, float far) {
+        float f = 1.f / tanHalfFov;
+        return float4x4(
+            f, 0.f, 0.f, 0.f,
+            0.f, -f, 0.f, 0.f,
+            0.f, 0.f, near / (far - near), (near * far) / (far - near),
+            0.f, 0.f, -1.f, 0.f
+        );
+    }
+
+    public float4x4 buildViewProj(float3 eye, float3 forward, float3 up, float tanHalfFov, float near, float far) {
+        return mul(makePerspReverseZ(tanHalfFov, near, far), makeLookView(eye, forward, up));
+    }
 
     public struct Params {
         public Texture2DArray mDirectionalMaps;
         public TextureCubeArray mPointMaps;
         public Texture2DArray mSpotMaps;
         public SamplerComparisonState mSampler;
+        public View* mViews;
     };
 
     public static const uint POISSON_COUNT = 16;
@@ -350,14 +393,8 @@ namespace SwLighting::Shadow {
     }
 
     public float shadowsFactor2D(
-        uint layer, float3 worldPos, Texture2DArray shadowMaps, SamplerComparisonState shadowsSampler
+        uint layer, float4x4 lightViewProj, float3 worldPos, Texture2DArray shadowMaps, SamplerComparisonState shadowsSampler
     ) {
-        const bool shadows2DEnabled = false;  // TODO: re-enable once the per-light view-projection is rebuilt
-        if (!shadows2DEnabled) {
-            return 1.f;
-        }
-
-        float4x4 lightViewProj = float4x4(1.f);  // TODO: source the rebuilt per-light view-projection
         float4 clip = mul(lightViewProj, float4(worldPos, 1.f));
         if (clip.w <= 0.f) {
             return 1.f;
@@ -368,8 +405,7 @@ namespace SwLighting::Shadow {
             return 1.f;
         }
 
-        const float bias = 0.0015f;
-        const float radius = ndc.z + bias;  // reversed-Z, so bias is added to push receivers toward lit
+        const float radius = ndc.z + SHADOWS_BIAS;  // reversed-Z, so bias is added to push receivers toward lit
         const float2 texel = 1.f / float2(SHADOWS_MAP_SIZE, SHADOWS_MAP_SIZE);
         float lit = 0.f;
         int count = 0;
@@ -386,9 +422,28 @@ namespace SwLighting::Shadow {
     }
 
     public float shadowsFactorCube(
-        uint cubeIndex, SwLight::Data light, float3 worldPos, TextureCubeArray shadowMaps, SamplerComparisonState shadowsSampler
+        uint cubeIndex, float3 lightWorldPos, float3 worldPos, View* views, TextureCubeArray shadowMaps, SamplerComparisonState shadowsSampler
     ) {
-        return 1.f; // TODO actually implement it
+        float3 dir = worldPos - lightWorldPos;
+        float3 absDir = abs(dir);
+        // (+X, -X, +Y, -Y, +Z, -Z).
+        uint face;
+        if (absDir.x >= absDir.y && absDir.x >= absDir.z) {
+            face = (dir.x > 0.f) ? 0 : 1;
+        } else if (absDir.y >= absDir.z) {
+            face = (dir.y > 0.f) ? 2 : 3;
+        } else {
+            face = (dir.z > 0.f) ? 4 : 5;
+        }
+
+        uint viewIndex = POINT_VIEW_BASE + cubeIndex * VIEWS_PER_POINT + face;
+        float4 clip = mul(views[viewIndex].mViewProj, float4(worldPos, 1.f));
+        if (clip.w <= 0.f) {
+            return 1.f;
+        }
+        float compareDepth = clip.z / clip.w + SHADOWS_BIAS;  // reversed-Z
+        float lit = shadowMaps.SampleCmpLevelZero(shadowsSampler, float4(dir, float(cubeIndex)), compareDepth).r;
+        return lerp(SHADOWS_AMBIENT, 1.0, lit);
     }
 }
 
