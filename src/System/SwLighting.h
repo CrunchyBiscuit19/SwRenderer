@@ -44,7 +44,7 @@ static const std::filesystem::path CLUSTERS_LIGHT_PREFIX_SUM_OFFSET_SHADER_PATH{
 static const std::filesystem::path CLUSTERS_LIGHT_SELECT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ClustersLightSelect.comp.spv"};
 static const std::filesystem::path SHADOWS_CULL_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsCull.comp.spv"};
 static const std::filesystem::path SHADOWS_DRAW_VERTEX_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsDraw.vert.spv"};
-static constexpr std::string_view SHADOWS_DRAW_OPAQUE_ENTRY_POINT{"mainOpaque"};
+static const std::filesystem::path SHADOWS_DRAW_FRAGMENT_SHADER_PATH{std::filesystem::path(SHADERS_PATH) / "ShadowsDraw.frag.spv"};
 
 static constexpr std::uint32_t MAX_DIRECTIONAL_SHADOW_MAPS{4};
 static constexpr std::uint32_t MAX_POINT_SHADOW_MAPS{4};
@@ -195,7 +195,7 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     std::uint32_t mNumRisPerShadowView{0};
     std::uint32_t mViewBase{0};
 
-    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex;
+    static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
 };
 
 struct Resources {
@@ -270,6 +270,7 @@ struct Resources {
     ShadowDrawPC mShadowsDrawPc;
     SwPipelineLayout mShadowsDrawPipelineLayout;
     SwGraphicsPipelineBundle mShadowsDrawOpaquePipelineBundle;
+    SwGraphicsPipelineBundle mShadowsDrawMaskedPipelineBundle;
 };
 
 class System : public SwSystem, public SwSystem::Resizable {

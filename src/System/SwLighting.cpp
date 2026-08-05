@@ -133,12 +133,17 @@ void SwLighting::System::initializeResources() {
     );
 
     mResources.mPointShadowMaps.addImageView(
-        "PointShadowMapsArray", SHADOWS_MAP_FORMAT, vk::ImageAspectFlagBits::eDepth, vk::ImageViewType::e2DArray, 0, 1, 0,
+        "PointShadowMapsArray",
+        SHADOWS_MAP_FORMAT,
+        vk::ImageAspectFlagBits::eDepth,
+        vk::ImageViewType::e2DArray,
+        0,
+        1,
+        0,
         MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT
     );
     mResources.mSpotShadowMaps.addImageView(
-        "SpotShadowMapsArray", SHADOWS_MAP_FORMAT, vk::ImageAspectFlagBits::eDepth, vk::ImageViewType::e2DArray, 0, 1, 0,
-        MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT
+        "SpotShadowMapsArray", SHADOWS_MAP_FORMAT, vk::ImageAspectFlagBits::eDepth, vk::ImageViewType::e2DArray, 0, 1, 0, MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT
     );
 
     mResources.mShadowsMapsSampler = makeComparisonSampler("ShadowsMapsSampler", vk::SamplerAddressMode::eClampToBorder);
@@ -234,11 +239,13 @@ void SwLighting::System::initializeResources() {
         "ShadowsCullPipeline", {shadowsCullShader.getHandle(), mResources.mShadowsCullPipelineLayout.getHandle()}
     );
 
-    mResources.mShadowsDrawPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsDrawPipelineLayout", nullptr, ShadowDrawPC::getRange());
+    mResources.mShadowsDrawPipelineLayout = SwPipelineFactory::createPipelineLayout(
+        "ShadowsDrawPipelineLayout",
+        {SwMaterialResources::sMaterialSamplersDescriptorLayout.getHandle(), SwMaterialResources::sMaterialTexturesDescriptorLayout.getHandle()},
+        ShadowDrawPC::getRange()
+    );
     SwShader drawVertexShader =
         SwShaderFactory::createShader("ShadowsDrawVertexShaderModule", SHADOWS_DRAW_VERTEX_SHADER_PATH, vk::ShaderStageFlagBits::eVertex);
-    vk::PipelineColorBlendAttachmentState noBlendState{};
-    noBlendState.blendEnable = VK_FALSE;
     SwGraphicsPipelineFactory::SwGraphicsPipelineOptions drawPipelineOptions;
     drawPipelineOptions.mVertexShader = drawVertexShader.getHandle();
     drawPipelineOptions.mFragmentShader = std::nullopt;
@@ -254,8 +261,11 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
-    drawPipelineOptions.mVertexEntryPoint = SHADOWS_DRAW_OPAQUE_ENTRY_POINT;
     mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawOpaquePipeline", drawPipelineOptions);
+    SwShader drawFragmentShader =
+        SwShaderFactory::createShader("ShadowsDrawFragmentShaderModule", SHADOWS_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
+    drawPipelineOptions.mFragmentShader = drawFragmentShader.getHandle();
+    mResources.mShadowsDrawMaskedPipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawMaskedPipeline", drawPipelineOptions);
 
     reInitializeOnResize();
 }
@@ -406,9 +416,16 @@ void SwLighting::System::initializePasses() {
             const std::uint32_t drawCount = numViews * numRcsPerView;
             const vk::DeviceSize rcsOffset = static_cast<vk::DeviceSize>(viewBase) * numRcsPerView * sizeof(SwRenderCommand);
 
-            auto& opaque = mResources.mShadowsDrawOpaquePipelineBundle;
-            cmd.bindPipeline(opaque.getBindPoint(), opaque.getPipelineHandle());
-            cmd.pushConstants<ShadowDrawPC>(opaque.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
+            auto& pipeline = mResources.mShadowsDrawOpaquePipelineBundle;
+            cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+            cmd.bindDescriptorSets(
+                pipeline.getBindPoint(),
+                pipeline.getLayoutHandle(),
+                0,
+                {mScene.getMaterialSamplersDescriptorSet().getHandle(), mScene.getMaterialTexturesDescriptorSet().getHandle()},
+                nullptr
+            );
+            cmd.pushConstants<ShadowDrawPC>(pipeline.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
             cmd.drawIndexedIndirect(mResources.mShadowsRcsBuffer.getHandle(), rcsOffset, drawCount, sizeof(SwRenderCommand));
 
             cmd.endRendering();
@@ -649,7 +666,7 @@ void SwLighting::System::refreshDataUsage() {
         d.mReadBuffers.emplace_back(&mScene.getVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getInstancesBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
-        d.mReadBuffers.emplace_back(&mScene.getMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mScene.getMaterialConstantsBuffer(), SwDependency::BufferDepType::VertexAndFragmentShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getIndexBuffer(), SwDependency::BufferDepType::IndexRead);
     }
 }

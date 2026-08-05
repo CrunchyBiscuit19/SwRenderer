@@ -141,13 +141,6 @@ namespace SwLighting {
         public nointerpolation uint mInstanceIndex;
     };
 
-    public struct VSOutputOpaque {
-        public float4 mPosition : SV_Position;
-        public uint mLayer : SV_RenderTargetArrayIndex;
-        public nointerpolation uint mAssetIndex;
-        public nointerpolation uint mInstanceIndex;
-    };
-
     public struct CSInput {
         public uint3 mDispatchThreadID : SV_DispatchThreadID;
     };

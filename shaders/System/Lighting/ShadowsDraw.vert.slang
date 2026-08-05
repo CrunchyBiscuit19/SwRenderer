@@ -39,13 +39,6 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
 }
 
 [shader("vertex")]
-SwLighting::VSOutputOpaque mainOpaque(SwLighting::VSInput in) {
-    SwLighting::VSOutput full = computeVertex(in);
-
-    SwLighting::VSOutputOpaque out;
-    out.mPosition = full.mPosition;
-    out.mLayer = full.mLayer;
-    out.mAssetIndex = full.mAssetIndex;
-    out.mInstanceIndex = full.mInstanceIndex;
-    return out;
+SwLighting::VSOutput main(SwLighting::VSInput in) {
+    return computeVertex(in);
 }
