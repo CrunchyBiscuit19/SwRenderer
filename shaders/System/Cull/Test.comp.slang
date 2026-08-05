@@ -67,14 +67,14 @@ bool occlusionCull(inout float4[SwMesh::NUM_AABB_CORNERS] aabbCorners, SwCamera:
     return closestDepthInRi >= furthestDepthInPyramid;
 }
 
-void markRiIndex(SwRenderCommand* rc, SwRenderItem* ri, uint* sceneRisIndicesBuffer) {
+void markRiIndex(SwRenderCommand* rc, SwRenderItem* ri, uint* risIndicesBuffer) {
     // Write the indices of to-draw render items to the draw instances indices buffer
     // Index into to-draw instances indices buffer with (in.instanceIndex + firstInstance) and get the index into the instances buffer
     // Then index into the instances buffer with that index to get the actual instance data
     uint offsetVisibleRiIndex;
     InterlockedAdd(rc->mRiCount, 1, offsetVisibleRiIndex);
     uint visibleRiIndex = rc->mFirstRi + offsetVisibleRiIndex;
-    sceneRisIndicesBuffer[visibleRiIndex] = ri->mInstanceIndex;
+    risIndicesBuffer[visibleRiIndex] = ri->mInstanceIndex;
 }
 
 [numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]

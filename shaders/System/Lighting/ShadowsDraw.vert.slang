@@ -26,8 +26,8 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
 
     float4x4 lightViewProj = shadowsDrawPc.mShadowsViewsBuffer[absoluteView].mViewProj;
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
-    out.mPosition = mul(lightViewProj, mul(modelMatrix, position));
     out.mLayer = layer;
+    out.mPosition = mul(lightViewProj, mul(modelMatrix, position));
     out.mUv = v.mUv;
     out.mColor = v.mColor * materialConstant->mBaseFactor;
     out.mAlphaCutoff = materialConstant->mAlphaCutoff;

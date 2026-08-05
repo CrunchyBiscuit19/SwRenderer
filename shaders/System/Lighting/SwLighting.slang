@@ -131,8 +131,8 @@ namespace SwLighting {
     };
 
     public struct VSOutput {
-        public float4 mPosition : SV_Position;
         public uint mLayer : SV_RenderTargetArrayIndex;
+        public float4 mPosition : SV_Position;
         public float2 mUv : TEXCOORD0;
         public float4 mColor : COLOR0;
         public nointerpolation float mAlphaCutoff;
