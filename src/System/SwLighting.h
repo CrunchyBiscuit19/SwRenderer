@@ -175,7 +175,8 @@ struct ShadowsCullPC : SwPC<ShadowsCullPC> {
     vk::DeviceAddress mNodeTransformsBuffer{0};
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mLightsFrustumsBuffer{0};
-    std::uint32_t mNumRcsPerShadowView{0};
+    std::uint32_t mNumOpaqueRcsPerShadowView{0};
+    std::uint32_t mNumMaskRcsPerShadowView{0};
     std::uint32_t mNumRisPerShadowView{0};
     std::uint32_t mShadowsRisLimit{0};
 
@@ -211,8 +212,8 @@ struct Resources {
     SwDescriptorSet mShadowsMapsDescriptorSet;
 
     SwAllocatedBuffer mLightsVisibleIndicesBuffer;  // 1st 4 bytes as count
-    SwAllocatedBuffer mShadowsViewsBuffer;
     SwAllocatedBuffer mLightsFrustumsBuffer;
+    SwAllocatedBuffer mShadowsViewsBuffer;
     SwAllocatedBuffer mShadowsRcsBuffer;
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
     SwAllocatedBuffer mShadowMapSlotsCount;
@@ -277,6 +278,9 @@ class System : public SwSystem, public SwSystem::Resizable {
 private:
     Resources mResources;
 
+    std::uint32_t mNumOpaqueRcsPerShadowView{0};
+    std::uint32_t mNumMaskRcsPerShadowView{0};
+
     void initializeResources() override;
     void initializePasses() override;
     void refreshDataUsage() override;
@@ -286,7 +290,7 @@ private:
 public:
     System(SwScene& scene);
 
-    void regenerateShadowsRcs();
+    void regenerateShadowsRcs(vk::DeviceSize opaqueRcsOffset, vk::DeviceSize opaqueRcsBytes, vk::DeviceSize maskRcsOffset, vk::DeviceSize maskRcsBytes);
 
     inline SwDescriptorSet& getShadowsMapsDescriptorSet() { return mResources.mShadowsMapsDescriptorSet; }
 

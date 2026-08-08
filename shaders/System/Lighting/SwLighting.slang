@@ -105,7 +105,8 @@ namespace SwLighting {
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public SwFrustum* mLightsFrustumsBuffer;
-        public uint mNumRcsPerShadowView;
+        public uint mNumOpaqueRcsPerShadowView;
+        public uint mNumMaskRcsPerShadowView;
         public uint mNumRisPerShadowView;
         public uint mShadowsRisLimit;
     };

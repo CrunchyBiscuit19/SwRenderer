@@ -47,7 +47,20 @@ void main(SwLighting::CSInput in) {
     }
 
     SwRenderItem* ri = &shadowsCullPc.mRisBuffer[risIndex];
-    SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[viewIndex * shadowsCullPc.mNumRcsPerShadowView + ri->mRcIndex];
+
+    uint globalRcIndex = ri->mRcIndex;
+    uint numOpaque = shadowsCullPc.mNumOpaqueRcsPerShadowView;
+    uint numMask = shadowsCullPc.mNumMaskRcsPerShadowView;
+
+    uint shadowRcIndex;
+    if (globalRcIndex < numOpaque) {
+        shadowRcIndex = viewIndex * numOpaque + globalRcIndex;
+    } else if (globalRcIndex < numOpaque + numMask) {
+        uint maskBase = numOpaque * SwLighting::Shadow::MAX_NUM_SHADOW_VIEWS;
+        shadowRcIndex = maskBase + viewIndex * numMask + (globalRcIndex - numOpaque);
+    }
+
+    SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[shadowRcIndex];
 
     SwBounds riBounds = shadowsCullPc.mBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowsCullPc.mNodeTransformsBuffer[rc->mNodeTransformIndex];

@@ -31,21 +31,34 @@ void SwLighting::Resources::cleanup() { sShadowsConsumeDescriptorLayout.destroy(
 
 SwLighting::System::System(SwScene& scene) : SwSystem(scene) {}
 
-void SwLighting::System::regenerateShadowsRcs() {
+void SwLighting::System::regenerateShadowsRcs(
+    vk::DeviceSize opaqueRcsOffset, vk::DeviceSize opaqueRcsBytes, vk::DeviceSize maskRcsOffset, vk::DeviceSize maskRcsBytes
+) {
+    mNumOpaqueRcsPerShadowView = static_cast<std::uint32_t>(opaqueRcsBytes / sizeof(SwRenderCommand));
+    mNumMaskRcsPerShadowView = static_cast<std::uint32_t>(maskRcsBytes / sizeof(SwRenderCommand));
+
     if (mScene.getRcs().empty()) return;
 
-    const std::uint64_t rcsBytes = mScene.getRcs().size() * sizeof(SwRenderCommand);
     const std::uint64_t shadowRisIndicesBytes = mScene.getRis().size() * sizeof(std::uint32_t) * MAX_NUM_SHADOW_VIEWS;
 
-    SwRenderer::sRendererContext.mImmSubmit->addCallback(SwQueueType::Graphics, [this, rcsBytes, shadowRisIndicesBytes](vk::CommandBuffer cmd) {
-        std::array<vk::BufferCopy, MAX_NUM_SHADOW_VIEWS> shadowRcsCopies;
-        for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_VIEWS; i++) {
-            shadowRcsCopies[i] = vk::BufferCopy{0, i * rcsBytes, rcsBytes};
-        }
-        mResources.mShadowsRcsBuffer.copyFrom(cmd, mScene.getInitialRcsBuffer(), shadowRcsCopies);
+    vk::DeviceSize shadowsOpaqueRcsOffset = opaqueRcsOffset;
+    vk::DeviceSize shadowsMaskRcsOffset = opaqueRcsOffset + opaqueRcsBytes * MAX_NUM_SHADOW_VIEWS;
 
-        mResources.mShadowsRisIndicesBuffer.ensureCapacity(cmd, shadowRisIndicesBytes);
-    });
+    SwRenderer::sRendererContext.mImmSubmit->addCallback(
+        SwQueueType::Graphics,
+        [this, shadowRisIndicesBytes, shadowsOpaqueRcsOffset, opaqueRcsOffset, opaqueRcsBytes, shadowsMaskRcsOffset, maskRcsOffset, maskRcsBytes](
+            vk::CommandBuffer cmd
+        ) {
+            std::array<vk::BufferCopy, MAX_NUM_SHADOW_VIEWS * 2> shadowRcsCopies;
+            for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_VIEWS; i++) {
+                shadowRcsCopies[i] = vk::BufferCopy{opaqueRcsOffset, shadowsOpaqueRcsOffset + i * opaqueRcsBytes, opaqueRcsBytes};
+                shadowRcsCopies[i + MAX_NUM_SHADOW_VIEWS] = vk::BufferCopy{maskRcsOffset, shadowsMaskRcsOffset + i * maskRcsBytes, maskRcsBytes};
+            }
+            mResources.mShadowsRcsBuffer.copyFrom(cmd, mScene.getInitialRcsBuffer(), shadowRcsCopies);
+
+            mResources.mShadowsRisIndicesBuffer.ensureCapacity(cmd, shadowRisIndicesBytes);
+        }
+    );
 }
 
 void SwLighting::System::initializeResources() {
@@ -625,7 +638,8 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mShadowsCullPc.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
         mResources.mShadowsCullPc.mInstancesBuffer = mScene.getInstancesBuffer();
         mResources.mShadowsCullPc.mLightsFrustumsBuffer = mResources.mLightsFrustumsBuffer;
-        mResources.mShadowsCullPc.mNumRcsPerShadowView = mScene.getRcs().size();
+        mResources.mShadowsCullPc.mNumOpaqueRcsPerShadowView = mNumOpaqueRcsPerShadowView;
+        mResources.mShadowsCullPc.mNumMaskRcsPerShadowView = mNumMaskRcsPerShadowView;
         mResources.mShadowsCullPc.mNumRisPerShadowView = mScene.getRis().size();
         mResources.mShadowsCullPc.mShadowsRisLimit = mScene.getRis().size() * MAX_NUM_SHADOW_VIEWS;
 

@@ -371,6 +371,7 @@ void SwScene::reloadRcsAndRisBuffers() {
         return a.mPipelineId < b.mPipelineId;
     });
 
+    std::array<std::uint32_t, SwMaterial::NUM_TYPES> rcBytes{};
     std::uint32_t batchIndex = 0;
     for (std::size_t batchStart = 0; batchStart < mPendingRcs.size();) {
         const SwMaterial::Type materialType = mPendingRcs[batchStart].mMaterialType;
@@ -398,6 +399,7 @@ void SwScene::reloadRcsAndRisBuffers() {
             pipelineId, materialType, pipelineId, batchIndex, rcsIndex, mRcs.size() - rcsIndex, risIndex, mRis.size() - risIndex
         );
         mBatchIndicesKeys.try_emplace({materialType, pipelineId}, batchIndex);
+        rcBytes[static_cast<std::size_t>(materialType)] += static_cast<std::uint32_t>(mRcs.size() - rcsIndex);
         batchIndex++;
         batchStart = batchEnd;
     }
@@ -430,7 +432,11 @@ void SwScene::reloadRcsAndRisBuffers() {
         mLateRcsBuffer.ensureCapacity(cmd, rcsBytes);   // At least as big as mInitialRcsBuffer
     });
 
-    mLighting.regenerateShadowsRcs();
+    const vk::DeviceSize opaqueRcsBytes = static_cast<vk::DeviceSize>(rcBytes[static_cast<std::size_t>(SwMaterial::Type::Opaque)]) * sizeof(SwRenderCommand);
+    const vk::DeviceSize opaqueRcsOffset = 0;
+    const vk::DeviceSize maskRcsBytes = static_cast<vk::DeviceSize>(rcBytes[static_cast<std::size_t>(SwMaterial::Type::Mask)]) * sizeof(SwRenderCommand);
+    const vk::DeviceSize maskRcsOffset = opaqueRcsBytes;
+    mLighting.regenerateShadowsRcs(opaqueRcsOffset, opaqueRcsBytes, maskRcsOffset, maskRcsBytes);
 }
 
 void SwScene::reloadBatchesBuffer() {
