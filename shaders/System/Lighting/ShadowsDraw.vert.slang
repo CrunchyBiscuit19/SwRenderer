@@ -12,7 +12,7 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     uint layer = in.mDrawIndex / shadowsDrawPc.mNumRcsPerShadowView;
     uint absoluteView = shadowsDrawPc.mViewBase + layer;
 
-    SwRenderCommand* rc = &shadowsDrawPc.mShadowsRcsBuffer[shadowsDrawPc.mViewBase * shadowsDrawPc.mNumRcsPerShadowView + in.mDrawIndex];
+    SwRenderCommand* rc = &shadowsDrawPc.mShadowsRcsBuffer[shadowsDrawPc.mRcsRegionBase + shadowsDrawPc.mViewBase * shadowsDrawPc.mNumRcsPerShadowView + in.mDrawIndex];
 
     uint risIndex = absoluteView * shadowsDrawPc.mNumRisPerShadowView + in.mRenderItemIndex;
     

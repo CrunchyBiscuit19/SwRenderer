@@ -193,6 +193,7 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mMaterialConstantsBuffer{0};
     std::uint32_t mNumRcsPerShadowView{0};
+    std::uint32_t mRcsRegionBase{0};
     std::uint32_t mNumRisPerShadowView{0};
     std::uint32_t mViewBase{0};
 

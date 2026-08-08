@@ -415,8 +415,7 @@ void SwLighting::System::initializePasses() {
 
     // Shadows Draw
     mScene.insertPass(SwPass::Type::LightingShadowsDraw, [&](vk::CommandBuffer cmd) {
-        const std::uint32_t numRcsPerView = static_cast<std::uint32_t>(mScene.getRcs().size());
-        if (numRcsPerView == 0) return;
+        if (mNumOpaqueRcsPerShadowView == 0 && mNumMaskRcsPerShadowView == 0) return;
 
         cmd.bindIndexBuffer(mScene.getIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
 
@@ -426,20 +425,30 @@ void SwLighting::System::initializePasses() {
             SwPass::setViewportScissors(cmd, vk::Extent3D{sideLength, sideLength, 1});
 
             mResources.mShadowsDrawPc.mViewBase = viewBase;
-            const std::uint32_t drawCount = numViews * numRcsPerView;
-            const vk::DeviceSize rcsOffset = static_cast<vk::DeviceSize>(viewBase) * numRcsPerView * sizeof(SwRenderCommand);
-
-            auto& pipeline = mResources.mShadowsDrawOpaquePipelineBundle;
-            cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
             cmd.bindDescriptorSets(
-                pipeline.getBindPoint(),
-                pipeline.getLayoutHandle(),
+                vk::PipelineBindPoint::eGraphics,
+                mResources.mShadowsDrawPipelineLayout.getHandle(),
                 0,
                 {mScene.getMaterialSamplersDescriptorSet().getHandle(), mScene.getMaterialTexturesDescriptorSet().getHandle()},
                 nullptr
             );
-            cmd.pushConstants<ShadowDrawPC>(pipeline.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
-            cmd.drawIndexedIndirect(mResources.mShadowsRcsBuffer.getHandle(), rcsOffset, drawCount, sizeof(SwRenderCommand));
+
+            // Opaque and masked shadow render commands live in separate regions, so each material region is drawn on its own.
+            auto drawRegion = [&](SwGraphicsPipelineBundle& pipeline, std::uint32_t regionBase, std::uint32_t numRcsPerView) {
+                if (numRcsPerView == 0) return;
+                mResources.mShadowsDrawPc.mRcsRegionBase = regionBase;
+                mResources.mShadowsDrawPc.mNumRcsPerShadowView = numRcsPerView;
+                const std::uint32_t drawCount = numViews * numRcsPerView;
+                const vk::DeviceSize rcsOffset =
+                    (static_cast<vk::DeviceSize>(regionBase) + static_cast<vk::DeviceSize>(viewBase) * numRcsPerView) * sizeof(SwRenderCommand);
+                cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
+                cmd.pushConstants<ShadowDrawPC>(pipeline.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
+                cmd.drawIndexedIndirect(mResources.mShadowsRcsBuffer.getHandle(), rcsOffset, drawCount, sizeof(SwRenderCommand));
+            };
+
+            const std::uint32_t maskRegionBase = mNumOpaqueRcsPerShadowView * MAX_NUM_SHADOW_VIEWS;
+            drawRegion(mResources.mShadowsDrawOpaquePipelineBundle, 0, mNumOpaqueRcsPerShadowView);
+            drawRegion(mResources.mShadowsDrawMaskedPipelineBundle, maskRegionBase, mNumMaskRcsPerShadowView);
 
             cmd.endRendering();
         };
@@ -667,7 +676,6 @@ void SwLighting::System::refreshDataUsage() {
         mResources.mShadowsDrawPc.mNodeTransformsBuffer = mScene.getNodeTransformsBuffer();
         mResources.mShadowsDrawPc.mInstancesBuffer = mScene.getInstancesBuffer();
         mResources.mShadowsDrawPc.mMaterialConstantsBuffer = mScene.getMaterialConstantsBuffer();
-        mResources.mShadowsDrawPc.mNumRcsPerShadowView = static_cast<std::uint32_t>(mScene.getRcs().size());
         mResources.mShadowsDrawPc.mNumRisPerShadowView = static_cast<std::uint32_t>(mScene.getRis().size());
 
         SwDependency& d = mScene.mPasses[SwPass::Type::LightingShadowsDraw].getDeps();
