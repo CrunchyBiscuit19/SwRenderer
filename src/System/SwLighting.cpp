@@ -424,7 +424,7 @@ void SwLighting::System::initializePasses() {
             cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{sideLength, sideLength}, {}, depth, numViews));
             SwPass::setViewportScissors(cmd, vk::Extent3D{sideLength, sideLength, 1});
 
-            mResources.mShadowsDrawPc.mViewBase = viewBase;
+            mResources.mShadowsDrawPc.mShadowViewBase = viewBase;
             cmd.bindDescriptorSets(
                 vk::PipelineBindPoint::eGraphics,
                 mResources.mShadowsDrawPipelineLayout.getHandle(),
@@ -434,21 +434,21 @@ void SwLighting::System::initializePasses() {
             );
 
             // Opaque and masked shadow render commands live in separate regions, so each material region is drawn on its own.
-            auto drawRegion = [&](SwGraphicsPipelineBundle& pipeline, std::uint32_t regionBase, std::uint32_t numRcsPerView) {
+            auto drawRegion = [&](SwGraphicsPipelineBundle& pipeline, std::uint32_t rcsMatTypeBase, std::uint32_t numRcsPerView) {
                 if (numRcsPerView == 0) return;
-                mResources.mShadowsDrawPc.mRcsRegionBase = regionBase;
+                mResources.mShadowsDrawPc.mRcsMatTypeBase = rcsMatTypeBase;
                 mResources.mShadowsDrawPc.mNumRcsPerShadowView = numRcsPerView;
                 const std::uint32_t drawCount = numViews * numRcsPerView;
                 const vk::DeviceSize rcsOffset =
-                    (static_cast<vk::DeviceSize>(regionBase) + static_cast<vk::DeviceSize>(viewBase) * numRcsPerView) * sizeof(SwRenderCommand);
+                    (static_cast<vk::DeviceSize>(rcsMatTypeBase) + static_cast<vk::DeviceSize>(viewBase) * numRcsPerView) * sizeof(SwRenderCommand);
                 cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
                 cmd.pushConstants<ShadowDrawPC>(pipeline.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
                 cmd.drawIndexedIndirect(mResources.mShadowsRcsBuffer.getHandle(), rcsOffset, drawCount, sizeof(SwRenderCommand));
             };
 
-            const std::uint32_t maskRegionBase = mNumOpaqueRcsPerShadowView * MAX_NUM_SHADOW_VIEWS;
+            const std::uint32_t rcsMaskBase = mNumOpaqueRcsPerShadowView * MAX_NUM_SHADOW_VIEWS;
             drawRegion(mResources.mShadowsDrawOpaquePipelineBundle, 0, mNumOpaqueRcsPerShadowView);
-            drawRegion(mResources.mShadowsDrawMaskedPipelineBundle, maskRegionBase, mNumMaskRcsPerShadowView);
+            drawRegion(mResources.mShadowsDrawMaskedPipelineBundle, rcsMaskBase, mNumMaskRcsPerShadowView);
 
             cmd.endRendering();
         };

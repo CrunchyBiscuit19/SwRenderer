@@ -121,9 +121,9 @@ namespace SwLighting {
         public SwInstance::Data* mInstancesBuffer;
         public SwMaterial::Constant* mMaterialConstantsBuffer;
         public uint mNumRcsPerShadowView;
-        public uint mRcsRegionBase;
+        public uint mRcsMatTypeBase;
         public uint mNumRisPerShadowView;
-        public uint mViewBase;
+        public uint mShadowViewBase;
     };
 
     public struct VSInput {

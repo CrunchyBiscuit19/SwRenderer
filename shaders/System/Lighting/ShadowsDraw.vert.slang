@@ -10,9 +10,9 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     float4 position = float4(v.mPosition, 1.0f);
 
     uint layer = in.mDrawIndex / shadowsDrawPc.mNumRcsPerShadowView;
-    uint absoluteView = shadowsDrawPc.mViewBase + layer;
+    uint absoluteView = shadowsDrawPc.mShadowViewBase + layer;
 
-    SwRenderCommand* rc = &shadowsDrawPc.mShadowsRcsBuffer[shadowsDrawPc.mRcsRegionBase + shadowsDrawPc.mViewBase * shadowsDrawPc.mNumRcsPerShadowView + in.mDrawIndex];
+    SwRenderCommand* rc = &shadowsDrawPc.mShadowsRcsBuffer[shadowsDrawPc.mRcsMatTypeBase + shadowsDrawPc.mShadowViewBase * shadowsDrawPc.mNumRcsPerShadowView + in.mDrawIndex];
 
     uint risIndex = absoluteView * shadowsDrawPc.mNumRisPerShadowView + in.mRenderItemIndex;
     
