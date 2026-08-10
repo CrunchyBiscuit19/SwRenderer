@@ -22,9 +22,9 @@ void main(SwLighting::CSInput in) {
     uint dirOpaqueBase = 0;
     uint dirMaskBase = dirOpaqueBase + numOpaqueRcs * SwLighting::Shadow::NUM_DIRECTIONAL_VIEWS;
     uint pointOpaqueBase = numViewRcs * SwLighting::Shadow::POINT_VIEW_BASE;
-    uint pointMaskBase = pointOpaqueBase + numMaskRcs * SwLighting::Shadow::NUM_POINT_VIEWS;
+    uint pointMaskBase = pointOpaqueBase + numOpaqueRcs * SwLighting::Shadow::NUM_POINT_VIEWS;
     uint spotOpaqueBase = numViewRcs * SwLighting::Shadow::SPOT_VIEW_BASE;
-    uint spotMaskBase = spotOpaqueBase + numMaskRcs * SwLighting::Shadow::NUM_SPOT_VIEWS;
+    uint spotMaskBase = spotOpaqueBase + numOpaqueRcs * SwLighting::Shadow::NUM_SPOT_VIEWS;
 
     uint segment;
     uint segmentBase;

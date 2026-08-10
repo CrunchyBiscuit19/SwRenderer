@@ -51,6 +51,7 @@ static constexpr std::uint32_t MAX_DIRECTIONAL_SHADOW_MAPS{4};
 static constexpr std::uint32_t MAX_POINT_SHADOW_MAPS{4};
 static constexpr std::uint32_t MAX_SPOT_SHADOW_MAPS{16};
 static constexpr std::uint32_t MAX_NUM_SHADOW_CASTERS{MAX_DIRECTIONAL_SHADOW_MAPS + MAX_POINT_SHADOW_MAPS + MAX_SPOT_SHADOW_MAPS};
+
 static constexpr std::uint32_t NUM_DIRECTIONAL_CASCADES{4};
 static constexpr std::uint32_t VIEWS_PER_DIRECTIONAL{NUM_DIRECTIONAL_CASCADES};
 static constexpr std::uint32_t VIEWS_PER_POINT{6};
@@ -62,8 +63,17 @@ static constexpr std::uint32_t DIRECTIONAL_VIEW_BASE{0};
 static constexpr std::uint32_t POINT_VIEW_BASE{NUM_DIRECTIONAL_VIEWS};
 static constexpr std::uint32_t SPOT_VIEW_BASE{POINT_VIEW_BASE + NUM_POINT_VIEWS};
 static constexpr std::uint32_t MAX_NUM_SHADOW_VIEWS{SPOT_VIEW_BASE + NUM_SPOT_VIEWS};
+
 static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
 static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
+
+static constexpr std::uint32_t DIRECTIONAL_OPAQUE_RCS_POSITION{0};
+static constexpr std::uint32_t DIRECTIONAL_MASK_RCS_POSITION{1};
+static constexpr std::uint32_t POINT_OPAQUE_RCS_POSITION{2};
+static constexpr std::uint32_t POINT_MASK_RCS_POSITION{3};
+static constexpr std::uint32_t SPOT_OPAQUE_RCS_POSITION{4};
+static constexpr std::uint32_t SPOT_MASK_RCS_POSITION{5};
+
 static constexpr vk::DeviceSize SHADOWS_VIEWS_BUFFER_SIZE{MAX_NUM_SHADOW_VIEWS * sizeof(ShadowView)};
 static constexpr vk::DeviceSize LIGHTS_FRUSTUMS_BUFFER_SIZE{MAX_NUM_SHADOW_VIEWS * sizeof(SwFrustum)};
 static constexpr vk::DeviceSize SHADOW_MAP_SLOTS_COUNT_SIZE{SwLight::NUM_TYPES * sizeof(std::uint32_t)};
@@ -210,8 +220,8 @@ struct ShadowDrawPC : SwPC<ShadowDrawPC> {
     vk::DeviceAddress mInstancesBuffer{0};
     vk::DeviceAddress mMaterialConstantsBuffer{0};
     std::uint32_t mNumRcsPerShadowView{0};
-    std::uint32_t mRcsMatTypeBase{0};
     std::uint32_t mNumRisPerShadowView{0};
+    std::uint32_t mRcsBase{0};
     std::uint32_t mShadowViewBase{0};
 
     static constexpr vk::ShaderStageFlags sStages = vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment;
@@ -304,6 +314,7 @@ private:
 
     std::uint32_t mNumOpaqueRcsPerShadowView{0};
     std::uint32_t mNumMaskRcsPerShadowView{0};
+    std::uint32_t mNumTotalRcsPerShadowView{0};
 
     void initializeResources() override;
     void initializePasses() override;

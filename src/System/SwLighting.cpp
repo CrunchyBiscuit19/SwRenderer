@@ -36,15 +36,16 @@ void SwLighting::System::regenerateShadowsRcs(
 ) {
     mNumOpaqueRcsPerShadowView = static_cast<std::uint32_t>(opaqueRcsBytes / sizeof(SwRenderCommand));
     mNumMaskRcsPerShadowView = static_cast<std::uint32_t>(maskRcsBytes / sizeof(SwRenderCommand));
+    mNumTotalRcsPerShadowView = mNumOpaqueRcsPerShadowView + mNumMaskRcsPerShadowView;
 
     if (mScene.getRcs().empty()) return;
 
     const std::uint64_t shadowRisIndicesBytes = mScene.getRis().size() * sizeof(std::uint32_t) * MAX_NUM_SHADOW_VIEWS;
 
-    // The shadows RC buffer is grouped by light type. Each type owns a contiguous segment holding its opaque RCs replicated by its view count followed by its mask RCs replicated by its view count.
+    // The shadows RC buffer is grouped by light type. Each type owns a contiguous segment holding its opaque RCs replicated by its view count followed by its
+    // mask RCs replicated by its view count.
     SwRenderer::sRendererContext.mImmSubmit->addCallback(
-        SwQueueType::Graphics,
-        [this, shadowRisIndicesBytes, opaqueRcsOffset, opaqueRcsBytes, maskRcsOffset, maskRcsBytes](vk::CommandBuffer cmd) {
+        SwQueueType::Graphics, [this, shadowRisIndicesBytes, opaqueRcsOffset, opaqueRcsBytes, maskRcsOffset, maskRcsBytes](vk::CommandBuffer cmd) {
             const vk::DeviceSize perViewBytes = opaqueRcsBytes + maskRcsBytes;
 
             std::array<vk::BufferCopy, MAX_NUM_SHADOW_VIEWS * 2> shadowRcsCopies;
@@ -78,12 +79,10 @@ void SwLighting::System::initializeResources() {
         SwBufferFactory::createAllocatedBuffer("ShadowsViewsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_VIEWS_BUFFER_SIZE, true);
     mResources.mLightsFrustumsBuffer =
         SwBufferFactory::createAllocatedBuffer("LightsFrustumsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTS_FRUSTUMS_BUFFER_SIZE, true);
-    mResources.mShadowsPreRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowsPreRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
-    );
-    mResources.mShadowsPostRcsBuffer = SwBufferFactory::createAllocatedBuffer(
-        "ShadowsPostRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
-    );
+    mResources.mShadowsPreRcsBuffer =
+        SwBufferFactory::createAllocatedBuffer("ShadowsPreRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
+    mResources.mShadowsPostRcsBuffer =
+        SwBufferFactory::createAllocatedBuffer("ShadowsPostRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
     mResources.mShadowsRcsCount =
         SwBufferFactory::createAllocatedBuffer("ShadowsRcsCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_RCS_COUNT_SIZE, true);
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
@@ -161,14 +160,7 @@ void SwLighting::System::initializeResources() {
     );
 
     mResources.mPointShadowMaps.addImageView(
-        "PointShadowMapsArray",
-        SHADOWS_MAP_FORMAT,
-        vk::ImageAspectFlagBits::eDepth,
-        vk::ImageViewType::e2DArray,
-        0,
-        1,
-        0,
-        NUM_POINT_VIEWS
+        "PointShadowMapsArray", SHADOWS_MAP_FORMAT, vk::ImageAspectFlagBits::eDepth, vk::ImageViewType::e2DArray, 0, 1, 0, NUM_POINT_VIEWS
     );
     mResources.mSpotShadowMaps.addImageView(
         "SpotShadowMapsArray", SHADOWS_MAP_FORMAT, vk::ImageAspectFlagBits::eDepth, vk::ImageViewType::e2DArray, 0, 1, 0, NUM_SPOT_VIEWS
@@ -267,8 +259,7 @@ void SwLighting::System::initializeResources() {
         "ShadowsCullPipeline", {shadowsCullShader.getHandle(), mResources.mShadowsCullPipelineLayout.getHandle()}
     );
 
-    mResources.mShadowsCompactPipelineLayout =
-        SwPipelineFactory::createPipelineLayout("ShadowsCompactPipelineLayout", nullptr, ShadowsCompactPC::getRange());
+    mResources.mShadowsCompactPipelineLayout = SwPipelineFactory::createPipelineLayout("ShadowsCompactPipelineLayout", nullptr, ShadowsCompactPC::getRange());
     SwShader shadowsCompactShader = SwShaderFactory::createShader("ShadowsCompactShaderModule", SHADOWS_COMPACT_SHADER_PATH, vk::ShaderStageFlagBits::eCompute);
     mResources.mShadowsCompactPipelineBundle = SwComputePipelineFactory::createComputePipeline(
         "ShadowsCompactPipeline", {shadowsCompactShader.getHandle(), mResources.mShadowsCompactPipelineLayout.getHandle()}
@@ -450,12 +441,11 @@ void SwLighting::System::initializePasses() {
 
         cmd.bindIndexBuffer(mScene.getIndexBuffer().getHandle(), 0, vk::IndexType::eUint32);
 
-        auto drawShadowImage = [&](SwImage& image, std::uint32_t viewBase, std::uint32_t numViews, std::uint32_t sideLength) {
+        auto drawShadowImage = [&](SwLight::Type lightType, SwImage& image, std::uint32_t viewBase, std::uint32_t numViews, std::uint32_t sideLength) {
             vk::RenderingAttachmentInfo depth = image.generateRenderingAttachment(0, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore);
             cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{sideLength, sideLength}, {}, depth, numViews));
             SwPass::setViewportScissors(cmd, vk::Extent3D{sideLength, sideLength, 1});
 
-            mResources.mShadowsDrawPc.mShadowViewBase = viewBase;
             cmd.bindDescriptorSets(
                 vk::PipelineBindPoint::eGraphics,
                 mResources.mShadowsDrawPipelineLayout.getHandle(),
@@ -464,28 +454,53 @@ void SwLighting::System::initializePasses() {
                 nullptr
             );
 
-            // Opaque and masked shadow render commands live in separate regions, so each material region is drawn on its own.
-            auto drawRegion = [&](SwGraphicsPipelineBundle& pipeline, std::uint32_t rcsMatTypeBase, std::uint32_t numRcsPerView) {
-                if (numRcsPerView == 0) return;
-                mResources.mShadowsDrawPc.mRcsMatTypeBase = rcsMatTypeBase;
-                mResources.mShadowsDrawPc.mNumRcsPerShadowView = numRcsPerView;
-                const std::uint32_t drawCount = numViews * numRcsPerView;
-                const vk::DeviceSize rcsOffset =
-                    (static_cast<vk::DeviceSize>(rcsMatTypeBase) + static_cast<vk::DeviceSize>(viewBase) * numRcsPerView) * sizeof(SwRenderCommand);
-                cmd.bindPipeline(pipeline.getBindPoint(), pipeline.getPipelineHandle());
-                cmd.pushConstants<ShadowDrawPC>(pipeline.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
-                cmd.drawIndexedIndirect(mResources.mShadowsPreRcsBuffer.getHandle(), rcsOffset, drawCount, sizeof(SwRenderCommand));
+            auto drawMaterial = [&](SwMaterial::Type materialType, std::uint32_t rcsPosition) {
+                SwPipelineBundle& pipelineBundle =
+                    (materialType == SwMaterial::Type::Opaque) ? mResources.mShadowsDrawOpaquePipelineBundle : mResources.mShadowsDrawMaskedPipelineBundle;
+                std::uint32_t numRcsPerShadowView = (materialType == SwMaterial::Type::Opaque) ? mNumOpaqueRcsPerShadowView : mNumMaskRcsPerShadowView;
+                std::uint32_t rcsBase = (materialType == SwMaterial::Type::Opaque)
+                                            ? mNumTotalRcsPerShadowView * viewBase
+                                            : mNumTotalRcsPerShadowView * viewBase + mNumOpaqueRcsPerShadowView * numViews;
+
+                if (numRcsPerShadowView == 0) return;
+
+                cmd.bindPipeline(pipelineBundle.getBindPoint(), pipelineBundle.getPipelineHandle());
+
+                mResources.mShadowsDrawPc.mNumRcsPerShadowView = numRcsPerShadowView;
+                mResources.mShadowsDrawPc.mRcsBase = rcsBase;
+                mResources.mShadowsDrawPc.mShadowViewBase = viewBase;
+                cmd.pushConstants<ShadowDrawPC>(pipelineBundle.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);
+
+                cmd.drawIndexedIndirectCount(
+                    mResources.mShadowsPostRcsBuffer.getHandle(),
+                    mResources.mShadowsDrawPc.mRcsBase * sizeof(SwRenderCommand),
+                    mResources.mShadowsRcsCount.getHandle(),
+                    rcsPosition * sizeof(std::uint32_t),
+                    numRcsPerShadowView * MAX_NUM_SHADOW_VIEWS,
+                    sizeof(SwRenderCommand)
+                );
             };
 
-            const std::uint32_t rcsMaskBase = mNumOpaqueRcsPerShadowView * MAX_NUM_SHADOW_VIEWS;
-            drawRegion(mResources.mShadowsDrawOpaquePipelineBundle, 0, mNumOpaqueRcsPerShadowView);
-            drawRegion(mResources.mShadowsDrawMaskedPipelineBundle, rcsMaskBase, mNumMaskRcsPerShadowView);
+            switch (lightType) {
+                case SwLight::Type::Directional:
+                    drawMaterial(SwMaterial::Type::Opaque, DIRECTIONAL_OPAQUE_RCS_POSITION);
+                    drawMaterial(SwMaterial::Type::Mask, DIRECTIONAL_MASK_RCS_POSITION);
+                    break;
+                case SwLight::Type::Point:
+                    drawMaterial(SwMaterial::Type::Opaque, POINT_OPAQUE_RCS_POSITION);
+                    drawMaterial(SwMaterial::Type::Mask, POINT_MASK_RCS_POSITION);
+                    break;
+                case SwLight::Type::Spot:
+                    drawMaterial(SwMaterial::Type::Opaque, SPOT_OPAQUE_RCS_POSITION);
+                    drawMaterial(SwMaterial::Type::Mask, SPOT_MASK_RCS_POSITION);
+                    break;
+            }
 
             cmd.endRendering();
         };
-
-        drawShadowImage(mResources.mPointShadowMaps, POINT_VIEW_BASE, NUM_POINT_VIEWS, SHADOWS_CUBEMAP_WIDTH_HEIGHT);
-        drawShadowImage(mResources.mSpotShadowMaps, SPOT_VIEW_BASE, NUM_SPOT_VIEWS, SHADOWS_2D_MAP_WIDTH_HEIGHT);
+        
+        drawShadowImage(SwLight::Type::Point, mResources.mPointShadowMaps, POINT_VIEW_BASE, NUM_POINT_VIEWS, SHADOWS_CUBEMAP_WIDTH_HEIGHT);
+        drawShadowImage(SwLight::Type::Spot, mResources.mSpotShadowMaps, SPOT_VIEW_BASE, NUM_SPOT_VIEWS, SHADOWS_2D_MAP_WIDTH_HEIGHT);
     });
 }
 
@@ -717,7 +732,7 @@ void SwLighting::System::refreshDataUsage() {
 
     // Shadows Draw
     {
-        mResources.mShadowsDrawPc.mShadowsRcsBuffer = mResources.mShadowsPreRcsBuffer;
+        mResources.mShadowsDrawPc.mShadowsRcsBuffer = mResources.mShadowsPostRcsBuffer;
         mResources.mShadowsDrawPc.mShadowsRisIndicesBuffer = mResources.mShadowsRisIndicesBuffer;
         mResources.mShadowsDrawPc.mShadowsViewsBuffer = mResources.mShadowsViewsBuffer;
         mResources.mShadowsDrawPc.mLightsBuffer = mScene.getLightsBuffer();
