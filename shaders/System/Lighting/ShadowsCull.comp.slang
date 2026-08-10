@@ -57,13 +57,13 @@ void main(SwLighting::CSInput in) {
     uint numViews;
     if (viewIndex < SwLighting::Shadow::POINT_VIEW_BASE) {
         viewBase = SwLighting::Shadow::DIRECTIONAL_VIEW_BASE;
-        numViews = SwLighting::Shadow::POINT_VIEW_BASE - SwLighting::Shadow::DIRECTIONAL_VIEW_BASE;
+        numViews = SwLighting::Shadow::NUM_DIRECTIONAL_VIEWS;
     } else if (viewIndex < SwLighting::Shadow::SPOT_VIEW_BASE) {
         viewBase = SwLighting::Shadow::POINT_VIEW_BASE;
-        numViews = SwLighting::Shadow::SPOT_VIEW_BASE - SwLighting::Shadow::POINT_VIEW_BASE;
+        numViews = SwLighting::Shadow::NUM_POINT_VIEWS;
     } else {
         viewBase = SwLighting::Shadow::SPOT_VIEW_BASE;
-        numViews = SwLighting::Shadow::MAX_NUM_SHADOW_VIEWS - SwLighting::Shadow::SPOT_VIEW_BASE;
+        numViews = SwLighting::Shadow::NUM_SPOT_VIEWS;
     }
 
     uint viewRcIndex = ri->mRcIndex;
@@ -93,7 +93,7 @@ void main(SwLighting::CSInput in) {
     }
     uint shadowRcIndex = shadowRcBase + viewRcOffset + viewRcIndex;
 
-    SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[shadowRcIndex];
+    SwRenderCommand* rc = &shadowsCullPc.mShadowsPreRcsBuffer[shadowRcIndex];
 
     SwBounds riBounds = shadowsCullPc.mBoundsBuffer[rc->mBoundsIndex];
     float4x4 riNodeTransform = shadowsCullPc.mNodeTransformsBuffer[rc->mNodeTransformIndex];

@@ -10,5 +10,5 @@ void main(SwLighting::CSInput in) {
     if (rcsIndex >= resetPc.mShadowsRcsLimit)
         return;
 
-    resetPc.mShadowsRcsBuffer[rcsIndex].mRiCount = 0;
+    resetPc.mShadowsPreRcsBuffer[rcsIndex].mRiCount = 0;
 }

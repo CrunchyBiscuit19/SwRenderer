@@ -33,6 +33,7 @@ public:
         LightingClustersLightPrefixSumOffset,
         LightingClustersLightSelect,
         LightingShadowsCull,
+        LightingShadowsCompact,
         LightingShadowsDraw,
         GeometryLateOpaque,
         GeometryMasked,

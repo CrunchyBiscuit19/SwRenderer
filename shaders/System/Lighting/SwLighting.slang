@@ -23,7 +23,7 @@ namespace SwLighting {
     };
 
     public struct ResetPC {
-        public SwRenderCommand* mShadowsRcsBuffer;
+        public SwRenderCommand* mShadowsPreRcsBuffer;
         public uint mShadowsRcsLimit;
     };
 
@@ -95,8 +95,17 @@ namespace SwLighting {
         public uint* mClustersLightWriteCursorsBuffer;
     };
 
+    public struct ShadowsCompactPC {
+        public SwRenderCommand* mShadowsPreRcsBuffer;
+        public SwRenderCommand* mShadowsPostRcsBuffer;
+        public uint* mShadowsRcsCount;
+        public uint mNumOpaqueRcsPerShadowView;
+        public uint mNumMaskRcsPerShadowView;
+        public uint mShadowsPreRcsLimit;
+    };
+
     public struct ShadowsCullPC {
-        public SwRenderCommand* mShadowsRcsBuffer;
+        public SwRenderCommand* mShadowsPreRcsBuffer;
         public SwRenderItem* mRisBuffer;
         public uint* mShadowsRisIndicesBuffer;
         public SwLighting::Shadow::View* mShadowsViewsBuffer;
@@ -313,10 +322,14 @@ namespace SwLighting::Shadow {
     public static const uint VIEWS_PER_POINT = 6;
     public static const uint VIEWS_PER_SPOT = 1;
 
+    public static const uint NUM_DIRECTIONAL_VIEWS = MAX_DIRECTIONAL_SHADOW_MAPS * VIEWS_PER_DIRECTIONAL;
+    public static const uint NUM_POINT_VIEWS = MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT;
+    public static const uint NUM_SPOT_VIEWS = MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT;
+
     public static const uint DIRECTIONAL_VIEW_BASE = 0;
-    public static const uint POINT_VIEW_BASE = MAX_DIRECTIONAL_SHADOW_MAPS * VIEWS_PER_DIRECTIONAL;
-    public static const uint SPOT_VIEW_BASE = POINT_VIEW_BASE + MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT;
-    public static const uint MAX_NUM_SHADOW_VIEWS = SPOT_VIEW_BASE + MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT;
+    public static const uint POINT_VIEW_BASE = NUM_DIRECTIONAL_VIEWS;
+    public static const uint SPOT_VIEW_BASE = POINT_VIEW_BASE + NUM_POINT_VIEWS;
+    public static const uint MAX_NUM_SHADOW_VIEWS = SPOT_VIEW_BASE + NUM_SPOT_VIEWS;
 
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
