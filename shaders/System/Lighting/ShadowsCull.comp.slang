@@ -48,17 +48,50 @@ void main(SwLighting::CSInput in) {
 
     SwRenderItem* ri = &shadowsCullPc.mRisBuffer[risIndex];
 
-    uint globalRcIndex = ri->mRcIndex;
-    uint numOpaque = shadowsCullPc.mNumOpaqueRcsPerShadowView;
-    uint numMask = shadowsCullPc.mNumMaskRcsPerShadowView;
+    uint numOpaqueRcs = shadowsCullPc.mNumOpaqueRcsPerShadowView;
+    uint numMaskRcs = shadowsCullPc.mNumMaskRcsPerShadowView;
+    uint numViewRcs = numOpaqueRcs + numMaskRcs;
 
-    uint shadowRcIndex;
-    if (globalRcIndex < numOpaque) {
-        shadowRcIndex = viewIndex * numOpaque + globalRcIndex;
-    } else if (globalRcIndex < numOpaque + numMask) {
-        uint maskBase = numOpaque * SwLighting::Shadow::MAX_NUM_SHADOW_VIEWS;
-        shadowRcIndex = maskBase + viewIndex * numMask + (globalRcIndex - numOpaque);
+    // The shadows RC buffer is grouped by light type, so the segment this view belongs to is derived from its global view index.
+    uint viewBase;
+    uint numViews;
+    if (viewIndex < SwLighting::Shadow::POINT_VIEW_BASE) {
+        viewBase = SwLighting::Shadow::DIRECTIONAL_VIEW_BASE;
+        numViews = SwLighting::Shadow::POINT_VIEW_BASE - SwLighting::Shadow::DIRECTIONAL_VIEW_BASE;
+    } else if (viewIndex < SwLighting::Shadow::SPOT_VIEW_BASE) {
+        viewBase = SwLighting::Shadow::POINT_VIEW_BASE;
+        numViews = SwLighting::Shadow::SPOT_VIEW_BASE - SwLighting::Shadow::POINT_VIEW_BASE;
+    } else {
+        viewBase = SwLighting::Shadow::SPOT_VIEW_BASE;
+        numViews = SwLighting::Shadow::MAX_NUM_SHADOW_VIEWS - SwLighting::Shadow::SPOT_VIEW_BASE;
     }
+
+    uint viewRcIndex = ri->mRcIndex;
+    SwMaterial::Type matType;
+    if (viewRcIndex < numOpaqueRcs) {
+        matType = SwMaterial::Type::Opaque;
+    } else if (viewRcIndex < numOpaqueRcs + numMaskRcs) {
+        matType = SwMaterial::Type::Mask;
+    } else {
+        return; // Invalid RC index
+    }
+
+    uint shadowRcBase;
+    uint viewRcOffset;
+    switch (matType) {
+        case SwMaterial::Type::Opaque:
+            shadowRcBase = numViewRcs * viewBase;
+            viewRcOffset = (viewIndex - viewBase) * numOpaqueRcs;        
+            break;
+        case SwMaterial::Type::Mask:
+            shadowRcBase = numViewRcs * viewBase + numOpaqueRcs * numViews;
+            viewRcOffset = (viewIndex - viewBase) * numMaskRcs;
+            viewRcIndex -= numOpaqueRcs; // Adjust index to be relative to the mask RCs
+            break;
+        default:
+            return; // Unsupported material type
+    }
+    uint shadowRcIndex = shadowRcBase + viewRcOffset + viewRcIndex;
 
     SwRenderCommand* rc = &shadowsCullPc.mShadowsRcsBuffer[shadowRcIndex];
 

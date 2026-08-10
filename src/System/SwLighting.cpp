@@ -41,19 +41,27 @@ void SwLighting::System::regenerateShadowsRcs(
 
     const std::uint64_t shadowRisIndicesBytes = mScene.getRis().size() * sizeof(std::uint32_t) * MAX_NUM_SHADOW_VIEWS;
 
-    vk::DeviceSize shadowsOpaqueRcsOffset = opaqueRcsOffset;
-    vk::DeviceSize shadowsMaskRcsOffset = opaqueRcsOffset + opaqueRcsBytes * MAX_NUM_SHADOW_VIEWS;
-
+    // The shadows RC buffer is grouped by light type. Each type owns a contiguous segment holding its opaque RCs replicated by its view count followed by its mask RCs replicated by its view count.
     SwRenderer::sRendererContext.mImmSubmit->addCallback(
         SwQueueType::Graphics,
-        [this, shadowRisIndicesBytes, shadowsOpaqueRcsOffset, opaqueRcsOffset, opaqueRcsBytes, shadowsMaskRcsOffset, maskRcsOffset, maskRcsBytes](
-            vk::CommandBuffer cmd
-        ) {
+        [this, shadowRisIndicesBytes, opaqueRcsOffset, opaqueRcsBytes, maskRcsOffset, maskRcsBytes](vk::CommandBuffer cmd) {
+            const vk::DeviceSize perViewBytes = opaqueRcsBytes + maskRcsBytes;
+
             std::array<vk::BufferCopy, MAX_NUM_SHADOW_VIEWS * 2> shadowRcsCopies;
-            for (std::uint32_t i = 0; i < MAX_NUM_SHADOW_VIEWS; i++) {
-                shadowRcsCopies[i] = vk::BufferCopy{opaqueRcsOffset, shadowsOpaqueRcsOffset + i * opaqueRcsBytes, opaqueRcsBytes};
-                shadowRcsCopies[i + MAX_NUM_SHADOW_VIEWS] = vk::BufferCopy{maskRcsOffset, shadowsMaskRcsOffset + i * maskRcsBytes, maskRcsBytes};
-            }
+            std::uint32_t copyIdx = 0;
+
+            auto fillSegment = [&](std::uint32_t viewBase, std::uint32_t numViews) {
+                const vk::DeviceSize shadowTypeOpaqueRcsOffset = perViewBytes * viewBase;
+                const vk::DeviceSize shadowTypeMaskRcsOffset = shadowTypeOpaqueRcsOffset + opaqueRcsBytes * numViews;
+                for (std::uint32_t i = 0; i < numViews; i++) {
+                    shadowRcsCopies[copyIdx++] = vk::BufferCopy{opaqueRcsOffset, shadowTypeOpaqueRcsOffset + i * opaqueRcsBytes, opaqueRcsBytes};
+                    shadowRcsCopies[copyIdx++] = vk::BufferCopy{maskRcsOffset, shadowTypeMaskRcsOffset + i * maskRcsBytes, maskRcsBytes};
+                }
+            };
+            fillSegment(DIRECTIONAL_VIEW_BASE, MAX_DIRECTIONAL_SHADOW_MAPS * VIEWS_PER_DIRECTIONAL);
+            fillSegment(POINT_VIEW_BASE, MAX_POINT_SHADOW_MAPS * VIEWS_PER_POINT);
+            fillSegment(SPOT_VIEW_BASE, MAX_SPOT_SHADOW_MAPS * VIEWS_PER_SPOT);
+
             mResources.mShadowsRcsBuffer.copyFrom(cmd, mScene.getInitialRcsBuffer(), shadowRcsCopies);
 
             mResources.mShadowsRisIndicesBuffer.ensureCapacity(cmd, shadowRisIndicesBytes);

@@ -215,7 +215,8 @@ struct Resources {
     SwAllocatedBuffer mLightsVisibleIndicesBuffer;  // 1st 4 bytes as count
     SwAllocatedBuffer mLightsFrustumsBuffer;
     SwAllocatedBuffer mShadowsViewsBuffer;
-    SwAllocatedBuffer mShadowsRcsBuffer;
+    SwAllocatedBuffer mShadowsRcsBuffer; 
+    SwAllocatedBuffer mShadowsRcsCount;  
     SwAllocatedBuffer mShadowsRisIndicesBuffer;
     SwAllocatedBuffer mShadowMapSlotsCount;
 
