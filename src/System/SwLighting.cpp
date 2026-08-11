@@ -466,7 +466,6 @@ void SwLighting::System::initializePasses() {
 
                 cmd.bindPipeline(pipelineBundle.getBindPoint(), pipelineBundle.getPipelineHandle());
 
-                mResources.mShadowsDrawPc.mNumRcsPerShadowView = numRcsPerShadowView;
                 mResources.mShadowsDrawPc.mRcsBase = rcsBase;
                 mResources.mShadowsDrawPc.mShadowViewBase = viewBase;
                 cmd.pushConstants<ShadowDrawPC>(pipelineBundle.getLayoutHandle(), ShadowDrawPC::sStages, 0, mResources.mShadowsDrawPc);

@@ -20,6 +20,7 @@ struct SwRenderCommand {
     std::uint32_t mFirstInstance{0};
     std::uint32_t mBoundsIndex{0};
     std::uint32_t mBatchIndex{0};
+    std::uint32_t mShadowView{0};
 };
 
 struct SwRenderItem {

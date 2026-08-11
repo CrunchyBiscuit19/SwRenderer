@@ -14,6 +14,7 @@ public struct SwRenderCommand {
     public uint mFirstInstance;
     public uint mBoundsIndex;
     public uint mBatchIndex;
+    public uint mShadowView;
 
     [mutating]
     public void copyFrom(SwRenderCommand* src) {
@@ -28,6 +29,7 @@ public struct SwRenderCommand {
         this.mFirstInstance = src->mFirstInstance;
         this.mBoundsIndex = src->mBoundsIndex;
         this.mBatchIndex = src->mBatchIndex;
+        this.mShadowView = src->mShadowView;
     }
 };
 

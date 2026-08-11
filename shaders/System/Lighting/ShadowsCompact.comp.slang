@@ -28,27 +28,45 @@ void main(SwLighting::CSInput in) {
 
     uint segment;
     uint segmentBase;
+    uint segmentViewBase;
+    uint segmentPerViewRcs;
     if (rcsIndex < dirMaskBase) {
         segment = 0;
         segmentBase = dirOpaqueBase;
+        segmentViewBase = SwLighting::Shadow::DIRECTIONAL_VIEW_BASE;
+        segmentPerViewRcs = numOpaqueRcs;
     } else if (rcsIndex < pointOpaqueBase) {
         segment = 1;
         segmentBase = dirMaskBase;
+        segmentViewBase = SwLighting::Shadow::DIRECTIONAL_VIEW_BASE;
+        segmentPerViewRcs = numMaskRcs;
     } else if (rcsIndex < pointMaskBase) {
         segment = 2;
         segmentBase = pointOpaqueBase;
+        segmentViewBase = SwLighting::Shadow::POINT_VIEW_BASE;
+        segmentPerViewRcs = numOpaqueRcs;
     } else if (rcsIndex < spotOpaqueBase) {
         segment = 3;
         segmentBase = pointMaskBase;
+        segmentViewBase = SwLighting::Shadow::POINT_VIEW_BASE;
+        segmentPerViewRcs = numMaskRcs;
     } else if (rcsIndex < spotMaskBase) {
         segment = 4;
         segmentBase = spotOpaqueBase;
+        segmentViewBase = SwLighting::Shadow::SPOT_VIEW_BASE;
+        segmentPerViewRcs = numOpaqueRcs;
     } else {
         segment = 5;
         segmentBase = spotMaskBase;
+        segmentViewBase = SwLighting::Shadow::SPOT_VIEW_BASE;
+        segmentPerViewRcs = numMaskRcs;
     }
+
+    uint absoluteView = segmentViewBase + (rcsIndex - segmentBase) / segmentPerViewRcs;
 
     uint segmentOffset;
     InterlockedAdd(shadowsCompactPc.mShadowsRcsCount[segment], 1, segmentOffset);
-    shadowsCompactPc.mShadowsPostRcsBuffer[segmentBase + segmentOffset].copyFrom(rc);
+    SwRenderCommand* dst = &shadowsCompactPc.mShadowsPostRcsBuffer[segmentBase + segmentOffset];
+    dst->copyFrom(rc);
+    dst->mShadowView = absoluteView;
 }

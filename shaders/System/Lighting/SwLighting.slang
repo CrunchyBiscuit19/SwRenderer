@@ -129,7 +129,6 @@ namespace SwLighting {
         public SwNode::Transform* mNodeTransformsBuffer;
         public SwInstance::Data* mInstancesBuffer;
         public SwMaterial::Constant* mMaterialConstantsBuffer;
-        public uint mNumRcsPerShadowView;
         public uint mNumRisPerShadowView;
         public uint mRcsBase;
         public uint mShadowViewBase;

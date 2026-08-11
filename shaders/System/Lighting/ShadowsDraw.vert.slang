@@ -9,12 +9,12 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     SwVertex v = shadowsDrawPc.mVertexBuffer[in.mVertexIndex];
     float4 position = float4(v.mPosition, 1.0f);
 
-    uint layer = in.mDrawIndex / shadowsDrawPc.mNumRcsPerShadowView;
-    uint absoluteView = shadowsDrawPc.mShadowViewBase + layer;
-
     SwRenderCommand* rc = &shadowsDrawPc.mShadowsRcsBuffer[shadowsDrawPc.mRcsBase + in.mDrawIndex];
 
-    uint risIndex = absoluteView * shadowsDrawPc.mNumRisPerShadowView + in.mRenderItemIndex;
+    uint shadowView = rc->mShadowView;
+    uint layer = shadowView - shadowsDrawPc.mShadowViewBase;
+
+    uint risIndex = shadowView * shadowsDrawPc.mNumRisPerShadowView + in.mRenderItemIndex;
     
     uint instanceIndex = shadowsDrawPc.mShadowsRisIndicesBuffer[risIndex];
     float4x4 instanceTransformMatrix = shadowsDrawPc.mInstancesBuffer[instanceIndex].mTransformMatrix;
@@ -24,7 +24,7 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     uint sceneMaterialIndex = rc->mMaterialIndex;
     SwMaterial::Constant* materialConstant = &shadowsDrawPc.mMaterialConstantsBuffer[sceneMaterialIndex];
 
-    float4x4 lightViewProj = shadowsDrawPc.mShadowsViewsBuffer[absoluteView].mViewProj;
+    float4x4 lightViewProj = shadowsDrawPc.mShadowsViewsBuffer[shadowView].mViewProj;
     float4x4 modelMatrix = mul(instanceTransformMatrix, nodeTransformMatrix);
     out.mLayer = layer;
     out.mPosition = mul(lightViewProj, mul(modelMatrix, position));
