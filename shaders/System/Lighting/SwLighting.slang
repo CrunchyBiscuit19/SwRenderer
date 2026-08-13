@@ -145,10 +145,7 @@ namespace SwLighting {
         public float4 mPosition : SV_Position;
         public float2 mUv : TEXCOORD0;
         public float4 mColor : COLOR0;
-        public nointerpolation float mAlphaCutoff;
         public nointerpolation uint mMaterialIndex;
-        public nointerpolation uint mAssetIndex;
-        public nointerpolation uint mInstanceIndex;
     };
 
     public struct CSInput {

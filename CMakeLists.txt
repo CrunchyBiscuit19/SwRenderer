@@ -102,7 +102,7 @@ foreach(SHADER IN LISTS SLANG_ENTRY_SOURCES)
     add_custom_command(
         OUTPUT "${SHADER_SPV}"
         COMMAND ${SLANGC} "${SHADER}" -o "${SHADER_SPV}" -I "${CMAKE_SHADER_DIR}"
-                ${SHADER_STAGE_ARGS} -profile sm_6_6 -target spirv ${SHADER_OPT_ARG} -fvk-use-scalar-layout
+                ${SHADER_STAGE_ARGS} -profile sm_6_6 -target spirv -capability spirv_1_6 ${SHADER_OPT_ARG} -fvk-use-scalar-layout
                 -depfile "${SHADER_DEPFILE}"
         DEPFILE "${SHADER_DEPFILE}"
         DEPENDS "${SHADER}" PurgeSlangModules

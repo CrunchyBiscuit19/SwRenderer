@@ -30,10 +30,7 @@ SwLighting::VSOutput computeVertex(SwLighting::VSInput in) {
     out.mPosition = mul(lightViewProj, mul(modelMatrix, position));
     out.mUv = v.mUv;
     out.mColor = v.mColor * materialConstant->mBaseFactor;
-    out.mAlphaCutoff = materialConstant->mAlphaCutoff;
     out.mMaterialIndex = sceneMaterialIndex;
-    out.mAssetIndex = rc->mAssetIndex;
-    out.mInstanceIndex = instanceIndex;
 
     return out;
 }

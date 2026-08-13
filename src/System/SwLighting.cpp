@@ -55,15 +55,21 @@ void SwLighting::System::regenerateShadowsRcs(
                 const vk::DeviceSize shadowTypeOpaqueRcsOffset = perViewBytes * viewBase;
                 const vk::DeviceSize shadowTypeMaskRcsOffset = shadowTypeOpaqueRcsOffset + opaqueRcsBytes * numViews;
                 for (std::uint32_t i = 0; i < numViews; i++) {
-                    shadowRcsCopies[copyIdx++] = vk::BufferCopy{opaqueRcsOffset, shadowTypeOpaqueRcsOffset + i * opaqueRcsBytes, opaqueRcsBytes};
-                    shadowRcsCopies[copyIdx++] = vk::BufferCopy{maskRcsOffset, shadowTypeMaskRcsOffset + i * maskRcsBytes, maskRcsBytes};
+                    if (opaqueRcsBytes > 0) {
+                        shadowRcsCopies[copyIdx++] = vk::BufferCopy{opaqueRcsOffset, shadowTypeOpaqueRcsOffset + i * opaqueRcsBytes, opaqueRcsBytes};
+                    }
+                    if (maskRcsBytes > 0) {
+                        shadowRcsCopies[copyIdx++] = vk::BufferCopy{maskRcsOffset, shadowTypeMaskRcsOffset + i * maskRcsBytes, maskRcsBytes};
+                    }
                 }
             };
             fillSegment(DIRECTIONAL_VIEW_BASE, NUM_DIRECTIONAL_VIEWS);
             fillSegment(POINT_VIEW_BASE, NUM_POINT_VIEWS);
             fillSegment(SPOT_VIEW_BASE, NUM_SPOT_VIEWS);
 
-            mResources.mShadowsPreRcsBuffer.copyFrom(cmd, mScene.getInitialRcsBuffer(), shadowRcsCopies);
+            if (copyIdx > 0) {
+                mResources.mShadowsPreRcsBuffer.copyFrom(cmd, mScene.getInitialRcsBuffer(), {copyIdx, shadowRcsCopies.data()});
+            }
             mResources.mShadowsPostRcsBuffer.ensureCapacity(cmd, perViewBytes * MAX_NUM_SHADOW_VIEWS);
 
             mResources.mShadowsRisIndicesBuffer.ensureCapacity(cmd, shadowRisIndicesBytes);

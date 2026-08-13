@@ -95,6 +95,7 @@ SwRenderer::SwRenderer()
     vk::PhysicalDeviceVulkan13Features features13{};
     features13.dynamicRendering = true;
     features13.synchronization2 = true;
+    features13.shaderDemoteToHelperInvocation = true;
     vk::PhysicalDeviceVulkan12Features features12{};
     features12.separateDepthStencilLayouts = true;
     features12.scalarBlockLayout = true;

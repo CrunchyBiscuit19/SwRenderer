@@ -306,8 +306,8 @@ SwLogger::SwLogger() {
 
     mLogger->set_log_level(LOG_LEVEL);
 
-    //mBlockedMessages.insert("BestPractices-vkBindBufferMemory-small-dedicated-allocation");
-    //mBlockedMessages.insert("BestPractices-vkBindImageMemory-small-dedicated-allocation");
+    mBlockedMessages.insert("BestPractices-vkBindBufferMemory-small-dedicated-allocation");
+    mBlockedMessages.insert("BestPractices-vkBindImageMemory-small-dedicated-allocation");
 
     mBreakMessages.insert("VUID-VkBufferCopy-size-01988");
     mBreakMessages.insert("VUID-vkCmdCopyBuffer-size-00115");
@@ -323,7 +323,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL SwLogger::debugMessageFunc(
 
     const std::string messageName{pCallbackData->pMessageIdName ? pCallbackData->pMessageIdName : ""};
     if (swLogger->mBlockedMessages.contains(messageName)) return vk::False;
-    if (swLogger->mBreakMessages.contains(messageName)) SW_DEBUG_BREAK();
+    //if (swLogger->mBreakMessages.contains(messageName)) SW_DEBUG_BREAK();
 
     std::string severity;
     switch (messageSeverity) {
