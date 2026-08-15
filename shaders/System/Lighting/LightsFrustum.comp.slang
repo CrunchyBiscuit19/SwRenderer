@@ -54,6 +54,8 @@ void main(SwLighting::CSInput in) {
         forward = CUBE_FACE_FORWARDS[view.mFace];
         halfSide = 1.f;  // 90 degree field of view per cube face
         viewUp = CUBE_FACE_UPS[view.mFace];
+        // Match the handedness of makeLookView so the cull frustum agrees with the rendered view.
+        right = normalize(cross(forward, viewUp));
         break;
     default:
         return;

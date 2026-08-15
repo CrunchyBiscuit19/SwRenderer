@@ -759,7 +759,9 @@ void SwLighting::System::refreshDataUsage() {
         d.mWriteImages.emplace_back(&mResources.mPointShadowMaps, SwDependency::ImageDepType::DepthAttachmentReadWrite);
         d.mWriteImages.emplace_back(&mResources.mSpotShadowMaps, SwDependency::ImageDepType::DepthAttachmentReadWrite);
         d.mReadBuffers.emplace_back(&mResources.mShadowsViewsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
-        d.mReadBuffers.emplace_back(&mResources.mShadowsPreRcsBuffer, SwDependency::BufferDepType::IndirectRead);
+        d.mReadBuffers.emplace_back(&mResources.mShadowsPostRcsBuffer, SwDependency::BufferDepType::IndirectRead);
+        d.mReadBuffers.emplace_back(&mResources.mShadowsPostRcsBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
+        d.mReadBuffers.emplace_back(&mResources.mShadowsRcsCount, SwDependency::BufferDepType::IndirectRead);
         d.mReadBuffers.emplace_back(&mResources.mShadowsRisIndicesBuffer, SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getVertexBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);
         d.mReadBuffers.emplace_back(&mScene.getNodeTransformsBuffer(), SwDependency::BufferDepType::VertexShaderStorageRead);

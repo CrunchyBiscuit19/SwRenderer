@@ -28,7 +28,7 @@ bool rangeTest(float3 aabbMin, float3 aabbMax, float3 center, float range) {
     return dot(delta, delta) <= range * range;
 }
 
-[numthreads(SwConstants::MAX_1D_WORKGROUP_THREADS, 1, 1)]
+[numthreads(SwConstants::MAX_2D_WORKGROUP_THREADS, SwConstants::MAX_2D_WORKGROUP_THREADS, 1)]
 void main(SwLighting::CSInput in) {
     uint viewIndex = in.mDispatchThreadID.x;
     if (viewIndex >= SwLighting::Shadow::MAX_NUM_SHADOW_VIEWS) {
@@ -42,9 +42,7 @@ void main(SwLighting::CSInput in) {
     }
 
     uint risIndex = in.mDispatchThreadID.y;
-    if (risIndex >= shadowsCullPc.mShadowsRisLimit) {
-        return;
-    }
+    if (risIndex >= shadowsCullPc.mNumRisPerShadowView) { return; }
 
     SwRenderItem* ri = &shadowsCullPc.mRisBuffer[risIndex];
 
@@ -121,7 +119,7 @@ void main(SwLighting::CSInput in) {
         case SwLight::Type::Point:
         case SwLight::Type::Spot:
             visible = SwFrustum::aabbInFrustum(shadowsCullPc.mLightsFrustumsBuffer[viewIndex], aabbMin, aabbMax);
-            visible = rangeTest(aabbMin, aabbMax, lightApex, light.mRange);
+            visible = visible && rangeTest(aabbMin, aabbMax, lightApex, light.mRange);
             break;
         default:
             break;
