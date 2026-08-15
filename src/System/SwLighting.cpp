@@ -87,10 +87,16 @@ void SwLighting::System::initializeResources() {
         SwBufferFactory::createAllocatedBuffer("LightsFrustumsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, LIGHTS_FRUSTUMS_BUFFER_SIZE, true);
     mResources.mShadowsPreRcsBuffer =
         SwBufferFactory::createAllocatedBuffer("ShadowsPreRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
-    mResources.mShadowsPostRcsBuffer =
-        SwBufferFactory::createAllocatedBuffer("ShadowsPostRcsBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true);
-    mResources.mShadowsRcsCount =
-        SwBufferFactory::createAllocatedBuffer("ShadowsRcsCount", vk::BufferUsageFlagBits::eStorageBuffer, 0, SHADOWS_RCS_COUNT_SIZE, true);
+    mResources.mShadowsPostRcsBuffer = SwBufferFactory::createAllocatedBuffer(
+        "ShadowsPostRcsBuffer",
+        vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer,
+        0,
+        SwBufferFactory::INITIAL_BUFFER_SIZE,
+        true
+    );
+    mResources.mShadowsRcsCount = SwBufferFactory::createAllocatedBuffer(
+        "ShadowsRcsCount", vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eIndirectBuffer, 0, SHADOWS_RCS_COUNT_SIZE, true
+    );
     mResources.mShadowsRisIndicesBuffer = SwBufferFactory::createAllocatedBuffer(
         "ShadowsRisIndicesBuffer", vk::BufferUsageFlagBits::eStorageBuffer, 0, SwBufferFactory::INITIAL_BUFFER_SIZE, true
     );
@@ -422,6 +428,7 @@ void SwLighting::System::initializePasses() {
 
     // Shadows Cull
     mScene.insertPass(SwPass::Type::LightingShadowsCull, [&](vk::CommandBuffer cmd) {
+        if (mScene.getRis().empty()) return;
         auto& shadowsCullPipeline = mResources.mShadowsCullPipelineBundle;
         cmd.bindPipeline(shadowsCullPipeline.getBindPoint(), shadowsCullPipeline.getPipelineHandle());
         cmd.pushConstants<ShadowsCullPC>(shadowsCullPipeline.getLayoutHandle(), ShadowsCullPC::sStages, 0, mResources.mShadowsCullPc);
@@ -503,7 +510,7 @@ void SwLighting::System::initializePasses() {
 
             cmd.endRendering();
         };
-        
+
         drawShadowImage(SwLight::Type::Point, mResources.mPointShadowMaps, POINT_VIEW_BASE, NUM_POINT_VIEWS, SHADOWS_CUBEMAP_WIDTH_HEIGHT);
         drawShadowImage(SwLight::Type::Spot, mResources.mSpotShadowMaps, SPOT_VIEW_BASE, NUM_SPOT_VIEWS, SHADOWS_2D_MAP_WIDTH_HEIGHT);
     });

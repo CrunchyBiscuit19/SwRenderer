@@ -822,9 +822,9 @@ void SwScene::draw() {
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightCalcOffset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightPrefixSumOffset]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::LightingClustersLightSelect]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCompact]);
-    // mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCull]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsCompact]);
+    mRenderGraph.addPass(&mPasses[SwPass::Type::LightingShadowsDraw]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryLateOpaque]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryMasked]);
     mRenderGraph.addPass(&mPasses[SwPass::Type::GeometryTransparent]);
