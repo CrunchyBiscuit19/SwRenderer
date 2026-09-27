@@ -132,7 +132,10 @@ private:
     static void setDepthFormat(vk::PipelineRenderingCreateInfo& pipelineRenderingCreateInfo, vk::Format format);
     static void disableDepthTest(vk::PipelineDepthStencilStateCreateInfo& pipelineDepthStencilStateCreateInfo);
     static void enableDepthTest(vk::PipelineDepthStencilStateCreateInfo& pipelineDepthStencilStateCreateInfo, bool depthWriteEnable, vk::CompareOp op);
-    static void setDepthBias(vk::PipelineRasterizationStateCreateInfo& pipelineRasterizationStateCreateInfo, bool depthBiasEnable, float depthBiasConstantFactor, float depthBiasSlopeFactor, float depthBiasClamp);
+    static void setDepthBias(
+        vk::PipelineRasterizationStateCreateInfo& pipelineRasterizationStateCreateInfo, bool depthBiasEnable, float depthBiasConstantFactor,
+        float depthBiasSlopeFactor, float depthBiasClamp
+    );
 };
 
 class SwComputePipelineFactory : public SwPipelineFactory {

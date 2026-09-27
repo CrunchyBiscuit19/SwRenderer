@@ -407,7 +407,7 @@ namespace SwLighting::Shadow {
             return 1.f;
         }
 
-        const float radius = ndc.z; 
+        const float compareDepth = ndc.z;
         const float2 texel = 1.f / float2(SHADOWS_MAP_SIZE, SHADOWS_MAP_SIZE);
         float lit = 0.f;
         int count = 0;
@@ -415,7 +415,7 @@ namespace SwLighting::Shadow {
             for (int x = -BLUR_RANGE; x <= BLUR_RANGE; x++) {
                 float2 off = float2(texel.x * x, texel.y * y);
                 float2 coord = GetPoissonDiskCoord(uv + off, count, POISSON_RADIUS);
-                lit += shadowMaps.SampleCmpLevelZero(shadowsSampler, float3(coord, layer), radius).r;
+                lit += shadowMaps.SampleCmpLevelZero(shadowsSampler, float3(coord, layer), compareDepth).r;
                 count++;
             }
         }
