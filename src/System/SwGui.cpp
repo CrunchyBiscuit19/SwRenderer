@@ -241,6 +241,13 @@ void SwGui::System::initializeResources() {
             }
         }
 
+        if (ImGui::CollapsingHeader("Shadow Depth Bias", ImGuiTreeNodeFlags_DefaultOpen)) {
+            ImGui::DragFloat("Point Constant Factor", &mScene.getLightingSystem().getShadowsPointDepthBiasConstantFactor(), 64.f);
+            ImGui::DragFloat("Spot Constant Factor", &mScene.getLightingSystem().getShadowsSpotDepthBiasConstantFactor(), 64.f);
+            ImGui::DragFloat("Slope Factor", &mScene.getLightingSystem().getShadowsDepthBiasSlopeFactor(), 0.05f);
+            ImGui::DragFloat("Clamp", &mScene.getLightingSystem().getShadowsDepthBiasClamp(), 0.0001f, 0.f, 0.f, "%.5f");
+        }
+
         ImGui::Unindent();
     };
     mResources.mGuiComponents[SwGuiComponent::Effects] = [this]() { ImGui::Checkbox("Toggle FXAA", mScene.getPostProcessSystem().getFXAAActivePtr()); };

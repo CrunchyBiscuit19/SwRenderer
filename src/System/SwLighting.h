@@ -90,9 +90,10 @@ static constexpr vk::DeviceSize CLUSTERS_LIGHT_COUNTS_SIZE{NUM_CLUSTERS * sizeof
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_OFFSETS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_WRITE_CURSORS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 
-static constexpr float SHADOWS_DEPTH_BIAS_CONSTANT{0.f};
-static constexpr float SHADOWS_DEPTH_BIAS_SLOPE{-0.05f};
-static constexpr float SHADOWS_DEPTH_BIAS_CLAMP{-0.005f};
+static constexpr float SHADOWS_POINT_DEPTH_BIAS_CONSTANT_FACTOR{-16384.f};
+static constexpr float SHADOWS_SPOT_DEPTH_BIAS_CONSTANT_FACTOR{-8192.f};
+static constexpr float SHADOWS_DEPTH_BIAS_SLOPE_FACTOR{-2.f};
+static constexpr float SHADOWS_DEPTH_BIAS_CLAMP{0.f};
 
 struct ResetPC : SwPC<ResetPC> {
     vk::DeviceAddress mShadowsPreRcsBuffer{0};
@@ -319,11 +320,17 @@ private:
     std::uint32_t mNumMaskRcsPerShadowView{0};
     std::uint32_t mNumTotalRcsPerShadowView{0};
 
+    float mShadowsPointDepthBiasConstantFactor{SHADOWS_POINT_DEPTH_BIAS_CONSTANT_FACTOR};
+    float mShadowsSpotDepthBiasConstantFactor{SHADOWS_SPOT_DEPTH_BIAS_CONSTANT_FACTOR};
+    float mShadowsDepthBiasSlopeFactor{SHADOWS_DEPTH_BIAS_SLOPE_FACTOR};
+    float mShadowsDepthBiasClamp{SHADOWS_DEPTH_BIAS_CLAMP};
+
     void initializeResources() override;
     void initializePasses() override;
     void refreshDataUsage() override;
 
     void reInitializeOnResize() override;
+
 
 public:
     System(SwScene& scene);
@@ -333,6 +340,11 @@ public:
     inline SwDescriptorSet& getShadowsMapsDescriptorSet() { return mResources.mShadowsMapsDescriptorSet; }
 
     inline Resources& getResources() { return mResources; }
+
+    inline float& getShadowsPointDepthBiasConstantFactor() { return mShadowsPointDepthBiasConstantFactor; }
+    inline float& getShadowsSpotDepthBiasConstantFactor() { return mShadowsSpotDepthBiasConstantFactor; }
+    inline float& getShadowsDepthBiasSlopeFactor() { return mShadowsDepthBiasSlopeFactor; }
+    inline float& getShadowsDepthBiasClamp() { return mShadowsDepthBiasClamp; }
 };
 
 }  // namespace SwLighting

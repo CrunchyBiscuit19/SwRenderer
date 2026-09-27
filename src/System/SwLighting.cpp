@@ -300,8 +300,8 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
     drawPipelineOptions.mDepthBiasEnabled = true;
-    drawPipelineOptions.mDepthBiasConstantFactor = SHADOWS_DEPTH_BIAS_CONSTANT;
-    drawPipelineOptions.mDepthBiasSlopeFactor = SHADOWS_DEPTH_BIAS_SLOPE;
+    drawPipelineOptions.mDepthBiasConstantFactor = SHADOWS_SPOT_DEPTH_BIAS_CONSTANT_FACTOR;
+    drawPipelineOptions.mDepthBiasSlopeFactor = SHADOWS_DEPTH_BIAS_SLOPE_FACTOR;
     drawPipelineOptions.mDepthBiasClamp = SHADOWS_DEPTH_BIAS_CLAMP;
     mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawOpaquePipeline", drawPipelineOptions);
     SwShader drawFragmentShader =
@@ -463,7 +463,9 @@ void SwLighting::System::initializePasses() {
             cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{sideLength, sideLength}, {}, depth, numViews));
 
             SwPass::setViewportScissors(cmd, vk::Extent3D{sideLength, sideLength, 1});
-            cmd.setDepthBias(SHADOWS_DEPTH_BIAS_CONSTANT, SHADOWS_DEPTH_BIAS_CLAMP, SHADOWS_DEPTH_BIAS_SLOPE);
+            float depthBiasConstantFactor =
+                (lightType == SwLight::Type::Point) ? mShadowsPointDepthBiasConstantFactor : mShadowsSpotDepthBiasConstantFactor;
+            cmd.setDepthBias(depthBiasConstantFactor, mShadowsDepthBiasClamp, mShadowsDepthBiasSlopeFactor);
 
             cmd.bindDescriptorSets(
                 vk::PipelineBindPoint::eGraphics,
