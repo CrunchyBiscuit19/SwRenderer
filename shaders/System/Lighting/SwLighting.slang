@@ -330,8 +330,6 @@ namespace SwLighting::Shadow {
     public static const float SHADOWS_SPOT_NEAR = 0.05f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
 
-    public static const float SHADOWS_BIAS = 0.0015f;
-
     public struct View {
         public uint mLightIndex;
         public uint mFace; // cube face for point lights, cascade for directional, 0 for spot
@@ -409,7 +407,7 @@ namespace SwLighting::Shadow {
             return 1.f;
         }
 
-        const float radius = ndc.z + SHADOWS_BIAS;  // reversed-Z, so bias is added to push receivers toward lit
+        const float radius = ndc.z; 
         const float2 texel = 1.f / float2(SHADOWS_MAP_SIZE, SHADOWS_MAP_SIZE);
         float lit = 0.f;
         int count = 0;
@@ -445,7 +443,7 @@ namespace SwLighting::Shadow {
         if (clip.w <= 0.f) {
             return 1.f;
         }
-        float compareDepth = clip.z / clip.w + SHADOWS_BIAS;  // reversed-Z
+        float compareDepth = clip.z / clip.w;  // reversed-Z
         float lit = shadowMaps.SampleCmpLevelZero(shadowsSampler, float4(dir, float(cubeIndex)), compareDepth).r;
         return lerp(SHADOWS_AMBIENT, 1.0, lit);
     }

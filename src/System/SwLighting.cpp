@@ -299,6 +299,10 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mDepthTestEnabled = true;
     drawPipelineOptions.mDepthWriteEnabled = true;
     drawPipelineOptions.mDepthCompareOp = vk::CompareOp::eGreaterOrEqual;
+    drawPipelineOptions.mDepthBiasEnabled = true;
+    drawPipelineOptions.mDepthBiasConstantFactor = SHADOWS_DEPTH_BIAS_CONSTANT;
+    drawPipelineOptions.mDepthBiasSlopeFactor = SHADOWS_DEPTH_BIAS_SLOPE;
+    drawPipelineOptions.mDepthBiasClamp = SHADOWS_DEPTH_BIAS_CLAMP;
     mResources.mShadowsDrawOpaquePipelineBundle = SwGraphicsPipelineFactory::createGraphicsPipeline("ShadowsDrawOpaquePipeline", drawPipelineOptions);
     SwShader drawFragmentShader =
         SwShaderFactory::createShader("ShadowsDrawFragmentShaderModule", SHADOWS_DRAW_FRAGMENT_SHADER_PATH, vk::ShaderStageFlagBits::eFragment);
@@ -457,7 +461,9 @@ void SwLighting::System::initializePasses() {
         auto drawShadowImage = [&](SwLight::Type lightType, SwImage& image, std::uint32_t viewBase, std::uint32_t numViews, std::uint32_t sideLength) {
             vk::RenderingAttachmentInfo depth = image.generateRenderingAttachment(0, vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore);
             cmd.beginRendering(SwPass::generateRenderingInfo(vk::Extent2D{sideLength, sideLength}, {}, depth, numViews));
+
             SwPass::setViewportScissors(cmd, vk::Extent3D{sideLength, sideLength, 1});
+            cmd.setDepthBias(SHADOWS_DEPTH_BIAS_CONSTANT, SHADOWS_DEPTH_BIAS_CLAMP, SHADOWS_DEPTH_BIAS_SLOPE);
 
             cmd.bindDescriptorSets(
                 vk::PipelineBindPoint::eGraphics,

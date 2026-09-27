@@ -90,6 +90,10 @@ static constexpr vk::DeviceSize CLUSTERS_LIGHT_COUNTS_SIZE{NUM_CLUSTERS * sizeof
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_OFFSETS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_WRITE_CURSORS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 
+static constexpr float SHADOWS_DEPTH_BIAS_CONSTANT{0.f};
+static constexpr float SHADOWS_DEPTH_BIAS_SLOPE{-0.05f};
+static constexpr float SHADOWS_DEPTH_BIAS_CLAMP{-0.005f};
+
 struct ResetPC : SwPC<ResetPC> {
     vk::DeviceAddress mShadowsPreRcsBuffer{0};
     std::uint32_t mShadowsRcsLimit{0};

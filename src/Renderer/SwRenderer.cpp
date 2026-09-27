@@ -126,6 +126,7 @@ SwRenderer::SwRenderer()
     features10.vertexPipelineStoresAndAtomics = true;
     features10.shaderInt64 = true;
     features10.imageCubeArray = true;
+    features10.depthBiasClamp = true;
 
     vk::PhysicalDeviceDynamicRenderingUnusedAttachmentsFeaturesEXT unusedAttachmentsFeatures{};
     unusedAttachmentsFeatures.dynamicRenderingUnusedAttachments = vk::True;

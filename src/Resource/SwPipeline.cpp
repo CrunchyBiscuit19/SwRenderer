@@ -34,7 +34,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(std::
     viewportState.scissorCount = 1;
 
     vk::PipelineDynamicStateCreateInfo dynamicInfo;
-    std::array<vk::DynamicState, 2> state = {vk::DynamicState::eViewport, vk::DynamicState::eScissor};
+    std::array<vk::DynamicState, 3> state = {vk::DynamicState::eViewport, vk::DynamicState::eScissor, vk::DynamicState::eDepthBias};
     dynamicInfo.pDynamicStates = state.data();
     dynamicInfo.dynamicStateCount = state.size();
 
@@ -51,6 +51,7 @@ SwGraphicsPipelineBundle SwGraphicsPipelineFactory::createGraphicsPipeline(std::
     setInputTopology(pipelineInputAssemblyStateCreateInfo, options.mTopology);
     setPolygonMode(pipelineRasterizationStateCreateInfo, options.mPolygonMode);
     setCullMode(pipelineRasterizationStateCreateInfo, options.mCullMode, options.mFrontFace);
+    setDepthBias(pipelineRasterizationStateCreateInfo, options.mDepthBiasEnabled, options.mDepthBiasConstantFactor, options.mDepthBiasSlopeFactor, options.mDepthBiasClamp);
     options.mMultisamplingEnabled ? enableMultisampling(pipelineMultiSampleStateCreateInfo) : disableMultisampling(pipelineMultiSampleStateCreateInfo);
     options.mSampleShadingEnabled ? enableSampleShading(pipelineMultiSampleStateCreateInfo) : disableSampleShading(pipelineMultiSampleStateCreateInfo);
     std::vector<vk::Format> formats;
@@ -184,6 +185,16 @@ void SwGraphicsPipelineFactory::enableDepthTest(
     pipelineDepthStencilStateCreateInfo.back = vk::StencilOpState{};
     pipelineDepthStencilStateCreateInfo.minDepthBounds = 0.f;
     pipelineDepthStencilStateCreateInfo.maxDepthBounds = 1.f;
+}
+
+void SwGraphicsPipelineFactory::setDepthBias(
+    vk::PipelineRasterizationStateCreateInfo& pipelineRasterizationStateCreateInfo, bool depthBiasEnable, float depthBiasConstantFactor,
+    float depthBiasSlopeFactor, float depthBiasClamp
+) {
+    pipelineRasterizationStateCreateInfo.depthBiasEnable = depthBiasEnable ? vk::True : vk::False;
+    pipelineRasterizationStateCreateInfo.depthBiasConstantFactor = depthBiasConstantFactor;
+    pipelineRasterizationStateCreateInfo.depthBiasSlopeFactor = depthBiasSlopeFactor;
+    pipelineRasterizationStateCreateInfo.depthBiasClamp = depthBiasClamp;
 }
 
 SwComputePipelineBundle SwComputePipelineFactory::createComputePipeline(std::string name, SwComputePipelineOptions options) {

@@ -102,6 +102,10 @@ public:
         bool mDepthTestEnabled{false};
         bool mDepthWriteEnabled{false};
         vk::CompareOp mDepthCompareOp{vk::CompareOp::eNever};
+        bool mDepthBiasEnabled{false};
+        float mDepthBiasConstantFactor{0.f};
+        float mDepthBiasSlopeFactor{0.f};
+        float mDepthBiasClamp{0.f};
     };
 
     static SwGraphicsPipelineBundle createGraphicsPipeline(std::string name, SwGraphicsPipelineOptions options);
@@ -128,6 +132,7 @@ private:
     static void setDepthFormat(vk::PipelineRenderingCreateInfo& pipelineRenderingCreateInfo, vk::Format format);
     static void disableDepthTest(vk::PipelineDepthStencilStateCreateInfo& pipelineDepthStencilStateCreateInfo);
     static void enableDepthTest(vk::PipelineDepthStencilStateCreateInfo& pipelineDepthStencilStateCreateInfo, bool depthWriteEnable, vk::CompareOp op);
+    static void setDepthBias(vk::PipelineRasterizationStateCreateInfo& pipelineRasterizationStateCreateInfo, bool depthBiasEnable, float depthBiasConstantFactor, float depthBiasSlopeFactor, float depthBiasClamp);
 };
 
 class SwComputePipelineFactory : public SwPipelineFactory {
