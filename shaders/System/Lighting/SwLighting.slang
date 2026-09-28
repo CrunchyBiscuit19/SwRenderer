@@ -327,7 +327,7 @@ namespace SwLighting::Shadow {
     public static const uint SPOT_VIEW_BASE = POINT_VIEW_BASE + NUM_POINT_VIEWS;
     public static const uint MAX_NUM_SHADOW_VIEWS = SPOT_VIEW_BASE + NUM_SPOT_VIEWS;
 
-    public static const float SHADOWS_SPOT_NEAR = 0.05f;
+    public static const float SHADOWS_NEAR = 0.001f;
     public static const float SHADOWS_SPOT_DEFAULT_RANGE = 60.f;
 
     public struct View {
@@ -351,7 +351,7 @@ namespace SwLighting::Shadow {
         float f = 1.f / tanHalfFov;
         return float4x4(
             f, 0.f, 0.f, 0.f,
-            0.f, -f, 0.f, 0.f,
+            0.f, f, 0.f, 0.f,
             0.f, 0.f, near / (far - near), (near * far) / (far - near),
             0.f, 0.f, -1.f, 0.f
         );

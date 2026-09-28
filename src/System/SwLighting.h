@@ -64,8 +64,8 @@ static constexpr std::uint32_t POINT_VIEW_BASE{NUM_DIRECTIONAL_VIEWS};
 static constexpr std::uint32_t SPOT_VIEW_BASE{POINT_VIEW_BASE + NUM_POINT_VIEWS};
 static constexpr std::uint32_t MAX_NUM_SHADOW_VIEWS{SPOT_VIEW_BASE + NUM_SPOT_VIEWS};
 
-static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 10};
-static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 9};
+static constexpr std::uint32_t SHADOWS_2D_MAP_WIDTH_HEIGHT{1 << 11};
+static constexpr std::uint32_t SHADOWS_CUBEMAP_WIDTH_HEIGHT{1 << 11};
 
 static constexpr std::uint32_t DIRECTIONAL_OPAQUE_RCS_POSITION{0};
 static constexpr std::uint32_t DIRECTIONAL_MASK_RCS_POSITION{1};
@@ -90,9 +90,9 @@ static constexpr vk::DeviceSize CLUSTERS_LIGHT_COUNTS_SIZE{NUM_CLUSTERS * sizeof
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_OFFSETS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 static constexpr vk::DeviceSize CLUSTERS_LIGHT_WRITE_CURSORS_SIZE{NUM_CLUSTERS * sizeof(std::uint32_t)};
 
-static constexpr float SHADOWS_POINT_DEPTH_BIAS_CONSTANT_FACTOR{-16384.f};
-static constexpr float SHADOWS_SPOT_DEPTH_BIAS_CONSTANT_FACTOR{-8192.f};
-static constexpr float SHADOWS_DEPTH_BIAS_SLOPE_FACTOR{-2.f};
+static constexpr float SHADOWS_POINT_DEPTH_BIAS_CONSTANT_FACTOR{-128.f};
+static constexpr float SHADOWS_SPOT_DEPTH_BIAS_CONSTANT_FACTOR{-128.f};
+static constexpr float SHADOWS_DEPTH_BIAS_SLOPE_FACTOR{-1.5f};
 static constexpr float SHADOWS_DEPTH_BIAS_CLAMP{0.f};
 
 struct ResetPC : SwPC<ResetPC> {

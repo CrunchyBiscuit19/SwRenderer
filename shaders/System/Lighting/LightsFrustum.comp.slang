@@ -62,7 +62,7 @@ void main(SwLighting::CSInput in) {
     }
 
     lightsFrustumPc.mLightsFrustumsBuffer[viewIndex] =
-        SwFrustum::calculateFrustum(apex, forward, right, viewUp, halfSide, halfSide, SwLighting::Shadow::SHADOWS_SPOT_NEAR, far);
+        SwFrustum::calculateFrustum(apex, forward, right, viewUp, halfSide, halfSide, SwLighting::Shadow::SHADOWS_NEAR, far);
     lightsFrustumPc.mShadowsViewsBuffer[viewIndex].mViewProj =
-        SwLighting::Shadow::buildViewProj(apex, forward, viewUp, halfSide, SwLighting::Shadow::SHADOWS_SPOT_NEAR, far);
+        SwLighting::Shadow::buildViewProj(apex, forward, viewUp, halfSide, SwLighting::Shadow::SHADOWS_NEAR, far);
 }

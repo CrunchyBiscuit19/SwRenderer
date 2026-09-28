@@ -290,8 +290,9 @@ void SwLighting::System::initializeResources() {
     drawPipelineOptions.mLayout = mResources.mShadowsDrawPipelineLayout.getHandle();
     drawPipelineOptions.mTopology = vk::PrimitiveTopology::eTriangleList;
     drawPipelineOptions.mPolygonMode = vk::PolygonMode::eFill;
-    drawPipelineOptions.mCullMode = vk::CullModeFlagBits::eFront;
-    drawPipelineOptions.mFrontFace = vk::FrontFace::eCounterClockwise;
+    drawPipelineOptions.mCullMode = vk::CullModeFlagBits::eBack;
+    // With the Y-flip in makePerspReverseZ, the fix function needs this CW front face to "unflip" the winding order.
+    drawPipelineOptions.mFrontFace = vk::FrontFace::eClockwise;
     drawPipelineOptions.mMultisamplingEnabled = false;
     drawPipelineOptions.mSampleShadingEnabled = false;
     drawPipelineOptions.mColorAttachments = {};
